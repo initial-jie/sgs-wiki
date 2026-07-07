@@ -183,6 +183,29 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   .main{padding:26px 18px 70px}
   .cards{grid-template-columns:1fr}
 }
+
+/* ---------- 工具 iframe 弹层 ---------- */
+.tool-open{
+  font-family:var(--body);font-size:14px;font-weight:600;cursor:pointer;
+  background:rgba(163,46,34,.07);border:1px solid rgba(163,46,34,.4);color:var(--seal);
+  border-radius:7px;padding:7px 14px;transition:.12s;
+}
+.tool-open:hover{background:rgba(163,46,34,.15)}
+.tool-open.link-style{
+  background:none;border:none;padding:0;font-weight:600;color:var(--seal);
+  border-bottom:1px solid rgba(163,46,34,.5);border-radius:0;
+}
+.tool-open.link-style:hover{background:none;border-bottom-width:2px}
+.tool-modal{position:fixed;inset:0;z-index:100;display:none;background:rgba(20,15,8,.72);padding:16px}
+.tool-modal.open{display:flex;flex-direction:column}
+.tm-bar{display:flex;align-items:center;gap:10px;max-width:720px;width:100%;margin:0 auto 10px;flex:none}
+.tm-title{font-family:var(--display);font-weight:800;font-size:16px;color:#f6ecd8;letter-spacing:.05em}
+.tm-actions{margin-left:auto;display:flex;gap:8px}
+.tm-btn{background:rgba(246,236,216,.14);border:1px solid rgba(246,236,216,.35);color:#f6ecd8;border-radius:7px;padding:7px 13px;font-size:13.5px;cursor:pointer;font-family:var(--body);text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.tm-btn:hover{background:rgba(246,236,216,.24)}
+.tm-btn.close{background:var(--seal);border-color:var(--seal)}
+.tm-frame-wrap{flex:1;max-width:720px;width:100%;margin:0 auto;min-height:0;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.tm-frame-wrap iframe{width:100%;height:100%;border:none;display:block}
 </style>
 </head>
 <body>
@@ -201,7 +224,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     <a class="navlink" data-target="revisions" role="button" tabindex="0">武将技能修正</a>
     <a class="navlink" data-target="replacements" role="button" tabindex="0">同名可替换武将</a>
   </nav>
-  <div class="updated">最近更新：2026-07-06 · v0.5</div>
+  <div class="updated">最近更新：2026-07-06 · v0.6</div>
 </aside>
 
 <main class="main">
@@ -269,7 +292,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
         <article class="card searchable">
           <h4>魔·司马懿</h4>
           <div class="tool-link">🎲 骤袭：使用线下化生成器 →
-            <a href="https://claude.ai/public/artifacts/a7ef4f1b-74fa-4fab-b311-a0c70bc83f50" target="_blank" rel="noopener">打开骤袭生成器</a>
+            <button class="tool-open link-style" data-tool="simayi" data-name="魔·司马懿 · 骤袭生成器">打开骤袭生成器</button>
           </div>
         </article>
         <article class="card searchable">
@@ -296,7 +319,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
         <article class="card searchable">
           <h4>魔·孙权</h4>
           <div class="tool-link">🎲 权御：使用线下化追踪器 →
-            <a href="https://claude.ai/public/artifacts/27a333cd-c9e6-4861-8958-9062c9fa4221" target="_blank" rel="noopener">打开权御追踪器</a>
+            <button class="tool-open link-style" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开权御追踪器</button>
           </div>
         </article>
       </div>
@@ -362,17 +385,22 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
       <article class="tool searchable">
         <h4>魔·司马懿 · 骤袭生成器</h4>
         <p>【骤袭】三选一随机器，内置 OL 官方技能池。</p>
-        <a href="https://claude.ai/public/artifacts/a7ef4f1b-74fa-4fab-b311-a0c70bc83f50" target="_blank" rel="noopener">打开工具 →</a>
+        <button class="tool-open" data-tool="simayi" data-name="魔·司马懿 · 骤袭生成器">打开工具 →</button>
       </article>
       <article class="tool searchable">
         <h4>魔·孙权 · 权御追踪器</h4>
         <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。</p>
-        <a href="https://claude.ai/public/artifacts/27a333cd-c9e6-4861-8958-9062c9fa4221" target="_blank" rel="noopener">打开工具 →</a>
+        <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
       </article>
       <article class="tool searchable">
         <h4>魔·曹操 · 覆载装备生成器</h4>
         <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
-        <a href="https://claude.ai/public/artifacts/5ef28ae0-db7f-4eb9-b8d5-d940458d5713" target="_blank" rel="noopener">打开工具 →</a>
+        <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
+      </article>
+      <article class="tool searchable">
+        <h4>南华老仙 · 青书天书生成器</h4>
+        <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
+        <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
       </article>
       <article class="tool searchable" style="opacity:.7">
         <h4>魔·吕布 · 追踪器（迭代中）</h4>
@@ -569,6 +597,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
   <footer>
     <strong>更新记录</strong><br>
+    v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
     v0.5（2026-07-06）：修正界·张松、界·郭皇后技能为三国杀 OL 现行版本（此前误用了十周年/标风旧版描述，由用户提供准确文本勘误）。<br>
     v0.4（2026-07-06）：目录改为页内滚动跳转（不再弹外链）；线下化工具按武将拆分为魔·司马懿 / 魔·孙权 / 魔·曹操 / 魔·吕布（迭代中）；新增魔·曹操「覆载装备生成器」、魔·孙权工具更新为纯权御追踪器；同名可替换武将新增蜀·界张松、魏·界郭皇后。<br>
     v0.3（2026-07-06）：对照三国杀 OL 官方描述勘误——刘宏一技能"爵赏"更正为"鬻爵"；界·鲁肃"缔盟"取消误标的主公技并修正措辞；族·王广"离论"措辞校准；同名可替换武将中"黄盖"更换为 OL"界·黄盖"（苦肉 / 诈降）。<br>
@@ -576,6 +605,20 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     v0.1（2026-07-06）：建站，收录衍生技 15 名武将、衍生牌 5 张、线下化工具 2 个。
   </footer>
 </main>
+</div>
+
+<!-- 工具 iframe 弹层 -->
+<div class="tool-modal" id="toolModal" role="dialog" aria-modal="true">
+  <div class="tm-bar">
+    <span class="tm-title" id="tmTitle">工具</span>
+    <div class="tm-actions">
+      <a class="tm-btn" id="tmNewTab" href="#" target="_blank" rel="noopener">↗ 新窗口</a>
+      <button class="tm-btn close" id="tmClose">✕ 关闭</button>
+    </div>
+  </div>
+  <div class="tm-frame-wrap">
+    <iframe id="tmFrame" title="工具" src="about:blank"></iframe>
+  </div>
 </div>
 
 <script>
@@ -618,6 +661,35 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     a.addEventListener('keydown',function(e){
       if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(a.getAttribute('data-target')); }
     });
+  });
+
+  // 工具 iframe 弹层
+  var modal=document.getElementById('toolModal');
+  var frame=document.getElementById('tmFrame');
+  var tmTitle=document.getElementById('tmTitle');
+  var tmNewTab=document.getElementById('tmNewTab');
+  function openTool(tool,name){
+    var src='tools/'+tool+'.html';
+    frame.src=src;
+    tmTitle.textContent=name||'工具';
+    tmNewTab.href=src;
+    modal.classList.add('open');
+    document.body.style.overflow='hidden';
+  }
+  function closeTool(){
+    modal.classList.remove('open');
+    frame.src='about:blank';       // 卸载，停止运行 & 释放
+    document.body.style.overflow='';
+  }
+  document.querySelectorAll('.tool-open').forEach(function(b){
+    b.addEventListener('click',function(){
+      openTool(b.getAttribute('data-tool'), b.getAttribute('data-name'));
+    });
+  });
+  document.getElementById('tmClose').addEventListener('click',closeTool);
+  // 点击遮罩空白处（bar 之外）不关闭，避免误触丢状态；仅按钮/ESC 关闭
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && modal.classList.contains('open')) closeTool();
   });
 })();
 </script>
