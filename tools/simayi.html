@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>魔司马懿 · 谋变入魔 & 骤袭三选一</title>
+<style>
+  :root{
+    --ink:#121014; --panel:#1c1722; --panel2:#231c2b; --line:#39303f;
+    --text:#ede6da; --dim:#9c8fa3;
+    --vermil:#c03a2b; --vermil-glow:rgba(192,58,43,.55);
+    --gold:#c9a46a; --disabled:#4a4150;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+  body{min-height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:0 auto;
+    padding:12px 12px calc(16px + env(safe-area-inset-bottom));}
+  body.demon{background:radial-gradient(ellipse at 50% -10%,#2a1015 0%,var(--ink) 55%)}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 12px;gap:8px}
+  h1{font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+    font-size:20px;font-weight:900;margin:0;letter-spacing:2px}
+  h1 .zhou{color:var(--vermil)}
+  .badge{font-size:11px;letter-spacing:2px;padding:4px 10px;border-radius:20px;
+    border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .badge.demon{border-color:var(--vermil);color:#fff;background:var(--vermil);
+    box-shadow:0 0 12px var(--vermil-glow);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 8px var(--vermil-glow)}50%{box-shadow:0 0 18px var(--vermil-glow)}}
+
+  .sec{border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    padding:12px;margin-bottom:12px}
+  .sec h2{margin:0 0 10px;font-size:14px;letter-spacing:1px;display:flex;
+    justify-content:space-between;align-items:center;font-weight:700}
+  .sec h2 small{font-weight:400;color:var(--dim);font-size:11px}
+
+  /* 诡伏记录 */
+  #recList{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:34px}
+  .rec{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;
+    background:var(--panel2);border:1px solid var(--line);font-size:14px}
+  .rec .t{font-size:10px;padding:1px 5px;border-radius:4px;letter-spacing:1px}
+  .rec .t.card{background:#3a3020;color:var(--gold)}
+  .rec .t.skill{background:#3a1d18;color:#e58274}
+  .rec .x{color:var(--dim);font-size:15px;padding:0 2px;cursor:pointer}
+  .rec-empty{color:var(--dim);font-size:12px;padding:6px 0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .chip{padding:7px 12px;border:1px solid var(--line);border-radius:20px;background:none;
+    color:var(--text);font-size:13px;cursor:pointer}
+  .chip:active{background:var(--panel2)}
+  .addrow{display:flex;gap:6px}
+  .addrow input{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--ink);color:var(--text);font-size:14px}
+  .addrow select{padding:9px 6px;border:1px solid var(--line);border-radius:8px;
+    background:var(--ink);color:var(--text);font-size:13px}
+  .addrow button{padding:9px 14px;border:none;border-radius:8px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--text);font-size:14px;cursor:pointer}
+
+  .progress{display:flex;align-items:center;gap:10px;margin:12px 0 0}
+  .pips{display:flex;gap:6px}
+  .pip{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:var(--panel2)}
+  .pip.on{background:var(--vermil);border-color:var(--vermil);box-shadow:0 0 8px var(--vermil-glow)}
+  .progress span{font-size:12px;color:var(--dim)}
+  #demonBtn{width:100%;margin-top:12px;padding:14px;border:none;border-radius:10px;cursor:pointer;
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:17px;font-weight:900;
+    letter-spacing:8px;color:#fff;background:linear-gradient(135deg,#5c1a3d,#c03a2b);
+    box-shadow:0 0 14px var(--vermil-glow)}
+  #demonBtn:disabled{background:var(--disabled);box-shadow:none;color:#8d8494;letter-spacing:4px;font-size:14px}
+  .flash-counter{display:flex;align-items:center;justify-content:space-between;
+    margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13px}
+  .flash-counter .ops{display:flex;align-items:center;gap:12px}
+  .flash-counter button{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);font-size:18px;cursor:pointer}
+  .flash-counter b{font-size:18px;color:var(--gold);min-width:24px;text-align:center}
+
+  /* 入魔后回合面板 */
+  #demonPanel{display:none}
+  body.demon #demonPanel{display:block}
+  .dp-row{display:flex;gap:8px;align-items:stretch}
+  .dmg-toggle{flex:1;padding:12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--dim);font-size:13px;cursor:pointer;text-align:center}
+  .dmg-toggle.on{border-color:var(--gold);color:var(--gold);background:#241d14}
+  .endround{padding:12px 14px;border-radius:10px;border:1px solid var(--vermil);
+    background:none;color:var(--vermil);font-size:13px;cursor:pointer;white-space:nowrap}
+  .dp-note{font-size:11px;color:var(--dim);margin:8px 0 0;line-height:1.6}
+
+  /* 当前持有 */
+  #held{display:none;margin:0 0 10px;padding:10px 12px;border:1px solid var(--gold);
+    border-radius:10px;background:linear-gradient(180deg,#241d14,#1c1722);font-size:14px;line-height:1.5}
+  #held b{font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:17px;color:var(--gold);letter-spacing:2px}
+  #held .until{font-size:11px;color:var(--dim)}
+
+  /* 三张符牌 */
+  #cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;min-height:236px}
+  .card{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    min-height:236px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;user-select:none;overflow:hidden;
+    transition:transform .12s ease,border-color .2s,box-shadow .2s;animation:flip .28s ease both}
+  .card:nth-child(2){animation-delay:.07s}
+  .card:nth-child(3){animation-delay:.14s}
+  @keyframes flip{from{transform:rotateY(80deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none}}
+  .card:active{transform:scale(.97)}
+  .card .num{position:absolute;top:8px;left:10px;font-size:11px;color:var(--dim)}
+  .card .skill{writing-mode:vertical-rl;font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+    font-size:30px;font-weight:900;letter-spacing:10px;line-height:1;color:var(--text)}
+  .card .hero{writing-mode:vertical-rl;font-size:12px;color:var(--dim);letter-spacing:4px;margin-left:10px}
+  .card .body{display:flex;flex-direction:row-reverse;align-items:center;justify-content:center;flex:1;padding:16px 0}
+  .card .note{width:100%;padding:6px 8px;border-top:1px dashed var(--line);
+    font-size:10px;line-height:1.45;color:var(--dim);min-height:34px;max-height:76px;overflow:auto}
+  .card.picked{border-color:var(--vermil);box-shadow:0 0 18px var(--vermil-glow),inset 0 0 24px rgba(192,58,43,.15)}
+  .card.picked .skill{color:var(--vermil)}
+  .card.faded{opacity:.32;pointer-events:none}
+  .placeholder{grid-column:1/-1;border:1px dashed var(--line);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;color:var(--dim);
+    font-size:13px;letter-spacing:2px;min-height:236px;text-align:center;padding:0 20px;line-height:2}
+
+  #drawBtn{width:100%;padding:16px;border:none;border-radius:12px;cursor:pointer;
+    background:var(--vermil);color:#fff;font-size:18px;font-weight:800;letter-spacing:6px;
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;box-shadow:0 4px 0 #7e241a}
+  #drawBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #7e241a}
+  #drawBtn:disabled{background:var(--disabled);box-shadow:none;color:#8d8494;letter-spacing:2px;font-size:14px}
+  .hint{text-align:center;font-size:11px;color:var(--dim);margin:8px 0 14px}
+
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-bottom:10px}
+  summary{padding:12px;font-size:14px;font-weight:700;cursor:pointer;list-style:none;
+    display:flex;justify-content:space-between;align-items:center}
+  summary::after{content:"▾";color:var(--dim);transition:transform .2s}
+  details[open] summary::after{transform:rotate(180deg)}
+  .dbody{padding:0 12px 12px}
+
+  .pool-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+  .pool-item:first-child{border-top:none}
+  .pool-item.off .pname{color:var(--disabled);text-decoration:line-through}
+  .pname{flex:1;font-size:14px}
+  .pname small{color:var(--dim);margin-left:6px}
+  .toggle{width:46px;height:26px;border-radius:13px;background:var(--disabled);position:relative;flex:none;cursor:pointer;transition:background .15s}
+  .toggle.on{background:var(--vermil)}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+  .toggle.on::after{left:23px}
+  .iconbtn{flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+    color:var(--dim);font-size:14px;cursor:pointer}
+  .pool-actions{display:flex;gap:8px;margin-top:10px}
+  .pool-actions button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
+  .pool-actions button.armed,#demonBtn.armed,.endround.armed{background:var(--vermil)!important;
+    border-color:var(--vermil)!important;color:#fff!important}
+  #poolCount{font-weight:400;font-size:12px;color:var(--dim);margin-left:8px}
+
+  .hrow{padding:8px 0;border-top:1px solid var(--line);font-size:12px;color:var(--dim);line-height:1.6}
+  .hrow:first-child{border-top:none}
+  .hrow b{color:var(--gold)}
+  .empty{padding:8px 0;font-size:12px;color:var(--dim)}
+  .skilltext{font-size:12px;color:var(--dim);line-height:1.8;padding:4px 0}
+  .skilltext b{color:var(--gold)}
+
+  dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);
+    width:min(92vw,380px);padding:16px}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog h3{margin:0 0 12px;font-size:16px}
+  dialog label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+  dialog input,dialog textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--ink);color:var(--text);font-size:14px;font-family:inherit}
+  dialog textarea{min-height:72px;resize:vertical}
+  .dlg-actions{display:flex;gap:8px;margin-top:14px}
+  .dlg-actions button{flex:1;padding:11px;border-radius:8px;font-size:14px;cursor:pointer;border:1px solid var(--line)}
+  .btn-save{background:var(--vermil);border-color:var(--vermil)!important;color:#fff}
+  .btn-cancel{background:var(--panel2);color:var(--text)}
+  .btn-del{background:none;color:var(--vermil);border-color:var(--vermil)!important}
+
+  #restartBtn{width:100%;padding:13px;margin:2px 0 10px;border-radius:10px;cursor:pointer;
+    background:none;border:1px solid var(--line);color:var(--dim);
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:15px;letter-spacing:6px}
+  #restartBtn.armed{background:var(--vermil);border-color:var(--vermil);color:#fff}
+
+  #toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);
+    max-width:86vw;padding:12px 18px;border-radius:10px;background:#2c2333;border:1px solid var(--gold);
+    color:var(--text);font-size:13px;line-height:1.5;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;z-index:99;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.warn{border-color:var(--vermil);background:#33191c}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>魔司马懿 <span class="zhou">·</span> 谋变骤袭</h1>
+  <span class="badge" id="stateBadge">蛰伏中</span>
+</header>
+
+<!-- 诡伏记录 / 谋变 -->
+<div class="sec" id="guifuSec">
+  <h2>诡伏 · 伤害记录 <small>技能或牌造成伤害后记录其名</small></h2>
+  <div id="recList"></div>
+  <div class="chips" id="quickChips"></div>
+  <div class="addrow">
+    <input id="recInput" maxlength="10" placeholder="自定义：牌名或技能名">
+    <select id="recType"><option value="card">牌</option><option value="skill">技</option></select>
+    <button id="recAdd">记录</button>
+  </div>
+  <div class="progress">
+    <div class="pips" id="pips"></div>
+    <span id="progText"></span>
+  </div>
+  <button id="demonBtn" disabled>入 魔</button>
+  <div class="flash-counter">
+    <span>诡伏之【闪】<br><small style="color:var(--dim)">每轮开始/体力变化时+1，可印记录的牌名（无法印【闪电】）</small></span>
+    <div class="ops">
+      <button id="flashMinus">−</button><b id="flashNum">0</b><button id="flashPlus">＋</button>
+    </div>
+  </div>
+</div>
+
+<!-- 入魔后回合面板 -->
+<div class="sec" id="demonPanel">
+  <h2>入魔 · 第 <span id="roundNo">1</span> 轮 <small>每轮未造成伤害 → 失去1点体力</small></h2>
+  <div class="dp-row">
+    <button class="dmg-toggle" id="dmgToggle">本轮尚未造成伤害</button>
+    <button class="endround" id="endRound">结束本轮</button>
+  </div>
+  <p class="dp-note" id="dpNote"></p>
+</div>
+
+<div id="held"></div>
+<div id="cards"></div>
+<button id="drawBtn">抽 取 三 技</button>
+<p class="hint" id="drawHint">骤袭：准备阶段从技能池随机抽三个 → 选一个获得至下回合开始</p>
+
+<details>
+  <summary>骤袭技能池<span id="poolCount"></span></summary>
+  <div class="dbody">
+    <div id="poolList"></div>
+    <div class="pool-actions">
+      <button id="addBtn">＋ 添加技能</button>
+      <button id="resetBtn">恢复默认16技</button>
+    </div>
+    <p class="hint" style="text-align:left;margin:10px 0 0">
+      入魔时若诡伏记录的技能与池中同名，会自动关闭该技能（已获得的不会再抽到）。点「✎」可编辑描述。
+    </p>
+  </div>
+</details>
+
+<details>
+  <summary>本局历史</summary>
+  <div class="dbody">
+    <div id="history"><div class="empty">尚无记录</div></div>
+    <div class="pool-actions"><button id="clearHist">清空历史记录</button></div>
+  </div>
+</details>
+
+<details>
+  <summary>武将技能速查</summary>
+  <div class="dbody">
+    <p class="skilltext"><b>【诡伏】</b>每轮开始时或你体力值变化后，你获得一张不计入手牌上限的【闪】。技能或牌造成伤害后，你记录此技能或牌名。你可将因此技能获得的【闪】当做记录的牌名使用（不计入次数限制，每回合每种牌名限一次）。</p>
+    <p class="skilltext"><b>【谋变】</b>准备阶段，若你"诡伏"记录的牌名与技能名之和大于等于3，你可入魔，获得你"诡伏"记录的牌各一张及记录的技能，并获得"骤袭"。入魔后，每轮结束时，若本轮你未造成过伤害，你失去1点体力。</p>
+    <p class="skilltext"><b>【骤袭】</b>准备阶段，你从三个可造成伤害的技能中选择一个获得至你的下回合开始。受到你伤害的角色于本轮结束时视为对你使用一张【杀】。</p>
+  </div>
+</details>
+
+<button id="restartBtn">重 开 一 局</button>
+
+<dialog id="editDlg">
+  <h3 id="dlgTitle">编辑技能</h3>
+  <label>技能名</label><input id="fSkill" maxlength="8">
+  <label>所属武将</label><input id="fHero" maxlength="12">
+  <label>技能描述（可选）</label><textarea id="fNote" placeholder="抽到时会显示在牌面下方"></textarea>
+  <div class="dlg-actions">
+    <button class="btn-del" id="fDelete">删除</button>
+    <button class="btn-cancel" id="fCancel">取消</button>
+    <button class="btn-save" id="fSave">保存</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- 数据 ---------- */
+const DEFAULT_POOL = [
+  ["盗书","蒋干","出牌阶段限一次，你可以选择一种花色，获得其他角色的一张手牌。若此牌与你选择的花色：相同，你对其造成1点伤害且此技能视为未发动过；不同，你交给该角色一张其他花色的手牌（若没有需展示所有手牌）。"],
+  ["雪恨","关银屏","出牌阶段限一次，你可以弃置一张红色牌并选择至多X名角色（X为你已损失的体力值且至少为1），然后你横置这些角色，并对其中一名角色造成1点火焰伤害。"],
+  ["雷击","界张角","当你使用或打出【闪】时，或使用【闪电】时，你可以进行一次判定；当你的判定牌生效后，若此牌为黑色，你可以选择一名角色，若此牌花色为：黑桃，你对其造成2点雷电伤害；梅花，你回复1点体力并对其造成1点雷电伤害。"],
+  ["天劫","神张角","一名角色的回合结束时，若本回合牌堆进行过洗牌，你可以对至多三名其他角色各造成X点雷电伤害（X为其手牌中【闪】的数量，且至少为1）。"],
+  ["溃诛","孙亮","弃牌阶段结束时，你可以选择一项：1.令至多X名角色各摸一张牌；2.对任意名体力值之和为X的角色各造成1点伤害（X为你本阶段弃置的牌数）。"],
+  ["绝策","界李儒","结束阶段，你可以对一名手牌数不大于你的其他角色造成1点伤害。"],
+  ["鸩毒","何太后","一名角色的出牌阶段开始时，你可以弃置一张手牌，依次执行以下所有项：1.令该角色视为使用一张【酒】；2.若该角色不为你，你对其造成1点伤害。"],
+  ["烈誓","族荀采","出牌阶段，你可以选择一项：1.废除判定区并受到1点火焰伤害；2.弃置所有【闪】；3.弃置所有【杀】。然后令一名其他角色选择其他两项中的一项。"],
+  ["驱虎","荀彧","出牌阶段限一次，你可以与一名体力值大于你的角色拼点，若你赢，则该角色对其攻击范围内你选择的一名角色造成1点伤害，否则其对你造成1点伤害。"],
+  ["束辎","韩馥","出牌阶段限一次，你可以交给一名其他角色两张手牌，然后其交给你一张手牌。若你交给其的牌中有与之牌名相同的牌，你可以选择一项：1.对其造成1点伤害；2.将场上的一张牌移动至其区域内。"],
+  ["强袭","典韦","出牌阶段限两次，你可以失去1点体力或弃置一张武器牌，对一名其他角色造成1点伤害（每名角色每阶段限一次）。"],
+  ["哲妇","郭槐","当你于回合外使用或打出牌后，你可以令一名有手牌的其他角色选择一项：1.弃置一张与之牌名相同的牌；2.受到你造成的1点伤害。"],
+  ["黩武","诸葛恪","出牌阶段，你可以弃置X张牌，对你攻击范围内的一名其他角色造成1点伤害（X为该角色的体力值）。若其因此进入濒死状态且被救回，你失去1点体力且本回合此技能失效。"],
+  ["刚烈","界夏侯惇","当你受到1点伤害后，你可以进行一次判定，若结果为：红色，你对伤害来源造成1点伤害；黑色，你弃置伤害来源的一张牌。"],
+  ["剑合","张华","出牌阶段每名角色限一次，你可以重铸至少两张同名牌或装备牌，令一名角色选择一项：1.重铸等量张此类别的牌；2.受到你造成的1点雷电伤害。"],
+  ["散谣","马谡","出牌阶段每项各限一次，你可以弃置一张牌，对全场体力值最大/手牌数最多的一名角色造成1点伤害。"]
+].map((x,i)=>({id:"d"+i, skill:x[0], hero:x[1], note:x[2]||"", enabled:true}));
+
+const QUICK_CARDS=["杀","决斗","南蛮入侵","万箭齐发","火攻","闪电"];
+const KEY="zhouxi_tool_v2";
+let mem=null;
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw) return JSON.parse(raw);
+    const old=localStorage.getItem("zhouxi_tool_v1"); // 迁移旧版
+    if(old){const s=JSON.parse(old); s.records=[]; s.flashes=0; s.demonized=false;
+      s.dmg=false; s.roundNo=1; return s;}
+  }catch(e){}
+  return mem;
+}
+function save(s){ mem=s; try{localStorage.setItem(KEY,JSON.stringify(s));}catch(e){} }
+let state = load() || {};
+state.pool = Array.isArray(state.pool)&&state.pool.length ? state.pool : JSON.parse(JSON.stringify(DEFAULT_POOL));
+state.history = state.history||[]; state.round=state.round||0;
+state.current=state.current||null; state.picked=state.picked||null;
+state.records=state.records||[]; state.flashes=state.flashes||0;
+state.demonized=!!state.demonized; state.dmg=!!state.dmg; state.roundNo=state.roundNo||1;
+state.pool.forEach(p=>{ if(!p.note){const d=DEFAULT_POOL.find(x=>x.id===p.id&&x.skill===p.skill);if(d)p.note=d.note;} });
+
+/* ---------- 工具 ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const enabledPool=()=>state.pool.filter(p=>p.enabled);
+let toastTimer=null;
+function toast(msg,warn){
+  const t=$("#toast"); t.textContent=msg; t.className=warn?"show warn":"show";
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className="",2600);
+}
+function vibrate(ms){ if(navigator.vibrate)try{navigator.vibrate(ms);}catch(e){} }
+/* 页面内两步确认：第一次点武装，2.5秒内再点执行 */
+function armConfirm(btn,armedText,fn){
+  let orig=btn.textContent,timer=null;
+  btn.addEventListener("click",()=>{
+    if(btn.classList.contains("armed")){
+      clearTimeout(timer); btn.classList.remove("armed"); btn.textContent=orig; fn();
+    }else{
+      btn.classList.add("armed"); btn.textContent=armedText;
+      timer=setTimeout(()=>{btn.classList.remove("armed");btn.textContent=orig;},2500);
+    }
+  });
+}
+
+/* ---------- 诡伏记录 ---------- */
+function addRecord(name,type){
+  name=name.trim(); if(!name)return;
+  if(state.records.some(r=>r.name===name)){toast("「"+name+"」已在记录中");return;}
+  state.records.push({name,type});
+  save(state); render(); vibrate(20);
+  if(!state.demonized&&state.records.length===3) toast("记录已满3！准备阶段可入魔",false);
+}
+function removeRecord(i){ state.records.splice(i,1); save(state); render(); }
+function enterDemon(){
+  state.demonized=true; state.dmg=false; state.roundNo=1;
+  // 记录中的技能若与骤袭池同名 → 自动关闭
+  const closed=[];
+  state.records.filter(r=>r.type==="skill").forEach(r=>{
+    state.pool.forEach(p=>{ if(p.skill===r.name&&p.enabled){p.enabled=false;closed.push(p.skill);} });
+  });
+  state.history.unshift({type:"demon",
+    txt:"入魔！获得记录："+state.records.map(r=>r.name).join("、")+(closed.length?"（骤袭池已关闭同名技："+closed.join("、")+"）":"")});
+  save(state); render(); vibrate([60,40,60]);
+  toast("已入魔！获得记录的牌与技能，解锁骤袭"+(closed.length?"；已自动关闭池中同名技：「"+closed.join("」「")+"」":""),false);
+}
+
+/* ---------- 骤袭抽取 ---------- */
+function draw(){
+  if(!state.demonized){toast("尚未入魔：记录满3后点「入魔」解锁骤袭",true);return;}
+  const pool=enabledPool();
+  if(pool.length<1){toast("技能池为空，请先开启或添加技能",true);return;}
+  const n=Math.min(3,pool.length);
+  const idx=[...pool.keys()], pick=[];
+  for(let i=0;i<n;i++){const j=Math.floor(Math.random()*idx.length);pick.push(pool[idx[j]]);idx.splice(j,1);}
+  state.round++; state.current=pick.map(p=>p.id); state.picked=null;
+  save(state); render();
+}
+function choose(id){
+  if(!state.current||state.picked)return;
+  state.picked=id;
+  const s=state.pool.find(p=>p.id===id);
+  const names=state.current.map(cid=>{const q=state.pool.find(p=>p.id===cid);return q?q.skill:"?";});
+  state.history.unshift({type:"draw",r:state.round,drew:names,got:s?s.skill:"?"});
+  if(state.history.length>80)state.history.length=80;
+  save(state); render(); vibrate(30);
+}
+
+/* ---------- 入魔后回合 ---------- */
+function endRound(){
+  if(!state.dmg){
+    state.history.unshift({type:"round",txt:"第"+state.roundNo+"轮结束：未造成伤害 → 失去1点体力！"});
+    toast("本轮未造成伤害：失去1点体力！（体力变化可+1诡伏闪）",true); vibrate([80,50,80]);
+  }else{
+    state.history.unshift({type:"round",txt:"第"+state.roundNo+"轮结束：受到你伤害的角色各视为对你使用一张【杀】"});
+    toast("结算：本轮受到你伤害的角色，各视为对你使用一张【杀】",true); vibrate(50);
+  }
+  state.roundNo++; state.dmg=false;
+  save(state); render();
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  document.body.classList.toggle("demon",state.demonized);
+  const badge=$("#stateBadge");
+  badge.textContent=state.demonized?"已入魔":"蛰伏中";
+  badge.className="badge"+(state.demonized?" demon":"");
+
+  // 诡伏区
+  const rl=$("#recList");
+  rl.innerHTML=state.records.length
+    ? state.records.map((r,i)=>`<span class="rec"><span class="t ${r.type==="skill"?"skill":"card"}">${r.type==="skill"?"技":"牌"}</span>${esc(r.name)}<span class="x" data-i="${i}">×</span></span>`).join("")
+    : '<div class="rec-empty">尚无记录 —— 技能或牌造成伤害后，点下方记录其名</div>';
+  rl.querySelectorAll(".x").forEach(el=>el.onclick=()=>removeRecord(+el.dataset.i));
+  $("#quickChips").innerHTML = QUICK_CARDS.map(c=>`<button class="chip" data-n="${c}">${c}</button>`).join("");
+  document.querySelectorAll("#quickChips .chip").forEach(el=>el.onclick=()=>addRecord(el.dataset.n,"card"));
+  $(".addrow").style.display="flex";
+  const n=state.records.length;
+  $("#pips").innerHTML=[0,1,2].map(i=>`<div class="pip ${i<Math.min(n,3)?"on":""}"></div>`).join("");
+  $("#progText").textContent=state.demonized?"已入魔 · 诡伏继续记录中":(n>=3?"记录 "+n+" 项 · 可入魔！":"记录 "+n+"/3");
+  const db=$("#demonBtn");
+  if(state.demonized){db.style.display="none";}
+  else{db.style.display="block";db.disabled=n<3;}
+
+  // 入魔面板
+  $("#roundNo").textContent=state.roundNo;
+  const dt=$("#dmgToggle");
+  dt.classList.toggle("on",state.dmg);
+  dt.textContent=state.dmg?"✓ 本轮已造成伤害":"本轮尚未造成伤害";
+  $("#dpNote").textContent=state.dmg
+    ? "提醒：本轮结束时，受到你伤害的角色各视为对你使用一张【杀】——留好闪/防具。"
+    : "提醒：若本轮结束时仍未造成伤害，你将失去1点体力（体力变化别忘了+1诡伏闪）。";
+
+  // 诡伏闪
+  $("#flashNum").textContent=state.flashes;
+
+  // 当前持有
+  const held=$("#held");
+  if(state.picked){
+    const s=state.pool.find(p=>p.id===state.picked);
+    held.style.display="block";
+    held.innerHTML=`当前获得：<b>【${esc(s?s.skill:"?")}】</b><br><span class="until">生效至你的下回合开始</span>`;
+  }else held.style.display="none";
+
+  // 三张牌
+  const box=$("#cards");
+  if(!state.current){
+    box.innerHTML=`<div class="placeholder">${state.demonized?"准备阶段 · 点下方抽取":"蛰伏中<br>诡伏记录满 3 项后入魔<br>方可解锁骤袭"}</div>`;
+  }else{
+    box.innerHTML=state.current.map((id,i)=>{
+      const s=state.pool.find(p=>p.id===id)||{skill:"已删除",hero:"",note:""};
+      const cls=state.picked?(state.picked===id?"card picked":"card faded"):"card";
+      return `<div class="${cls}" data-id="${id}">
+        <span class="num">${i+1}</span>
+        <div class="body"><div class="skill">${esc(s.skill)}</div></div>
+        <div class="note">${s.note?esc(s.note):'<span style="opacity:.5">（无描述）</span>'}</div>
+      </div>`;
+    }).join("");
+    box.querySelectorAll(".card").forEach(el=>el.onclick=()=>choose(el.dataset.id));
+  }
+  const drawBtn=$("#drawBtn");
+  drawBtn.disabled=!state.demonized;
+  drawBtn.textContent=!state.demonized?"入魔后解锁骤袭":(state.picked?"下 回 合 · 再 抽":(state.current?"重 新 抽 取":"抽 取 三 技"));
+
+  // 技能池
+  $("#poolCount").textContent=`（启用 ${enabledPool().length} / ${state.pool.length}）`;
+  $("#poolList").innerHTML=state.pool.map(p=>`
+    <div class="pool-item ${p.enabled?"":"off"}" data-id="${p.id}">
+      <span class="pname">【${esc(p.skill)}】<small>${esc(p.hero)}</small></span>
+      <button class="iconbtn edit">✎</button>
+      <span class="toggle ${p.enabled?"on":""}"></span>
+    </div>`).join("");
+  $("#poolList").querySelectorAll(".pool-item").forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector(".toggle").onclick=()=>{const p=state.pool.find(x=>x.id===id);p.enabled=!p.enabled;save(state);render();};
+    row.querySelector(".edit").onclick=()=>openEdit(id);
+  });
+
+  // 历史
+  const h=$("#history");
+  h.innerHTML = state.history.length
+    ? state.history.map(e=>{
+        if(e.type==="draw")return `<div class="hrow">骤袭第${e.r}次 · 抽到 ${e.drew.map(esc).join(" / ")} → 选 <b>【${esc(e.got)}】</b></div>`;
+        return `<div class="hrow">${esc(e.txt)}</div>`;
+      }).join("")
+    : '<div class="empty">尚无记录</div>';
+}
+
+/* ---------- 编辑弹窗 ---------- */
+const dlg=$("#editDlg"); let editing=null, delArmed=false;
+function openEdit(id){
+  editing=id; delArmed=false;
+  const p=id?state.pool.find(x=>x.id===id):null;
+  $("#dlgTitle").textContent=p?"编辑技能":"添加技能";
+  $("#fSkill").value=p?p.skill:""; $("#fHero").value=p?p.hero:""; $("#fNote").value=p?p.note:"";
+  const del=$("#fDelete"); del.style.display=p?"block":"none"; del.textContent="删除"; del.classList.remove("armed");
+  dlg.showModal();
+}
+$("#fSave").onclick=()=>{
+  const skill=$("#fSkill").value.trim(); if(!skill){toast("技能名不能为空",true);return;}
+  const hero=$("#fHero").value.trim(), note=$("#fNote").value.trim();
+  if(editing){const p=state.pool.find(x=>x.id===editing);Object.assign(p,{skill,hero,note});}
+  else state.pool.push({id:"u"+Date.now(), skill, hero, note, enabled:true});
+  save(state); dlg.close(); render();
+};
+$("#fDelete").onclick=function(){
+  if(!delArmed){delArmed=true;this.textContent="再点一次确认删除";this.classList.add("armed");
+    setTimeout(()=>{delArmed=false;this.textContent="删除";this.classList.remove("armed");},2500);return;}
+  state.pool=state.pool.filter(x=>x.id!==editing);
+  save(state); dlg.close(); render();
+};
+$("#fCancel").onclick=()=>dlg.close();
+
+/* ---------- 事件绑定 ---------- */
+$("#recAdd").onclick=()=>{addRecord($("#recInput").value,$("#recType").value);$("#recInput").value="";};
+$("#recInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("#recAdd").click();});
+armConfirm($("#demonBtn"),"再点一次 · 确认入魔",()=>{
+  if(state.records.length>=3&&!state.demonized)enterDemon();
+});
+$("#flashPlus").onclick=()=>{state.flashes++;save(state);render();};
+$("#flashMinus").onclick=()=>{if(state.flashes>0)state.flashes--;save(state);render();};
+$("#dmgToggle").onclick=()=>{state.dmg=!state.dmg;save(state);render();};
+armConfirm($("#endRound"),"确认结束？",endRound);
+$("#drawBtn").onclick=draw;
+$("#addBtn").onclick=()=>openEdit(null);
+armConfirm($("#resetBtn"),"再点确认恢复",()=>{
+  state.pool=JSON.parse(JSON.stringify(DEFAULT_POOL));
+  state.current=null;state.picked=null;save(state);render();
+  toast("已恢复默认16技（历史与记录保留）");
+});
+armConfirm($("#clearHist"),"再点确认清空",()=>{
+  state.history=[]; save(state); render(); toast("已清空历史记录");
+});
+armConfirm($("#restartBtn"),"再点一次 · 确认重开",()=>{
+  // 重开一局：保留技能池设置（含开关与描述），重置对局状态
+  state.records=[]; state.flashes=0; state.demonized=false; state.dmg=false;
+  state.roundNo=1; state.round=0; state.current=null; state.picked=null; state.history=[];
+  save(state); render(); vibrate(40);
+  toast("已重开一局（技能池设置已保留）");
+});
+document.addEventListener("keydown",e=>{
+  if(dlg.open||e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;
+  if(e.code==="Space"){e.preventDefault();draw();}
+  if(["1","2","3"].includes(e.key)&&state.current&&!state.picked){
+    const id=state.current[+e.key-1]; if(id)choose(id);
+  }
+});
+
+render();
+})();
+</script>
+</body>
+</html>

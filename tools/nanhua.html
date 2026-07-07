@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南华老仙 · 青书天书生成器</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#141b24; --panel:#161f2b; --panel2:#1f2a38;
+  --ink:#e4ecf4; --ink-soft:#8fa3b5; --line:#283546;
+  --dao:#7b68b8; --dao-soft:#5a4a90;
+  --gold:#c9a24a; --red:#c0574a; --green:#3d9a63;
+  --lv1:#5a9bd8; --lv2:#c9a24a; --lv3:#c0574a;
+  --serif:'Songti SC','SimSun',serif; --kai:'Kaiti SC','KaiTi','STKaiti',serif;
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#efe9dc; --bg2:#e5ddcb; --panel:#faf5ea; --panel2:#f0e9d9;
+    --ink:#241d14; --ink-soft:#645844; --line:#d6cbb4;
+    --dao:#6a56a8; --gold:#9a7a26;
+    --lv1:#3a72b0; --lv2:#9a7a26; --lv3:#a8463a;
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  line-height:1.55;padding:14px;max-width:660px;margin:0 auto;
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(123,104,184,.10),transparent 60%);
+}
+h1{font-family:var(--serif);font-weight:900;font-size:21px;letter-spacing:.05em;text-align:center;color:var(--dao)}
+.sub{text-align:center;color:var(--ink-soft);font-size:12px;letter-spacing:.1em;margin-top:2px;margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:13px}
+.card h2{font-family:var(--serif);font-size:15px;color:var(--dao);letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.card h2 .n{font-size:11px;color:var(--ink-soft);font-family:sans-serif;letter-spacing:.08em;font-weight:400;margin-left:auto}
+.hint{font-size:11.5px;color:var(--ink-soft);font-family:var(--kai);margin-top:8px;line-height:1.6}
+
+/* 座位设置 */
+.seat-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seat-row label{font-size:13px;color:var(--ink-soft);font-family:var(--kai)}
+.seat-seg{display:flex;gap:5px;flex-wrap:wrap}
+.seat-seg button{width:34px;height:34px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-family:var(--serif);font-size:14px;cursor:pointer}
+.seat-seg button.on{border-color:var(--dao);color:var(--dao);box-shadow:0 0 0 1px var(--dao) inset}
+.count-seg{display:flex;gap:5px}
+.count-seg button{padding:5px 10px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-family:var(--serif);font-size:13px;cursor:pointer}
+.count-seg button.on{border-color:var(--dao);color:var(--dao);box-shadow:0 0 0 1px var(--dao) inset}
+
+/* 书写主按钮 */
+.write-btn{
+  width:100%;background:linear-gradient(180deg,#7b68b8,#5a4a90);color:#fff;
+  border:none;border-radius:11px;font-family:var(--serif);font-weight:900;
+  font-size:17px;letter-spacing:.14em;padding:15px;cursor:pointer;
+  box-shadow:0 3px 0 rgba(0,0,0,.28);transition:.12s;
+}
+.write-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.write-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* 抽选流程 */
+.step-label{font-family:var(--serif);font-size:13px;color:var(--dao);margin:4px 0 9px;letter-spacing:.05em;display:flex;align-items:center;gap:7px}
+.step-label .dot{width:20px;height:20px;border-radius:50%;background:var(--dao);color:#fff;font-size:12px;font-family:sans-serif;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.choices{display:grid;gap:9px}
+.choice{
+  background:var(--panel2);border:1.5px solid var(--line);border-radius:10px;
+  padding:12px 14px;cursor:pointer;transition:.12s;text-align:left;position:relative;
+}
+.choice:active{transform:scale(.985)}
+.choice:hover{border-color:var(--dao-soft)}
+.choice .lvtag{font-family:var(--serif);font-weight:700;font-size:10.5px;padding:1px 7px;border-radius:4px;margin-right:8px}
+.choice.l1 .lvtag{background:rgba(90,155,216,.18);color:var(--lv1);border:1px solid var(--lv1)}
+.choice.l2 .lvtag{background:rgba(201,162,74,.18);color:var(--lv2);border:1px solid var(--lv2)}
+.choice.l3 .lvtag{background:rgba(192,87,74,.18);color:var(--lv3);border:1px solid var(--lv3)}
+.choice .ctext{font-family:var(--kai);font-size:14px;vertical-align:middle}
+.chosen-timing{
+  background:rgba(123,104,184,.12);border:1px solid var(--dao-soft);border-radius:9px;
+  padding:9px 12px;margin-bottom:11px;font-family:var(--kai);font-size:13.5px;
+}
+.chosen-timing .lvtag{font-family:var(--serif);font-weight:700;font-size:10.5px;padding:1px 7px;border-radius:4px;margin-right:8px;background:var(--panel2)}
+.flow-actions{display:flex;gap:8px;margin-top:11px}
+.flow-actions .btn{flex:1}
+
+.btn{border:none;border-radius:9px;font-family:var(--serif);font-weight:700;font-size:13.5px;letter-spacing:.06em;padding:10px;cursor:pointer;transition:.12s}
+.btn:active{transform:translateY(1px)}
+.btn-dao{background:linear-gradient(180deg,#7b68b8,#5a4a90);color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.btn-ghost{background:var(--panel2);color:var(--ink-soft);border:1px solid var(--line)}
+
+/* 完成的天书卡 */
+.done-ts{
+  background:linear-gradient(160deg,var(--panel2),var(--panel));
+  border:1px solid var(--dao-soft);border-radius:12px;padding:13px 15px;margin-top:4px;
+  opacity:0;transform:translateY(8px);animation:rise .3s forwards;
+}
+@keyframes rise{to{opacity:1;transform:none}}
+.done-ts .dt-head{font-family:var(--serif);font-weight:800;color:var(--dao);margin-bottom:8px;font-size:14px}
+.done-ts .dt-line{font-family:var(--kai);font-size:14px;margin:3px 0}
+.done-ts .dt-line .lab{color:var(--ink-soft);font-size:12px;margin-right:6px}
+
+/* 南华老仙持有栏 */
+.slots{display:grid;gap:9px}
+.slot{
+  background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:11px 13px;
+  display:flex;align-items:center;gap:10px;min-height:56px;
+}
+.slot.filled{border-style:solid}
+.slot .s-info{flex:1;min-width:0}
+.slot .s-timing{font-family:var(--kai);font-size:13.5px;font-weight:600}
+.slot .s-effect{font-family:var(--kai);font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.slot .s-lvtag{font-family:var(--serif);font-weight:700;font-size:9.5px;padding:1px 6px;border-radius:4px;margin-right:6px}
+.slot .s-lvtag.l1{background:rgba(90,155,216,.18);color:var(--lv1)}
+.slot .s-lvtag.l2{background:rgba(201,162,74,.18);color:var(--lv2)}
+.slot .s-lvtag.l3{background:rgba(192,87,74,.18);color:var(--lv3)}
+.slot .s-uses{font-size:12px;color:var(--gold);font-family:sans-serif;flex:none;background:none;border:1px solid var(--gold-soft,var(--gold));border-radius:6px;padding:4px 8px;cursor:pointer}
+.slot .s-give{font-size:11px;color:var(--dao);font-family:var(--serif);flex:none;background:none;border:1px solid var(--dao-soft);border-radius:6px;padding:4px 8px;cursor:pointer}
+.slot .s-empty{color:var(--ink-soft);font-family:var(--kai);font-size:12.5px}
+
+/* 授术给玩家的下拉 */
+.give-panel{display:none;gap:6px;margin-top:8px;padding:9px;background:var(--panel2);border:1px solid var(--dao-soft);border-radius:9px}
+.give-panel.show{display:flex;flex-wrap:wrap;align-items:center}
+.give-panel select{background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:6px 8px;font-family:var(--kai);font-size:13px}
+.give-panel .gp-label{font-size:12px;color:var(--ink-soft);font-family:var(--kai)}
+
+/* 其他玩家持有的天书 */
+.others{display:grid;gap:8px}
+.other-slot{
+  background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 12px;
+  display:flex;align-items:center;gap:9px;
+}
+.other-slot .o-who{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--dao);flex:none}
+.other-slot .o-info{flex:1;min-width:0}
+.other-slot .o-timing{font-family:var(--kai);font-size:12.5px}
+.other-slot .o-effect{font-family:var(--kai);font-size:11.5px;color:var(--ink-soft)}
+.other-slot .o-uses{font-size:11px;color:var(--gold);font-family:sans-serif;flex:none;background:none;border:1px solid var(--gold);border-radius:6px;padding:3px 7px;cursor:pointer}
+.others-empty{color:var(--ink-soft);font-family:var(--kai);font-size:12.5px;text-align:center;padding:10px}
+
+/* 浏览表 */
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:13px}
+summary{padding:11px 14px;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:14px;color:var(--dao);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"\25BE";float:right;color:var(--ink-soft)}
+details[open] summary::after{content:"\25B4"}
+.browse{padding:2px 14px 14px}
+.browse h5{font-family:var(--serif);font-size:12.5px;margin:12px 0 5px;letter-spacing:.05em}
+.browse h5.c1{color:var(--lv1)} .browse h5.c2{color:var(--lv2)} .browse h5.c3{color:var(--lv3)}
+.browse .row{font-family:var(--kai);font-size:12.5px;padding:3px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px}
+.browse .row .id{font-family:sans-serif;font-size:10px;color:var(--ink-soft);flex:none;width:26px}
+
+footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:16px;font-family:var(--kai);line-height:1.7}
+</style>
+</head>
+<body>
+  <h1>南华老仙 · 青书天书生成器</h1>
+  <div class="sub">QING SHU · 时机 3选1 → 效果 3选1</div>
+
+  <!-- 座位设置 -->
+  <div class="card">
+    <h2>对局设置 <span class="n">SETUP</span></h2>
+    <div class="seat-row">
+      <label>总人数</label>
+      <div class="count-seg" id="countSeg"></div>
+    </div>
+    <div class="seat-row" style="margin-top:10px">
+      <label>南华老仙座位</label>
+      <div class="seat-seg" id="seatSeg"></div>
+    </div>
+    <div class="hint">授术给其他玩家时，下拉菜单会自动排除南华老仙本人的座位。</div>
+  </div>
+
+  <!-- 书写天书 -->
+  <div class="card">
+    <h2>书写天书 <span class="n">青书</span></h2>
+    <button class="write-btn" id="writeBtn">✦ 书写一册天书 ✦</button>
+    <div class="hint">游戏开始、每个准备阶段、每个结束阶段各可书写一次。点击后先抽 3 个时机（3选1），再抽 3 个效果（3选1）。</div>
+    <div id="writeFlow"></div>
+  </div>
+
+  <!-- 南华老仙持有栏 -->
+  <div class="card">
+    <h2>南华老仙持有栏 <span class="n">合道上限</span></h2>
+    <div class="seat-row" style="margin-bottom:10px">
+      <label>上限</label>
+      <div class="count-seg" id="capSeg">
+        <button data-cap="2" class="on">2 册（初始）</button>
+        <button data-cap="3">3 册（濒死后）</button>
+      </div>
+    </div>
+    <div class="slots" id="slots"></div>
+    <div class="hint">自己的天书每册 2 次；点「×次数」记录发动 −1，用尽自动移出。点「授术」可将一册（需 2 次未动用）交给其他玩家。</div>
+  </div>
+
+  <!-- 其他玩家持有 -->
+  <div class="card">
+    <h2>其他玩家天书 <span class="n">授术</span></h2>
+    <div class="others" id="others"></div>
+    <div class="hint">每名非南华老仙玩家同时最多持有一册天书，可用次数 1，点「×1」记录发动后移出。</div>
+  </div>
+
+  <!-- 浏览 -->
+  <details>
+    <summary>时机表 · 30 条</summary>
+    <div class="browse" id="browseTimings"></div>
+  </details>
+  <details>
+    <summary>效果表 · 30 条</summary>
+    <div class="browse" id="browseEffects"></div>
+  </details>
+
+  <div class="card" style="text-align:center">
+    <button class="btn btn-ghost" id="resetAll" style="width:100%">结束本局 / 全部重置</button>
+    <div class="flow-actions" id="resetConfirm" style="display:none">
+      <button class="btn btn-ghost" id="resetCancel">取消</button>
+      <button class="btn btn-dao" id="resetYes">确认重置</button>
+    </div>
+  </div>
+
+  <footer>
+    数据依据三国杀 OL 现行版本（制表：埃城）· 完全离线，存本机<br>
+    时机级别概率 1级40% / 2级35% / 3级25%；效果按天书级别 85%/15% 溢出<br>
+    效果与时机不兼容时（如"伤害+1"配无伤害时机）自动排除
+  </footer>
+
+<script>
+var TIMINGS = [
+  // —— 1 级时机（3 条）——
+  {id:1,  level:1, text:'当你使用牌后'},
+  {id:2,  level:1, text:'其他角色对你使用牌后'},
+  {id:3,  level:1, text:'你失去手牌后'},
+
+  // —— 2 级时机（20 条）——
+  {id:4,  level:2, text:'出牌阶段开始时'},
+  {id:5,  level:2, text:'你受到伤害后', ctx:['dmg_deal']},
+  {id:6,  level:2, text:'准备阶段'},
+  {id:7,  level:2, text:'结束阶段'},
+  {id:8,  level:2, text:'你造成伤害后', ctx:['dmg_deal']},
+  {id:9,  level:2, text:'你成为【杀】的目标时', ctx:['target']},
+  {id:10, level:2, text:'你使用或打出【闪】时'},
+  {id:11, level:2, text:'当一张判定牌生效前', ctx:['judge','judge_before']},
+  {id:12, level:2, text:'你使用的牌被抵消后'},
+  {id:13, level:2, text:'当一张判定牌生效后', ctx:['judge']},
+  {id:14, level:2, text:'你于回合外失去红色牌后'},
+  {id:15, level:2, text:'弃牌阶段开始时'},
+  {id:16, level:2, text:'一名角色受到【杀】的伤害后', ctx:['dmg_deal']},
+  {id:17, level:2, text:'摸牌阶段开始时'},
+  {id:18, level:2, text:'你成为普通锦囊牌的目标后', ctx:['target']},
+  {id:19, level:2, text:'一名角色进入连环状态后'},
+  {id:20, level:2, text:'你的体力值变化后'},
+  {id:21, level:2, text:'每轮开始时'},
+  {id:22, level:2, text:'一名角色造成伤害时', ctx:['dmg_deal','dmg_when']},
+  {id:23, level:2, text:'一名角色受到伤害时', ctx:['dmg_when']},
+
+  // —— 3 级时机（7 条）——
+  {id:24, level:3, text:'一名角色进入濒死时'},
+  {id:25, level:3, text:'你失去装备牌后'},
+  {id:26, level:3, text:'一名其他角色死亡后'},
+  {id:27, level:3, text:'【南蛮入侵】或【万箭齐发】结算后'},
+  {id:28, level:3, text:'你使用【杀】造成伤害后', ctx:['dmg_deal']},
+  {id:29, level:3, text:'一名角色受到属性伤害后', ctx:['dmg_deal']},
+  {id:30, level:3, text:'一名角色失去最后的手牌后'}
+];
+var EFFECTS = [
+  // —— 1 级效果（6 条）——
+  {id:1,  level:1, text:'你可以摸 1 张牌'},
+  {id:2,  level:1, text:'你可以弃置一名角色区域内的一张牌'},
+  {id:3,  level:1, text:'你可以观看牌堆的 3 张牌，以任意顺序置于牌堆顶或牌堆底'},
+  {id:4,  level:1, text:'你可弃置任意张牌，摸等量牌'},
+  {id:5,  level:1, text:'你可以视为使用一张无距离次数限制的【杀】'},
+  {id:6,  level:1, text:'你可令一名角色的手牌上限 +2 直到其回合结束'},
+
+  // —— 2 级效果（14 条）——
+  {id:7,  level:2, text:'你可以获得造成伤害的牌', req:'dmg_deal'},
+  {id:8,  level:2, text:'你可以获得一名角色区域内的一张牌'},
+  {id:9,  level:2, text:'你可以回复 1 点体力'},
+  {id:10, level:2, text:'你可令此牌对你无效', req:'target'},
+  {id:11, level:2, text:'你可以令一名其他角色判定，若结果为黑桃，你对其造成 2 点雷电伤害'},
+  {id:12, level:2, text:'你可以用一张手牌替换判定牌', req:'judge_before'},
+  {id:13, level:2, text:'你可以获得此判定牌', req:'judge'},
+  {id:14, level:2, text:'若你不是体力上限最高的角色，你可增加 1 点体力上限'},
+  {id:15, level:2, text:'你可与一名已受伤角色拼点，若你赢，你获得其两张牌'},
+  {id:16, level:2, text:'你可令至多两名角色各摸一张牌'},
+  {id:17, level:2, text:'你可弃置两张牌，令你和一名其他角色回复 1 点体力'},
+  {id:18, level:2, text:'你可令此伤害值 +1', req:'dmg_when'},
+  {id:19, level:2, text:'你可以失去 1 点体力，摸 3 张牌'},
+  {id:20, level:2, text:'你可防止此伤害，令伤害来源摸 3 张牌', req:'dmg_when'},
+
+  // —— 3 级效果（10 条）——
+  {id:21, level:3, text:'你可以摸 3 张牌，弃置 1 张牌'},
+  {id:22, level:3, text:'你可摸牌至体力上限（至多摸 5 张）'},
+  {id:23, level:3, text:'你可令一名角色非锁定技失效直到下个回合开始'},
+  {id:24, level:3, text:'你可令一名角色摸 2 张牌并翻面'},
+  {id:25, level:3, text:'你可获得两张非基本牌'},
+  {id:26, level:3, text:'你可获得两张锦囊牌'},
+  {id:27, level:3, text:'你可以摸 3 张牌并翻面'},
+  {id:28, level:3, text:'你可令你对一名角色使用牌无次数距离限制直到你的回合结束'},
+  {id:29, level:3, text:'你可交换两名角色装备区的牌'},
+  {id:30, level:3, text:'你可交换两名角色手牌区的牌'}
+];
+
+/* 时机级别出现概率：1级35% / 2级33% / 3级32% */
+var TIMING_LEVEL_DIST = [{lv:1,p:0.40},{lv:2,p:0.35},{lv:3,p:0.25}];
+/* 效果级别：按所抽时机的天书级别，85% 同级 / 15% 溢出高一级；3级必3级 */
+var EFFECT_LEVEL_DIST = {
+  1:[{lv:1,p:0.85},{lv:2,p:0.15}],
+  2:[{lv:2,p:0.85},{lv:3,p:0.15}],
+  3:[{lv:3,p:1.0}]
+};
+var LVMAP={1:'一',2:'二',3:'三'};
+
+function byLevel(list,lv){return list.filter(function(x){return x.level===lv;});}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function rollByDist(dist){var r=Math.random(),acc=0;for(var i=0;i<dist.length;i++){acc+=dist[i].p;if(r<=acc)return dist[i].lv;}return dist[dist.length-1].lv;}
+/* 从列表中不重复随机取 n 个 */
+function sampleN(list,n){
+  var a=list.slice(),out=[];
+  for(var i=0;i<n && a.length;i++){var j=Math.floor(Math.random()*a.length);out.push(a.splice(j,1)[0]);}
+  return out;
+}
+/* 抽 3 个时机：每个按级别概率独立决定级别，再从该级别池抽（去重） */
+function draw3Timings(){
+  var picked=[],usedIds={};
+  var guard=0;
+  while(picked.length<3 && guard<50){
+    guard++;
+    var lv=rollByDist(TIMING_LEVEL_DIST);
+    var pool=byLevel(TIMINGS,lv).filter(function(x){return !usedIds[x.id];});
+    if(!pool.length) continue;
+    var one=pick(pool); usedIds[one.id]=true; picked.push(one);
+  }
+  return picked;
+}
+/* 判断某效果是否与所选时机兼容：
+   无 req 的效果 = 自足，任何时机可配；
+   有 req 的效果 = 时机的 ctx 数组须包含该 req */
+function effectCompatible(effect, timing){
+  if(!effect.req) return true;
+  var ctx = timing.ctx || [];
+  return ctx.indexOf(effect.req) !== -1;
+}
+/* 根据已选时机的级别抽 3 个效果，且只在与该时机兼容的效果中抽（去重）。
+   若兼容效果不足 3 个，则有几个给几个。 */
+function draw3Effects(timing){
+  var timingLevel = timing.level;
+  var picked=[],usedIds={},guard=0;
+  while(picked.length<3 && guard<80){
+    guard++;
+    var lv=rollByDist(EFFECT_LEVEL_DIST[timingLevel]);
+    var pool=byLevel(EFFECTS,lv).filter(function(x){
+      return !usedIds[x.id] && effectCompatible(x,timing);
+    });
+    if(!pool.length) continue;
+    var one=pick(pool); usedIds[one.id]=true; picked.push(one);
+  }
+  // 若因概率抖动没凑满3个，兜底：从所有兼容效果里补齐
+  if(picked.length<3){
+    var allCompat=EFFECTS.filter(function(x){
+      return !usedIds[x.id] && effectCompatible(x,timing)
+        && EFFECT_LEVEL_DIST[timingLevel].some(function(d){return d.lv===x.level;});
+    });
+    while(picked.length<3 && allCompat.length){
+      var j=Math.floor(Math.random()*allCompat.length);
+      picked.push(allCompat.splice(j,1)[0]);
+    }
+  }
+  return picked;
+}
+
+/* ---------- 状态 ---------- */
+var S = load() || { total:8, seat:1, cap:2, slots:[], others:{} };
+// slots: [{timing,effect,uses}]  others: { seatNumber: {timing,effect,uses:1} }
+function save(){try{localStorage.setItem('nanhua_v2',JSON.stringify(S));}catch(e){}}
+function load(){try{var r=localStorage.getItem('nanhua_v2');return r?JSON.parse(r):null;}catch(e){return null;}}
+
+/* ---------- 座位设置 ---------- */
+function renderSetup(){
+  var cs=document.getElementById('countSeg'); cs.innerHTML='';
+  [2,3,4,5,6,7,8].forEach(function(n){
+    var b=document.createElement('button'); b.textContent=n; if(n===S.total)b.className='on';
+    b.onclick=function(){S.total=n; if(S.seat>n)S.seat=1; save(); renderSetup(); renderOthers();};
+    cs.appendChild(b);
+  });
+  var ss=document.getElementById('seatSeg'); ss.innerHTML='';
+  for(var i=1;i<=S.total;i++){(function(i){
+    var b=document.createElement('button'); b.textContent=i; if(i===S.seat)b.className='on';
+    b.onclick=function(){S.seat=i; save(); renderSetup(); renderOthers();};
+    ss.appendChild(b);
+  })(i);}
+}
+
+/* ---------- 书写流程 ---------- */
+var flowState=null; // {stage:'timing'|'effect', timings:[], chosenTiming, effects:[]}
+function renderFlow(){
+  var box=document.getElementById('writeFlow');
+  if(!flowState){box.innerHTML='';return;}
+  var html='';
+  if(flowState.stage==='timing'){
+    html+='<div class="step-label"><span class="dot">1</span>选择时机（3 选 1）</div><div class="choices">';
+    flowState.timings.forEach(function(t,i){
+      html+='<button class="choice l'+t.level+'" data-ti="'+i+'"><span class="lvtag">'+LVMAP[t.level]+'级</span><span class="ctext">'+t.text+'</span></button>';
+    });
+    html+='</div>';
+  } else if(flowState.stage==='effect'){
+    var ct=flowState.chosenTiming;
+    html+='<div class="chosen-timing"><span class="lvtag">'+LVMAP[ct.level]+'级时机</span>'+ct.text+'</div>';
+    html+='<div class="step-label"><span class="dot">2</span>选择效果（3 选 1）</div><div class="choices">';
+    flowState.effects.forEach(function(e,i){
+      html+='<button class="choice l'+e.level+'" data-ei="'+i+'"><span class="lvtag">'+LVMAP[e.level]+'级</span><span class="ctext">'+e.text+'</span></button>';
+    });
+    html+='</div><div class="flow-actions"><button class="btn btn-ghost" id="flowCancel">取消书写</button></div>';
+  }
+  box.innerHTML=html;
+
+  box.querySelectorAll('[data-ti]').forEach(function(b){
+    b.onclick=function(){
+      var t=flowState.timings[+b.getAttribute('data-ti')];
+      flowState.chosenTiming=t;
+      flowState.effects=draw3Effects(t);
+      flowState.stage='effect';
+      renderFlow();
+    };
+  });
+  box.querySelectorAll('[data-ei]').forEach(function(b){
+    b.onclick=function(){
+      var e=flowState.effects[+b.getAttribute('data-ei')];
+      finishWrite(flowState.chosenTiming,e);
+    };
+  });
+  var fc=document.getElementById('flowCancel');
+  if(fc)fc.onclick=function(){flowState=null;renderFlow();};
+}
+
+function finishWrite(timing,effect){
+  // 满栏则提示替换；否则直接入栏
+  var newbook={timing:timing,effect:effect,uses:2};
+  if(S.slots.length>=S.cap){
+    // 进入替换选择模式
+    flowState={stage:'replace',pending:newbook};
+    renderReplace();
+  } else {
+    S.slots.push(newbook); save(); flowState=null; renderFlow(); renderSlots();
+  }
+}
+function renderReplace(){
+  var box=document.getElementById('writeFlow');
+  var nb=flowState.pending;
+  var html='<div class="done-ts"><div class="dt-head">新天书已书写 · 持有栏已满，请选择替换哪一册</div>'
+    +'<div class="dt-line"><span class="lab">时机</span>'+nb.timing.text+'</div>'
+    +'<div class="dt-line"><span class="lab">效果</span>'+nb.effect.text+'</div></div>';
+  html+='<div class="step-label" style="margin-top:11px">点击下方要被替换的旧天书：</div><div class="choices">';
+  S.slots.forEach(function(s,i){
+    html+='<button class="choice l'+s.timing.level+'" data-rep="'+i+'"><span class="ctext"><b>'+s.timing.text+'</b> ＋ '+s.effect.text+' <span style="color:var(--gold)">（剩 '+s.uses+' 次）</span></span></button>';
+  });
+  html+='</div><div class="flow-actions"><button class="btn btn-ghost" id="repCancel">放弃新天书</button></div>';
+  box.innerHTML=html;
+  box.querySelectorAll('[data-rep]').forEach(function(b){
+    b.onclick=function(){
+      var i=+b.getAttribute('data-rep');
+      S.slots[i]=nb; save(); flowState=null; renderFlow(); renderSlots();
+    };
+  });
+  document.getElementById('repCancel').onclick=function(){flowState=null;renderFlow();};
+}
+
+document.getElementById('writeBtn').onclick=function(){
+  flowState={stage:'timing',timings:draw3Timings(),chosenTiming:null,effects:[]};
+  renderFlow();
+};
+
+/* ---------- 南华老仙持有栏 ---------- */
+function renderSlots(){
+  document.querySelectorAll('#capSeg button').forEach(function(b){
+    b.classList.toggle('on',parseInt(b.getAttribute('data-cap'))===S.cap);
+  });
+  var wrap=document.getElementById('slots'); wrap.innerHTML='';
+  for(var i=0;i<S.cap;i++){
+    var s=S.slots[i];
+    var div=document.createElement('div');
+    div.className='slot'+(s?' filled':'');
+    if(s){
+      div.innerHTML='<div class="s-info">'
+        +'<div class="s-timing"><span class="s-lvtag l'+s.timing.level+'">'+LVMAP[s.timing.level]+'</span>'+s.timing.text+'</div>'
+        +'<div class="s-effect">＋ '+s.effect.text+'</div></div>'
+        +'<button class="s-give" data-give="'+i+'">授术</button>'
+        +'<button class="s-uses" data-use="'+i+'">×'+s.uses+'</button>';
+    } else {
+      div.innerHTML='<span class="s-empty">— 空栏位 —</span>';
+    }
+    wrap.appendChild(div);
+  }
+  // 用量-1
+  wrap.querySelectorAll('[data-use]').forEach(function(b){
+    b.onclick=function(){
+      var i=+b.getAttribute('data-use');
+      S.slots[i].uses--;
+      if(S.slots[i].uses<=0)S.slots.splice(i,1);
+      save(); renderSlots();
+    };
+  });
+  // 授术
+  wrap.querySelectorAll('[data-give]').forEach(function(b){
+    b.onclick=function(){
+      var i=+b.getAttribute('data-give');
+      if(S.slots[i].uses<2){ showGiveError(i); return; }
+      openGivePanel(i);
+    };
+  });
+}
+function showGiveError(i){
+  // 简易提示：仅 uses=2 的天书可授术
+  var wrap=document.getElementById('slots');
+  var slot=wrap.children[i];
+  var old=slot.querySelector('.give-panel'); if(old)old.remove();
+  var p=document.createElement('div'); p.className='give-panel show';
+  p.innerHTML='<span class="gp-label" style="color:var(--red)">只能授术未动用过（剩 2 次）的天书。</span>';
+  slot.appendChild(p);
+  setTimeout(function(){if(p.parentNode)p.remove();},2200);
+}
+function openGivePanel(i){
+  var wrap=document.getElementById('slots');
+  var slot=wrap.children[i];
+  var old=slot.querySelector('.give-panel'); if(old){old.remove();return;}
+  var p=document.createElement('div'); p.className='give-panel show';
+  var opts='';
+  for(var s=1;s<=S.total;s++){
+    if(s===S.seat) continue;
+    var taken=S.others[s]?' （已有天书）':'';
+    opts+='<option value="'+s+'"'+(S.others[s]?' disabled':'')+'>玩家 '+s+taken+'</option>';
+  }
+  p.innerHTML='<span class="gp-label">授予</span><select class="give-sel">'+opts+'</select>'
+    +'<button class="btn btn-dao" style="padding:6px 12px" id="giveGo">确定</button>';
+  slot.appendChild(p);
+  p.querySelector('#giveGo').onclick=function(){
+    var sel=p.querySelector('.give-sel'); var target=parseInt(sel.value);
+    if(!target) return;
+    if(S.others[target]){ return; }
+    S.others[target]={timing:S.slots[i].timing,effect:S.slots[i].effect,uses:1};
+    S.slots.splice(i,1); // 授术后该册离开南华老仙
+    save(); renderSlots(); renderOthers();
+  };
+}
+
+/* ---------- 其他玩家持有 ---------- */
+function renderOthers(){
+  var wrap=document.getElementById('others'); wrap.innerHTML='';
+  var keys=Object.keys(S.others).filter(function(k){return parseInt(k)<=S.total && parseInt(k)!==S.seat;});
+  if(!keys.length){ wrap.innerHTML='<div class="others-empty">暂无 · 通过持有栏的「授术」交给其他玩家</div>'; return; }
+  keys.sort(function(a,b){return a-b;}).forEach(function(k){
+    var o=S.others[k];
+    var div=document.createElement('div'); div.className='other-slot';
+    div.innerHTML='<span class="o-who">玩家 '+k+'</span>'
+      +'<div class="o-info"><div class="o-timing"><span class="s-lvtag l'+o.timing.level+'" style="font-size:9px;padding:1px 5px">'+LVMAP[o.timing.level]+'</span>'+o.timing.text+'</div>'
+      +'<div class="o-effect">＋ '+o.effect.text+'</div></div>'
+      +'<button class="o-uses" data-ouse="'+k+'">×'+o.uses+'</button>';
+    wrap.appendChild(div);
+  });
+  wrap.querySelectorAll('[data-ouse]').forEach(function(b){
+    b.onclick=function(){
+      var k=b.getAttribute('data-ouse');
+      S.others[k].uses--;
+      if(S.others[k].uses<=0) delete S.others[k];
+      save(); renderOthers();
+    };
+  });
+}
+
+/* ---------- 上限切换 ---------- */
+document.querySelectorAll('#capSeg button').forEach(function(b){
+  b.onclick=function(){
+    S.cap=parseInt(b.getAttribute('data-cap'));
+    while(S.slots.length>S.cap)S.slots.pop();
+    save(); renderSlots();
+  };
+});
+
+/* ---------- 浏览表 ---------- */
+function renderBrowse(list,elId){
+  var el=document.getElementById(elId),html='';
+  [1,2,3].forEach(function(lv){
+    var items=byLevel(list,lv);
+    html+='<h5 class="c'+lv+'">'+LVMAP[lv]+'级 · '+items.length+' 条</h5>';
+    items.forEach(function(x){html+='<div class="row"><span class="id">#'+x.id+'</span><span>'+x.text+'</span></div>';});
+  });
+  el.innerHTML=html;
+}
+
+/* ---------- 重置 ---------- */
+document.getElementById('resetAll').onclick=function(){
+  document.getElementById('resetConfirm').style.display='flex';
+  this.style.display='none';
+};
+document.getElementById('resetCancel').onclick=function(){
+  document.getElementById('resetConfirm').style.display='none';
+  document.getElementById('resetAll').style.display='block';
+};
+document.getElementById('resetYes').onclick=function(){
+  var keepTotal=S.total,keepSeat=S.seat;
+  S={total:keepTotal,seat:keepSeat,cap:2,slots:[],others:{}};
+  flowState=null; save();
+  renderSetup();renderFlow();renderSlots();renderOthers();
+  document.getElementById('resetConfirm').style.display='none';
+  document.getElementById('resetAll').style.display='block';
+};
+
+/* ---------- init ---------- */
+renderSetup();
+renderFlow();
+renderSlots();
+renderOthers();
+renderBrowse(TIMINGS,'browseTimings');
+renderBrowse(EFFECTS,'browseEffects');
+</script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔孙权 面杀追踪器</title>
+<style>
+:root{
+ --surface-0:#EFEBE2;--surface-1:#F6F3EC;--surface-2:#FFFFFF;
+ --text-primary:#26231E;--text-secondary:#6B655B;--text-muted:#9B948A;
+ --border:#DDD7CB;--border-strong:#C3BCAD;--border-accent:#8C6A2F;
+ --bg-warning:#F6E8C8;--text-warning:#7A5410;
+ --bg-success:#E4EEDD;--text-success:#3E6224;
+ --bg-danger:#F3DEDA;--text-danger:#A2352A;
+ --seal:#A2352A;--gold:#8C6A2F;--radius:8px;
+}
+@media (prefers-color-scheme: dark){
+ :root{
+  --surface-0:#191714;--surface-1:#232019;--surface-2:#2B2820;
+  --text-primary:#EDE8DE;--text-secondary:#B0A896;--text-muted:#7E776B;
+  --border:#3D392F;--border-strong:#57513F;--border-accent:#C9A45C;
+  --bg-warning:#4A3B12;--text-warning:#EFD292;
+  --bg-success:#2E4020;--text-success:#BCD9A2;
+  --bg-danger:#4A231E;--text-danger:#EFA79A;
+  --seal:#D9604F;--gold:#C9A45C;
+ }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--text-primary);
+ font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+ font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 48px}
+header{padding:20px 4px 14px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.06em;
+ font-family:"Songti SC","STSong","SimSun","Noto Serif SC",serif}
+header .tag{font-size:13px;color:var(--text-secondary)}
+header .seal{display:inline-block;border:1.5px solid var(--seal);color:var(--seal);
+ border-radius:4px;padding:0 6px;font-size:13px;font-family:"Songti SC","SimSun",serif}
+.card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+ padding:16px 18px;margin:0 0 14px}
+.h{font-size:16px;font-weight:600;margin:0 0 12px}
+.sub{font-size:13px;color:var(--text-secondary)}
+button{font:inherit;font-size:14px;color:var(--text-primary);background:transparent;
+ border:1px solid var(--border-strong);border-radius:var(--radius);
+ padding:8px 14px;cursor:pointer}
+button:active{transform:scale(.98)}
+button:hover{background:var(--surface-1)}
+input[type=text],select{font:inherit;font-size:14px;color:var(--text-primary);
+ background:var(--surface-2);border:1px solid var(--border-strong);
+ border-radius:var(--radius);padding:8px 10px;min-height:38px}
+.grid6{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.eff{padding:10px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);
+ text-align:left;background:transparent;font-size:14px;line-height:1.4}
+.eff b{font-family:"Songti SC","SimSun",serif;font-weight:600;letter-spacing:.08em}
+.eff:disabled{opacity:.35;cursor:not-allowed}
+.pill{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px}
+.warnbox{background:var(--bg-warning);border-radius:var(--radius);padding:8px 12px;
+ display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.warnbox span{color:var(--text-warning);font-size:13px}
+table.qt{width:100%;font-size:13px;border-collapse:collapse}
+table.qt td,table.qt th{padding:7px 4px;border-top:1px solid var(--border);text-align:center}
+table.qt th{color:var(--text-secondary);font-weight:400;border-top:none;font-size:12px}
+.tl{text-align:left}
+.rowline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.chk{color:var(--gold);font-weight:600}
+.msgcard{background:var(--bg-warning);border:none}
+.msgcard span{color:var(--text-warning);font-size:14px}
+.namegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0 12px}
+.wfull{width:100%}
+.scrollx{overflow-x:auto}
+label{font-size:13px}
+footer{text-align:center;font-size:12px;color:var(--text-muted);padding:16px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <h1>魔孙权</h1>
+ <span class="seal">面杀</span>
+ <span class="tag">身份场追踪器 · 权御暗选 / 天恩 / 乾纲</span>
+</header>
+
+<div id="setup" class="card">
+  <p class="h">对局设置（身份场 · 魔孙权）</p>
+  <div class="rowline">
+    <label class="sub">人数</label>
+    <select id="pcount"><option>4</option><option>5</option><option>6</option><option>7</option><option selected>8</option></select>
+    <label class="sub">魔孙权</label><select id="sel-sq"></select>
+  </div>
+  <div id="namerows" class="namegrid"></div>
+  <button id="startbtn" class="wfull">开始游戏</button>
+</div>
+<div id="game"></div>
+
+<footer>技能文本以三国杀OL线上现行版本为准</footer>
+</div>
+
+<script>
+const EFFECTS=[
+ {n:'白虹',d:'伤害+1'},{n:'青冥',d:'额外指定一个目标'},{n:'辟邪',d:'无视防具'},
+ {n:'紫电',d:'不可响应'},{n:'百里',d:'额外结算一次'},{n:'流星',d:'无次数限制'}];
+let S=null,L=null;
+const $=id=>document.getElementById(id);
+function seatName(i){return (i+1)+'号位'}
+function renderSetup(keep){
+ const n=+$('pcount').value,nr=$('namerows');nr.innerHTML='';
+ for(let i=0;i<n;i++){const inp=document.createElement('input');inp.type='text';inp.id='pn'+i;inp.placeholder=seatName(i);inp.style.width='100%';if(keep&&L&&L.names[i])inp.value=L.names[i]===seatName(i)?'':L.names[i];nr.appendChild(inp)}
+ const s=$('sel-sq');s.innerHTML='<option value="-1">请选择</option>';
+ for(let i=0;i<n;i++){const o=document.createElement('option');o.value=i;o.textContent=seatName(i);s.appendChild(o)}
+ if(keep&&L)s.value=L.sq;else s.value='-1';
+}
+$('pcount').onchange=()=>renderSetup(false);renderSetup(false);
+$('startbtn').onclick=()=>{
+ const n=+$('pcount').value;
+ const sq=+$('sel-sq').value;
+ if(sq<0){alertBox('请指定魔孙权的座位');return}
+ S={n,sq,round:1,alive:Array(n).fill(true),
+  names:Array.from({length:n},(_,i)=>($('pn'+i).value.trim()||seatName(i))),
+  used:Array.from({length:n},()=>new Set()),picks:Array(n).fill(null),
+  phase:'idle',order:[],oi:0,lastReveal:null,
+  gg:false,te:{diff:false,same:false},teFlow:null,teNote:'',pc:'',over:false,
+  dmg:{sq:false},msg:''};
+ L={n,sq,names:S.names.slice()};
+ $('setup').style.display='none';render();
+};
+function pname(i){return S.names[i]+(i===S.sq?'（魔孙权）':'')}
+function alertBox(t){const d=document.createElement('div');d.className='card msgcard';d.innerHTML='<span>'+t+'</span>';$('setup').parentNode.insertBefore(d,$('setup'));setTimeout(()=>d.remove(),3000)}
+function esc(s){return s.replace(/</g,'&lt;')}
+function confirmBox(text,yes){
+ return '<div class="warnbox" style="margin:8px 0"><span>'+text+'</span><button style="font-size:13px" onclick="'+yes+'">确认</button><button style="font-size:13px" onclick="S.pc=\'\';render()">取消</button></div>';
+}
+function askPc(k){S.pc=k;render()}
+function doGG(){S.gg=true;S.teFlow=null;S.pc='';render()}
+function undoGG(){S.gg=false;S.pc='';render()}
+function doOver(){S.over=true;S.pc='';render()}
+function newGame(){
+ S=null;$('game').innerHTML='';
+ $('setup').style.display='';$('pcount').value=L.n;renderSetup(true);
+ window.scrollTo(0,0);
+}
+function render(){
+ const g=$('game');let h='';
+ if(S.msg){h+='<div class="card msgcard"><span>'+S.msg+'</span></div>';S.msg=''}
+ if(S.over){g.innerHTML=h+overHtml();return}
+ h+='<div class="card"><div class="rowline" style="justify-content:space-between;margin:0">'
+ +'<span style="font-size:15px;font-weight:600">第 '+S.round+' 轮</span>'
+ +'<span style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="endRound()">结束本轮，进入下一轮</button><button onclick="askPc(\'over\')">结束对局</button></span></div>';
+ if(S.pc==='over')h+=confirmBox('确定结束本局？将显示对局总结','doOver()');
+ if(S.gg){h+='<div style="margin-top:10px">'
+  +'<label style="margin-right:16px"><input type="checkbox" '+(S.dmg.sq?'checked':'')+' onchange="S.dmg.sq=this.checked"> '+esc(S.names[S.sq])+' 本轮已造成伤害</label>'
+  +'<div class="sub" style="margin-top:4px">入魔角色一轮未造成伤害，该轮结束时失去1点体力</div></div>'}
+ h+='</div>';
+ h+='<div class="card"><p class="h">角色存活</p><div class="rowline" style="margin:0">';
+ for(let i=0;i<S.n;i++){h+='<button style="'+(S.alive[i]?'':'opacity:.4;text-decoration:line-through')+'" onclick="toggleAlive('+i+')">'+esc(pname(i))+'</button>'}
+ h+='</div><div class="sub" style="margin-top:6px">点击名字切换存活/阵亡</div></div>';
+ h+=sqPanel();
+ g.innerHTML=h;
+}
+function overHtml(){
+ const surv=[],dead=[];
+ for(let i=0;i<S.n;i++)(S.alive[i]?surv:dead).push(pname(i));
+ let h='<div class="card"><p class="h">对局结束 · 共进行 '+S.round+' 轮</p>';
+ h+='<p style="font-size:14px;margin:0 0 4px">存活：'+(surv.length?esc(surv.join('、')):'无')+'</p>';
+ h+='<p style="font-size:14px;margin:0 0 10px;color:var(--text-secondary)">阵亡：'+(dead.length?esc(dead.join('、')):'无')+'</p>';
+ h+='<p style="font-size:14px;margin:0 0 4px">魔孙权'+(S.gg?'已发动乾纲入魔':'未发动乾纲')+'</p>'+historyHtml();
+ h+='<button class="wfull" style="margin-top:14px" onclick="newGame()">新开下一局（保留人数与姓名）</button></div>';
+ return h;
+}
+function teCandidates(){
+ const r=S.lastReveal;const out=[];
+ for(let i=0;i<S.n;i++){
+  if(i===S.sq||!S.alive[i])continue;
+  if(r&&r.round===S.round&&r.sqPick!==null&&r.sqPick!==undefined){
+   const e=r.entries.find(x=>x[0]===i);
+   if(e&&e[1]===r.sqPick)continue;
+  }
+  out.push(i);
+ }
+ return out;
+}
+function sqPanel(){
+ let h='<div class="card"><p class="h">魔孙权 · 权御</p>';
+ if(S.phase==='idle'){
+  h+='<button class="wfull" onclick="startPick()">开始第 '+S.round+' 轮权御暗选</button>';
+  if(S.lastReveal)h+=revealHtml(S.lastReveal);
+ }else if(S.phase==='handoff'){
+  const p=S.order[S.oi];
+  h+='<p style="font-size:15px;margin:0 0 10px">请把设备交给 <b>'+esc(pname(p))+'</b>，其他人请勿偷看</p><button class="wfull" onclick="S.phase=\'picking\';render()">我是本人，开始选择</button>';
+ }else if(S.phase==='picking'){
+  const p=S.order[S.oi];const avail=EFFECTS.filter((e,ei)=>!S.used[p].has(ei)).length;
+  h+='<p style="font-size:14px;margin:0 0 10px">'+esc(pname(p))+'，选择一项本轮的权御效果（灰色为已用过）</p><div class="grid6">';
+  EFFECTS.forEach((e,ei)=>{h+='<button class="eff" '+(S.used[p].has(ei)?'disabled':'')+' onclick="doPick('+ei+')"><b>'+e.n+'</b><br><span class="sub">'+e.d+'</span></button>'});
+  h+='</div>';
+  if(!avail)h+='<button class="wfull" style="margin-top:10px" onclick="doPick(null)">六项均已用完，跳过</button>';
+ }else if(S.phase==='handnext'){
+  h+='<p style="font-size:15px;margin:0 0 10px">已记录 <span class="chk">✓</span></p><button class="wfull" onclick="nextPicker()">继续（传给下一位）</button>';
+ }else if(S.phase==='ready'){
+  h+='<p style="font-size:15px;margin:0 0 10px">所有人已完成选择</p><button class="wfull" onclick="reveal()">同时翻开</button>';
+ }else if(S.phase==='revealed'){
+  h+=revealHtml(S.lastReveal);
+ }
+ h+='<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">';
+ h+='<p style="font-size:14px;font-weight:600;margin:0 0 6px">天恩（每回合各限一次）'+(S.gg?' <span class="pill" style="background:var(--surface-1);color:var(--text-muted)">已失去（乾纲）</span>':'')+'</p>';
+ if(!S.gg){
+  h+='<div class="rowline" style="margin:0 0 8px">';
+  if(S.te.diff){h+='<span class="pill" style="background:var(--bg-success);color:var(--text-success)">不同项已用</span>'+(S.teNote?'<span class="sub">'+esc(S.teNote)+'</span>':'')}
+  else if(!S.teFlow){h+='<button onclick="S.teFlow={step:\'target\',t:-1};render()">发动天恩 · 不同项（弃目标一张牌，令其追加权御）</button>'}
+  h+='</div>';
+  if(S.teFlow&&S.teFlow.step==='target'){
+   const cands=teCandidates();
+   if(cands.length){
+    h+='<div class="rowline"><label class="sub">目标角色（已排除孙权本人及本轮选择相同者）</label><select onchange="S.teFlow.t=+this.value">';
+    h+='<option value="-1">请选择</option>';
+    for(const i of cands)h+='<option value="'+i+'" '+(S.teFlow.t===i?'selected':'')+'>'+esc(pname(i))+'</option>';
+    h+='</select><button onclick="teTarget()">确认（随机弃其一张牌后继续）</button><button onclick="S.teFlow=null;render()">取消</button></div>';
+   }else{
+    h+='<div class="rowline"><span class="sub">本轮没有与孙权选择不同的存活角色，无法发动不同项</span><button onclick="S.teFlow=null;render()">关闭</button></div>';
+   }
+  }
+  if(S.teFlow&&S.teFlow.step==='pick'){
+   const t=S.teFlow.t;const avail=EFFECTS.filter((e,ei)=>!S.used[t].has(ei)).length;
+   h+='<p style="font-size:14px;margin:0 0 8px">'+esc(pname(t))+' 追加选择一项未选过的权御效果：</p><div class="grid6">';
+   EFFECTS.forEach((e,ei)=>{h+='<button class="eff" '+(S.used[t].has(ei)?'disabled':'')+' onclick="doTePick('+ei+')"><b>'+e.n+'</b><br><span class="sub">'+e.d+'</span></button>'});
+   h+='</div>';
+   if(!avail)h+='<button class="wfull" style="margin-top:8px" onclick="doTePick(null)">其六项均已用完，仅记录天恩已用</button>';
+   h+='<button style="margin-top:8px" onclick="S.teFlow=null;render()">取消</button>';
+  }
+  h+='<div class="rowline" style="margin:8px 0 0">'
+  +'<label><input type="checkbox" '+(S.te.same?'checked':'')+' onchange="S.te.same=this.checked"> 相同项已用（从牌堆得一张杀，不计手牌上限）</label>'
+  +'<button onclick="S.te={diff:false,same:false};S.teNote=\'\';S.teFlow=null;render()">下一回合，重置天恩</button></div>';
+  if(S.pc==='gg')h+=confirmBox('确定发动乾纲？魔孙权将永久失去天恩并入魔','doGG()');
+  else h+='<button style="margin-top:10px" onclick="askPc(\'gg\')">发动乾纲：失去天恩并入魔</button>';
+ }else{
+  h+='<div class="rowline" style="margin:0;opacity:.45">'
+  +'<label><input type="checkbox" disabled '+(S.te.diff?'checked':'')+'> 不同项</label>'
+  +'<label><input type="checkbox" disabled '+(S.te.same?'checked':'')+'> 相同项</label></div>'
+  +'<div class="rowline" style="margin:8px 0 0"><span class="pill" style="background:var(--bg-danger);color:var(--text-danger)">已入魔（乾纲）</span><span class="sub">使用【杀】指定唯一目标时，执行下表中该目标勾选过的所有效果</span></div>';
+  if(S.pc==='ggUndo')h+=confirmBox('确定撤销乾纲入魔？仅用于纠正误触','undoGG()');
+  else h+='<button style="margin-top:8px" onclick="askPc(\'ggUndo\')">撤销入魔（误触回滚）</button>';
+ }
+ h+='</div>'+historyHtml()+'</div>';
+ return h;
+}
+function teTarget(){
+ if(!S.teFlow||S.teFlow.t<0){S.msg='请先在下拉菜单中选择天恩的目标角色';render();return}
+ S.teFlow.step='pick';render();
+}
+function doTePick(ei){
+ const t=S.teFlow.t;
+ if(ei!==null){S.used[t].add(ei);S.teNote='目标 '+S.names[t]+'：已随机弃一张牌，追加选择了 '+EFFECTS[ei].n+'（'+EFFECTS[ei].d+'）'}
+ else{S.teNote='目标 '+S.names[t]+'：已随机弃一张牌，六项已满无可追加'}
+ S.te.diff=true;S.teFlow=null;render();
+}
+function historyHtml(){
+ let h='<div style="margin-top:14px"><p style="font-size:14px;font-weight:600;margin:0 0 6px">权御历史（每人每项限一次；乾纲入魔后打谁就看谁那行的勾）</p><div class="scrollx"><table class="qt" style="table-layout:fixed;min-width:560px"><tr><th class="tl" style="width:86px">角色</th>';
+ EFFECTS.forEach(e=>{h+='<th><span style="color:var(--text-primary);font-weight:600">'+e.n+'</span><br>'+e.d+'</th>'});h+='</tr>';
+ for(let i=0;i<S.n;i++){h+='<tr'+(S.alive[i]?'':' style="opacity:.4"')+'><td class="tl">'+esc(pname(i))+'</td>';
+  EFFECTS.forEach((e,ei)=>{h+='<td>'+(S.used[i].has(ei)?'<span class="chk">✓</span>':'')+'</td>'});
+  h+='</tr>'}
+ return h+'</table></div></div>';
+}
+function revealHtml(r){
+ let h='<div style="margin:10px 0 0"><p style="font-size:14px;font-weight:600;margin:0 0 6px">第 '+r.round+' 轮选择结果</p><div class="grid6">';
+ for(const[i,ei]of r.entries){
+  const same=(i!==S.sq&&ei!==null&&ei===r.sqPick);
+  h+='<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px'+(i===S.sq?';border:2px solid var(--border-accent)':'')+'">'
+  +'<div style="font-size:13px;color:var(--text-secondary)">'+esc(pname(i))+'</div>'
+  +'<div style="font-size:14px;font-weight:600">'+(ei===null?'无可选':EFFECTS[ei].n+' · '+EFFECTS[ei].d)+'</div>';
+  if(i!==S.sq)h+='<span class="pill" style="background:'+(same?'var(--bg-success);color:var(--text-success)':'var(--surface-1);color:var(--text-secondary)')+'">'+(same?'与孙权相同':'与孙权不同')+'</span>';
+  h+='</div>'}
+ h+='</div>';
+ if(r.sqPick!==null&&r.sqPick!==undefined){
+  const total=Math.min(r.match+1,3);
+  h+='<p style="font-size:14px;margin:10px 0 0">与魔孙权选择相同的角色数（含孙权自己）：<b>'+(r.match+1)+'</b> → 魔孙权摸 <b>'+total+'</b> 张牌（至多3）</p>';
+  h+='<p class="sub" style="margin:4px 0 0">本轮魔孙权的【杀】均执行：'+EFFECTS[r.sqPick].n+'（'+EFFECTS[r.sqPick].d+'）'+(S.gg?'，入魔后另执行目标选过的所有效果':'')+'</p>'}
+ return h+'</div>';
+}
+function startPick(){S.order=Array.from({length:S.n},(_,i)=>i).filter(i=>S.alive[i]);S.oi=0;S.picks=Array(S.n).fill(undefined);S.phase='handoff';render()}
+function doPick(ei){S.picks[S.order[S.oi]]=ei;S.phase='handnext';render()}
+function nextPicker(){S.oi++;S.phase=S.oi>=S.order.length?'ready':'handoff';render()}
+function reveal(){
+ const entries=S.order.map(i=>[i,S.picks[i]]);
+ for(const[i,ei]of entries)if(ei!==null&&ei!==undefined)S.used[i].add(ei);
+ const sqPick=S.alive[S.sq]?S.picks[S.sq]:null;
+ let match=0;if(sqPick!==null&&sqPick!==undefined)for(const[i,ei]of entries)if(i!==S.sq&&ei===sqPick)match++;
+ S.lastReveal={round:S.round,entries,sqPick,match};S.phase='revealed';render();
+}
+function toggleAlive(i){S.alive[i]=!S.alive[i];render()}
+function endRound(){
+ const lose=[];
+ if(S.gg&&S.alive[S.sq]&&!S.dmg.sq)lose.push(S.names[S.sq]);
+ S.round++;S.dmg={sq:false};S.te={diff:false,same:false};S.teNote='';S.teFlow=null;S.pc='';S.phase='idle';
+ S.msg=(lose.length?'入魔反噬：'+lose.join('、')+' 本轮未造成伤害，失去1点体力。':'')+'新一轮开始，请进行权御暗选。';
+ render();
+}
+</script>
+</body>
+</html>

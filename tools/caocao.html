@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔曹操 · 覆载装备生成器</title>
+<style>
+:root{
+  --bg:#141013; --bg2:#1d1519; --panel:#241a20; --panel2:#2c2028;
+  --ink:#ece3d4; --ink-soft:#a89684; --line:#3a2c34;
+  --gold:#c9a24a; --gold-soft:#8a7433;
+  --wei:#4a7bb0; --red:#b5473a; --gray:#6b5f56;
+  --wpn:#c07a3a; --arm:#5a86b0;
+  --serif:'Songti SC','SimSun',serif;
+  --kai:'Kaiti SC','KaiTi','STKaiti',serif;
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#efe7d8; --bg2:#e6dcc8; --panel:#faf4e8; --panel2:#f2ead9;
+    --ink:#2a2118; --ink-soft:#6a5c4a; --line:#d8ccb4;
+    --gold:#9a7a26; --gold-soft:#b9a054;
+    --wpn:#a55f22; --arm:#356089;
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  line-height:1.6;padding:16px;max-width:640px;margin:0 auto;
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(201,162,74,.08),transparent 60%);
+}
+h1{font-family:var(--serif);font-weight:900;font-size:22px;letter-spacing:.06em;text-align:center;color:var(--gold)}
+.sub{text-align:center;color:var(--ink-soft);font-size:12.5px;letter-spacing:.1em;margin-top:2px;margin-bottom:18px}
+.covload{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:11px 14px;font-family:var(--kai);font-size:13.5px;color:var(--ink-soft);margin-bottom:16px;
+}
+.covload b{color:var(--gold);font-family:var(--serif)}
+
+/* hp selector */
+.hp-label{font-size:13px;color:var(--ink-soft);letter-spacing:.08em;margin-bottom:8px;text-align:center}
+.hp-row{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.hp-btn{
+  flex:1;min-width:56px;max-width:90px;
+  background:var(--panel);border:1.5px solid var(--line);border-radius:9px;
+  color:var(--ink);font-family:var(--serif);font-size:15px;font-weight:700;
+  padding:12px 4px;cursor:pointer;transition:.12s;text-align:center;
+}
+.hp-btn small{display:block;font-family:sans-serif;font-size:10px;font-weight:400;color:var(--ink-soft);margin-top:2px;letter-spacing:0}
+.hp-btn:active{transform:scale(.96)}
+.hp-btn.on{border-color:var(--gold);background:linear-gradient(var(--panel2),var(--panel));box-shadow:0 0 0 1px var(--gold) inset}
+.hp-btn.on small{color:var(--gold)}
+.special-row{display:flex;gap:7px;justify-content:center;margin-bottom:16px}
+.special-row .hp-btn{max-width:170px}
+
+.gen-btn{
+  width:100%;background:linear-gradient(180deg,#c9a24a,#9a7a26);color:#1a1410;
+  border:none;border-radius:11px;font-family:var(--serif);font-weight:900;
+  font-size:17px;letter-spacing:.14em;padding:14px;cursor:pointer;
+  box-shadow:0 3px 0 rgba(0,0,0,.28);transition:.12s;margin-bottom:6px;
+}
+.gen-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.reroll-note{text-align:center;font-size:11.5px;color:var(--ink-soft);margin-bottom:18px}
+
+/* result cards */
+.result{display:grid;gap:12px;margin-bottom:18px}
+.eq{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:0;overflow:hidden;opacity:0;transform:translateY(8px);
+  animation:rise .32s forwards;
+}
+@keyframes rise{to{opacity:1;transform:none}}
+.eq-head{
+  display:flex;align-items:center;gap:10px;padding:13px 15px 11px;
+  border-bottom:1px solid var(--line);
+}
+.eq-kind{
+  font-family:var(--serif);font-size:11px;font-weight:700;letter-spacing:.1em;
+  padding:3px 9px;border-radius:5px;flex:none;
+}
+.eq-wpn .eq-kind{background:rgba(192,122,58,.18);color:var(--wpn);border:1px solid rgba(192,122,58,.4)}
+.eq-arm .eq-kind{background:rgba(90,134,176,.18);color:var(--arm);border:1px solid rgba(90,134,176,.4)}
+.eq-name{font-family:var(--serif);font-weight:900;font-size:20px;letter-spacing:.04em}
+.eq-wpn .eq-name{color:var(--wpn)} .eq-arm .eq-name{color:var(--arm)}
+.eq-range{margin-left:auto;font-size:12px;color:var(--ink-soft);font-family:var(--serif)}
+.eq-desc{padding:11px 15px 13px;font-family:var(--kai);font-size:14px;color:var(--ink)}
+.eq-tag{display:inline-block;font-size:10.5px;color:var(--gold);border:1px solid var(--gold-soft);border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:1px;font-family:sans-serif}
+.eq-placeholder{
+  text-align:center;color:var(--ink-soft);font-family:var(--kai);font-size:14px;
+  padding:34px 16px;border:1.5px dashed var(--line);border-radius:12px;
+}
+
+/* pools reference */
+details{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+summary{padding:12px 15px;cursor:pointer;font-family:var(--serif);font-weight:700;font-size:14px;color:var(--gold);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"▾";float:right;color:var(--ink-soft)}
+details[open] summary::after{content:"▴"}
+.pool{padding:4px 15px 14px}
+.pool h5{font-family:var(--serif);font-size:13px;color:var(--ink-soft);margin:12px 0 5px;letter-spacing:.06em}
+.pool .chip{
+  display:inline-block;font-family:var(--kai);font-size:12.5px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+  padding:2px 8px;margin:3px 4px 0 0;
+}
+.pool .chip.sp{border-color:var(--gold-soft);color:var(--gold)}
+footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:22px;font-family:var(--kai);line-height:1.7}
+</style>
+</head>
+<body>
+  <h1>魔曹操 · 覆载装备生成器</h1>
+  <div class="sub">MO CAO CAO · 装备随血量而变</div>
+
+  <div class="covload">
+    <b>覆载</b>（锁定技）：你的装备牌只能当【借刀】或【无中生有】使用。若你的装备区里没有牌，你视为装备着一张武器牌和防具牌——武器攻击范围、防具名字字数均与当前体力值挂钩，血量变化时随之更新。
+  </div>
+
+  <div class="hp-label">选择当前体力值</div>
+  <div class="hp-row" id="hpRow">
+    <button class="hp-btn" data-hp="4">4 血<small>方天 / 羽扇</small></button>
+    <button class="hp-btn" data-hp="3">3 血<small>青龙 / 斧 / 丈八</small></button>
+    <button class="hp-btn" data-hp="2">2 血<small>六刀多选</small></button>
+    <button class="hp-btn" data-hp="1">1 血<small>连弩固定</small></button>
+  </div>
+  <div class="special-row">
+    <button class="hp-btn" data-hp="king">主公 / 地主 / 5血<small>麒麟弓 · 防具全随机</small></button>
+  </div>
+
+  <button class="gen-btn" id="genBtn">抽取装备</button>
+  <div class="reroll-note">濒死回复、血量变化后可重新抽取（游戏内会随之刷新）</div>
+
+  <div class="result" id="result">
+    <div class="eq-placeholder">先选血量，再点「抽取装备」</div>
+  </div>
+
+  <details>
+    <summary>装备池与效果一览</summary>
+    <div class="pool">
+      <h5>4 血 · 武器（攻击范围 4）</h5>
+      <span class="chip">方天画戟</span><span class="chip">朱雀羽扇</span>
+      <h5>4 血 · 防具</h5><span class="chip">白银狮子（固定）</span>
+      <h5>3 血 · 武器（攻击范围 3）</h5>
+      <span class="chip">青龙偃月刀</span><span class="chip">贯石斧</span><span class="chip">丈八蛇矛</span>
+      <h5>3 血 · 防具（三字，二选一）</h5><span class="chip">八卦阵</span><span class="chip">仁王盾</span>
+      <h5>2 血 · 武器（攻击范围 2）</h5>
+      <span class="chip">古锭刀</span><span class="chip">青钢剑</span><span class="chip">寒冰剑</span><span class="chip">雌雄双股剑</span><span class="chip sp">七宝刀</span><span class="chip sp">百辟刀</span>
+      <h5>2 血 · 防具</h5><span class="chip">藤甲（固定）</span>
+      <h5>1 血 · 武器</h5><span class="chip">诸葛连弩（固定）</span>
+      <h5>主公 / 地主 / 5 血 · 武器</h5><span class="chip">麒麟弓（固定）</span>
+      <h5>1 血 &amp; 主公/地主/5血 · 防具</h5>
+      <span class="chip">狮子 / 藤甲 / 仁王 / 八卦（全随机）</span>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin-top:12px;font-family:sans-serif"><span class="chip sp" style="margin:0">金色</span> 为魔曹操专属武器（七宝刀 / 百辟刀），非常规装备。</p>
+    </div>
+  </details>
+
+  <footer>
+    技能与装备池以三国杀 OL 现行版本为准 · 完全离线，可加入主屏幕<br>
+    仅辅助线下面杀，不含官方美术素材
+  </footer>
+
+<script>
+// ---- 装备数据：名称 / 攻击范围（武器）/ 效果 ----
+var WPN = {
+  fangtian:{n:'方天画戟',r:4,d:'当你使用【杀】指定唯一目标时，若你的手牌只剩这一张【杀】，你可以额外指定至多两个目标。'},
+  yushan:{n:'朱雀羽扇',r:4,d:'你可以将普通【杀】当火【杀】使用。'},
+  qinglong:{n:'青龙偃月刀',r:3,d:'当你使用【杀】被【闪】抵消后，你可以对该角色再使用一张【杀】（无距离限制）。'},
+  fu:{n:'贯石斧',r:3,d:'当你使用【杀】被【闪】抵消后，你可以弃置两张牌，令此【杀】仍造成伤害。'},
+  zhangba:{n:'丈八蛇矛',r:3,d:'你可以将两张手牌当【杀】使用或打出（颜色不限）。'},
+  guding:{n:'古锭刀',r:2,d:'锁定技，当你使用【杀】造成伤害时，若目标角色没有手牌，此伤害 +1。'},
+  qinggang:{n:'青钢剑',r:2,d:'锁定技，当你使用【杀】指定目标后，无视其防具。'},
+  hanbing:{n:'寒冰剑',r:2,d:'当你使用【杀】对目标造成伤害前，你可以防止此伤害，改为依次弃置其两张牌。'},
+  cixiong:{n:'雌雄双股剑',r:2,d:'当你使用【杀】指定异性目标后，你可以令其选择一项：弃一张手牌，或令你摸一张牌。'},
+  qibao:{n:'七宝刀',r:2,sp:1,d:'魔曹操专属：【杀】无视防具；对满血角色使用【杀】造成的伤害 +1。'},
+  baibi:{n:'百辟刀',r:2,sp:1,d:'魔曹操专属：使用【杀】造成伤害后，获得对方一张手牌。'},
+  nu:{n:'诸葛连弩',r:1,d:'出牌阶段，你使用【杀】无次数限制。'},
+  qilin:{n:'麒麟弓',r:5,d:'当你使用【杀】对目标造成伤害时，你可以弃置其装备区里的一张坐骑牌。'}
+};
+var ARM = {
+  shizi:{n:'白银狮子',d:'锁定技，当你受到伤害时，若此伤害大于 1，防止多余的伤害。当你失去装备区里的【白银狮子】后，你回复 1 点体力。'},
+  bagua:{n:'八卦阵',d:'当你需要使用或打出【闪】时，你可以判定，若结果为红色，视为你使用或打出了一张【闪】。'},
+  renwang:{n:'仁王盾',d:'锁定技，黑色【杀】对你无效。'},
+  tengjia:{n:'藤甲',d:'锁定技，【南蛮入侵】【万箭齐发】及普通【杀】对你无效；但你受到火焰伤害时 +1。'}
+};
+var ALL_ARM = ['shizi','tengjia','renwang','bagua'];
+
+// ---- 各血量对应装备池 ----
+var TABLE = {
+  '4':   {wpn:['fangtian','yushan'],           arm:['shizi']},
+  '3':   {wpn:['qinglong','fu','zhangba'],     arm:['bagua','renwang']},
+  '2':   {wpn:['guding','qinggang','hanbing','cixiong','qibao','baibi'], arm:['tengjia']},
+  '1':   {wpn:['nu'],                          arm:ALL_ARM},
+  'king':{wpn:['qilin'],                       arm:ALL_ARM}
+};
+
+var selHp = null;
+var hpBtns = document.querySelectorAll('.hp-btn');
+hpBtns.forEach(function(b){
+  b.addEventListener('click',function(){
+    hpBtns.forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    selHp = b.getAttribute('data-hp');
+  });
+});
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+document.getElementById('genBtn').addEventListener('click',function(){
+  var res = document.getElementById('result');
+  if(!selHp){
+    res.innerHTML = '<div class="eq-placeholder" style="color:var(--red);border-color:var(--red)">请先在上方选择当前体力值</div>';
+    return;
+  }
+  var t = TABLE[selHp];
+  var w = WPN[pick(t.wpn)];
+  var a = ARM[pick(t.arm)];
+  var wFixed = t.wpn.length===1, aFixed = t.arm.length===1;
+
+  var html = '';
+  html += '<div class="eq eq-wpn" style="animation-delay:0s">'
+        + '<div class="eq-head"><span class="eq-kind">武器</span>'
+        + '<span class="eq-name">'+w.n+(w.sp?'<span class="eq-tag">专属</span>':'')+'</span>'
+        + '<span class="eq-range">攻击范围 '+w.r+(wFixed?' · 固定':'')+'</span></div>'
+        + '<div class="eq-desc">'+w.d+'</div></div>';
+  html += '<div class="eq eq-arm" style="animation-delay:.08s">'
+        + '<div class="eq-head"><span class="eq-kind">防具</span>'
+        + '<span class="eq-name">'+a.n+'</span>'
+        + '<span class="eq-range">'+(aFixed?'固定':'随机')+'</span></div>'
+        + '<div class="eq-desc">'+a.d+'</div></div>';
+  res.innerHTML = html;
+});
+</script>
+</body>
+</html>
