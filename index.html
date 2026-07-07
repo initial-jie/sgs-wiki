@@ -224,7 +224,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     <a class="navlink" data-target="revisions" role="button" tabindex="0">武将技能修正</a>
     <a class="navlink" data-target="replacements" role="button" tabindex="0">同名可替换武将</a>
   </nav>
-  <div class="updated">最近更新：2026-07-06 · v0.6</div>
+  <div class="updated">最近更新：2026-07-07 · v0.7</div>
 </aside>
 
 <main class="main">
@@ -345,6 +345,12 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
           <div class="skill"><span class="skill-name">飞扬</span><span class="skill-text">判定阶段开始时，若你的判定区有牌，你可以弃置两张牌并弃置自己判定区里的所有牌。</span></div>
           <div class="skill"><span class="skill-name">跋扈</span><span class="tag tag-lock">锁定技</span><span class="skill-text">准备阶段，你摸一张牌。出牌阶段，你使用【杀】的次数限制 +1。</span></div>
         </article>
+        <article class="card searchable">
+          <h4>魔·吕布</h4>
+          <div class="tool-link">🎲 狂魔 / 夺炁：使用线下化追踪器 →
+            <button class="tool-open link-style" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开夺炁追踪器</button>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -389,7 +395,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
       </article>
       <article class="tool searchable">
         <h4>魔·孙权 · 权御追踪器</h4>
-        <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。</p>
+        <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
         <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
       </article>
       <article class="tool searchable">
@@ -402,10 +408,10 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
         <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
         <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
       </article>
-      <article class="tool searchable" style="opacity:.7">
-        <h4>魔·吕布 · 追踪器（迭代中）</h4>
-        <p>炁牌账本、狂魔入魔等功能规划中，敬请期待。</p>
-        <span style="font-size:13px;color:var(--ink-soft)">开发中 …</span>
+      <article class="tool searchable">
+        <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
+        <p>开局暗登记全员初始手牌（炁），【夺炁】随机指定与重抽、【狂魔】入魔与击败转移、轮末反噬提醒。对局进度自动保存。</p>
+        <button class="tool-open" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开工具 →</button>
       </article>
     </div>
   </section>
@@ -597,6 +603,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
   <footer>
     <strong>更新记录</strong><br>
+    v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
     v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
     v0.5（2026-07-06）：修正界·张松、界·郭皇后技能为三国杀 OL 现行版本（此前误用了十周年/标风旧版描述，由用户提供准确文本勘误）。<br>
     v0.4（2026-07-06）：目录改为页内滚动跳转（不再弹外链）；线下化工具按武将拆分为魔·司马懿 / 魔·孙权 / 魔·曹操 / 魔·吕布（迭代中）；新增魔·曹操「覆载装备生成器」、魔·孙权工具更新为纯权御追踪器；同名可替换武将新增蜀·界张松、魏·界郭皇后。<br>
