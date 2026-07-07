@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>魔吕布·狂魔夺炁追踪器</title>
+<style>
+:root{
+  --bg:#17110f; --panel:#221a16; --panel2:#2b211c; --line:#4a382c;
+  --ink:#e8dcc8; --ink-dim:#a08e76; --verm:#d64541; --verm-deep:#8e2b28;
+  --gold:#d4af37; --gold-dim:#8a6d1f; --ok:#5a9e6f; --red-suit:#e05c50;
+  --shadow:0 4px 16px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f0e7d3; --panel:#f8f2e2; --panel2:#efe5cd; --line:#c9b591;
+    --ink:#3a2a1e; --ink-dim:#8a765c; --verm:#a4262c; --verm-deep:#7c1d21;
+    --gold:#8a6d1f; --gold-dim:#a98d3c; --ok:#3d7a52; --red-suit:#b3372f;
+    --shadow:0 4px 14px rgba(90,60,20,.18);
+  }
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
+  font-size:16px; line-height:1.55; padding:12px 10px 60px;}
+.wrap{max-width:520px; margin:0 auto;}
+h1{font-size:1.35em; text-align:center; margin:6px 0 2px; letter-spacing:.15em; color:var(--gold);}
+h1 .mo{color:var(--verm);}
+.sub{text-align:center; color:var(--ink-dim); font-size:.82em; margin-bottom:14px; letter-spacing:.08em;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:12px; box-shadow:var(--shadow);}
+.panel h2{font-size:1.02em; margin:0 0 10px; color:var(--gold);
+  border-bottom:1px solid var(--line); padding-bottom:6px; letter-spacing:.12em;}
+.panel h2 .tag{float:right; font-size:.78em; color:var(--ink-dim); letter-spacing:0;}
+button{font-family:inherit; font-size:.95em; border-radius:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--ink); padding:9px 14px; cursor:pointer;}
+button:active{transform:scale(.97);}
+button.primary{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+button.gold{background:transparent; border-color:var(--gold-dim); color:var(--gold);}
+button.ghost{background:transparent; color:var(--ink-dim);}
+button.danger{background:transparent; border-color:var(--verm); color:var(--verm);}
+button.confirm{background:var(--verm); border-color:var(--verm); color:#fff; animation:pulse 1s infinite;}
+button:disabled{opacity:.4; cursor:default;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,65,.5);}50%{box-shadow:0 0 0 6px rgba(214,69,65,0);}}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.row.right{justify-content:flex-end;}
+.grow{flex:1;}
+input[type=text],select{font-family:inherit; font-size:.95em; background:var(--panel2);
+  color:var(--ink); border:1px solid var(--line); border-radius:7px; padding:8px 10px; width:100%;}
+.hint{font-size:.8em; color:var(--ink-dim); margin-top:6px;}
+.notice{background:var(--panel2); border-left:3px solid var(--gold-dim); padding:8px 10px;
+  border-radius:0 7px 7px 0; font-size:.86em; margin:8px 0;}
+.alert{border-left-color:var(--verm); color:var(--verm);}
+.chip{display:inline-block; font-size:.78em; border:1px solid var(--line); border-radius:20px;
+  padding:2px 10px; margin:2px 3px 2px 0; color:var(--ink-dim);}
+.chip.on{border-color:var(--verm); color:var(--verm);}
+.chip.goldc{border-color:var(--gold-dim); color:var(--gold);}
+/* 花色/点数选择 */
+.pickgrid{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0;}
+.pick{min-width:42px; text-align:center; padding:8px 0; font-size:1.05em;}
+.pick.sel{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+.suitred{color:var(--red-suit);}
+.pick.sel .suitred{color:#ffd7d0;}
+.cardslot{border:1px dashed var(--line); border-radius:8px; padding:8px 10px; margin-bottom:10px;}
+.cardslot .slottitle{font-size:.85em; color:var(--ink-dim); margin-bottom:2px;}
+/* 揭示大牌面 —— 签名元素 */
+.reveal{position:relative; margin:10px auto; width:190px; height:250px; border-radius:12px;
+  background:linear-gradient(160deg,var(--panel2),var(--panel));
+  border:2px solid var(--gold-dim); box-shadow:var(--shadow), inset 0 0 30px rgba(0,0,0,.25);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden;}
+.reveal::before{content:"炁"; position:absolute; font-size:150px; color:var(--gold);
+  opacity:.08; top:38px; left:50%; transform:translateX(-50%); pointer-events:none;}
+.reveal .corner{position:absolute; width:22px; height:22px; border-color:var(--gold); border-style:solid;}
+.reveal .c1{top:6px; left:6px; border-width:2px 0 0 2px;}
+.reveal .c2{top:6px; right:6px; border-width:2px 2px 0 0;}
+.reveal .c3{bottom:6px; left:6px; border-width:0 0 2px 2px;}
+.reveal .c4{bottom:6px; right:6px; border-width:0 2px 2px 0;}
+.reveal .sr{font-size:2.6em; font-weight:bold; z-index:1;}
+.reveal .nm{font-size:1.15em; margin-top:4px; z-index:1;}
+.reveal .own{font-size:.8em; color:var(--ink-dim); margin-top:10px; z-index:1;}
+/* 玩家卡 */
+.pcard{border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px;
+  background:var(--panel2);}
+.pcard.dead{opacity:.5;}
+.pcard .pname{font-size:1em;}
+.pcard .pname .lb{color:var(--verm); font-size:.8em; border:1px solid var(--verm);
+  border-radius:4px; padding:0 4px; margin-left:6px;}
+.pcard .pname .kb{color:var(--gold); font-size:.8em; border:1px solid var(--gold-dim);
+  border-radius:4px; padding:0 4px; margin-left:6px;}
+.qidots{margin-top:3px;}
+.qidot{display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:5px;
+  border:1px solid var(--gold-dim); vertical-align:middle;}
+.qidot.pool{background:var(--gold-dim);}
+.qidot.taken{background:transparent; border-style:dashed; opacity:.5;}
+.loglist{font-size:.82em; color:var(--ink-dim); max-height:220px; overflow-y:auto;}
+.loglist div{padding:3px 0; border-bottom:1px dashed var(--line);}
+.qirow{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px dashed var(--line);}
+.qirow .lbl{flex:1;}
+.qirow .src{font-size:.75em; color:var(--ink-dim);}
+details{margin-bottom:12px;}
+summary{cursor:pointer; color:var(--gold); font-size:.95em; letter-spacing:.1em; padding:6px 0;}
+.skilltxt{font-size:.86em; color:var(--ink-dim); padding:4px 8px;}
+.skilltxt b{color:var(--verm);}
+.interstitial{text-align:center; padding:40px 10px;}
+.interstitial .big{font-size:1.5em; color:var(--gold); margin:14px 0; letter-spacing:.1em;}
+.roundbig{font-size:1.4em; color:var(--gold); text-align:center; letter-spacing:.2em; margin:4px 0 10px;}
+.toast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:var(--verm-deep); color:#fff; padding:10px 18px; border-radius:8px;
+  box-shadow:var(--shadow); font-size:.9em; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none;
+  max-width:90%; text-align:center;}
+.toast.show{opacity:1;}
+footer{text-align:center; color:var(--ink-dim); font-size:.72em; margin-top:24px; letter-spacing:.08em;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 状态 ================= */
+const LS_KEY='sgs_lvbu_v1';
+let memStore=null;
+function loadState(){
+  try{const s=localStorage.getItem(LS_KEY); if(s) return JSON.parse(s);}catch(e){ if(memStore) return memStore; }
+  return null;
+}
+function save(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){ memStore=JSON.parse(JSON.stringify(S)); }
+}
+function defaultState(){
+  return {
+    phase:'setup',        // setup | reg | game
+    playerCount:8,
+    lvbuSeat:0,
+    names:[],
+    players:[],           // {id,name,isLvbu,dead,cards:[{s,r,n,st}]}  st: pool|taken
+    regIdx:0, regStage:'hand', // hand=交接页 edit=登记页
+    regDraft:null,
+    entered:false,        // 是否已入魔
+    kuangTarget:null,     // 狂角色 id
+    round:1, dmgThisRound:false,
+    myQi:[],              // {label,from}
+    steal:null,           // {targetId, excluded:[], cur:idx}
+    transfer:null,        // {targetId, queue:[], cur, got, skip}
+    cf:{},                // 两步确认标记
+    log:[]
+  };
+}
+let S=loadState()||defaultState();
+
+const SUITS=[{k:'S',t:'♠',red:false},{k:'H',t:'♥',red:true},{k:'C',t:'♣',red:false},{k:'D',t:'♦',red:true}];
+const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+function suitObj(k){return SUITS.find(s=>s.k===k);}
+function cardLabel(c,html){
+  const s=suitObj(c.s);
+  const sr=s.t+c.r;
+  const nm=c.n?(' '+c.n):'';
+  if(html) return '<span class="'+(s.red?'suitred':'')+'">'+sr+'</span>'+nm;
+  return sr+nm;
+}
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function addLog(msg){
+  const d=new Date();
+  const hm=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  S.log.unshift(hm+'　'+msg);
+  if(S.log.length>200)S.log.pop();
+}
+function cfKey(k){ // 两步确认：第一次点返回false并标记，第二次点返回true
+  if(S.cf[k]){delete S.cf[k]; return true;}
+  S.cf={}; S.cf[k]=true; save(); render();
+  return false;
+}
+function clearCf(){S.cf={};}
+
+/* ================= 渲染入口 ================= */
+function render(){
+  const app=document.getElementById('app');
+  let h='<h1><span class="mo">魔</span>吕布 · 狂魔夺炁追踪器</h1>'
+       +'<div class="sub">面杀辅助 · 离线可用 · 炁牌暗记</div>';
+  h+=skillRef();
+  if(S.phase==='setup') h+=viewSetup();
+  else if(S.phase==='reg') h+=viewReg();
+  else h+=viewGame();
+  h+='<footer>三国杀线下化工具 · 魔吕布 v1.0</footer>';
+  app.innerHTML=h;
+}
+
+/* ================= 技能参考 ================= */
+function skillRef(){
+  return `<details><summary>▸ 技能速查（OL现行）</summary>
+  <div class="skilltxt"><b>【狂魔】</b>出牌阶段，你可以入魔并选择一名其他角色，你与其成为"狂"角色，每回合对彼此首次造成的伤害+1；击败对方后，获得对方所有"炁"。"狂"角色死亡后，你重新指定。入魔后，每轮结束时，若本轮你未造成过伤害，你失去1点体力。</div>
+  <div class="skilltxt"><b>【夺炁】</b>锁定技，一号位首个回合开始前，你执行一个不能使用延时锦囊牌的额外出牌阶段。所有角色的初始手牌称为"炁"。你每回合对一名角色首次造成伤害后，你获得其一张"炁"。</div>
+  <div class="skilltxt"><b>【罡拳】</b>若你使用的上一张牌为"炁"，你可以将一张装备牌当指定相邻角色为目标的火【杀】使用；否则，你可以将一张锦囊牌当【决斗】使用。</div>
+  <div class="notice" style="font-size:.8em">面杀约定：炁标记永久跟随实体牌；夺炁从目标<b>初始4张中未被夺过的</b>里随机指定，实体牌无论当前位于何处均交给吕布；牌暂时移出游戏或已洗回牌堆等无法取得时点"重抽"；每张初始炁至多被夺一次。狂角色仅在被吕布击败时转移全部剩余炁。</div>
+  </details>`;
+}
+
+/* ================= 开局设置 ================= */
+function viewSetup(){
+  if(!S.names.length||S.names.length!==S.playerCount){
+    S.names=Array.from({length:S.playerCount},(_,i)=>S.names[i]||((i+1)+'号位'));
+  }
+  let h='<div class="panel"><h2>开局设置</h2>';
+  h+='<div class="row"><span>玩家人数</span>';
+  for(const n of [3,4,5,6,7,8]){
+    h+=`<button class="pick ${S.playerCount===n?'sel':''}" onclick="setCount(${n})">${n}</button>`;
+  }
+  h+='</div><div class="hint">点选人数后，在下方为各座位命名，并勾选吕布所在座位。</div>';
+  for(let i=0;i<S.playerCount;i++){
+    h+=`<div class="row" style="margin-top:8px">
+      <input type="text" class="grow" value="${esc(S.names[i])}" onchange="setName(${i},this.value)" placeholder="${i+1}号位">
+      <button class="${S.lvbuSeat===i?'primary':'ghost'}" onclick="setLvbu(${i})">${S.lvbuSeat===i?'⚔ 吕布':'吕布?'}</button>
+    </div>`;
+  }
+  h+='<div class="row right" style="margin-top:14px">';
+  h+=`<button class="primary" onclick="startReg()">开始炁牌登记 →</button></div>`;
+  h+='<div class="hint">登记方式：手机依次传给每位玩家（含吕布本人），各自暗中录入初始4张手牌的花色点数与牌名，录完翻页传下家，互不可见。</div>';
+  h+='</div>';
+  return h;
+}
+function setCount(n){S.playerCount=n; if(S.lvbuSeat>=n)S.lvbuSeat=0; S.names=S.names.slice(0,n); save(); render();}
+function setName(i,v){S.names[i]=v.trim()||((i+1)+'号位'); save();}
+function setLvbu(i){S.lvbuSeat=i; save(); render();}
+function startReg(){
+  S.players=S.names.map((n,i)=>({id:i,name:n,isLvbu:i===S.lvbuSeat,dead:false,cards:[]}));
+  S.regIdx=0; S.regStage='hand'; S.regDraft=newDraft();
+  S.phase='reg'; clearCf(); save(); render();
+}
+function newDraft(){return [0,1,2,3].map(()=>({s:null,r:null,n:''}));}
+
+/* ================= 炁牌登记 ================= */
+function viewReg(){
+  const p=S.players[S.regIdx];
+  if(S.regStage==='hand'){
+    return `<div class="panel interstitial">
+      <div>请将手机交给</div>
+      <div class="big">${esc(p.name)}${p.isLvbu?' ⚔':''}</div>
+      <div class="hint">（第 ${S.regIdx+1} / ${S.players.length} 位）请其他玩家回避屏幕</div>
+      <button class="primary" style="margin-top:16px" onclick="regBegin()">我是 ${esc(p.name)}，开始登记</button>
+    </div>`;
+  }
+  let h=`<div class="panel"><h2>${esc(p.name)} 的初始手牌（炁）<span class="tag">${S.regIdx+1}/${S.players.length}</span></h2>`;
+  S.regDraft.forEach((c,ci)=>{
+    h+=`<div class="cardslot"><div class="slottitle">第 ${ci+1} 张</div><div class="pickgrid">`;
+    for(const s of SUITS){
+      h+=`<button class="pick ${c.s===s.k?'sel':''}" onclick="draftSuit(${ci},'${s.k}')"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+    }
+    h+='</div><div class="pickgrid">';
+    for(const r of RANKS){
+      h+=`<button class="pick ${c.r===r?'sel':''}" onclick="draftRank(${ci},'${r}')">${r}</button>`;
+    }
+    h+=`</div><input type="text" placeholder="牌名（如：杀 / 过河拆桥，建议填写以防同花同点混淆）" value="${esc(c.n)}" onchange="draftName(${ci},this.value)">`;
+    h+='</div>';
+  });
+  h+='<div class="row right"><button class="ghost" onclick="regBack()">← 返回交接页</button>';
+  h+='<button class="primary" onclick="regDone()">确认并传给下一位 →</button></div></div>';
+  return h;
+}
+function regBegin(){S.regStage='edit'; save(); render();}
+function regBack(){S.regStage='hand'; save(); render();}
+function draftSuit(ci,k){S.regDraft[ci].s=k; save(); render();}
+function draftRank(ci,r){S.regDraft[ci].r=r; save(); render();}
+function draftName(ci,v){S.regDraft[ci].n=v.trim(); save();}
+function regDone(){
+  for(const c of S.regDraft){
+    if(!c.s||!c.r){toast('还有牌未选花色或点数'); return;}
+  }
+  const p=S.players[S.regIdx];
+  p.cards=S.regDraft.map(c=>({s:c.s,r:c.r,n:c.n,st:'pool'}));
+  if(S.regIdx+1<S.players.length){
+    S.regIdx++; S.regStage='hand'; S.regDraft=newDraft();
+  }else{
+    // 登记完成，进入对局
+    S.phase='game';
+    const lv=S.players.find(x=>x.isLvbu);
+    S.myQi=lv.cards.map(c=>({label:cardLabel(c),from:'初始'}));
+    addLog('对局开始，'+S.players.length+'名玩家炁牌登记完毕');
+  }
+  clearCf(); save(); render();
+}
+
+/* ================= 对局主界面 ================= */
+function alivePlayers(){return S.players.filter(p=>!p.dead);}
+function poolCards(p){return p.cards.map((c,i)=>({c,i})).filter(x=>x.c.st==='pool');}
+
+function viewGame(){
+  let h='';
+  h+=viewStatusBar();
+  if(S.steal) h+=viewSteal();
+  else if(S.transfer) h+=viewTransfer();
+  else{
+    h+=viewStealEntry();
+    h+=viewKuang();
+    if(S.entered) h+=viewRound();
+    h+=viewMyQi();
+    h+=viewPlayers();
+    h+=viewLog();
+    h+=viewReset();
+  }
+  return h;
+}
+
+function viewStatusBar(){
+  const kt=S.kuangTarget!=null?S.players[S.kuangTarget]:null;
+  let h='<div class="panel"><div class="row">';
+  h+=`<span class="chip ${S.entered?'on':''}">${S.entered?'已入魔':'未入魔'}</span>`;
+  if(kt&&!kt.dead) h+=`<span class="chip goldc">狂：${esc(kt.name)}</span>`;
+  if(S.entered) h+=`<span class="chip">第 ${S.round} 轮</span>`;
+  h+='</div>';
+  if(!S.entered&&S.round===1){
+    h+='<div class="notice" style="margin-bottom:0">【夺炁】开局提醒：一号位首个回合开始前，吕布执行一个<b>额外出牌阶段</b>（不能使用延时锦囊牌）。</div>';
+  }
+  if(kt&&!kt.dead){
+    h+='<div class="notice" style="margin-bottom:0">狂：吕布与 '+esc(kt.name)+' <b>每回合对彼此首次造成的伤害+1</b>。</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+/* ---------- 夺炁 ---------- */
+function viewStealEntry(){
+  let h='<div class="panel"><h2>夺 炁<span class="tag">每回合对一名角色首次造成伤害后</span></h2>';
+  h+='<div class="row">';
+  for(const p of S.players){
+    if(p.isLvbu) continue;
+    const n=poolCards(p).length;
+    const dis=p.dead||n===0;
+    h+=`<button ${dis?'disabled':''} onclick="stealStart(${p.id})">${esc(p.name)}<span style="font-size:.75em;color:var(--ink-dim)">（余${n}）</span></button>`;
+  }
+  h+='</div><div class="hint">点被伤害的角色 → 随机指定其一张未被夺过的初始炁 → 该实体牌无论在何处均交给吕布。</div></div>';
+  return h;
+}
+function stealStart(id){
+  const p=S.players[id];
+  const pool=poolCards(p);
+  if(!pool.length){toast(p.name+' 已无炁可夺'); return;}
+  S.steal={targetId:id, excluded:[], cur:null};
+  stealRoll();
+}
+function stealRoll(){
+  const p=S.players[S.steal.targetId];
+  const cand=poolCards(p).filter(x=>!S.steal.excluded.includes(x.i));
+  if(!cand.length){
+    addLog('对 '+p.name+' 夺炁：其余炁均无法取得，本次不夺');
+    toast('该角色剩余炁均无法取得，本次不夺');
+    S.steal=null; clearCf(); save(); render(); return;
+  }
+  S.steal.cur=cand[Math.floor(Math.random()*cand.length)].i;
+  clearCf(); save(); render();
+}
+function viewSteal(){
+  const p=S.players[S.steal.targetId];
+  const c=p.cards[S.steal.cur];
+  let h=`<div class="panel"><h2>夺炁 · ${esc(p.name)}</h2>`;
+  h+=revealCard(c,esc(p.name)+' 的炁');
+  h+='<div class="row" style="justify-content:center;margin-top:10px">';
+  h+=`<button class="primary" onclick="stealGot()">✓ 吕布已取得</button>`;
+  h+=`<button class="gold" onclick="stealReroll()">↻ 无法取得，重抽</button>`;
+  h+='</div><div class="row" style="justify-content:center;margin-top:8px">';
+  h+=`<button class="ghost" onclick="stealCancel()">✕ 取消本次夺炁</button>`;
+  h+='</div><div class="hint" style="text-align:center">这张牌当前在任何角色的任何区域或弃牌堆均可取得；仅当暂时移出游戏或已洗回摸牌堆时选择"重抽"。重抽跳过的牌仍留在炁池中。</div></div>';
+  return h;
+}
+function revealCard(c,ownText){
+  const s=suitObj(c.s);
+  return `<div class="reveal">
+    <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+    <div class="sr ${s.red?'suitred':''}">${s.t}${c.r}</div>
+    <div class="nm">${esc(c.n)||'（未记牌名）'}</div>
+    <div class="own">${ownText}</div>
+  </div>`;
+}
+function stealGot(){
+  const p=S.players[S.steal.targetId];
+  const c=p.cards[S.steal.cur];
+  c.st='taken';
+  S.myQi.push({label:cardLabel(c),from:'夺自'+p.name});
+  addLog('夺炁：从 '+p.name+' 处取得 '+cardLabel(c));
+  toast('已取得 '+cardLabel(c));
+  S.steal=null; clearCf(); save(); render();
+}
+function stealReroll(){
+  const p=S.players[S.steal.targetId];
+  addLog('夺炁：'+p.name+' 的 '+cardLabel(p.cards[S.steal.cur])+' 无法取得，重抽');
+  S.steal.excluded.push(S.steal.cur);
+  stealRoll();
+}
+function stealCancel(){S.steal=null; clearCf(); save(); render();}
+
+/* ---------- 狂魔 ---------- */
+function viewKuang(){
+  const kt=S.kuangTarget!=null?S.players[S.kuangTarget]:null;
+  let h='<div class="panel"><h2>狂 魔</h2>';
+  if(!S.entered){
+    h+='<div class="hint">出牌阶段，吕布可入魔并指定一名其他角色，双方成为"狂"角色。</div>';
+    h+='<div class="row" style="margin-top:8px"><select id="kuangSel" class="grow" onchange="pickKuang(this.value)">';
+    for(const p of alivePlayers()){ if(!p.isLvbu) h+=`<option value="${p.id}" ${S.kuangPick===p.id?'selected':''}>${esc(p.name)}</option>`; }
+    h+='</select>';
+    if(S.cf['enter']) h+=`<button class="confirm" onclick="enterMo()">确认入魔？</button>`;
+    else h+=`<button class="danger" onclick="enterMo()">⚔ 入魔</button>`;
+    h+='</div>';
+    if(S.cf['enter']) h+='<div class="notice alert">入魔后不可撤销：每轮结束时若本轮未造成伤害，失去1点体力。再点一次确认。</div>';
+  }else if(kt&&!kt.dead){
+    h+=`<div class="row"><span class="grow">当前狂角色：<b style="color:var(--gold)">${esc(kt.name)}</b></span></div>`;
+    h+='<div class="row" style="margin-top:8px">';
+    if(S.cf['defeat']) h+=`<button class="confirm" onclick="defeatKuang()">确认由吕布击败？</button>`;
+    else h+=`<button class="danger" onclick="defeatKuang()">⚔ 吕布击败了狂角色</button>`;
+    if(S.cf['kdied']) h+=`<button class="confirm" onclick="kuangDiedOther()">确认非吕布击败？</button>`;
+    else h+=`<button onclick="kuangDiedOther()">☠ 狂角色阵亡（非吕布击败）</button>`;
+    h+='</div>';
+    if(S.cf['defeat']) h+='<div class="notice alert">将逐张结算其全部剩余炁转移给吕布，并标记其阵亡。再点一次确认。</div>';
+    if(S.cf['kdied']) h+='<div class="notice alert">不转移炁，标记其阵亡后重新指定狂角色。再点一次确认。</div>';
+  }else{
+    // 已入魔但狂角色空缺（死亡后）
+    h+='<div class="notice alert">狂角色空缺，需重新指定。</div>';
+    const cands=alivePlayers().filter(p=>!p.isLvbu);
+    if(cands.length){
+      h+='<div class="row"><select id="kuangSel" class="grow" onchange="pickKuang(this.value)">';
+      for(const p of cands) h+=`<option value="${p.id}" ${S.kuangPick===p.id?'selected':''}>${esc(p.name)}</option>`;
+      h+='</select><button class="primary" onclick="rePick()">指定为狂角色</button></div>';
+    }else h+='<div class="hint">已无可指定的存活角色。</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function pickKuang(v){S.kuangPick=parseInt(v,10); save();}
+function curKuangPick(cands){
+  if(S.kuangPick!=null && cands.some(p=>p.id===S.kuangPick)) return S.kuangPick;
+  return cands.length?cands[0].id:null;
+}
+function enterMo(){
+  if(!cfKey('enter')) return;
+  const cands=alivePlayers().filter(p=>!p.isLvbu);
+  const t=curKuangPick(cands);
+  if(t==null){toast('无可指定的角色'); return;}
+  S.entered=true; S.kuangTarget=t; S.kuangPick=null;
+  S.dmgThisRound=false;
+  addLog('吕布入魔，指定 '+S.players[S.kuangTarget].name+' 为狂角色');
+  toast('已入魔 · 狂："'+S.players[S.kuangTarget].name+'"');
+  save(); render();
+}
+function rePick(){
+  const cands=alivePlayers().filter(p=>!p.isLvbu);
+  const t=curKuangPick(cands);
+  if(t==null){toast('无可指定的角色'); return;}
+  S.kuangTarget=t; S.kuangPick=null;
+  addLog('重新指定 '+S.players[S.kuangTarget].name+' 为狂角色');
+  clearCf(); save(); render();
+}
+function defeatKuang(){
+  if(!cfKey('defeat')) return;
+  const p=S.players[S.kuangTarget];
+  p.dead=true;
+  addLog('吕布击败狂角色 '+p.name+'，开始转移其全部剩余炁');
+  const q=poolCards(p).map(x=>x.i);
+  if(!q.length){
+    addLog(p.name+' 已无剩余炁');
+    toast(p.name+' 已无剩余炁');
+    S.kuangTarget=null; save(); render(); return;
+  }
+  S.transfer={targetId:p.id, queue:q, cur:0, got:0, skip:0};
+  save(); render();
+}
+function kuangDiedOther(){
+  if(!cfKey('kdied')) return;
+  const p=S.players[S.kuangTarget];
+  p.dead=true;
+  addLog('狂角色 '+p.name+' 阵亡（非吕布击败），不转移炁');
+  S.kuangTarget=null;
+  save(); render();
+}
+function viewTransfer(){
+  const p=S.players[S.transfer.targetId];
+  const idx=S.transfer.queue[S.transfer.cur];
+  const c=p.cards[idx];
+  let h=`<div class="panel"><h2>狂魔 · 获得 ${esc(p.name)} 的所有炁<span class="tag">${S.transfer.cur+1}/${S.transfer.queue.length}</span></h2>`;
+  h+=revealCard(c,esc(p.name)+' 的炁');
+  h+='<div class="row" style="justify-content:center;margin-top:10px">';
+  h+=`<button class="primary" onclick="transGot()">✓ 已取得</button>`;
+  h+=`<button class="gold" onclick="transSkip()">→ 无法取得，跳过</button>`;
+  h+='</div><div class="hint" style="text-align:center">逐张确认。牌在任何区域或弃牌堆均可取得；仅移出游戏/已洗回摸牌堆时跳过。</div></div>';
+  return h;
+}
+function transGot(){
+  const p=S.players[S.transfer.targetId];
+  const c=p.cards[S.transfer.queue[S.transfer.cur]];
+  c.st='taken';
+  S.myQi.push({label:cardLabel(c),from:'狂魔·'+p.name});
+  addLog('狂魔转移：取得 '+p.name+' 的 '+cardLabel(c));
+  transNext();
+}
+function transSkip(){
+  const p=S.players[S.transfer.targetId];
+  addLog('狂魔转移：'+p.name+' 的 '+cardLabel(p.cards[S.transfer.queue[S.transfer.cur]])+' 无法取得，跳过');
+  S.transfer.skip++;
+  transNext(true);
+}
+function transNext(skipped){
+  if(!skipped) S.transfer.got++;
+  S.transfer.cur++;
+  if(S.transfer.cur>=S.transfer.queue.length){
+    toast('转移完毕：取得 '+S.transfer.got+' 张，跳过 '+S.transfer.skip+' 张');
+    addLog('狂魔转移完毕（取得'+S.transfer.got+'/跳过'+S.transfer.skip+'）');
+    S.transfer=null; S.kuangTarget=null;
+  }
+  clearCf(); save(); render();
+}
+
+/* ---------- 每轮结算 ---------- */
+function viewRound(){
+  let h='<div class="panel"><h2>入魔 · 每轮结算</h2>';
+  h+=`<div class="roundbig">第 ${S.round} 轮</div>`;
+  h+='<div class="row" style="justify-content:center">';
+  h+=`<button class="${S.dmgThisRound?'primary':''}" onclick="toggleDmg()">${S.dmgThisRound?'✓ 本轮吕布已造成伤害':'本轮吕布尚未造成伤害'}</button>`;
+  h+='</div><div class="row" style="justify-content:center;margin-top:10px">';
+  if(S.cf['endr']) h+=`<button class="confirm" onclick="endRound()">确认结束本轮？</button>`;
+  else h+=`<button class="gold" onclick="endRound()">结束本轮 →</button>`;
+  h+='</div>';
+  if(!S.dmgThisRound) h+='<div class="notice alert" style="margin-top:10px">若以此状态结束本轮，吕布<b>失去1点体力</b>。</div>';
+  h+='</div>';
+  return h;
+}
+function toggleDmg(){S.dmgThisRound=!S.dmgThisRound; clearCf(); save(); render();}
+function endRound(){
+  if(!cfKey('endr')) return;
+  if(!S.dmgThisRound){
+    addLog('第'+S.round+'轮结束：本轮未造成伤害，吕布失去1点体力！');
+    toast('⚠ 本轮未造成伤害：吕布失去1点体力！');
+  }else{
+    addLog('第'+S.round+'轮结束：本轮已造成伤害，无需扣体力');
+    toast('第'+S.round+'轮结束');
+  }
+  S.round++; S.dmgThisRound=false;
+  save(); render();
+}
+
+/* ---------- 我的炁 ---------- */
+function viewMyQi(){
+  let h=`<div class="panel"><h2>吕布的炁<span class="tag">罡拳判定用 · 共${S.myQi.length}张</span></h2>`;
+  if(!S.myQi.length) h+='<div class="hint">当前手中无炁。使用装备牌当火杀需"上一张使用的牌为炁"。</div>';
+  S.myQi.forEach((q,i)=>{
+    h+=`<div class="qirow"><span class="lbl">${q.label}</span><span class="src">${esc(q.from)}</span>`;
+    if(S.cf['rmqi'+i]) h+=`<button class="confirm" onclick="rmQi(${i})">确认移除？</button>`;
+    else h+=`<button class="ghost" onclick="rmQi(${i})">已用出/失去</button>`;
+    h+='</div>';
+  });
+  h+='<div class="hint">这里只记吕布手中现存的炁；打出或失去后点移除，方便随时核对【罡拳】"上一张使用的牌为炁"。</div></div>';
+  return h;
+}
+function rmQi(i){
+  if(!cfKey('rmqi'+i)) return;
+  addLog('吕布用出/失去炁：'+S.myQi[i].label);
+  S.myQi.splice(i,1);
+  save(); render();
+}
+
+/* ---------- 玩家总览 ---------- */
+function viewPlayers(){
+  let h='<div class="panel"><h2>炁池总览</h2>';
+  for(const p of S.players){
+    h+=`<div class="pcard ${p.dead?'dead':''}"><div class="row">
+      <span class="pname grow">${esc(p.name)}${p.isLvbu?'<span class="lb">吕布</span>':''}${S.kuangTarget===p.id&&!p.dead?'<span class="kb">狂</span>':''}${p.dead?'　☠':''}</span>`;
+    if(!p.isLvbu&&!p.dead){
+      if(S.cf['die'+p.id]) h+=`<button class="confirm" onclick="markDead(${p.id})">确认阵亡？</button>`;
+      else h+=`<button class="ghost" onclick="markDead(${p.id})">阵亡</button>`;
+    }
+    h+='</div><div class="qidots">';
+    for(const c of p.cards){
+      h+=`<span class="qidot ${c.st}" title="${cardLabel(c)}"></span>`;
+    }
+    const n=poolCards(p).length;
+    h+=`<span style="font-size:.78em;color:var(--ink-dim)">未被夺 ${n} / 4</span></div></div>`;
+  }
+  h+='<div class="hint">实心块=未被夺的初始炁，虚框=已被吕布取得。牌面内容保密，仅显示数量。</div></div>';
+  return h;
+}
+function markDead(id){
+  if(!cfKey('die'+id)) return;
+  const p=S.players[id];
+  if(S.kuangTarget===id){
+    toast('该角色是狂角色，请在"狂魔"面板选择击败方式');
+    clearCf(); save(); render(); return;
+  }
+  p.dead=true;
+  addLog(p.name+' 阵亡');
+  save(); render();
+}
+
+/* ---------- 记录 / 重开 ---------- */
+function viewLog(){
+  let h='<div class="panel"><h2>记 录</h2><div class="loglist">';
+  if(!S.log.length) h+='<div>暂无记录</div>';
+  for(const l of S.log) h+='<div>'+esc(l)+'</div>';
+  h+='</div></div>';
+  return h;
+}
+function viewReset(){
+  let h='<div class="panel"><div class="row right">';
+  if(S.cf['reset']) h+=`<button class="confirm" onclick="resetGame()">确认重开？将清空本局所有记录</button>`;
+  else h+=`<button class="danger" onclick="resetGame()">⟳ 重开一局</button>`;
+  h+='</div><div class="hint" style="text-align:right">保留人数与座位命名，需重新登记炁牌。</div></div>';
+  return h;
+}
+function resetGame(){
+  if(!cfKey('reset')) return;
+  const keep={playerCount:S.playerCount, names:S.names.slice(), lvbuSeat:S.lvbuSeat};
+  S=defaultState();
+  S.playerCount=keep.playerCount; S.names=keep.names; S.lvbuSeat=keep.lvbuSeat;
+  save(); render();
+}
+
+render();
+</script>
+</body>
+</html>

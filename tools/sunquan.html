@@ -92,7 +92,7 @@ footer{text-align:center;font-size:12px;color:var(--text-muted);padding:16px 0 0
 </div>
 <div id="game"></div>
 
-<footer>技能文本以三国杀OL线上现行版本为准</footer>
+<footer>技能文本以三国杀OL线上现行版本为准 · 对局进度自动保存，关闭后重新打开可继续</footer>
 </div>
 
 <script>
@@ -101,6 +101,24 @@ const EFFECTS=[
  {n:'紫电',d:'不可响应'},{n:'百里',d:'额外结算一次'},{n:'流星',d:'无次数限制'}];
 let S=null,L=null;
 const $=id=>document.getElementById(id);
+/* ===== 断线续档：对局状态实时写入 localStorage，重新打开自动恢复 ===== */
+const LSK='sgs_sunquan_v1';
+function save(){
+ try{
+  if(S){
+   const c=Object.assign({},S,{used:S.used.map(s=>Array.from(s))});
+   localStorage.setItem(LSK+'_S',JSON.stringify(c));
+  }else localStorage.removeItem(LSK+'_S');
+  if(L)localStorage.setItem(LSK+'_L',JSON.stringify(L));
+ }catch(e){}
+}
+function load(){
+ try{
+  const l=localStorage.getItem(LSK+'_L');if(l)L=JSON.parse(l);
+  const s=localStorage.getItem(LSK+'_S');
+  if(s){S=JSON.parse(s);S.used=S.used.map(a=>new Set(a));}
+ }catch(e){}
+}
 function seatName(i){return (i+1)+'号位'}
 function renderSetup(keep){
  const n=+$('pcount').value,nr=$('namerows');nr.innerHTML='';
@@ -109,7 +127,10 @@ function renderSetup(keep){
  for(let i=0;i<n;i++){const o=document.createElement('option');o.value=i;o.textContent=seatName(i);s.appendChild(o)}
  if(keep&&L)s.value=L.sq;else s.value='-1';
 }
-$('pcount').onchange=()=>renderSetup(false);renderSetup(false);
+$('pcount').onchange=()=>renderSetup(false);
+load();
+if(S){$('setup').style.display='none';render();}
+else{if(L)$('pcount').value=L.n;renderSetup(!!L);}
 $('startbtn').onclick=()=>{
  const n=+$('pcount').value;
  const sq=+$('sel-sq').value;
@@ -134,20 +155,20 @@ function doGG(){S.gg=true;S.teFlow=null;S.pc='';render()}
 function undoGG(){S.gg=false;S.pc='';render()}
 function doOver(){S.over=true;S.pc='';render()}
 function newGame(){
- S=null;$('game').innerHTML='';
+ S=null;save();$('game').innerHTML='';
  $('setup').style.display='';$('pcount').value=L.n;renderSetup(true);
  window.scrollTo(0,0);
 }
 function render(){
  const g=$('game');let h='';
  if(S.msg){h+='<div class="card msgcard"><span>'+S.msg+'</span></div>';S.msg=''}
- if(S.over){g.innerHTML=h+overHtml();return}
+ if(S.over){g.innerHTML=h+overHtml();save();return}
  h+='<div class="card"><div class="rowline" style="justify-content:space-between;margin:0">'
  +'<span style="font-size:15px;font-weight:600">第 '+S.round+' 轮</span>'
  +'<span style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="endRound()">结束本轮，进入下一轮</button><button onclick="askPc(\'over\')">结束对局</button></span></div>';
  if(S.pc==='over')h+=confirmBox('确定结束本局？将显示对局总结','doOver()');
  if(S.gg){h+='<div style="margin-top:10px">'
-  +'<label style="margin-right:16px"><input type="checkbox" '+(S.dmg.sq?'checked':'')+' onchange="S.dmg.sq=this.checked"> '+esc(S.names[S.sq])+' 本轮已造成伤害</label>'
+  +'<label style="margin-right:16px"><input type="checkbox" '+(S.dmg.sq?'checked':'')+' onchange="S.dmg.sq=this.checked;save()"> '+esc(S.names[S.sq])+' 本轮已造成伤害</label>'
   +'<div class="sub" style="margin-top:4px">入魔角色一轮未造成伤害，该轮结束时失去1点体力</div></div>'}
  h+='</div>';
  h+='<div class="card"><p class="h">角色存活</p><div class="rowline" style="margin:0">';
@@ -155,6 +176,7 @@ function render(){
  h+='</div><div class="sub" style="margin-top:6px">点击名字切换存活/阵亡</div></div>';
  h+=sqPanel();
  g.innerHTML=h;
+ save();
 }
 function overHtml(){
  const surv=[],dead=[];
@@ -209,7 +231,7 @@ function sqPanel(){
   if(S.teFlow&&S.teFlow.step==='target'){
    const cands=teCandidates();
    if(cands.length){
-    h+='<div class="rowline"><label class="sub">目标角色（已排除孙权本人及本轮选择相同者）</label><select onchange="S.teFlow.t=+this.value">';
+    h+='<div class="rowline"><label class="sub">目标角色（已排除孙权本人及本轮选择相同者）</label><select onchange="S.teFlow.t=+this.value;save()">';
     h+='<option value="-1">请选择</option>';
     for(const i of cands)h+='<option value="'+i+'" '+(S.teFlow.t===i?'selected':'')+'>'+esc(pname(i))+'</option>';
     h+='</select><button onclick="teTarget()">确认（随机弃其一张牌后继续）</button><button onclick="S.teFlow=null;render()">取消</button></div>';
@@ -226,7 +248,7 @@ function sqPanel(){
    h+='<button style="margin-top:8px" onclick="S.teFlow=null;render()">取消</button>';
   }
   h+='<div class="rowline" style="margin:8px 0 0">'
-  +'<label><input type="checkbox" '+(S.te.same?'checked':'')+' onchange="S.te.same=this.checked"> 相同项已用（从牌堆得一张杀，不计手牌上限）</label>'
+  +'<label><input type="checkbox" '+(S.te.same?'checked':'')+' onchange="S.te.same=this.checked;save()"> 相同项已用（从牌堆得一张杀，不计手牌上限）</label>'
   +'<button onclick="S.te={diff:false,same:false};S.teNote=\'\';S.teFlow=null;render()">下一回合，重置天恩</button></div>';
   if(S.pc==='gg')h+=confirmBox('确定发动乾纲？魔孙权将永久失去天恩并入魔','doGG()');
   else h+='<button style="margin-top:10px" onclick="askPc(\'gg\')">发动乾纲：失去天恩并入魔</button>';
