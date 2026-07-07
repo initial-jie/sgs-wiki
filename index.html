@@ -67,7 +67,34 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   font-size:14px;padding:5px 8px;border-radius:5px;border-left:3px solid transparent;
 }
 .nav a:hover{background:rgba(163,46,34,.09);border-left-color:var(--seal)}
+.nav-item{display:flex;align-items:stretch}
+.nav-item .navlink{flex:1;min-width:0}
+.nav-toggle{
+  background:none;border:none;cursor:pointer;color:var(--ink-soft);
+  font-size:12px;padding:5px 9px;border-radius:5px;font-family:var(--body);
+  min-width:34px;line-height:1.4;
+}
+.nav-toggle:hover{background:rgba(163,46,34,.09);color:var(--seal)}
+.nav-toggle .caret{display:inline-block;transition:transform .15s}
+.nav-toggle.open .caret{transform:rotate(180deg)}
+.nav-sub{display:none;margin:0 0 4px 12px;border-left:1px solid rgba(60,48,30,.22);padding-left:6px}
+.nav-sub.open{display:block}
+.nav-sub a{font-size:13px;padding:3px 8px;color:var(--ink-soft)}
+.nav-sub a:hover{color:var(--ink)}
 .updated{margin-top:30px;font-size:11px;color:var(--ink-soft);letter-spacing:.05em}
+
+/* ---------- 窄屏势力浮窗 ---------- */
+.nav-pop{
+  position:fixed;z-index:60;display:none;min-width:130px;
+  background:rgba(255,252,244,.98);border:1px solid rgba(60,48,30,.35);
+  border-radius:9px;box-shadow:0 6px 22px rgba(38,33,26,.28);padding:6px;
+}
+.nav-pop.open{display:block}
+.nav-pop a{
+  display:block;padding:10px 16px;font-size:14.5px;border-radius:6px;
+  text-decoration:none;color:var(--ink);cursor:pointer;
+}
+.nav-pop a:hover{background:rgba(163,46,34,.09)}
 
 /* ---------- header & search ---------- */
 .hero h1{font-family:var(--display);font-weight:900;font-size:clamp(26px,4vw,38px);letter-spacing:.03em}
@@ -94,7 +121,8 @@ section{margin-top:52px;scroll-margin-top:24px}
 .sec-note{font-size:13px;color:var(--ink-soft);margin-top:8px}
 
 .faction{margin-top:26px;scroll-margin-top:24px}
-.faction-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.faction-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;user-select:none;border-radius:8px;padding:2px 4px}
+.faction-head:hover{background:rgba(163,46,34,.05)}
 .faction-seal{
   width:34px;height:34px;flex:none;border-radius:6px;
   color:#f6ecd8;font-family:var(--display);font-weight:900;font-size:19px;
@@ -102,6 +130,11 @@ section{margin-top:52px;scroll-margin-top:24px}
   box-shadow:inset 0 0 0 1.5px rgba(246,236,216,.5);
 }
 .faction-head h3{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.06em}
+.fh-count{font-size:12.5px;color:var(--ink-soft)}
+.fh-caret{margin-left:auto;color:var(--ink-soft);font-size:13px;transition:transform .15s;padding:0 6px}
+.faction.folded .fh-caret{transform:rotate(-90deg)}
+.faction.folded .cards{display:none}
+body.searching .faction .cards{display:grid !important}
 .f-shu .faction-seal{background:var(--shu)} .f-wei .faction-seal{background:var(--wei)}
 .f-wu  .faction-seal{background:var(--wu)}  .f-qun .faction-seal{background:var(--qun)}
 .f-jin .faction-seal{background:var(--jin)}
@@ -173,6 +206,11 @@ section{margin-top:52px;scroll-margin-top:24px}
 .ph-chip{font-family:var(--display);font-weight:700;font-size:13px;color:#f6ecd8;padding:2px 12px;border-radius:5px}
 
 footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;font-size:12.5px;color:var(--ink-soft)}
+footer .latest{display:block;margin-top:4px}
+footer details{margin-top:8px}
+footer summary{cursor:pointer;color:var(--seal);font-weight:600;font-size:12.5px}
+footer summary:hover{text-decoration:underline}
+footer .hist{margin-top:8px}
 
 /* ---------- responsive ---------- */
 @media (max-width:860px){
@@ -180,6 +218,9 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   .sidebar{position:static;width:100%;height:auto;border-right:none;border-bottom:1px solid rgba(60,48,30,.25);padding:22px 20px}
   .nav{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:14px}
   .nav-group{width:100%;margin:8px 0 2px}
+  .nav a{padding:10px 10px}
+  .nav-toggle{min-width:44px;min-height:44px;font-size:13px}
+  .nav-sub{display:none !important}   /* 窄屏用浮窗代替内联二级目录 */
   .main{padding:26px 18px 70px}
   .cards{grid-template-columns:1fr}
 }
@@ -217,14 +258,26 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   <div class="site-sub">衍生技 · 衍生牌 · 武将修订</div>
   <nav class="nav" aria-label="页面目录">
     <div class="nav-group">衍生内容</div>
-    <a class="navlink" data-target="derived-skills" role="button" tabindex="0">常见武将牌衍生技</a>
+    <div class="nav-item">
+      <a class="navlink" data-target="derived-skills" role="button" tabindex="0">常见武将牌衍生技</a>
+      <button type="button" class="nav-toggle" data-sec="derived-skills" aria-label="展开势力子目录"><span class="caret">▾</span></button>
+    </div>
+    <div class="nav-sub" id="sub-derived-skills"></div>
     <a class="navlink" data-target="derived-cards" role="button" tabindex="0">常见武将牌衍生牌</a>
     <a class="navlink" data-target="tools" role="button" tabindex="0">线下化工具</a>
     <div class="nav-group">武将修订</div>
-    <a class="navlink" data-target="revisions" role="button" tabindex="0">武将技能修正</a>
-    <a class="navlink" data-target="replacements" role="button" tabindex="0">同名可替换武将</a>
+    <div class="nav-item">
+      <a class="navlink" data-target="revisions" role="button" tabindex="0">武将技能修正</a>
+      <button type="button" class="nav-toggle" data-sec="revisions" aria-label="展开势力子目录"><span class="caret">▾</span></button>
+    </div>
+    <div class="nav-sub" id="sub-revisions"></div>
+    <div class="nav-item">
+      <a class="navlink" data-target="replacements" role="button" tabindex="0">同名可替换武将</a>
+      <button type="button" class="nav-toggle" data-sec="replacements" aria-label="展开势力子目录"><span class="caret">▾</span></button>
+    </div>
+    <div class="nav-sub" id="sub-replacements"></div>
   </nav>
-  <div class="updated">最近更新：2026-07-07 · v0.7</div>
+  <div class="updated">最近更新：2026-07-07 · v0.8</div>
 </aside>
 
 <main class="main">
@@ -241,21 +294,15 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   <!-- ============ 常见武将牌衍生技 ============ -->
   <section id="derived-skills">
     <div class="sec-head"><h2>常见武将牌衍生技</h2><span class="en">DERIVED SKILLS</span></div>
-    <p class="sec-note">按势力分组。<span class="tag tag-lock">锁定技</span><span class="tag tag-limit">限定技</span><span class="tag tag-awake">觉醒技</span>等技能标签已单独标出。</p>
+    <p class="sec-note">按势力分组，组内按武将本名拼音排序（忽略界 / 谋 / 魔等前缀）。点击势力标题可折叠 / 展开。<span class="tag tag-lock">锁定技</span><span class="tag tag-limit">限定技</span><span class="tag tag-awake">觉醒技</span>等技能标签已单独标出。</p>
 
     <!-- 蜀 -->
     <div class="faction f-shu" id="shu-skills">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3><span class="fh-count">6 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
-          <h4>谋·庞统</h4>
-          <div class="skill"><span class="skill-name">飞军</span><span class="skill-text">出牌阶段限一次，你可以弃置一张牌，然后选择一项：1. 令一名手牌数大于你的角色交给你一张牌；2. 令一名装备区里牌数大于你的角色弃置一张装备区里的牌。</span></div>
-          <div class="skill"><span class="skill-name">潜袭</span><span class="skill-text">准备阶段，你可以摸一张牌并弃置一张牌，然后令距离为 1 的一名角色本回合不能使用或打出与你弃置牌颜色相同的手牌。</span></div>
-        </article>
-        <article class="card searchable">
-          <h4>谋·姜维</h4>
-          <div class="skill"><span class="skill-name">诈降</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你失去 1 点体力后，你摸 3 张牌，若在你的出牌阶段，你本回合使用【杀】的次数限制 +1，使用红色【杀】无距离限制且不能被抵消。</span></div>
-          <div class="skill"><span class="skill-name">困奋</span><span class="skill-text">结束阶段，你可以失去 1 点体力，然后摸两张牌。</span></div>
+          <h4>鲍三娘</h4>
+          <div class="skill"><span class="skill-name">征南</span><span class="skill-text">当其他角色死亡后，你可以摸 3 张牌，然后获得【武圣】【当先】【制蛮】中的一个技能。</span></div>
         </article>
         <article class="card searchable">
           <h4>关索</h4>
@@ -264,14 +311,20 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
           <div class="skill"><span class="skill-name">制蛮</span><span class="skill-text">当你对一名其他角色造成伤害时，你可以防止此伤害，改为获得其区域里的一张牌。</span></div>
         </article>
         <article class="card searchable">
-          <h4>鲍三娘</h4>
-          <div class="skill"><span class="skill-name">征南</span><span class="skill-text">当其他角色死亡后，你可以摸 3 张牌，然后获得【武圣】【当先】【制蛮】中的一个技能。</span></div>
+          <h4>谋·姜维</h4>
+          <div class="skill"><span class="skill-name">诈降</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你失去 1 点体力后，你摸 3 张牌，若在你的出牌阶段，你本回合使用【杀】的次数限制 +1，使用红色【杀】无距离限制且不能被抵消。</span></div>
+          <div class="skill"><span class="skill-name">困奋</span><span class="skill-text">结束阶段，你可以失去 1 点体力，然后摸两张牌。</span></div>
         </article>
         <article class="card searchable">
           <h4>界·庞统</h4>
           <div class="skill"><span class="skill-name">火计</span><span class="skill-text">你可以将一张红色牌当做【火攻】使用。你使用的【火攻】修改描述。<span class="paren">（【火攻】：出牌阶段，对一名有手牌的角色使用，令目标角色随机展示其一张手牌。你可以弃置一张与之颜色相同的牌，对目标角色造成 1 点火焰伤害。）</span></span></div>
           <div class="skill"><span class="skill-name">看破</span><span class="skill-text">你可以将一张黑色牌当做【无懈可击】使用。你使用的【无懈可击】不能被响应。</span></div>
           <div class="skill"><span class="skill-name">八阵</span><span class="tag tag-lock">锁定技</span><span class="skill-text">若你的防具栏未被废除且没有牌，你视为拥有【八卦阵】。</span></div>
+        </article>
+        <article class="card searchable">
+          <h4>谋·庞统</h4>
+          <div class="skill"><span class="skill-name">飞军</span><span class="skill-text">出牌阶段限一次，你可以弃置一张牌，然后选择一项：1. 令一名手牌数大于你的角色交给你一张牌；2. 令一名装备区里牌数大于你的角色弃置一张装备区里的牌。</span></div>
+          <div class="skill"><span class="skill-name">潜袭</span><span class="skill-text">准备阶段，你可以摸一张牌并弃置一张牌，然后令距离为 1 的一名角色本回合不能使用或打出与你弃置牌颜色相同的手牌。</span></div>
         </article>
         <article class="card searchable">
           <h4>SP·孙尚香</h4>
@@ -282,7 +335,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
     <!-- 魏 -->
     <div class="faction f-wei" id="wei-skills">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3><span class="fh-count">3 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>曹婴</h4>
@@ -304,7 +357,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
     <!-- 吴 -->
     <div class="faction f-wu" id="wu-skills">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">3 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>界·吕蒙</h4>
@@ -327,18 +380,12 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
     <!-- 群 -->
     <div class="faction f-qun" id="qun-skills">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">4 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>谋·董卓</h4>
           <div class="skill"><span class="skill-name">焚城</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择一名其他角色开始，令所有其他角色依次选择一项：1. 弃置任意张牌（须比上家弃置的牌多）；2. 受到你造成的 2 点火焰伤害。</span></div>
           <div class="skill"><span class="skill-name">崩坏</span><span class="tag tag-lock">锁定技</span><span class="skill-text">结束阶段，若你不是体力值最小的角色，你失去 1 点体力或减少 1 点体力上限。</span></div>
-        </article>
-        <article class="card searchable">
-          <h4>司马徽</h4>
-          <div class="skill"><span class="skill-name">火计</span><span class="skill-text">出牌阶段限三次，你可以将一张红色手牌当【火攻】使用。</span></div>
-          <div class="skill"><span class="skill-name">连环</span><span class="skill-text">出牌阶段限三次，你可以将一张梅花手牌当【铁索连环】重铸或使用。</span></div>
-          <div class="skill"><span class="skill-name">业炎</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择至多三名角色，对其共计造成三点火焰伤害，若你对一名角色分配至少两点火焰伤害，你须先弃置四种花色的手牌并失去三点体力。</span></div>
         </article>
         <article class="card searchable">
           <h4>起·刘宏</h4>
@@ -351,6 +398,12 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
             <button class="tool-open link-style" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开夺炁追踪器</button>
           </div>
         </article>
+        <article class="card searchable">
+          <h4>司马徽</h4>
+          <div class="skill"><span class="skill-name">火计</span><span class="skill-text">出牌阶段限三次，你可以将一张红色手牌当【火攻】使用。</span></div>
+          <div class="skill"><span class="skill-name">连环</span><span class="skill-text">出牌阶段限三次，你可以将一张梅花手牌当【铁索连环】重铸或使用。</span></div>
+          <div class="skill"><span class="skill-name">业炎</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择至多三名角色，对其共计造成三点火焰伤害，若你对一名角色分配至少两点火焰伤害，你须先弃置四种花色的手牌并失去三点体力。</span></div>
+        </article>
       </div>
     </div>
   </section>
@@ -358,20 +411,8 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   <!-- ============ 常见武将牌衍生牌 ============ -->
   <section id="derived-cards">
     <div class="sec-head"><h2>常见武将牌衍生牌</h2><span class="en">DERIVED CARDS</span></div>
-    <p class="sec-note">括号内为该衍生牌的来源武将或装备。</p>
+    <p class="sec-note">按牌名拼音排序。括号内为该衍生牌的来源武将或装备。</p>
     <div class="dcards">
-      <article class="dcard searchable">
-        <span class="dname">出其不意</span><span class="dsrc">（晋·杜预）</span>
-        <div class="dtext">出牌阶段，对一名角色使用。你展示目标角色的一张手牌，若该牌与此【出其不意】花色不同，你对其造成 1 点伤害。</div>
-      </article>
-      <article class="dcard searchable">
-        <span class="dname">推心置腹</span><span class="dsrc">（承·吕布）</span>
-        <div class="dtext">出牌阶段，对距离为 1 的一名其他角色使用。你获得目标角色区域里至多两张牌，然后交给其等量的手牌。</div>
-      </article>
-      <article class="dcard searchable">
-        <span class="dname">趁火打劫</span><span class="dsrc">（承·吕布）</span>
-        <div class="dtext">出牌阶段，对一名其他角色使用。你展示其一张手牌并令其选择一项：1. 将此牌交给你；2. 受到你造成的 1 点伤害。</div>
-      </article>
       <article class="dcard searchable">
         <span class="dname">兵临城下</span><span class="dsrc">（司马昭）</span>
         <div class="dtext">出牌阶段，对一名其他角色使用。你亮出牌堆顶的四张牌，然后依次对目标角色使用其中的【杀】，其余的牌置于牌堆顶。</div>
@@ -380,14 +421,41 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
         <span class="dname">冰【杀】</span><span class="dsrc">（晋·张春华 / 族·荀粲 / 五行鹤翎扇）</span>
         <div class="dtext">出牌阶段，对你攻击范围内的一名其他角色使用，你对该角色造成 1 点冰属性伤害。<span style="color:var(--ink-soft)">（一名角色造成不为连环伤害的冰冻伤害时，若受到此伤害的角色有牌，来源可防止此伤害，然后依次弃置其两张牌。）</span></div>
       </article>
+      <article class="dcard searchable">
+        <span class="dname">趁火打劫</span><span class="dsrc">（承·吕布）</span>
+        <div class="dtext">出牌阶段，对一名其他角色使用。你展示其一张手牌并令其选择一项：1. 将此牌交给你；2. 受到你造成的 1 点伤害。</div>
+      </article>
+      <article class="dcard searchable">
+        <span class="dname">出其不意</span><span class="dsrc">（晋·杜预）</span>
+        <div class="dtext">出牌阶段，对一名角色使用。你展示目标角色的一张手牌，若该牌与此【出其不意】花色不同，你对其造成 1 点伤害。</div>
+      </article>
+      <article class="dcard searchable">
+        <span class="dname">推心置腹</span><span class="dsrc">（承·吕布）</span>
+        <div class="dtext">出牌阶段，对距离为 1 的一名其他角色使用。你获得目标角色区域里至多两张牌，然后交给其等量的手牌。</div>
+      </article>
     </div>
   </section>
 
   <!-- ============ 线下化工具 ============ -->
   <section id="tools">
     <div class="sec-head"><h2>线下化工具</h2><span class="en">OFFLINE TOOLS</span></div>
-    <p class="sec-note">用于将线上专属技能带到桌面对局的辅助工具，手机打开即可使用。</p>
+    <p class="sec-note">用于将线上专属技能带到桌面对局的辅助工具，手机打开即可使用。按武将本名拼音排序。</p>
     <div class="tools">
+      <article class="tool searchable">
+        <h4>魔·曹操 · 覆载装备生成器</h4>
+        <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
+        <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
+      </article>
+      <article class="tool searchable">
+        <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
+        <p>开局暗登记全员初始手牌（炁），【夺炁】随机指定与重抽、【狂魔】入魔与击败转移、轮末反噬提醒。对局进度自动保存。</p>
+        <button class="tool-open" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开工具 →</button>
+      </article>
+      <article class="tool searchable">
+        <h4>南华老仙 · 青书天书生成器</h4>
+        <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
+        <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
+      </article>
       <article class="tool searchable">
         <h4>魔·司马懿 · 骤袭生成器</h4>
         <p>【骤袭】三选一随机器，内置 OL 官方技能池。</p>
@@ -398,31 +466,16 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
         <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
         <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
       </article>
-      <article class="tool searchable">
-        <h4>魔·曹操 · 覆载装备生成器</h4>
-        <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
-        <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>南华老仙 · 青书天书生成器</h4>
-        <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
-        <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
-        <p>开局暗登记全员初始手牌（炁），【夺炁】随机指定与重抽、【狂魔】入魔与击败转移、轮末反噬提醒。对局进度自动保存。</p>
-        <button class="tool-open" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开工具 →</button>
-      </article>
     </div>
   </section>
 
-  <!-- ============ 武将技能修正（占位） ============ -->
+  <!-- ============ 武将技能修正 ============ -->
   <section id="revisions">
     <div class="sec-head"><h2>武将技能修正</h2><span class="en">SKILL REVISIONS</span></div>
-    <p class="sec-note">以下武将在对局中按三国杀 OL 现行技能描述执行（转录自游戏内截图）。</p>
+    <p class="sec-note">以下武将在对局中按三国杀 OL 现行技能描述执行（转录自游戏内截图）。按势力分组，组内按武将本名拼音排序。</p>
 
     <div class="faction f-shu" id="shu-rev">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3><span class="fh-count">1 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>闪·赵云</h4>
@@ -433,24 +486,24 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     </div>
 
     <div class="faction f-wei" id="wei-rev">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3><span class="fh-count">2 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
-        <article class="card searchable">
-          <h4>闪·张辽</h4>
-          <div class="skill"><span class="skill-name">整兵</span><span class="tag tag-conv">群势力技</span><span class="skill-text">出牌阶段限三次，你可以重铸一张牌，若此牌为：【杀】，你的手牌上限 +1；【闪】，你摸一张牌；【桃】或【酒】，此回合结束时，你执行一个额外的出牌阶段。然后若你以此法触发过所有选项，你变更势力至魏。</span></div>
-          <div class="skill"><span class="skill-name">突围</span><span class="tag tag-conv">魏势力技</span><span class="skill-text">出牌阶段开始时，你可以获得攻击范围内任意角色各一张牌，然后回合结束时，其中本回合未受到伤害的角色各获得你一张牌。</span></div>
-        </article>
         <article class="card searchable">
           <h4>族·王广</h4>
           <div class="skill"><span class="skill-name">离论</span><span class="skill-text">出牌阶段限一次，你可以重铸两张牌名相同的牌（不能是本回合以此法重铸过的牌名），然后可以使用一张重铸的牌。</span></div>
           <div class="skill"><span class="skill-name">见机</span><span class="tag tag-limit">限定技</span><span class="skill-text">每名角色的回合结束时，若其相邻角色此回合：1. 未使用过牌，你可以与其各摸一张牌；2. 未成为过牌的目标，你可以视为使用一张【杀】。</span></div>
           <div class="skill"><span class="skill-name">中流</span><span class="tag tag-conv">宗族技</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你使用牌时，若不为同族角色的手牌，你视为未发动武将牌上的技能。</span></div>
         </article>
+        <article class="card searchable">
+          <h4>闪·张辽</h4>
+          <div class="skill"><span class="skill-name">整兵</span><span class="tag tag-conv">群势力技</span><span class="skill-text">出牌阶段限三次，你可以重铸一张牌，若此牌为：【杀】，你的手牌上限 +1；【闪】，你摸一张牌；【桃】或【酒】，此回合结束时，你执行一个额外的出牌阶段。然后若你以此法触发过所有选项，你变更势力至魏。</span></div>
+          <div class="skill"><span class="skill-name">突围</span><span class="tag tag-conv">魏势力技</span><span class="skill-text">出牌阶段开始时，你可以获得攻击范围内任意角色各一张牌，然后回合结束时，其中本回合未受到伤害的角色各获得你一张牌。</span></div>
+        </article>
       </div>
     </div>
 
     <div class="faction f-wu" id="wu-rev">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">1 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>诸葛恪</h4>
@@ -461,7 +514,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     </div>
 
     <div class="faction f-qun" id="qun-rev">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">2 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>闪·刘宏</h4>
@@ -477,19 +530,14 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     </div>
   </section>
 
-  <!-- ============ 同名可替换武将（占位） ============ -->
+  <!-- ============ 同名可替换武将 ============ -->
   <section id="replacements">
     <div class="sec-head"><h2>同名可替换武将</h2><span class="en">INTERCHANGEABLE GENERALS</span></div>
-    <p class="sec-note">与常用实体卡同名、可在面杀中替换使用的武将版本（技能转录自三国杀 OL 截图）。</p>
+    <p class="sec-note">与常用实体卡同名、可在面杀中替换使用的武将版本（技能转录自三国杀 OL 截图）。按势力分组，组内按武将本名拼音排序。</p>
 
     <div class="faction f-shu" id="shu-rep">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3><span class="fh-count">4 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
-        <article class="card searchable">
-          <h4>界·庞统</h4>
-          <div class="skill"><span class="skill-name">连环</span><span class="skill-text">你可以将一张梅花牌当【铁索连环】使用或重铸。你使用【铁索连环】可以多指定一个目标。</span></div>
-          <div class="skill"><span class="skill-name">涅槃</span><span class="tag tag-limit">限定技</span><span class="skill-text">当你处于濒死状态时，你可以：弃置所有牌，复原你的武将牌，摸三张牌，回复至 3 点体力，然后获得【八阵】【火计】【看破】中的一个。<span class="paren">（八阵：锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。火计：你可以将一张红色牌当【火攻】使用。你的【火攻】改为令目标展示随机手牌，你弃置与展示牌颜色相同的牌以造成伤害。看破：见"常见武将牌衍生技"界·庞统。）</span></span></div>
-        </article>
         <article class="card searchable">
           <h4>界·姜维</h4>
           <div class="skill"><span class="skill-name">挑衅</span><span class="skill-text">出牌阶段限一次，你可以选择一名攻击范围内包含你的角色，然后除非其对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后本阶段本技能限两次。</span></div>
@@ -501,6 +549,11 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
           <div class="skill"><span class="skill-name">铁骑</span><span class="skill-text">当你使用【杀】指定目标后，你可以令其本回合非锁定技失效，然后你判定，除非其弃置一张与判定结果花色相同的牌，否则其不能抵消此【杀】。</span></div>
         </article>
         <article class="card searchable">
+          <h4>界·庞统</h4>
+          <div class="skill"><span class="skill-name">连环</span><span class="skill-text">你可以将一张梅花牌当【铁索连环】使用或重铸。你使用【铁索连环】可以多指定一个目标。</span></div>
+          <div class="skill"><span class="skill-name">涅槃</span><span class="tag tag-limit">限定技</span><span class="skill-text">当你处于濒死状态时，你可以：弃置所有牌，复原你的武将牌，摸三张牌，回复至 3 点体力，然后获得【八阵】【火计】【看破】中的一个。<span class="paren">（八阵：锁定技，若你的装备区里没有防具牌，你视为装备着【八卦阵】。火计：你可以将一张红色牌当【火攻】使用。你的【火攻】改为令目标展示随机手牌，你弃置与展示牌颜色相同的牌以造成伤害。看破：见"常见武将牌衍生技"界·庞统。）</span></span></div>
+        </article>
+        <article class="card searchable">
           <h4>界·张松</h4>
           <div class="skill"><span class="skill-name">强识</span><span class="skill-text">出牌阶段开始时，你可以观看一名其他角色的手牌并展示其中一张牌，然后你本阶段使用此类别的牌后可以摸一张牌。</span></div>
           <div class="skill"><span class="skill-name">献图</span><span class="skill-text">其他角色的出牌阶段开始时，你可以摸至多两张牌，然后交给其等量的牌。此阶段结束时，若其造成的伤害小于你以此法交给其的牌数，你失去 1 点体力。</span></div>
@@ -509,7 +562,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     </div>
 
     <div class="faction f-wei" id="wei-rep">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3><span class="fh-count">2 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>界·曹操</h4>
@@ -525,12 +578,22 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     </div>
 
     <div class="faction f-wu" id="wu-rep">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">5 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
+        <article class="card searchable">
+          <h4>界·韩当</h4>
+          <div class="skill"><span class="skill-name">弓骑</span><span class="skill-text">出牌阶段限一次，你可以弃置一张牌使你本回合攻击范围无限，且你使用与弃置的牌花色相同的【杀】无次数限制。若弃置的牌为装备牌，你可以弃置一名其他角色一张牌。</span></div>
+          <div class="skill"><span class="skill-name">解烦</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择一名角色，令所有攻击范围内包含其的角色选择一项：1. 弃置一张武器牌；2. 令该角色摸一张牌。若此时为第一轮，回合结束时，此技能视为未发动过。</span></div>
+        </article>
         <article class="card searchable">
           <h4>界·黄盖</h4>
           <div class="skill"><span class="skill-name">苦肉</span><span class="skill-text">出牌阶段限一次，你可以弃置一张牌，然后失去 1 点体力。</span></div>
           <div class="skill"><span class="skill-name">诈降</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你失去 1 点体力后，你摸三张牌，然后若此时在你的出牌阶段内，则直到回合结束，你使用红色【杀】无距离限制且不能被【闪】响应，且你可以多使用一张【杀】。</span></div>
+        </article>
+        <article class="card searchable">
+          <h4>界·鲁肃</h4>
+          <div class="skill"><span class="skill-name">好施</span><span class="skill-text">摸牌阶段，你可以多摸两张牌，然后若你的手牌数大于 5，你将一半的手牌（向下取整）交给手牌最少的一名其他角色，然后直到你的下回合开始，当你成为【杀】或普通锦囊牌的目标后，其可以交给你一张手牌。</span></div>
+          <div class="skill"><span class="skill-name">缔盟</span><span class="skill-text">出牌阶段限一次，你可以令两名手牌数的差不大于你的牌数的其他角色交换手牌。若如此做，此阶段结束时，你弃置 X 张牌（X 为这两名角色手牌数的差）。</span></div>
         </article>
         <article class="card searchable">
           <h4>界·陆逊</h4>
@@ -542,34 +605,29 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
           <div class="skill"><span class="skill-name">结姻</span><span class="skill-text">出牌阶段限一次，你可以选择一名男性角色，弃置一张手牌或将一张装备牌置入其装备区，然后你与其中体力值较大的角色摸一张牌，体力值较小的角色回复 1 点体力。</span></div>
           <div class="skill"><span class="skill-name">枭姬</span><span class="skill-text">当你失去装备区里的一张牌后，你可以摸两张牌。</span></div>
         </article>
-        <article class="card searchable">
-          <h4>界·韩当</h4>
-          <div class="skill"><span class="skill-name">弓骑</span><span class="skill-text">出牌阶段限一次，你可以弃置一张牌使你本回合攻击范围无限，且你使用与弃置的牌花色相同的【杀】无次数限制。若弃置的牌为装备牌，你可以弃置一名其他角色一张牌。</span></div>
-          <div class="skill"><span class="skill-name">解烦</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择一名角色，令所有攻击范围内包含其的角色选择一项：1. 弃置一张武器牌；2. 令该角色摸一张牌。若此时为第一轮，回合结束时，此技能视为未发动过。</span></div>
-        </article>
-        <article class="card searchable">
-          <h4>界·鲁肃</h4>
-          <div class="skill"><span class="skill-name">好施</span><span class="skill-text">摸牌阶段，你可以多摸两张牌，然后若你的手牌数大于 5，你将一半的手牌（向下取整）交给手牌最少的一名其他角色，然后直到你的下回合开始，当你成为【杀】或普通锦囊牌的目标后，其可以交给你一张手牌。</span></div>
-          <div class="skill"><span class="skill-name">缔盟</span><span class="skill-text">出牌阶段限一次，你可以令两名手牌数的差不大于你的牌数的其他角色交换手牌。若如此做，此阶段结束时，你弃置 X 张牌（X 为这两名角色手牌数的差）。</span></div>
-        </article>
       </div>
     </div>
 
     <div class="faction f-qun" id="qun-rep">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">5 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
-        <article class="card searchable">
-          <h4>许攸</h4>
-          <div class="skill"><span class="skill-name">成略</span><span class="tag tag-conv">转换技</span><span class="skill-text">出牌阶段限一次：阳：你可以摸一张牌并弃置两张手牌；阴：你可以摸两张牌并弃置一张手牌。然后你本阶段使用与弃置牌花色相同的牌无距离和次数限制。</span></div>
-          <div class="skill"><span class="skill-name">恃才</span><span class="skill-text">当你每回合首次使用一种类型的牌后，你可以将之置于牌堆顶，然后摸一张牌。</span></div>
-          <div class="skill"><span class="skill-name">寸目</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你摸牌时，你改为从牌堆底摸牌。</span></div>
-        </article>
         <article class="card searchable">
           <h4>界·董卓</h4>
           <div class="skill"><span class="skill-name">酒池</span><span class="skill-text">你可以将一张黑桃手牌当【酒】使用。你使用【酒】无次数限制。当你使用【酒】【杀】造成伤害后，本回合"崩坏"失效。</span></div>
           <div class="skill"><span class="skill-name">肉林</span><span class="tag tag-lock">锁定技</span><span class="skill-text">你对女性角色使用的【杀】和女性角色对你使用的【杀】均需使用两张【闪】才能抵消。</span></div>
           <div class="skill"><span class="skill-name">崩坏</span><span class="tag tag-lock">锁定技</span><span class="skill-text">结束阶段，若你不是体力值最小的角色，你失去 1 点体力或减少 1 点体力上限。</span></div>
           <div class="skill"><span class="skill-name">暴虐</span><span class="tag tag-lord">主公技</span><span class="skill-text">当其他群势力角色造成 1 点伤害后，你可以判定，若结果为黑桃，你回复 1 点体力并获得此判定牌。</span></div>
+        </article>
+        <article class="card searchable">
+          <h4>刘宏</h4>
+          <div class="skill"><span class="skill-name">鬻爵</span><span class="skill-text">出牌阶段限一次，你可以废除一个装备栏，然后令一名有手牌的其他角色交给你一张手牌，其直到你的下回合开始获得【执笏】。<span class="paren">（执笏：锁定技，每回合限两次，当你对其他角色造成伤害后，你摸两张牌。）</span></span></div>
+          <div class="skill"><span class="skill-name">图兴</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你废除一个装备栏时，你增加 1 点体力上限并回复 1 点体力。当你的所有装备栏首次被废除后，你减少 4 点体力上限，并令你本局造成的伤害 +1。</span></div>
+        </article>
+        <article class="card searchable">
+          <h4>许攸</h4>
+          <div class="skill"><span class="skill-name">成略</span><span class="tag tag-conv">转换技</span><span class="skill-text">出牌阶段限一次：阳：你可以摸一张牌并弃置两张手牌；阴：你可以摸两张牌并弃置一张手牌。然后你本阶段使用与弃置牌花色相同的牌无距离和次数限制。</span></div>
+          <div class="skill"><span class="skill-name">恃才</span><span class="skill-text">当你每回合首次使用一种类型的牌后，你可以将之置于牌堆顶，然后摸一张牌。</span></div>
+          <div class="skill"><span class="skill-name">寸目</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你摸牌时，你改为从牌堆底摸牌。</span></div>
         </article>
         <article class="card searchable">
           <h4>袁术</h4>
@@ -581,16 +639,11 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
           <div class="skill"><span class="skill-name">雄乱</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以指定一名其他角色并废除你的判定区和装备区，然后你本回合对其使用牌无距离和次数限制，其本回合不能使用和打出手牌。</span></div>
           <div class="skill"><span class="skill-name">从谏</span><span class="skill-text">当你成为锦囊牌的目标时，若此牌的目标数大于 1，你可以交给其中一名目标角色一张牌，然后摸一张牌，若你给出的牌是装备牌，改为摸两张牌。</span></div>
         </article>
-        <article class="card searchable">
-          <h4>刘宏</h4>
-          <div class="skill"><span class="skill-name">鬻爵</span><span class="skill-text">出牌阶段限一次，你可以废除一个装备栏，然后令一名有手牌的其他角色交给你一张手牌，其直到你的下回合开始获得【执笏】。<span class="paren">（执笏：锁定技，每回合限两次，当你对其他角色造成伤害后，你摸两张牌。）</span></span></div>
-          <div class="skill"><span class="skill-name">图兴</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当你废除一个装备栏时，你增加 1 点体力上限并回复 1 点体力。当你的所有装备栏首次被废除后，你减少 4 点体力上限，并令你本局造成的伤害 +1。</span></div>
-        </article>
       </div>
     </div>
 
     <div class="faction f-jin" id="jin-rep">
-      <div class="faction-head"><span class="faction-seal" aria-hidden="true">晋</span><h3>晋</h3></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">晋</span><h3>晋</h3><span class="fh-count">1 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
         <article class="card searchable">
           <h4>钟琰</h4>
@@ -602,17 +655,26 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   </section>
 
   <footer>
-    <strong>更新记录</strong><br>
-    v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
-    v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
-    v0.5（2026-07-06）：修正界·张松、界·郭皇后技能为三国杀 OL 现行版本（此前误用了十周年/标风旧版描述，由用户提供准确文本勘误）。<br>
-    v0.4（2026-07-06）：目录改为页内滚动跳转（不再弹外链）；线下化工具按武将拆分为魔·司马懿 / 魔·孙权 / 魔·曹操 / 魔·吕布（迭代中）；新增魔·曹操「覆载装备生成器」、魔·孙权工具更新为纯权御追踪器；同名可替换武将新增蜀·界张松、魏·界郭皇后。<br>
-    v0.3（2026-07-06）：对照三国杀 OL 官方描述勘误——刘宏一技能"爵赏"更正为"鬻爵"；界·鲁肃"缔盟"取消误标的主公技并修正措辞；族·王广"离论"措辞校准；同名可替换武将中"黄盖"更换为 OL"界·黄盖"（苦肉 / 诈降）。<br>
-    v0.2（2026-07-06）：填入"武将技能修正"（蜀 1 / 魏 2 / 吴 1 / 群 2，共 6 将）与"同名可替换武将"（蜀 3 / 魏 1 / 吴 5 / 群 5 / 晋 1，共 15 将）。<br>
-    v0.1（2026-07-06）：建站，收录衍生技 15 名武将、衍生牌 5 张、线下化工具 2 个。
+    <strong>更新记录</strong>
+    <span class="latest">v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。</span>
+    <details>
+      <summary>展开完整更新历史</summary>
+      <div class="hist">
+        v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
+        v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
+        v0.5（2026-07-06）：修正界·张松、界·郭皇后技能为三国杀 OL 现行版本（此前误用了十周年/标风旧版描述，由用户提供准确文本勘误）。<br>
+        v0.4（2026-07-06）：目录改为页内滚动跳转（不再弹外链）；线下化工具按武将拆分为魔·司马懿 / 魔·孙权 / 魔·曹操 / 魔·吕布（迭代中）；新增魔·曹操「覆载装备生成器」、魔·孙权工具更新为纯权御追踪器；同名可替换武将新增蜀·界张松、魏·界郭皇后。<br>
+        v0.3（2026-07-06）：对照三国杀 OL 官方描述勘误——刘宏一技能"爵赏"更正为"鬻爵"；界·鲁肃"缔盟"取消误标的主公技并修正措辞；族·王广"离论"措辞校准；同名可替换武将中"黄盖"更换为 OL"界·黄盖"（苦肉 / 诈降）。<br>
+        v0.2（2026-07-06）：填入"武将技能修正"（蜀 1 / 魏 2 / 吴 1 / 群 2，共 6 将）与"同名可替换武将"（蜀 3 / 魏 1 / 吴 5 / 群 5 / 晋 1，共 15 将）。<br>
+        v0.1（2026-07-06）：建站，收录衍生技 15 名武将、衍生牌 5 张、线下化工具 2 个。
+      </div>
+    </details>
   </footer>
 </main>
 </div>
+
+<!-- 窄屏势力子目录浮窗 -->
+<div class="nav-pop" id="navPop" role="menu"></div>
 
 <!-- 工具 iframe 弹层 -->
 <div class="tool-modal" id="toolModal" role="dialog" aria-modal="true">
@@ -630,6 +692,39 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
 
 <script>
 (function(){
+  /* ---------- 各分区的势力子目录数据 ---------- */
+  var SUBS={
+    'derived-skills':[['蜀','shu-skills'],['魏','wei-skills'],['吴','wu-skills'],['群','qun-skills']],
+    'revisions':[['蜀','shu-rev'],['魏','wei-rev'],['吴','wu-rev'],['群','qun-rev']],
+    'replacements':[['蜀','shu-rep'],['魏','wei-rep'],['吴','wu-rep'],['群','qun-rep'],['晋','jin-rep']]
+  };
+
+  /* ---------- 势力折叠（记忆状态） ---------- */
+  var FOLD_KEY='sgs_wiki_fold_v1';
+  var fold={};
+  try{fold=JSON.parse(localStorage.getItem(FOLD_KEY))||{};}catch(e){}
+  function saveFold(){try{localStorage.setItem(FOLD_KEY,JSON.stringify(fold));}catch(e){}}
+  function setFolded(f,val){
+    f.classList.toggle('folded',val);
+    fold[f.id]=val;
+    var head=f.querySelector('.faction-head');
+    if(head)head.setAttribute('aria-expanded',val?'false':'true');
+    saveFold();
+  }
+  document.querySelectorAll('.faction').forEach(function(f){
+    if(fold[f.id])setFolded(f,true);
+    var head=f.querySelector('.faction-head');
+    head.addEventListener('click',function(){setFolded(f,!f.classList.contains('folded'));});
+    head.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();setFolded(f,!f.classList.contains('folded'));}
+    });
+  });
+  function expandFaction(id){
+    var f=document.getElementById(id);
+    if(f&&f.classList.contains('faction')&&f.classList.contains('folded'))setFolded(f,false);
+  }
+
+  /* ---------- 搜索 ---------- */
   var input=document.getElementById('search');
   var empty=document.getElementById('searchEmpty');
   var items=Array.prototype.slice.call(document.querySelectorAll('.searchable'));
@@ -637,6 +732,7 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   var factions=Array.prototype.slice.call(document.querySelectorAll('.faction'));
   input.addEventListener('input',function(){
     var q=input.value.trim().toLowerCase();
+    document.body.classList.toggle('searching',!!q);  /* 搜索期间强制展开折叠组，清空后恢复原状态 */
     var any=false;
     items.forEach(function(el){
       var hit=!q||el.textContent.toLowerCase().indexOf(q)>-1;
@@ -657,20 +753,85 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
     empty.classList.toggle('show',q&&!any);
   });
 
-  // 目录跳转：用 scrollIntoView 绕过沙盒对 #锚点 的外链拦截
-  var navlinks=document.querySelectorAll('.navlink');
+  /* ---------- 目录跳转（scrollIntoView，跳转前自动展开目标势力组） ---------- */
   function go(id){
+    expandFaction(id);
     var el=document.getElementById(id);
-    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
   }
-  navlinks.forEach(function(a){
-    a.addEventListener('click',function(){ go(a.getAttribute('data-target')); });
+  document.querySelectorAll('.navlink').forEach(function(a){
+    a.addEventListener('click',function(){go(a.getAttribute('data-target'));});
     a.addEventListener('keydown',function(e){
-      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(a.getAttribute('data-target')); }
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();go(a.getAttribute('data-target'));}
     });
   });
 
-  // 工具 iframe 弹层
+  /* ---------- 侧栏势力二级目录：宽屏内联 / 窄屏浮窗 ---------- */
+  var NAVSUB_KEY='sgs_wiki_navsub_v1';
+  var navsub={};
+  try{navsub=JSON.parse(localStorage.getItem(NAVSUB_KEY))||{};}catch(e){}
+  function saveNavsub(){try{localStorage.setItem(NAVSUB_KEY,JSON.stringify(navsub));}catch(e){}}
+  function isNarrow(){return window.matchMedia('(max-width:860px)').matches;}
+
+  /* 生成宽屏内联子目录 */
+  Object.keys(SUBS).forEach(function(sec){
+    var box=document.getElementById('sub-'+sec);
+    if(!box)return;
+    SUBS[sec].forEach(function(pair){
+      var a=document.createElement('a');
+      a.textContent=pair[0];
+      a.setAttribute('role','button');a.setAttribute('tabindex','0');
+      a.addEventListener('click',function(){go(pair[1]);});
+      a.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();go(pair[1]);}
+      });
+      box.appendChild(a);
+    });
+  });
+
+  var pop=document.getElementById('navPop');
+  var popSec=null;
+  function closePop(){pop.classList.remove('open');pop.innerHTML='';popSec=null;}
+  function openPop(btn,sec){
+    pop.innerHTML='';
+    SUBS[sec].forEach(function(pair){
+      var a=document.createElement('a');
+      a.textContent=pair[0]+' 势力';
+      a.addEventListener('click',function(){closePop();go(pair[1]);});
+      pop.appendChild(a);
+    });
+    var r=btn.getBoundingClientRect();
+    pop.style.top=(r.bottom+6)+'px';
+    pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-150))+'px';
+    pop.classList.add('open');
+    popSec=sec;
+  }
+  document.querySelectorAll('.nav-toggle').forEach(function(btn){
+    var sec=btn.getAttribute('data-sec');
+    /* 宽屏：恢复记忆的展开状态 */
+    if(navsub[sec]){
+      var sub=document.getElementById('sub-'+sec);
+      if(sub){sub.classList.add('open');btn.classList.add('open');}
+    }
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(isNarrow()){
+        if(popSec===sec){closePop();}
+        else{openPop(btn,sec);}
+      }else{
+        var sub=document.getElementById('sub-'+sec);
+        var open=sub.classList.toggle('open');
+        btn.classList.toggle('open',open);
+        navsub[sec]=open;saveNavsub();
+      }
+    });
+  });
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('open')&&!pop.contains(e.target))closePop();
+  });
+  window.addEventListener('scroll',function(){if(pop.classList.contains('open'))closePop();},{passive:true});
+
+  /* ---------- 工具 iframe 弹层 ---------- */
   var modal=document.getElementById('toolModal');
   var frame=document.getElementById('tmFrame');
   var tmTitle=document.getElementById('tmTitle');
@@ -696,7 +857,10 @@ footer{margin-top:70px;border-top:1px solid rgba(60,48,30,.3);padding-top:16px;f
   document.getElementById('tmClose').addEventListener('click',closeTool);
   // 点击遮罩空白处（bar 之外）不关闭，避免误触丢状态；仅按钮/ESC 关闭
   document.addEventListener('keydown',function(e){
-    if(e.key==='Escape' && modal.classList.contains('open')) closeTool();
+    if(e.key==='Escape'){
+      if(pop.classList.contains('open')){closePop();return;}
+      if(modal.classList.contains('open'))closeTool();
+    }
   });
 })();
 </script>
