@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标钟琰 · 博览技能生成器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --jin:#8a6db8; --jin-deep:#5d4587;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --jin:#6a4c93; --jin-deep:#563b7c;
+    --ok:#3f7d4e; --warn:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"博";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--jin);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--jin-deep);color:#efe8f8;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-jin{background:linear-gradient(160deg,var(--jin),var(--jin-deep));border-color:transparent;color:#f2ecfa}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.mode-row{display:flex;gap:8px;margin-bottom:10px}
+.mode-btn{flex:1;text-align:center;padding:9px 6px;border:1px solid var(--gold-dim);border-radius:8px;background:var(--panel2);cursor:pointer;font-size:13px;color:var(--ink-dim)}
+.mode-btn.on{border-color:var(--jin);color:var(--ink);background:linear-gradient(160deg,var(--panel2),rgba(138,109,184,.18));box-shadow:inset 0 0 0 1px var(--jin)}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.note-warn{color:var(--warn)}
+input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;color:var(--ink);padding:8px 10px;font-size:14px;font-family:inherit}
+textarea{width:100%;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;color:var(--ink);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:56px}
+.cand{border:1px solid var(--gold-dim);border-left:3px solid var(--jin);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--panel2)}
+.cand .skname{font-size:16px}
+.cand .pick{margin-top:8px;text-align:right}
+.active-banner{border:1px solid var(--jin);border-radius:var(--radius);background:linear-gradient(160deg,rgba(138,109,184,.16),var(--panel));padding:12px 14px;margin-bottom:14px}
+.active-banner .tag{font-size:11px;color:#efe8f8;background:var(--jin-deep);border-radius:20px;padding:1px 8px;letter-spacing:1px}
+.owner-line{font-size:13px;color:var(--ink-dim);margin:4px 0 8px}
+.pool-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--gold-dim)}
+.pool-item:last-child{border-bottom:none}
+.pool-item .tgl{margin-top:4px;flex-shrink:0;width:18px;height:18px;accent-color:var(--jin)}
+.pool-item.off .skilltext{opacity:.35}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+.reminder{border:1px dashed var(--gold-dim);border-radius:8px;padding:8px 12px;margin-top:10px;font-size:13px;color:var(--ink-dim)}
+.reminder .skname{font-size:14px}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.count-pill{font-size:12px;color:var(--ink-dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">晋</span>标钟琰 · 博览技能生成器</h1>
+  <div class="sub">出牌阶段随机三技选一 · 支持他人借技 · v1.0</div>
+</header>
+
+<!-- 技能原文 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖博览〗</span>出牌阶段开始时，你可以从随机三个“出牌阶段限一次”的技能中选择一个获得直到本阶段结束；其他角色的出牌阶段限一次，其可以失去1点体力，令你从随机三个“出牌阶段限一次”的技能中选择一个，其获得之直到此阶段结束。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖仪法〗</span>锁定技，当其他角色使用【杀】或黑色普通锦囊牌指定你为目标后，其手牌上限-1直到其回合结束。</p>
+  </div>
+</section>
+
+<!-- 发动博览 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secRoll')">发动博览<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secRoll">
+    <div class="mode-row">
+      <div class="mode-btn" id="modeSelf" onclick="setMode('self')">钟琰自己发动<br><span style="font-size:11px">出牌阶段开始时</span></div>
+      <div class="mode-btn" id="modeLend" onclick="setMode('lend')">其他角色借技<br><span style="font-size:11px">其失去1点体力</span></div>
+    </div>
+    <div id="lendBox" class="hidden" style="margin-bottom:10px">
+      <input type="text" id="lendNote" placeholder="借技角色备注（选填，如：3号位·反贼）" oninput="setLendNote(this.value)">
+      <div class="note note-warn">提醒：该角色需失去 1 点体力（每名角色的出牌阶段限一次）。选择权在钟琰。</div>
+    </div>
+    <div class="row">
+      <button class="btn btn-jin grow" id="rollBtn" onclick="doRoll()">随机三个技能</button>
+      <span class="count-pill" id="poolCount"></span>
+    </div>
+    <div id="candBox" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- 当前生效技能 -->
+<div id="activeBox"></div>
+
+<!-- 仪法提醒 -->
+<div class="reminder"><span class="skname">仪法常驻提醒：</span>其他角色用【杀】或黑色普通锦囊指定钟琰为目标后，其手牌上限-1直到其回合结束（锁定技，桌面结算）。</div>
+
+<!-- 本局记录 -->
+<section style="margin-top:14px">
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<!-- 技能池管理 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secPool')">技能池管理<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secPool">
+    <div class="note">取消勾选可临时移出随机池；自定义技能可增删。设置在重开一局后保留。</div>
+    <div id="poolBox"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--gold-dim);padding-top:10px">
+      <div class="note">添加自定义技能：</div>
+      <input type="text" id="addName" placeholder="技能名" style="margin-bottom:6px">
+      <textarea id="addText" placeholder="技能描述（OL现行文本）"></textarea>
+      <div style="text-align:right;margin-top:6px"><button class="btn btn-sm" onclick="addCustom()">添加</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 重开 -->
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">清空当前技能与记录，保留技能池设置</div>
+  </div>
+</section>
+
+<footer>标钟琰 · 博览技能生成器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+/* ================= 数据 ================= */
+const BUILTIN = [
+ {id:'qingnang', name:'青囊', text:'出牌阶段限一次，你可以弃置一张手牌，令一名角色回复1点体力。'},
+ {id:'lijian',  name:'离间', text:'出牌阶段限一次，你可以弃置一张牌，令一名男性角色视为对另一名男性角色使用一张【决斗】。'},
+ {id:'quhu',    name:'驱虎', text:'出牌阶段限一次，你可以与体力值大于你的一名角色拼点：若你赢，你令该角色对其攻击范围内的另一名角色造成1点伤害；若你没赢，其对你造成1点伤害。'},
+ {id:'tianyi',  name:'天义', text:'出牌阶段限一次，你可以与一名角色拼点：若你赢，本回合你可以多使用一张【杀】、使用【杀】无距离限制且可以多选择一个目标；若你没赢，本回合你不能使用【杀】。'},
+ {id:'lihun',   name:'离魂', text:'出牌阶段限一次，你可以弃置一张牌并翻面，然后获得一名男性角色的所有手牌。出牌阶段结束时，你将X张牌交给该角色（X为其体力值）。'},
+ {id:'qiangwu', name:'枪舞', text:'出牌阶段限一次，你可以进行判定，然后本回合你使用点数小于判定结果的【杀】无距离限制，点数大于判定结果的【杀】无次数限制。'},
+ {id:'gongxin', name:'攻心', text:'出牌阶段限一次，你可以观看一名其他角色的手牌，然后你可以展示其中一张红桃牌，选择一项：1.弃置此牌；2.将此牌置于牌堆顶。'},
+ {id:'mingce',  name:'明策', text:'出牌阶段限一次，你可以将一张装备牌或【杀】交给一名其他角色，然后其选择一项：1.视为对你选择的另一名角色使用一张【杀】；2.摸一张牌。'},
+ {id:'qice',    name:'奇策', text:'出牌阶段限一次，你可以将所有手牌当任意一张普通锦囊牌使用。'},
+ {id:'mizhao',  name:'密诏', text:'出牌阶段限一次，你可以将所有手牌交给一名其他角色，然后令该角色与另一名其他角色拼点，拼点赢的角色视为对拼点没赢的角色使用一张【杀】。'},
+ {id:'guose',   name:'国色', text:'出牌阶段限一次，你选择一项，然后摸一张牌：1.将一张方块牌当【乐不思蜀】使用；2.弃置一张方块牌并弃置场上的一张【乐不思蜀】。'},
+ {id:'zhiheng', name:'制衡', text:'出牌阶段限一次，你可以弃置任意张牌，然后摸等量的牌。若你以此法弃置了所有的手牌，则额外摸一张牌。'},
+ {id:'jieyin',  name:'结姻', text:'出牌阶段限一次，你可以选择一名男性角色，然后你弃置一张手牌或将一张装备牌置入其装备区。若其体力值小于你，你摸一张牌，其回复1点体力。若其体力值大于你，其摸一张牌，你回复1点体力。'},
+ {id:'qiangxi', name:'强袭', text:'出牌阶段限一次，你可以失去1点体力或弃置一张武器牌，并对你攻击范围内的一名其他角色造成1点伤害。'},
+ {id:'tiaoxin', name:'挑衅', text:'出牌阶段限一次，你可以选择一名攻击范围内含有你的角色，然后除非该角色对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后将此技能修改为出牌阶段限两次直到回合结束。'},
+ {id:'sanchen', name:'三陈', text:'出牌阶段限一次，你可令一名角色摸三张牌，然后弃置三张牌。若其以此法弃置的牌种类均不同，则其摸一张牌，并视为该技能未发动过（本回合不能再指定其为目标）。'},
+ {id:'chuli',   name:'除疠', text:'出牌阶段限一次，你可以选择任意名势力各不相同的其他角色，然后你弃置你和这些角色的各一张牌。被弃置黑桃牌的角色各摸一张牌。'},
+ {id:'daoshu',  name:'盗书', text:'出牌阶段限一次，你可以选择一名角色并选择一种花色，然后获得该角色一张手牌。若此牌与你选择的花色相同，你对其造成1点伤害且此技能视为未发动过；若花色不同，则你交给该角色一张其他花色的手牌（若没有需展示所有手牌）。'}
+];
+const LS_KEY = 'sgs_zhongyan_v1';
+let S = null;
+let memFallback = null;
+let pend = {}; // 两步确认瞬态
+
+function defaultState(){
+  return {
+    pool: BUILTIN.map(s=>({id:s.id,name:s.name,text:s.text,enabled:true,custom:false})),
+    mode:'self', lendNote:'',
+    rolled:null,          // [id,id,id] 或 null
+    active:null,          // {id,name,text,owner:'self'|'lend',note}
+    history:[], seq:0
+  };
+}
+function save(){
+  const raw = JSON.stringify(S);
+  try{ localStorage.setItem(LS_KEY, raw); }catch(e){ memFallback = raw; }
+}
+function load(){
+  let raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){ raw = memFallback; }
+  S = defaultState();
+  if(raw){
+    try{
+      const o = JSON.parse(raw);
+      if(o && Array.isArray(o.pool)) S = Object.assign(defaultState(), o);
+    }catch(e){}
+  }
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function skillById(id){ return S.pool.find(s=>s.id===id) || null; }
+
+/* ================= 逻辑 ================= */
+function setMode(m){ S.mode = m; save(); render(); }
+function setLendNote(v){ S.lendNote = v; save(); }
+function doRoll(){
+  const enabled = S.pool.filter(s=>s.enabled);
+  if(enabled.length===0){ S.rolled = []; save(); render(); return; }
+  const bag = enabled.slice();
+  const picked = [];
+  const n = Math.min(3, bag.length);
+  for(let i=0;i<n;i++){
+    const k = Math.floor(Math.random()*bag.length);
+    picked.push(bag.splice(k,1)[0].id);
+  }
+  S.rolled = picked;
+  pend = {};
+  save(); render();
+}
+function cancelRoll(){ S.rolled = null; save(); render(); }
+function choose(id){
+  const sk = skillById(id);
+  if(!sk || !S.rolled) return;
+  S.seq++;
+  const owner = S.mode==='lend' ? 'lend' : 'self';
+  S.active = {id:sk.id, name:sk.name, text:sk.text, owner:owner, note: owner==='lend'?S.lendNote:''};
+  S.history.push({n:S.seq, name:sk.name, owner:owner, note: owner==='lend'?S.lendNote:'', cand:S.rolled.map(x=>{const c=skillById(x);return c?c.name:x;})});
+  S.rolled = null;
+  if(owner==='lend') S.lendNote='';
+  save(); render();
+}
+function endActive(){
+  if(!pend.endActive){ pend.endActive=true; render(); setTimeout(()=>{ if(pend.endActive){pend.endActive=false; render();} },4000); return; }
+  pend.endActive=false;
+  S.active=null; save(); render();
+}
+function togglePool(id){
+  const sk = skillById(id); if(!sk) return;
+  sk.enabled = !sk.enabled; save(); render();
+}
+function addCustom(){
+  const nameEl = document.getElementById('addName');
+  const textEl = document.getElementById('addText');
+  addCustomData(nameEl.value, textEl.value);
+  nameEl.value=''; textEl.value='';
+}
+function addCustomData(name, text){
+  name = String(name||'').trim(); text = String(text||'').trim();
+  if(!name) return;
+  S.pool.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), name:name, text:text||'（未填写描述）', enabled:true, custom:true});
+  save(); render();
+}
+function removeCustom(id){
+  if(pend.rm !== id){ pend.rm = id; render(); setTimeout(()=>{ if(pend.rm===id){pend.rm=null; render();} },4000); return; }
+  pend.rm = null;
+  S.pool = S.pool.filter(s=>s.id!==id);
+  save(); render();
+}
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{ if(pend.reset){pend.reset=false; render();} },5000); return; }
+  pend.reset=false;
+  const keepPool = S.pool;
+  S = defaultState();
+  S.pool = keepPool;
+  save(); render();
+}
+
+/* ================= 渲染 ================= */
+function toggleSec(id){
+  const b = document.getElementById(id);
+  if(!b) return;
+  b.classList.toggle('hidden');
+  const h = b.previousElementSibling;
+  if(h && h.classList) h.classList.toggle('open', !b.classList.contains('hidden'));
+}
+function render(){
+  // 模式
+  const mSelf = document.getElementById('modeSelf');
+  const mLend = document.getElementById('modeLend');
+  if(mSelf && mSelf.classList){ mSelf.classList.toggle('on', S.mode==='self'); }
+  if(mLend && mLend.classList){ mLend.classList.toggle('on', S.mode==='lend'); }
+  const lendBox = document.getElementById('lendBox');
+  if(lendBox && lendBox.classList){ lendBox.classList.toggle('hidden', S.mode!=='lend'); }
+  const lendInput = document.getElementById('lendNote');
+  if(lendInput && lendInput.value !== S.lendNote) lendInput.value = S.lendNote;
+  // 池计数
+  const pc = document.getElementById('poolCount');
+  if(pc) pc.textContent = '池内 '+S.pool.filter(s=>s.enabled).length+' / '+S.pool.length;
+  // 候选
+  const cb = document.getElementById('candBox');
+  if(cb){
+    if(S.rolled===null){ cb.innerHTML=''; }
+    else if(S.rolled.length===0){ cb.innerHTML='<div class="note note-warn">技能池为空，请先在下方启用技能。</div>'; }
+    else{
+      let h = '<div class="note">'+(S.rolled.length<3?'池内不足三个，已全部列出：':'三选一（由钟琰选择）：')+'</div>';
+      S.rolled.forEach(id=>{
+        const sk = skillById(id); if(!sk) return;
+        h += '<div class="cand"><div class="skilltext"><span class="skname">〖'+esc(sk.name)+'〗</span>'+esc(sk.text)+'</div>'+
+             '<div class="pick"><button class="btn btn-sm btn-primary" onclick="choose(\''+sk.id+'\')">选定此技</button></div></div>';
+      });
+      h += '<div style="text-align:right"><button class="btn btn-sm" onclick="cancelRoll()">取消本次</button></div>';
+      cb.innerHTML = h;
+    }
+  }
+  // 当前生效
+  const ab = document.getElementById('activeBox');
+  if(ab){
+    if(!S.active){ ab.innerHTML=''; }
+    else{
+      const a = S.active;
+      const ownerTxt = a.owner==='self' ? '归属：钟琰自己 · 直到本出牌阶段结束'
+        : '归属：其他角色'+(a.note?'（'+esc(a.note)+'）':'')+' · 其已失去1点体力 · 直到此阶段结束';
+      ab.innerHTML = '<div class="active-banner"><span class="tag">本阶段生效</span>'+
+        '<div class="skilltext" style="margin-top:8px"><span class="skname" style="font-size:18px">〖'+esc(a.name)+'〗</span>'+esc(a.text)+'</div>'+
+        '<div class="owner-line">'+ownerTxt+'</div>'+
+        '<div style="text-align:right"><button class="btn btn-sm '+(pend.endActive?'btn-confirm':'')+'" onclick="endActive()">'+(pend.endActive?'再点一次确认结束':'出牌阶段结束 · 移除')+'</button></div></div>';
+    }
+  }
+  // 记录
+  const lb = document.getElementById('logBox');
+  if(lb){
+    if(S.history.length===0){ lb.innerHTML='暂无记录'; }
+    else{
+      lb.innerHTML = S.history.slice().reverse().map(h=>{
+        return '<div class="log-item">第'+h.n+'次 · <b>〖'+esc(h.name)+'〗</b> · '+(h.owner==='self'?'钟琰自己':'借技'+(h.note?'（'+esc(h.note)+'）':''))+
+          '<br><span style="font-size:11px">候选：'+h.cand.map(esc).join(' / ')+'</span></div>';
+      }).join('');
+    }
+  }
+  // 池
+  const pb = document.getElementById('poolBox');
+  if(pb){
+    pb.innerHTML = S.pool.map(sk=>{
+      let rm = '';
+      if(sk.custom){
+        rm = '<button class="btn btn-sm '+(pend.rm===sk.id?'btn-confirm':'')+'" onclick="removeCustom(\''+sk.id+'\')">'+(pend.rm===sk.id?'确认删除':'删除')+'</button>';
+      }
+      return '<div class="pool-item'+(sk.enabled?'':' off')+'">'+
+        '<input class="tgl" type="checkbox" '+(sk.enabled?'checked':'')+' onchange="togglePool(\''+sk.id+'\')">'+
+        '<div class="grow skilltext"><span class="skname">〖'+esc(sk.name)+'〗</span>'+(sk.custom?'<span style="font-size:11px;color:var(--ink-dim)">（自定义）</span>':'')+esc(sk.text)+'</div>'+rm+'</div>';
+    }).join('');
+  }
+  // 重开按钮
+  const rb = document.getElementById('resetBtn');
+  if(rb){
+    rb.textContent = pend.reset ? '再点一次确认重开' : '重开一局';
+    if(rb.classList) rb.classList.toggle('btn-confirm', !!pend.reset);
+  }
+}
+/* ================= 启动 ================= */
+load();
+render();
+</script>
+</body>
+</html>

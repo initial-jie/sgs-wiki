@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>袁姬 · 镜花水月追踪器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --wu:#4f9e77; --wu-deep:#2f7a56;
+  --ok:#5f9e6e; --warn:#c8873a; --bad:#b0574a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --wu:#2e7d5b; --wu-deep:#236247;
+    --ok:#3f7d4e; --warn:#a06a24; --bad:#a04a3d;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"鏡";position:absolute;right:44px;top:-16px;font-size:80px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--wu);opacity:.12;pointer-events:none}
+header::after{content:"月";position:absolute;right:-8px;top:8px;font-size:80px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--gold);opacity:.10;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--wu-deep);color:#e9f5ef;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-wu{background:linear-gradient(160deg,var(--wu),var(--wu-deep));border-color:transparent;color:#eef8f2}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.note-warn{color:var(--warn)}
+input[type=text]{background:var(--bg2);border:1px solid var(--gold-dim);border-radius:6px;color:var(--ink);padding:5px 8px;font-size:13px;font-family:inherit}
+/* 节言状态 */
+.jieyan-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-pill{font-size:13px;padding:4px 12px;border-radius:20px;letter-spacing:1px}
+.status-ok{background:rgba(95,158,110,.18);color:var(--ok);border:1px solid var(--ok)}
+.status-bad{background:rgba(176,87,74,.15);color:var(--bad);border:1px solid var(--bad)}
+/* 流程 */
+.flow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.flow-card{border:1px solid var(--gold-dim);border-radius:8px;padding:10px;background:var(--panel2);text-align:center}
+.flow-card .when{font-size:11px;color:var(--ink-dim);letter-spacing:1px}
+.flow-card .dir{font-size:12px;color:var(--gold);margin:2px 0 8px;font-family:"Kaiti SC","STKaiti",KaiTi,serif}
+/* 持有区 */
+.zone{border:1px solid var(--gold-dim);border-radius:8px;margin-top:10px;overflow:hidden}
+.zone-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--panel2);border-bottom:1px solid var(--gold-dim)}
+.zone-h .zt{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px}
+.zone-jh .zt{color:var(--wu)}
+.zone-sy .zt{color:var(--gold)}
+.zone-b{padding:8px 12px}
+.card-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--gold-dim)}
+.card-row:last-child{border-bottom:none}
+.card-row .mark{flex-shrink:0;width:26px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:#fff}
+.zone-jh .mark{background:linear-gradient(160deg,var(--wu),var(--wu-deep))}
+.zone-sy .mark{background:linear-gradient(160deg,var(--gold),#9a7736)}
+.card-row input{flex:1;min-width:0}
+.prompt{border:1px solid var(--wu);border-radius:var(--radius);background:linear-gradient(160deg,rgba(79,158,119,.14),var(--panel));padding:12px 14px;margin-bottom:14px}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">吴</span>袁姬 · 镜花水月追踪器</h1>
+  <div class="sub">标记牌台账 · 节言状态 · v1.0</div>
+</header>
+
+<!-- 技能原文 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖节言〗</span>一名角色一次性失去了恰好两张手牌后，你可以与其从牌堆两端各摸一张牌并展示，若花色不同，此技能本回合失效。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖镜花〗</span>锁定技，每轮开始时，你摸两张牌。回合开始时，你将“镜花”牌置于牌堆底。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖水月〗</span>锁定技，回合结束时，你摸两张牌。每轮结束时，你将“水月”牌置于牌堆顶。</p>
+    <div class="note">线下配套建议：用两种颜色的卡夹/回形针分别标记镜花牌与水月牌；牌离开手牌区即摘除标记并在本工具中点“消散”。</div>
+  </div>
+</section>
+
+<!-- 节言状态 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secJieyan')">节言状态<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secJieyan">
+    <div class="jieyan-bar">
+      <span class="status-pill" id="jyPill"></span>
+      <button class="btn btn-sm" id="jyResetBtn" onclick="resetJieyan()">新回合 · 重置</button>
+      <button class="btn btn-sm" onclick="manualJieyan()">手动发动节言</button>
+    </div>
+    <div class="note">任意角色一次性失去恰好两张手牌均可发动（含袁姬自己归位镜花/水月各2张时）。“本回合失效”指当前回合，回合切换后点重置。</div>
+  </div>
+</section>
+
+<!-- 节言结算面板 -->
+<div id="promptBox"></div>
+
+<!-- 流程 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secFlow')">回合流程<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secFlow">
+    <div class="flow">
+      <div class="flow-card">
+        <div class="when">① 每轮开始</div>
+        <div class="dir">摸两张 → 标记镜花</div>
+        <button class="btn btn-sm btn-wu" onclick="addCards('jh',2)">＋2 镜花</button>
+      </div>
+      <div class="flow-card">
+        <div class="when">② 袁姬回合开始</div>
+        <div class="dir">镜花牌 ⬇ 置于牌堆底</div>
+        <button class="btn btn-sm" id="placeJhBtn" onclick="placeZone('jh')">归位（底）</button>
+      </div>
+      <div class="flow-card">
+        <div class="when">③ 袁姬回合结束</div>
+        <div class="dir">摸两张 → 标记水月</div>
+        <button class="btn btn-sm btn-wu" onclick="addCards('sy',2)">＋2 水月</button>
+      </div>
+      <div class="flow-card">
+        <div class="when">④ 每轮结束</div>
+        <div class="dir">水月牌 ⬆ 置于牌堆顶</div>
+        <button class="btn btn-sm" id="placeSyBtn" onclick="placeZone('sy')">归位（顶）</button>
+      </div>
+    </div>
+
+    <!-- 镜花持有区 -->
+    <div class="zone zone-jh">
+      <div class="zone-h"><span class="zt">镜花牌（归牌堆底）</span>
+        <span class="row"><span class="note" id="jhCount" style="margin:0"></span><button class="btn btn-sm" onclick="addCards('jh',1)">＋1</button></span>
+      </div>
+      <div class="zone-b" id="jhBox"></div>
+    </div>
+    <!-- 水月持有区 -->
+    <div class="zone zone-sy">
+      <div class="zone-h"><span class="zt">水月牌（归牌堆顶）</span>
+        <span class="row"><span class="note" id="syCount" style="margin:0"></span><button class="btn btn-sm" onclick="addCards('sy',1)">＋1</button></span>
+      </div>
+      <div class="zone-b" id="syBox"></div>
+    </div>
+    <div class="note">牌名选填，仅供袁姬自己备忘；牌因使用/弃置/被拿走等离开手牌时点“消散”。</div>
+  </div>
+</section>
+
+<!-- 本局记录 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<!-- 重开 -->
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">清空所有标记牌与记录</div>
+  </div>
+</section>
+
+<footer>袁姬 · 镜花水月追踪器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+const LS_KEY = 'sgs_yuanji_v1';
+let S = null;
+let memFallback = null;
+let pend = {};
+
+function defaultState(){
+  return {
+    jh: [],            // 镜花 [{id,name}]
+    sy: [],            // 水月
+    jieyan: 'ok',      // 'ok' | 'off'
+    prompt: null,      // {source:'jh'|'sy'|'manual', n:2}
+    log: [], seq: {jh:0, sy:0}
+  };
+}
+function save(){
+  const raw = JSON.stringify(S);
+  try{ localStorage.setItem(LS_KEY, raw); }catch(e){ memFallback = raw; }
+}
+function load(){
+  let raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){ raw = memFallback; }
+  S = defaultState();
+  if(raw){
+    try{
+      const o = JSON.parse(raw);
+      if(o && Array.isArray(o.jh) && Array.isArray(o.sy)) S = Object.assign(defaultState(), o);
+    }catch(e){}
+  }
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function addLog(t){ S.log.push(t); if(S.log.length>80) S.log.shift(); }
+
+/* ============ 逻辑 ============ */
+function addCards(zone, n){
+  for(let i=0;i<n;i++){
+    S.seq[zone]++;
+    S[zone].push({id:zone+S.seq[zone]+'_'+Date.now()%100000, name:''});
+  }
+  addLog((zone==='jh'?'镜花':'水月')+' +'+n+'（现持有'+S[zone].length+'）');
+  save(); render();
+}
+function editName(zone, id, v){
+  const c = S[zone].find(x=>x.id===id);
+  if(c){ c.name = v; save(); }
+}
+function dissipate(zone, id){
+  const key = 'dp_'+id;
+  if(!pend[key]){ pend[key]=true; render(); setTimeout(()=>{ if(pend[key]){pend[key]=false; render();} },4000); return; }
+  pend[key]=false;
+  const c = S[zone].find(x=>x.id===id);
+  S[zone] = S[zone].filter(x=>x.id!==id);
+  addLog((zone==='jh'?'镜花':'水月')+'牌消散'+(c&&c.name?'（'+c.name+'）':''));
+  save(); render();
+}
+function placeZone(zone){
+  const key = 'pl_'+zone;
+  const n = S[zone].length;
+  if(n===0){ addLog((zone==='jh'?'镜花':'水月')+'归位：当前无标记牌'); save(); render(); return; }
+  if(!pend[key]){ pend[key]=true; render(); setTimeout(()=>{ if(pend[key]){pend[key]=false; render();} },4000); return; }
+  pend[key]=false;
+  S[zone] = [];
+  addLog((zone==='jh'?'镜花 '+n+' 张置于牌堆底':'水月 '+n+' 张置于牌堆顶'));
+  if(n===2 && S.jieyan==='ok'){
+    S.prompt = {source:zone, n:2};
+  }
+  save(); render();
+}
+function manualJieyan(){
+  if(S.jieyan!=='ok'){ addLog('节言本回合已失效，无法发动'); save(); render(); return; }
+  S.prompt = {source:'manual', n:2};
+  save(); render();
+}
+function jieyanResult(same){
+  if(!S.prompt) return;
+  if(same){
+    addLog('节言：两端各摸一张展示，花色相同，技能保持有效');
+  }else{
+    S.jieyan = 'off';
+    addLog('节言：花色不同，本回合失效');
+  }
+  S.prompt = null;
+  save(); render();
+}
+function jieyanSkip(){
+  if(!S.prompt) return;
+  addLog('节言：本次放弃发动');
+  S.prompt = null;
+  save(); render();
+}
+function resetJieyan(){
+  S.jieyan = 'ok';
+  addLog('新回合：节言状态重置为有效');
+  save(); render();
+}
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{ if(pend.reset){pend.reset=false; render();} },5000); return; }
+  pend.reset=false;
+  S = defaultState();
+  save(); render();
+}
+
+/* ============ 渲染 ============ */
+function toggleSec(id){
+  const b = document.getElementById(id);
+  if(!b) return;
+  b.classList.toggle('hidden');
+  const h = b.previousElementSibling;
+  if(h && h.classList) h.classList.toggle('open', !b.classList.contains('hidden'));
+}
+function renderZone(zone, boxId, countId){
+  const box = document.getElementById(boxId);
+  const cnt = document.getElementById(countId);
+  if(cnt) cnt.textContent = S[zone].length+' 张';
+  if(!box) return;
+  if(S[zone].length===0){ box.innerHTML = '<div class="note" style="margin:2px 0">当前无'+(zone==='jh'?'镜花':'水月')+'标记牌</div>'; return; }
+  box.innerHTML = S[zone].map((c,i)=>{
+    const key='dp_'+c.id;
+    return '<div class="card-row">'+
+      '<div class="mark">'+(zone==='jh'?'镜':'月')+'</div>'+
+      '<input type="text" value="'+esc(c.name)+'" placeholder="牌名备忘（选填）" oninput="editName(\''+zone+'\',\''+c.id+'\',this.value)">'+
+      '<button class="btn btn-sm '+(pend[key]?'btn-confirm':'')+'" onclick="dissipate(\''+zone+'\',\''+c.id+'\')">'+(pend[key]?'确认':'消散')+'</button>'+
+      '</div>';
+  }).join('');
+}
+function render(){
+  const pill = document.getElementById('jyPill');
+  if(pill){
+    pill.textContent = S.jieyan==='ok' ? '节言 · 有效' : '节言 · 本回合失效';
+    pill.className = 'status-pill '+(S.jieyan==='ok'?'status-ok':'status-bad');
+  }
+  const pb = document.getElementById('promptBox');
+  if(pb){
+    if(!S.prompt){ pb.innerHTML=''; }
+    else{
+      const srcTxt = S.prompt.source==='jh' ? '镜花归位恰好2张，袁姬自身可发动节言'
+        : S.prompt.source==='sy' ? '水月归位恰好2张，袁姬自身可发动节言'
+        : '有角色一次性失去恰好两张手牌';
+      pb.innerHTML = '<div class="prompt"><div class="skilltext"><span class="skname">〖节言〗</span>'+srcTxt+'：与其从牌堆两端各摸一张牌并展示。结果？</div>'+
+        '<div class="row" style="margin-top:10px">'+
+        '<button class="btn btn-sm btn-wu" onclick="jieyanResult(true)">花色相同 · 保持有效</button>'+
+        '<button class="btn btn-sm btn-primary" onclick="jieyanResult(false)">花色不同 · 本回合失效</button>'+
+        '<button class="btn btn-sm" onclick="jieyanSkip()">放弃发动</button>'+
+        '</div></div>';
+    }
+  }
+  const jhBtn = document.getElementById('placeJhBtn');
+  if(jhBtn){
+    jhBtn.textContent = pend['pl_jh'] ? '确认归底' : '归位（底）';
+    if(jhBtn.classList) jhBtn.classList.toggle('btn-confirm', !!pend['pl_jh']);
+  }
+  const syBtn = document.getElementById('placeSyBtn');
+  if(syBtn){
+    syBtn.textContent = pend['pl_sy'] ? '确认归顶' : '归位（顶）';
+    if(syBtn.classList) syBtn.classList.toggle('btn-confirm', !!pend['pl_sy']);
+  }
+  renderZone('jh','jhBox','jhCount');
+  renderZone('sy','syBox','syCount');
+  const lb = document.getElementById('logBox');
+  if(lb){
+    lb.innerHTML = S.log.length===0 ? '暂无记录' : S.log.slice().reverse().map(t=>'<div class="log-item">'+esc(t)+'</div>').join('');
+  }
+  const rb = document.getElementById('resetBtn');
+  if(rb){
+    rb.textContent = pend.reset ? '再点一次确认重开' : '重开一局';
+    if(rb.classList) rb.classList.toggle('btn-confirm', !!pend.reset);
+  }
+}
+load();
+render();
+</script>
+</body>
+</html>

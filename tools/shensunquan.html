@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>神孙权 · 驭衡帝力追踪器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --wu:#4f9e77; --wu-deep:#2f7a56;
+  --shen:#d9b23d;
+  --ok:#5f9e6e; --warn:#c8873a; --bad:#b0574a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --wu:#2e7d5b; --wu-deep:#236247;
+    --shen:#a3801a;
+    --ok:#3f7d4e; --warn:#a06a24; --bad:#a04a3d;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"衡";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--wu);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--wu-deep);color:#e9f5ef;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+.badge-shen{background:linear-gradient(160deg,#8a6d1e,#6b520f);color:#f6ecc9}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-wu{background:linear-gradient(160deg,var(--wu),var(--wu-deep));border-color:transparent;color:#eef8f2}
+.btn-shen{background:linear-gradient(160deg,#a3801a,#7c5f0e);border-color:transparent;color:#f6ecc9}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.note-warn{color:var(--warn)}
+input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;color:var(--ink);padding:8px 10px;font-size:14px;font-family:inherit}
+/* 状态栏 */
+.status{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.stat-card{flex:1;min-width:130px;border:1px solid var(--gold-dim);border-radius:8px;background:var(--panel2);padding:8px 12px;text-align:center}
+.stat-card .lb{font-size:11px;color:var(--ink-dim);letter-spacing:1px}
+.stat-card .vl{font-size:24px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--gold)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:8px}
+.stepper button{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold-dim);background:var(--bg2);color:var(--ink);font-size:16px;cursor:pointer}
+.awaken-hint{border:1px solid var(--shen);border-radius:8px;background:linear-gradient(160deg,rgba(217,178,61,.14),var(--panel));padding:10px 12px;margin-top:10px;font-size:13px}
+/* 花色 */
+.suit-row{display:flex;gap:10px;margin:8px 0}
+.suit{flex:1;text-align:center;padding:8px 0;border:1px solid var(--gold-dim);border-radius:8px;background:var(--panel2);font-size:20px;cursor:pointer;color:var(--ink-dim);user-select:none}
+.suit.red{color:#c96a5a}
+.suit.on{border-color:var(--wu);box-shadow:inset 0 0 0 1px var(--wu);color:var(--ink)}
+.suit.on.red{color:#e0705c}
+/* 技能卡 */
+.skcard{border:1px solid var(--gold-dim);border-left:3px solid var(--wu);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--panel2)}
+.skcard.gain{border-left-color:var(--shen)}
+.skcard .tag{font-size:10px;color:var(--ink-dim);letter-spacing:1px}
+/* 外来技能 */
+.ext-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--gold-dim)}
+.ext-row:last-child{border-bottom:none}
+/* 觉醒向导 */
+.wizard{border:1px solid var(--shen);border-radius:var(--radius);background:linear-gradient(160deg,rgba(217,178,61,.12),var(--panel));padding:12px 14px;margin-top:10px}
+.lose-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--gold-dim);font-size:14px}
+.lose-item:last-child{border-bottom:none}
+.lose-item input{width:18px;height:18px;accent-color:var(--shen);flex-shrink:0}
+/* 太极 */
+.taiji{display:flex;align-items:center;gap:12px;margin-top:8px}
+.taiji .face{width:52px;height:52px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;border:2px solid var(--gold-dim)}
+.face-yang{background:#e8dcc8;color:#241d17}
+.face-yin{background:#241d17;color:#e8dcc8;border-color:var(--ink-dim)}
+.tips{border:1px dashed var(--gold-dim);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;color:var(--ink-dim)}
+.pool-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px dashed var(--gold-dim)}
+.pool-item:last-child{border-bottom:none}
+.pool-item .tgl{margin-top:4px;flex-shrink:0;width:18px;height:18px;accent-color:var(--wu)}
+.pool-item.off .skilltext{opacity:.35}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">吴</span><span class="badge badge-shen">神</span>神孙权 · 驭衡帝力追踪器</h1>
+  <div class="sub">弃牌roll技 · 觉醒管理 · 持纲阴阳 · v1.1</div>
+</header>
+
+<!-- 状态栏 -->
+<section>
+  <div class="sec-b">
+    <div class="status">
+      <div class="stat-card">
+        <div class="lb">体力上限</div>
+        <div class="stepper"><button onclick="hpAdj(-1)">−</button><span class="vl" id="hpVal">4</span><button onclick="hpAdj(1)">＋</button></div>
+      </div>
+      <div class="stat-card">
+        <div class="lb">当前技能数</div>
+        <div class="vl" id="skVal">2</div>
+        <div class="note" id="skBreak" style="margin:0"></div>
+      </div>
+    </div>
+    <div id="awakenHint"></div>
+  </div>
+</section>
+
+<!-- 技能原文 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖驭衡〗</span>锁定技，回合开始时，你弃置任意张花色不同的牌，随机获得等量吴势力武将的技能。回合结束时，你失去以此法获得的技能，摸等量张牌。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖帝力〗</span>觉醒技，当你的技能数超过体力上限后，你减少1点体力上限，失去任意个其他技能并获得“圣质”“权道”“持纲”中的前等量个。</p>
+    <div class="note">觉醒判定的技能数计入驭衡获得的临时技能及外来获得的技能。</div>
+  </div>
+</section>
+
+<!-- 驭衡 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secYuheng')">驭衡 · 回合开始<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secYuheng">
+    <div class="note" id="yuhengNote">选择本次弃置的牌的花色（互不相同）：</div>
+    <div class="suit-row" id="suitRow"></div>
+    <div class="row">
+      <button class="btn btn-wu grow" id="rollBtn" onclick="doRoll()">弃置并随机获得技能</button>
+      <span class="note" id="poolCount" style="margin:0"></span>
+    </div>
+    <div id="tempBox" style="margin-top:12px"></div>
+    <div id="turnEndBox"></div>
+  </div>
+</section>
+
+<!-- 外来技能 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secExt')">外来获得的技能<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secExt">
+    <div class="note">场上其他武将（如SP刘备、许靖、二曹等）给予神孙权的技能，计入觉醒判定的技能数。</div>
+    <div id="extBox"></div>
+    <div class="row" style="margin-top:8px">
+      <input type="text" id="extName" placeholder="技能名" style="flex:1">
+      <input type="text" id="extNote" placeholder="来源备注（选填）" style="flex:1.4">
+      <button class="btn btn-sm" onclick="addExt()">添加</button>
+    </div>
+  </div>
+</section>
+
+<!-- 帝力觉醒 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secDili')">帝力 · 觉醒<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secDili"><div id="diliBox"></div></div>
+</section>
+
+<!-- 觉醒后技能 -->
+<div id="gainedBox"></div>
+
+<!-- 技能池管理 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secPool')">吴技能池管理<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secPool">
+    <div class="note">取消勾选可临时移出随机池；自定义技能可增删。设置在重开一局后保留。</div>
+    <div id="poolBox"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--gold-dim);padding-top:10px">
+      <div class="note">添加自定义池技能：</div>
+      <input type="text" id="addName" placeholder="技能名" style="margin-bottom:6px">
+      <input type="text" id="addText" placeholder="技能描述（OL现行文本）">
+      <div style="text-align:right;margin-top:6px"><button class="btn btn-sm" onclick="addCustomPool()">添加</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 本局记录 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<!-- 重开 -->
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">重置体力上限、技能与记录，保留技能池设置</div>
+  </div>
+</section>
+
+<footer>神孙权 · 驭衡帝力追踪器 v1.1<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+/* ================= 数据 ================= */
+const BUILTIN = [
+ {id:'shenxing', name:'慎行', text:'出牌阶段，你可以弃置两张牌，然后摸一张牌。'},
+ {id:'bingyi',   name:'秉壹', text:'每阶段限一次，当你的牌因弃置置入弃牌堆后，你可以展示所有手牌：若颜色均相同，你可以与至多X名其他角色各摸一张牌（X为你的手牌数）。'},
+ {id:'zhiheng',  name:'制衡', text:'出牌阶段限一次，你可以弃置任意张牌，然后摸等量张牌，若你以此法弃置了所有手牌，你额外摸一张牌。'},
+ {id:'xiashu',   name:'下书', text:'出牌阶段开始时，你可以交给一名其他角色所有手牌，然后其展示任意张手牌，你选择一项：1.获得展示牌；2.获得其未展示的手牌。'},
+ {id:'anguo',    name:'安国', text:'出牌阶段限一次，你可以选择一名其他角色，若其：手牌数全场最少，其摸一张牌；体力值全场最低，其回复1点体力；装备区里牌数全场最少，其随机使用一张装备牌。然后你执行其未满足但你满足条件的效果。'},
+ {id:'dimeng',   name:'缔盟', text:'出牌阶段限一次，你可以选择两名其他角色并弃置X张牌（X为两者手牌数之差），然后交换两者手牌。'},
+ {id:'lanjiang', name:'澜疆', text:'结束阶段，你可以令所有手牌数不小于你的角色依次选择是否令你摸一张牌。选择完成后，你可以对手牌数等于你的其中一名角色造成1点伤害，然后令手牌数小于你的其中一名角色摸一张牌。'},
+ {id:'guanwei',  name:'观微', text:'每回合限一次，每名角色出牌阶段结束时，若其本回合使用过至少两张牌且这些牌花色均相同，你可以弃置一张牌，令其摸两张牌并执行一个额外的出牌阶段。'},
+ {id:'diaodu',   name:'调度', text:'每回合限一次，当与你势力相同的角色使用装备牌时，其可以摸一张牌。出牌阶段开始时，你可以获得与你势力相同的一名角色装备区里的一张牌，然后可以将此牌交给另一名角色。'},
+ {id:'anxu',     name:'安恤', text:'出牌阶段限一次，你可以令一名其他角色获得另一名手牌数大于其的其他角色一张手牌并展示之，若此牌不为黑桃，你摸一张牌。'},
+ {id:'hongyuan', name:'弘援', text:'每阶段限一次，当你一次获得至少两张牌后，你可以交给至多两名其他角色各一张牌。'},
+ {id:'xingxue',  name:'兴学', text:'结束阶段，你可以令至多X名角色依次摸一张牌并将一张牌置于牌堆顶（X为你的体力值）。'},
+ {id:'jiexun',   name:'诫训', text:'结束阶段，你可以令一名其他角色摸与场上方块牌数等量张牌，然后弃置X张牌（X为本技能发动次数），若其因此弃置了所有牌，你失去本技能并修改【复难】。'},
+ {id:'bizheng',  name:'弼政', text:'摸牌阶段结束时，你可以令一名其他角色摸两张牌，然后你与其之中手牌数大于体力上限的角色弃置两张牌。'},
+ {id:'youdi',    name:'诱敌', text:'结束阶段，你可以令一名其他角色弃置你一张手牌，若不为：【杀】，你获得其一张牌；黑色牌，你摸一张牌。'}
+];
+const GAIN_DEF = [
+ {id:'shengzhi', name:'圣质', text:'锁定技，当你发动非锁定技后，你本回合使用的下一张牌无距离和次数限制。'},
+ {id:'quandao',  name:'权道', text:'锁定技，当你使用【杀】或普通锦囊牌时，你将手牌中的【杀】或普通锦囊牌的数量弃至两者中的最小值并摸一张牌。'},
+ {id:'chigang',  name:'持纲', text:'转换技，锁定技，①你的判定阶段改为摸牌阶段；②你的判定阶段改为出牌阶段。'}
+];
+const SUITS = [
+ {k:'s', c:'♠', red:false},
+ {k:'h', c:'♥', red:true},
+ {k:'c', c:'♣', red:false},
+ {k:'d', c:'♦', red:true}
+];
+const LS_KEY = 'sgs_shensunquan_v1';
+let S = null;
+let memFallback = null;
+let pend = {};
+
+function defaultState(){
+  return {
+    maxHp: 4,
+    pool: BUILTIN.map(s=>({id:s.id,name:s.name,text:s.text,enabled:true,custom:false})),
+    suits: [],
+    temp: [],           // 临时技能id
+    perm: [],           // 本局永久技能id（失去驭衡后由临时技固化）
+    custom: [],         // 外来技能 [{id,name,note}]
+    hasYuheng: true,
+    awakened: false,
+    gained: [],         // ['shengzhi','quandao','chigang'] 前若干个
+    chigangYang: true,
+    wizard: null,       // {lose:[keys]}
+    preAwaken: null,
+    log: []
+  };
+}
+function save(){
+  const raw = JSON.stringify(S);
+  try{ localStorage.setItem(LS_KEY, raw); }catch(e){ memFallback = raw; }
+}
+function load(){
+  let raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){ raw = memFallback; }
+  S = defaultState();
+  if(raw){
+    try{
+      const o = JSON.parse(raw);
+      if(o && Array.isArray(o.pool)) S = Object.assign(defaultState(), o);
+    }catch(e){}
+  }
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function addLog(t){ S.log.push(t); if(S.log.length>80) S.log.shift(); }
+function skillById(id){ return S.pool.find(s=>s.id===id) || null; }
+function skillCount(){
+  return (S.hasYuheng?1:0) + 1 /*帝力*/ + S.temp.length + S.perm.length + S.custom.length + S.gained.length;
+}
+function canAwaken(){ return !S.awakened && skillCount() > S.maxHp; }
+
+/* ================= 逻辑 ================= */
+function hpAdj(d){
+  S.maxHp = Math.max(1, Math.min(12, S.maxHp + d));
+  save(); render();
+}
+function toggleSuit(k){
+  if(!S.hasYuheng) return;
+  const i = S.suits.indexOf(k);
+  if(i>=0) S.suits.splice(i,1); else S.suits.push(k);
+  save(); render();
+}
+function doRoll(){
+  if(!S.hasYuheng || S.temp.length>0 || S.suits.length===0) return;
+  const enabled = S.pool.filter(s=>s.enabled);
+  const n = S.suits.length;
+  const bag = enabled.slice();
+  const picked = [];
+  for(let i=0;i<Math.min(n,bag.length);i++){
+    const k = Math.floor(Math.random()*bag.length);
+    picked.push(bag.splice(k,1)[0].id);
+  }
+  S.temp = picked;
+  const suitTxt = S.suits.map(k=>{const s=SUITS.find(x=>x.k===k);return s?s.c:k;}).join('');
+  addLog('驭衡：弃置'+n+'张（'+suitTxt+'），获得 '+picked.map(id=>{const s=skillById(id);return s?'〖'+s.name+'〗':id;}).join(''));
+  if(picked.length<n) addLog('注意：技能池不足，仅获得'+picked.length+'个');
+  save(); render();
+}
+function turnEnd(){
+  if(!pend.turnEnd){ pend.turnEnd=true; render(); setTimeout(()=>{ if(pend.turnEnd){pend.turnEnd=false; render();} },4000); return; }
+  pend.turnEnd=false;
+  const n = S.temp.length;
+  addLog('回合结束：失去'+n+'个临时技能，摸'+n+'张牌');
+  S.temp = []; S.suits = [];
+  save(); render();
+}
+function addExt(){
+  const nameEl = document.getElementById('extName');
+  const noteEl = document.getElementById('extNote');
+  addExtData(nameEl.value, noteEl.value);
+  nameEl.value=''; noteEl.value='';
+}
+function addExtData(name, note){
+  name = String(name||'').trim(); note = String(note||'').trim();
+  if(!name) return;
+  S.custom.push({id:'e'+Date.now()+Math.floor(Math.random()*1000), name:name, note:note});
+  addLog('外来技能 +〖'+name+'〗'+(note?'（'+note+'）':''));
+  save(); render();
+}
+function removeExt(id){
+  const key='rx_'+id;
+  if(!pend[key]){ pend[key]=true; render(); setTimeout(()=>{ if(pend[key]){pend[key]=false; render();} },4000); return; }
+  pend[key]=false;
+  const c = S.custom.find(x=>x.id===id);
+  S.custom = S.custom.filter(x=>x.id!==id);
+  if(c) addLog('外来技能 −〖'+c.name+'〗');
+  save(); render();
+}
+/* --- 觉醒 --- */
+function openWizard(){
+  if(!canAwaken()) return;
+  S.wizard = {lose:[]};
+  save(); render();
+}
+function cancelWizard(){ S.wizard=null; save(); render(); }
+function toggleLose(key){
+  if(!S.wizard) return;
+  const i = S.wizard.lose.indexOf(key);
+  if(i>=0) S.wizard.lose.splice(i,1); else S.wizard.lose.push(key);
+  save(); render();
+}
+function confirmAwaken(){
+  if(!S.wizard) return;
+  if(!pend.awaken){ pend.awaken=true; render(); setTimeout(()=>{ if(pend.awaken){pend.awaken=false; render();} },5000); return; }
+  pend.awaken=false;
+  S.preAwaken = JSON.parse(JSON.stringify({maxHp:S.maxHp, temp:S.temp, perm:S.perm, custom:S.custom, hasYuheng:S.hasYuheng, gained:S.gained, awakened:S.awakened, chigangYang:S.chigangYang}));
+  const lose = S.wizard.lose;
+  S.maxHp = Math.max(1, S.maxHp - 1);
+  const lostNames = [];
+  lose.forEach(key=>{
+    if(key==='yuheng'){ S.hasYuheng=false; lostNames.push('驭衡'); }
+    else if(key.slice(0,2)==='t:'){
+      const id = key.slice(2);
+      const sk = skillById(id);
+      if(S.temp.indexOf(id)>=0){ S.temp = S.temp.filter(x=>x!==id); lostNames.push(sk?sk.name:id); }
+    }
+    else if(key.slice(0,2)==='c:'){
+      const id = key.slice(2);
+      const c = S.custom.find(x=>x.id===id);
+      if(c){ S.custom = S.custom.filter(x=>x.id!==id); lostNames.push(c.name); }
+    }
+  });
+  const n = Math.min(lose.length, 3);
+  S.gained = GAIN_DEF.slice(0, n).map(g=>g.id);
+  S.awakened = true;
+  S.chigangYang = true;
+  S.wizard = null;
+  addLog('帝力觉醒：体力上限-1（现'+S.maxHp+'），失去'+lose.length+'个技能'+(lostNames.length?'（'+lostNames.join('/')+'）':'')+'，获得 '+S.gained.map(id=>{const g=GAIN_DEF.find(x=>x.id===id);return '〖'+g.name+'〗';}).join(''));
+  if(lose.length>3) addLog('注意：失去超过3个技能，最多获得圣质/权道/持纲共3个');
+  if(!S.hasYuheng && S.temp.length>0){
+    S.perm = S.perm.concat(S.temp);
+    addLog('驭衡已失去：'+S.temp.length+'个临时技能固化为本局永久技能（不再于回合结束失去/摸牌）');
+    S.temp = [];
+    S.suits = [];
+  }
+  save(); render();
+}
+function rollbackAwaken(){
+  if(!S.preAwaken) return;
+  if(!pend.rollback){ pend.rollback=true; render(); setTimeout(()=>{ if(pend.rollback){pend.rollback=false; render();} },5000); return; }
+  pend.rollback=false;
+  const p = S.preAwaken;
+  S.maxHp=p.maxHp; S.temp=p.temp; S.perm=p.perm||[]; S.custom=p.custom; S.hasYuheng=p.hasYuheng;
+  S.gained=p.gained; S.awakened=p.awakened; S.chigangYang=p.chigangYang;
+  S.preAwaken=null;
+  addLog('已回滚帝力觉醒（误触撤销）');
+  save(); render();
+}
+function flipChigang(){
+  S.chigangYang = !S.chigangYang;
+  addLog('持纲翻面：现为'+(S.chigangYang?'阳（判定阶段→摸牌阶段）':'阴（判定阶段→出牌阶段）'));
+  save(); render();
+}
+/* --- 池 --- */
+function togglePool(id){
+  const sk = skillById(id); if(!sk) return;
+  sk.enabled = !sk.enabled; save(); render();
+}
+function addCustomPool(){
+  const nameEl = document.getElementById('addName');
+  const textEl = document.getElementById('addText');
+  addCustomPoolData(nameEl.value, textEl.value);
+  nameEl.value=''; textEl.value='';
+}
+function addCustomPoolData(name, text){
+  name = String(name||'').trim(); text = String(text||'').trim();
+  if(!name) return;
+  S.pool.push({id:'p'+Date.now()+Math.floor(Math.random()*1000), name:name, text:text||'（未填写描述）', enabled:true, custom:true});
+  save(); render();
+}
+function removeCustomPool(id){
+  const key='rp_'+id;
+  if(!pend[key]){ pend[key]=true; render(); setTimeout(()=>{ if(pend[key]){pend[key]=false; render();} },4000); return; }
+  pend[key]=false;
+  S.pool = S.pool.filter(s=>s.id!==id);
+  S.temp = S.temp.filter(x=>x!==id);
+  S.perm = S.perm.filter(x=>x!==id);
+  save(); render();
+}
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{ if(pend.reset){pend.reset=false; render();} },5000); return; }
+  pend.reset=false;
+  const keepPool = S.pool;
+  S = defaultState();
+  S.pool = keepPool;
+  save(); render();
+}
+
+/* ================= 渲染 ================= */
+function toggleSec(id){
+  const b = document.getElementById(id);
+  if(!b) return;
+  b.classList.toggle('hidden');
+  const h = b.previousElementSibling;
+  if(h && h.classList) h.classList.toggle('open', !b.classList.contains('hidden'));
+}
+function render(){
+  const hp = document.getElementById('hpVal');
+  if(hp) hp.textContent = S.maxHp;
+  const sv = document.getElementById('skVal');
+  if(sv) sv.textContent = skillCount();
+  const sb = document.getElementById('skBreak');
+  if(sb){
+    const parts = [];
+    if(S.hasYuheng) parts.push('驭衡');
+    parts.push('帝力');
+    if(S.temp.length) parts.push('临时×'+S.temp.length);
+    if(S.perm.length) parts.push('永久×'+S.perm.length);
+    if(S.custom.length) parts.push('外来×'+S.custom.length);
+    if(S.gained.length) parts.push('觉醒×'+S.gained.length);
+    sb.textContent = parts.join(' + ');
+  }
+  const ah = document.getElementById('awakenHint');
+  if(ah){
+    ah.innerHTML = canAwaken()
+      ? '<div class="awaken-hint">⚡ 技能数（'+skillCount()+'）已超过体力上限（'+S.maxHp+'），可发动〖帝力〗觉醒 → 见下方“帝力·觉醒”面板</div>'
+      : '';
+  }
+  // 花色
+  const sr = document.getElementById('suitRow');
+  if(sr){
+    sr.innerHTML = !S.hasYuheng ? '' : SUITS.map(s=>{
+      const on = S.suits.indexOf(s.k)>=0;
+      return '<div class="suit'+(s.red?' red':'')+(on?' on':'')+'" onclick="toggleSuit(\''+s.k+'\')">'+s.c+'</div>';
+    }).join('');
+  }
+  const yn = document.getElementById('yuhengNote');
+  if(yn){
+    yn.textContent = !S.hasYuheng
+      ? '〖驭衡〗已随帝力觉醒失去，本区停用。'+(S.perm.length?'以下技能已固化为本局永久技能：':'')
+      : (S.temp.length>0
+        ? '本回合临时技能生效中，先结算回合结束再进行下次驭衡。'
+        : '选择本次弃置的牌的花色（互不相同）：');
+  }
+  const rbn = document.getElementById('rollBtn');
+  if(rbn){
+    const n = S.suits.length;
+    rbn.textContent = !S.hasYuheng ? '驭衡已失去' : (n>0 ? '弃置'+n+'张 · 随机获得'+n+'个技能' : '弃置并随机获得技能');
+    if(!S.hasYuheng || S.temp.length>0 || n===0){ rbn.setAttribute('disabled','disabled'); } else { rbn.removeAttribute('disabled'); }
+  }
+  const pc = document.getElementById('poolCount');
+  if(pc) pc.textContent = '池内 '+S.pool.filter(s=>s.enabled).length+' / '+S.pool.length;
+  // 临时/永久技能
+  const tb = document.getElementById('tempBox');
+  if(tb){
+    tb.innerHTML = S.temp.map(id=>{
+      const sk = skillById(id);
+      if(!sk) return '';
+      return '<div class="skcard"><span class="tag">本回合临时技能</span><div class="skilltext"><span class="skname">〖'+esc(sk.name)+'〗</span>'+esc(sk.text)+'</div></div>';
+    }).join('') + S.perm.map(id=>{
+      const sk = skillById(id);
+      if(!sk) return '';
+      return '<div class="skcard gain"><span class="tag">本局永久技能（驭衡失去后固化）</span><div class="skilltext"><span class="skname">〖'+esc(sk.name)+'〗</span>'+esc(sk.text)+'</div></div>';
+    }).join('');
+  }
+  const teb = document.getElementById('turnEndBox');
+  if(teb){
+    if(S.temp.length===0){ teb.innerHTML=''; }
+    else{
+      teb.innerHTML = '<div style="text-align:right"><button class="btn btn-sm '+(pend.turnEnd?'btn-confirm':'btn-primary')+'" onclick="turnEnd()">'+
+        (pend.turnEnd?'再点一次确认':'回合结束：失去'+S.temp.length+'个技能并摸'+S.temp.length+'张')+'</button></div>';
+    }
+  }
+  // 外来技能
+  const eb = document.getElementById('extBox');
+  if(eb){
+    eb.innerHTML = S.custom.length===0 ? '<div class="note" style="margin:2px 0">暂无外来技能</div>'
+      : S.custom.map(c=>{
+          const key='rx_'+c.id;
+          return '<div class="ext-row"><div class="grow skilltext"><span class="skname">〖'+esc(c.name)+'〗</span>'+(c.note?'<span style="font-size:12px;color:var(--ink-dim)">（'+esc(c.note)+'）</span>':'')+'</div>'+
+            '<button class="btn btn-sm '+(pend[key]?'btn-confirm':'')+'" onclick="removeExt(\''+c.id+'\')">'+(pend[key]?'确认移除':'移除')+'</button></div>';
+        }).join('');
+  }
+  // 帝力
+  const db = document.getElementById('diliBox');
+  if(db){
+    if(S.awakened){
+      db.innerHTML = '<div class="note">已觉醒 ✔ 体力上限已-1，觉醒技能见下方。</div>'+
+        (S.preAwaken ? '<div style="text-align:right"><button class="btn btn-sm '+(pend.rollback?'btn-confirm':'')+'" onclick="rollbackAwaken()">'+(pend.rollback?'再点一次确认回滚':'撤销觉醒（误触回滚）')+'</button></div>' : '');
+    }else if(S.wizard){
+      const items = [];
+      if(S.hasYuheng) items.push({key:'yuheng', label:'〖驭衡〗（锁定技·本体技能）'});
+      S.temp.forEach(id=>{ const sk=skillById(id); items.push({key:'t:'+id, label:'〖'+(sk?sk.name:id)+'〗（本回合临时）'}); });
+      S.custom.forEach(c=>{ items.push({key:'c:'+c.id, label:'〖'+c.name+'〗（外来）'}); });
+      const n = S.wizard.lose.length;
+      const gainNames = GAIN_DEF.slice(0, Math.min(n,3)).map(g=>'〖'+g.name+'〗').join('');
+      const loseYuheng = S.wizard.lose.indexOf('yuheng')>=0;
+      const keepTemp = S.temp.filter(id=>S.wizard.lose.indexOf('t:'+id)<0).length;
+      const fixHint = (loseYuheng && keepTemp>0)
+        ? '<div class="note note-warn" style="margin-top:6px">失去驭衡后，未勾选的 '+keepTemp+' 个临时技能将固化为本局永久技能（不再于回合结束失去 / 摸牌）。</div>'
+        : '';
+      db.innerHTML = '<div class="wizard"><div class="skilltext"><span class="skname">帝力觉醒流程</span>　体力上限将-1，勾选要失去的技能（帝力不可失去）：</div>'+
+        items.map(it=>{
+          const on = S.wizard.lose.indexOf(it.key)>=0;
+          return '<div class="lose-item"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleLose(\''+it.key+'\')"><span>'+it.label+'</span></div>';
+        }).join('')+
+        '<div class="note" style="margin-top:8px">将失去 <b>'+n+'</b> 个技能 → 获得前 <b>'+Math.min(n,3)+'</b> 个：'+(n>0?gainNames:'（无）')+(n>3?'<span class="note-warn">（超过3个仅获得3个）</span>':'')+'</div>'+
+        fixHint+
+        '<div class="row" style="margin-top:8px;justify-content:flex-end">'+
+        '<button class="btn btn-sm" onclick="cancelWizard()">取消</button>'+
+        '<button class="btn btn-sm '+(pend.awaken?'btn-confirm':'btn-shen')+'" onclick="confirmAwaken()">'+(pend.awaken?'再点一次确认觉醒':'确认觉醒')+'</button>'+
+        '</div></div>';
+    }else{
+      db.innerHTML = '<div class="note">条件：技能数超过体力上限（当前 '+skillCount()+' / '+S.maxHp+'）。</div>'+
+        '<button class="btn btn-shen" '+(canAwaken()?'':'disabled')+' onclick="openWizard()">发动帝力 · 觉醒</button>';
+    }
+  }
+  // 觉醒后技能
+  const gb = document.getElementById('gainedBox');
+  if(gb){
+    if(S.gained.length===0){ gb.innerHTML=''; }
+    else{
+      let h = '<section><div class="sec-h open">觉醒技能<span class="arrow">▶</span></div><div class="sec-b">';
+      S.gained.forEach(id=>{
+        const g = GAIN_DEF.find(x=>x.id===id);
+        if(!g) return;
+        h += '<div class="skcard gain"><div class="skilltext"><span class="skname">〖'+g.name+'〗</span>'+g.text+'</div>';
+        if(id==='quandao'){
+          h += '<div class="tips"><b>三叠持牌法（免展示手牌）：</b>手牌分三叠持拿——【杀】一叠、普通锦囊一叠、其余牌一叠。发动权道时数前两叠的牌背张数，将较多的一叠弃至与较少者相同，摸一张牌。全程无需亮出任何牌面，其他玩家只需核对两叠张数。</div>';
+        }
+        if(id==='chigang'){
+          h += '<div class="taiji"><div class="face '+(S.chigangYang?'face-yang':'face-yin')+'">'+(S.chigangYang?'阳':'阴')+'</div>'+
+               '<div class="grow"><div style="font-size:13px">'+(S.chigangYang?'① 你的判定阶段改为摸牌阶段':'② 你的判定阶段改为出牌阶段')+'</div>'+
+               '<button class="btn btn-sm" style="margin-top:6px" onclick="flipChigang()">本次判定阶段已结算 · 翻面</button></div></div>';
+        }
+        h += '</div>';
+      });
+      h += '</div></section>';
+      gb.innerHTML = h;
+    }
+  }
+  // 池
+  const pb = document.getElementById('poolBox');
+  if(pb){
+    pb.innerHTML = S.pool.map(sk=>{
+      let rm = '';
+      if(sk.custom){
+        const key='rp_'+sk.id;
+        rm = '<button class="btn btn-sm '+(pend[key]?'btn-confirm':'')+'" onclick="removeCustomPool(\''+sk.id+'\')">'+(pend[key]?'确认删除':'删除')+'</button>';
+      }
+      return '<div class="pool-item'+(sk.enabled?'':' off')+'">'+
+        '<input class="tgl" type="checkbox" '+(sk.enabled?'checked':'')+' onchange="togglePool(\''+sk.id+'\')">'+
+        '<div class="grow skilltext"><span class="skname">〖'+esc(sk.name)+'〗</span>'+(sk.custom?'<span style="font-size:11px;color:var(--ink-dim)">（自定义）</span>':'')+esc(sk.text)+'</div>'+rm+'</div>';
+    }).join('');
+  }
+  const lb = document.getElementById('logBox');
+  if(lb){
+    lb.innerHTML = S.log.length===0 ? '暂无记录' : S.log.slice().reverse().map(t=>'<div class="log-item">'+esc(t)+'</div>').join('');
+  }
+  const rb = document.getElementById('resetBtn');
+  if(rb){
+    rb.textContent = pend.reset ? '再点一次确认重开' : '重开一局';
+    if(rb.classList) rb.classList.toggle('btn-confirm', !!pend.reset);
+  }
+}
+load();
+render();
+</script>
+</body>
+</html>

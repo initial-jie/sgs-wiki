@@ -285,7 +285,7 @@ footer .hist{margin-top:8px}
     </div>
     <div class="nav-sub" id="sub-replacements"></div>
   </nav>
-  <div class="updated">最近更新：2026-07-07 · v1.0</div>
+  <div class="updated">最近更新：2026-07-08 · v1.1</div>
 </aside>
 
 <main class="main">
@@ -342,12 +342,22 @@ footer .hist{margin-top:8px}
     </div>
 
     <div class="faction f-wu" id="wu-tools">
-      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">1 个</span><span class="fh-caret">▾</span></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">3 个</span><span class="fh-caret">▾</span></div>
       <div class="tools">
         <article class="tool searchable">
           <h4>魔·孙权 · 权御追踪器</h4>
           <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
           <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>神·孙权 · 驭衡帝力追踪器</h4>
+          <p>【驭衡】按弃牌花色随机获得吴势力技能，【帝力】觉醒向导与误触回滚，含外来技能登记、持纲阴阳翻面与权道三叠持牌法。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="shensunquan" data-name="神·孙权 · 驭衡帝力追踪器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>袁姬 · 镜花水月追踪器</h4>
+          <p>【镜花】【水月】标记牌台账与归位流程（底 / 顶），【节言】状态灯与恰失两张触发提示。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="yuanji" data-name="袁姬 · 镜花水月追踪器">打开工具 →</button>
         </article>
       </div>
     </div>
@@ -369,6 +379,17 @@ footer .hist{margin-top:8px}
           <h4>南华老仙 · 青书天书生成器</h4>
           <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
           <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+
+    <div class="faction f-jin" id="jin-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">晋</span><h3>晋</h3><span class="fh-count">1 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>钟琰 · 博览技能生成器</h4>
+          <p>【博览】随机三技选一，自己发动 / 他人借技双模式（借技提醒失去 1 点体力），内置 18 技池可增删。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="zhongyan" data-name="钟琰 · 博览技能生成器">打开工具 →</button>
         </article>
       </div>
     </div>
@@ -708,6 +729,9 @@ footer .hist{margin-top:8px}
           <h4>钟琰</h4>
           <div class="skill"><span class="skill-name">博览</span><span class="skill-text">出牌阶段开始时，你可以从随机三个"出牌阶段限一次"的技能中选择一个获得直到本阶段结束；其他角色的出牌阶段限一次，其可以失去 1 点体力，令你从随机三个"出牌阶段限一次"的技能中选择一个，其获得之直到此阶段结束。</span></div>
           <div class="skill"><span class="skill-name">仪法</span><span class="tag tag-lock">锁定技</span><span class="skill-text">当其他角色使用【杀】或黑色普通锦囊牌指定你为目标后，其手牌上限 -1 直到其回合结束。</span></div>
+          <div class="tool-link">🎲 博览：使用线下化生成器 →
+            <button class="tool-open link-style" data-tool="zhongyan" data-name="钟琰 · 博览技能生成器">打开博览生成器</button>
+          </div>
         </article>
       </div>
     </div>
@@ -715,10 +739,11 @@ footer .hist{margin-top:8px}
 
   <footer>
     <strong>更新记录</strong>
-    <span class="latest">v1.0（2026-07-07）：线下化工具区置顶为首个栏目并按势力分组（蜀 1 / 魏 4 / 吴 1 / 群 3，沿用折叠与侧栏二级目录）；新增三件工具——谋·黄月英「并才理贤追踪器」（tools/huangyueying.html）、族·荀攸「百出记录表」（tools/xunyou.html）、董昭 / 谋董昭「先略顺机记录器」（tools/dongzhao.html，双页签合一）；侧栏重排为「线下化工具 / 衍生内容 / 武将修订」三大块；衍生技区族·荀攸卡新增工具入口。</span>
+    <span class="latest">v1.1（2026-07-08）：三件新工具上线——神·孙权「驭衡帝力追踪器」（tools/shensunquan.html：弃牌花色 roll 吴势力技能 / 帝力觉醒向导与误触回滚 / 外来技能登记 / 持纲阴阳与权道三叠持牌法）、袁姬「镜花水月追踪器」（tools/yuanji.html：标记牌台账与归位流程 / 节言状态与触发提示）、钟琰「博览技能生成器」（tools/zhongyan.html：随机三技选一 / 自己发动与他人借技双模式 / 18 技池可增删），均支持断线续档；工具区新增晋势力分组（现蜀 1 / 魏 4 / 吴 3 / 群 3 / 晋 1，共 12 件）；同名可替换武将区钟琰卡新增工具入口。</span>
     <details>
       <summary>展开完整更新历史</summary>
       <div class="hist">
+        v1.0（2026-07-07）：线下化工具区置顶为首个栏目并按势力分组（蜀 1 / 魏 4 / 吴 1 / 群 3，沿用折叠与侧栏二级目录）；新增三件工具——谋·黄月英「并才理贤追踪器」（tools/huangyueying.html）、族·荀攸「百出记录表」（tools/xunyou.html）、董昭 / 谋董昭「先略顺机记录器」（tools/dongzhao.html，双页签合一）；侧栏重排为「线下化工具 / 衍生内容 / 武将修订」三大块；衍生技区族·荀攸卡新增工具入口。<br>
         v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。<br>
         v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。<br>
         v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
@@ -755,7 +780,7 @@ footer .hist{margin-top:8px}
 (function(){
   /* ---------- 各分区的势力子目录数据 ---------- */
   var SUBS={
-    'tools':[['蜀','shu-tools'],['魏','wei-tools'],['吴','wu-tools'],['群','qun-tools']],
+    'tools':[['蜀','shu-tools'],['魏','wei-tools'],['吴','wu-tools'],['群','qun-tools'],['晋','jin-tools']],
     'derived-skills':[['蜀','shu-skills'],['魏','wei-skills'],['吴','wu-skills'],['群','qun-skills']],
     'revisions':[['蜀','shu-rev'],['魏','wei-rev'],['吴','wu-rev'],['群','qun-rev']],
     'replacements':[['蜀','shu-rep'],['魏','wei-rep'],['吴','wu-rep'],['群','qun-rep'],['晋','jin-rep']]
