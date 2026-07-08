@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>谋黄月英·并才理贤追踪器</title>
+<style>
+:root{
+  --bg:#17110f; --panel:#221a16; --panel2:#2b211c; --line:#4a382c;
+  --ink:#e8dcc8; --ink-dim:#a08e76; --verm:#d64541; --verm-deep:#8e2b28;
+  --gold:#d4af37; --gold-dim:#8a6d1f; --shadow:0 4px 16px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f0e7d3; --panel:#f8f2e2; --panel2:#efe5cd; --line:#c9b591;
+    --ink:#3a2a1e; --ink-dim:#8a765c; --verm:#a4262c; --verm-deep:#7c1d21;
+    --gold:#8a6d1f; --gold-dim:#a98d3c; --shadow:0 4px 14px rgba(90,60,20,.18);
+  }
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
+  font-size:16px; line-height:1.55; padding:12px 10px 60px;}
+.wrap{max-width:520px; margin:0 auto;}
+h1{font-size:1.3em; text-align:center; margin:6px 0 2px; letter-spacing:.12em; color:var(--gold);}
+.sub{text-align:center; color:var(--ink-dim); font-size:.82em; margin-bottom:14px;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:12px; box-shadow:var(--shadow);}
+.panel h2{font-size:1.02em; margin:0 0 10px; color:var(--gold);
+  border-bottom:1px solid var(--line); padding-bottom:6px; letter-spacing:.12em;}
+.panel h2 .tag{float:right; font-size:.78em; color:var(--ink-dim); letter-spacing:0;}
+button{font-family:inherit; font-size:.95em; border-radius:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--ink); padding:9px 14px; cursor:pointer;}
+button:active{transform:scale(.97);}
+button.primary{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+button.gold{background:transparent; border-color:var(--gold-dim); color:var(--gold);}
+button.ghost{background:transparent; color:var(--ink-dim); font-size:.82em; padding:4px 8px;}
+button.danger{background:transparent; border-color:var(--verm); color:var(--verm);}
+button.confirm{background:var(--verm); border-color:var(--verm); color:#fff; animation:pulse 1s infinite;}
+button:disabled{opacity:.4; cursor:default;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,65,.5);}50%{box-shadow:0 0 0 6px rgba(214,69,65,0);}}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.row.right{justify-content:flex-end;}
+.hint{font-size:.8em; color:var(--ink-dim); margin-top:6px;}
+.notice{background:var(--panel2); border-left:3px solid var(--gold-dim); padding:8px 10px;
+  border-radius:0 7px 7px 0; font-size:.86em; margin:8px 0;}
+.banner{border:1.5px solid var(--gold); border-radius:9px; padding:9px 12px; margin:8px 0;
+  color:var(--gold); font-size:.92em; background:linear-gradient(160deg,var(--panel2),var(--panel));}
+.chip{display:inline-flex; align-items:center; gap:6px; font-size:.85em; border:1px solid var(--gold-dim);
+  border-radius:20px; padding:3px 6px 3px 12px; margin:3px 4px 3px 0; color:var(--gold);}
+.uses{font-size:.86em;}
+.uses div{padding:5px 0; border-bottom:1px dashed var(--line); display:flex; align-items:center; gap:8px;}
+.uses .nm{flex:1;}
+.cnt{font-size:.82em; color:var(--ink-dim);}
+details{margin-bottom:12px;}
+summary{cursor:pointer; color:var(--gold); font-size:.95em; letter-spacing:.1em; padding:6px 0;}
+.skilltxt{font-size:.86em; color:var(--ink-dim); padding:4px 8px;}
+.skilltxt b{color:var(--verm);}
+.loglist{font-size:.82em; color:var(--ink-dim); max-height:200px; overflow-y:auto;}
+.loglist div{padding:3px 0; border-bottom:1px dashed var(--line);}
+.toast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:var(--verm-deep); color:#fff; padding:10px 18px; border-radius:8px;
+  box-shadow:var(--shadow); font-size:.9em; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none;}
+.toast.show{opacity:1;}
+footer{text-align:center; color:var(--ink-dim); font-size:.72em; margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+const LS_KEY='sgs_hyy_v1';
+let memStore=null;
+function loadState(){try{const s=localStorage.getItem(LS_KEY); if(s)return JSON.parse(s);}catch(e){if(memStore)return memStore;} return null;}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){memStore=JSON.parse(JSON.stringify(S));}}
+function defaultState(){return {bc:[], lx:[], cf:{}, log:[]};}
+let S=loadState()||defaultState();
+
+const BC_NAMES=['顺手牵羊','过河拆桥','铁索连环'];
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+function addLog(m){const d=new Date();S.log.unshift(('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+'　'+m);if(S.log.length>200)S.log.pop();}
+function cfKey(k){if(S.cf[k]){delete S.cf[k];return true;}S.cf={};S.cf[k]=true;save();render();return false;}
+function clearCf(){S.cf={};}
+function lxPool(){return ['无中生有'].concat(S.bc);}
+function lxDistinct(){return new Set(S.lx).size;}
+
+function render(){
+  const app=document.getElementById('app');
+  let h='<h1>谋·黄月英 · 并才理贤追踪器</h1><div class="sub">面杀辅助 · 离线可用 · 进度自动保存</div>';
+  h+=`<details><summary>▸ 技能速查（OL现行）</summary>
+  <div class="skilltxt"><b>【并才】</b>每回合第一张基本牌被使用时，你可重铸一张牌，若这两张牌均为伤害牌或非伤害牌，则此牌额外结算一次。然后若重铸的牌为锦囊牌，你为"理贤"添加一个牌名：【顺手牵羊】；【过河拆桥】；【铁索连环】。以上牌名均添加完后，"理贤"于你的准备阶段也可发动。</div>
+  <div class="skilltxt"><b>【理贤】</b>当你受到伤害后，你可将一张牌当【无中生有】使用。当你以此法使用过三种不同牌名的锦囊牌后，此技能于你的结束阶段也可发动。</div>
+  </details>`;
+
+  /* 并才 */
+  h+=`<div class="panel"><h2>并 才<span class="tag">已添加 ${S.bc.length}/3</span></h2>`;
+  h+='<div class="notice">每回合第一张基本牌被使用时可重铸一张牌；两张牌同为伤害牌或同为非伤害牌 → 此牌<b>额外结算一次</b>。重铸的是锦囊牌 → 在下方为"理贤"添加一个牌名（自选，不可重复）。</div>';
+  h+='<div class="row">';
+  for(const n of BC_NAMES){
+    const added=S.bc.includes(n);
+    h+=`<button ${added?'disabled':''} onclick="bcAdd('${n}')">${added?'✓ ':''}${n}</button>`;
+  }
+  h+='</div>';
+  if(S.bc.length){
+    h+='<div style="margin-top:8px">';
+    S.bc.forEach((n,i)=>{
+      h+=`<span class="chip">${n}`;
+      if(S.cf['bcrm'+i]) h+=`<button class="confirm" style="padding:2px 8px;font-size:.85em" onclick="bcRm(${i})">确认移除?</button>`;
+      else h+=`<button class="ghost" onclick="bcRm(${i})">✕</button>`;
+      h+='</span>';
+    });
+    h+='</div>';
+  }
+  if(S.bc.length>=3) h+='<div class="banner">✦ 三个牌名均已添加：【理贤】于你的<b>准备阶段</b>也可发动！</div>';
+  h+='</div>';
+
+  /* 理贤 */
+  const dist=lxDistinct();
+  h+=`<div class="panel"><h2>理 贤<span class="tag">已用 ${dist}/3 种不同牌名</span></h2>`;
+  h+='<div class="notice">受到伤害后（'+(S.bc.length>=3?'及准备阶段':'')+(dist>=3?'及结束阶段':'')+'），可将一张牌当以下牌名之一使用。每次发动后在此点选记录：</div>';
+  h+='<div class="row">';
+  for(const n of lxPool()){
+    const used=S.lx.includes(n);
+    h+=`<button class="${used?'gold':''}" onclick="lxUse('${n}')">${used?'✓ ':''}${n}</button>`;
+  }
+  h+='</div>';
+  if(S.lx.length){
+    h+='<div class="uses" style="margin-top:8px">';
+    S.lx.forEach((n,i)=>{
+      h+=`<div><span class="nm">第 ${i+1} 次：当【${n}】使用</span>`;
+      if(S.cf['lxrm'+i]) h+=`<button class="confirm" style="font-size:.8em;padding:3px 8px" onclick="lxRm(${i})">确认删除?</button>`;
+      else h+=`<button class="ghost" onclick="lxRm(${i})">删除</button>`;
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  if(dist>=3) h+='<div class="banner">✦ 已使用三种不同牌名：【理贤】于你的<b>结束阶段</b>也可发动！</div>';
+  h+='</div>';
+
+  /* 记录 / 重开 */
+  h+='<div class="panel"><h2>记 录</h2><div class="loglist">';
+  if(!S.log.length)h+='<div>暂无记录</div>';
+  for(const l of S.log)h+='<div>'+esc(l)+'</div>';
+  h+='</div></div>';
+  h+='<div class="panel"><div class="row right">';
+  if(S.cf['reset'])h+=`<button class="confirm" onclick="resetGame()">确认重开？清空全部记录</button>`;
+  else h+=`<button class="danger" onclick="resetGame()">⟳ 重开一局</button>`;
+  h+='</div></div>';
+  h+='<footer>三国杀线下化工具 · 谋黄月英 v1.0</footer>';
+  app.innerHTML=h;
+}
+function bcAdd(n){
+  if(S.bc.includes(n)){toast('该牌名已添加过，不可重复');return;}
+  S.bc.push(n); addLog('并才：为理贤添加牌名【'+n+'】');
+  if(S.bc.length>=3){toast('三个牌名已集齐：理贤于准备阶段也可发动！');addLog('达成：理贤可于准备阶段发动');}
+  clearCf(); save(); render();
+}
+function bcRm(i){
+  if(!cfKey('bcrm'+i))return;
+  addLog('撤回并才牌名【'+S.bc[i]+'】');
+  S.bc.splice(i,1); save(); render();
+}
+function lxUse(n){
+  const before=lxDistinct();
+  S.lx.push(n); addLog('理贤：将一张牌当【'+n+'】使用');
+  if(before<3&&lxDistinct()>=3){toast('已用三种不同牌名：理贤于结束阶段也可发动！');addLog('达成：理贤可于结束阶段发动');}
+  clearCf(); save(); render();
+}
+function lxRm(i){
+  if(!cfKey('lxrm'+i))return;
+  addLog('删除理贤记录：第'+(i+1)+'次【'+S.lx[i]+'】');
+  S.lx.splice(i,1); save(); render();
+}
+function resetGame(){
+  if(!cfKey('reset'))return;
+  S=defaultState(); save(); render();
+}
+render();
+</script>
+</body>
+</html>

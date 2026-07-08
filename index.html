@@ -133,8 +133,8 @@ section{margin-top:52px;scroll-margin-top:24px}
 .fh-count{font-size:12.5px;color:var(--ink-soft)}
 .fh-caret{margin-left:auto;color:var(--ink-soft);font-size:13px;transition:transform .15s;padding:0 6px}
 .faction.folded .fh-caret{transform:rotate(-90deg)}
-.faction.folded .cards{display:none}
-body.searching .faction .cards{display:grid !important}
+.faction.folded .cards,.faction.folded .tools{display:none}
+body.searching .faction .cards,body.searching .faction .tools{display:grid !important}
 .f-shu .faction-seal{background:var(--shu)} .f-wei .faction-seal{background:var(--wei)}
 .f-wu  .faction-seal{background:var(--wu)}  .f-qun .faction-seal{background:var(--qun)}
 .f-jin .faction-seal{background:var(--jin)}
@@ -189,6 +189,9 @@ body.searching .faction .cards{display:grid !important}
 
 /* ---------- tools ---------- */
 .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:20px}
+.faction .tools{margin-top:0}
+.faction .tool{border-top:4px solid var(--fc,var(--ink))}
+.f-shu .tool{--fc:var(--shu)} .f-wei .tool{--fc:var(--wei)} .f-wu .tool{--fc:var(--wu)} .f-qun .tool{--fc:var(--qun)} .f-jin .tool{--fc:var(--jin)}
 .tool{
   background:rgba(255,252,244,.72);border:1px solid rgba(60,48,30,.32);
   border-radius:9px;padding:15px 17px;
@@ -257,6 +260,12 @@ footer .hist{margin-top:8px}
   <div class="site-title">三国杀线下 Wiki</div>
   <div class="site-sub">衍生技 · 衍生牌 · 武将修订</div>
   <nav class="nav" aria-label="页面目录">
+    <div class="nav-group">线下化工具</div>
+    <div class="nav-item">
+      <a class="navlink" data-target="tools" role="button" tabindex="0">线下化工具</a>
+      <button type="button" class="nav-toggle" data-sec="tools" aria-label="展开势力子目录"><span class="caret">▾</span></button>
+    </div>
+    <div class="nav-sub" id="sub-tools"></div>
     <div class="nav-group">衍生内容</div>
     <div class="nav-item">
       <a class="navlink" data-target="derived-skills" role="button" tabindex="0">常见武将牌衍生技</a>
@@ -264,7 +273,6 @@ footer .hist{margin-top:8px}
     </div>
     <div class="nav-sub" id="sub-derived-skills"></div>
     <a class="navlink" data-target="derived-cards" role="button" tabindex="0">常见武将牌衍生牌</a>
-    <a class="navlink" data-target="tools" role="button" tabindex="0">线下化工具</a>
     <div class="nav-group">武将修订</div>
     <div class="nav-item">
       <a class="navlink" data-target="revisions" role="button" tabindex="0">武将技能修正</a>
@@ -277,19 +285,94 @@ footer .hist{margin-top:8px}
     </div>
     <div class="nav-sub" id="sub-replacements"></div>
   </nav>
-  <div class="updated">最近更新：2026-07-07 · v0.9</div>
+  <div class="updated">最近更新：2026-07-07 · v1.0</div>
 </aside>
 
 <main class="main">
   <div class="hero">
     <h1>线下三国杀速查手册</h1>
-    <p>桌面对局中常用的衍生技、衍生牌与线下化工具汇总。技能名后标注来源武将，方便查阅原描述。</p>
+    <p>桌面对局的线下化工具、常用衍生技 / 衍生牌与武将修订汇总。技能名后标注来源武将，方便查阅原描述。</p>
   </div>
 
   <div class="searchbar">
     <input id="search" type="search" placeholder="搜索武将、技能或牌名，如：庞统 / 火计 / 冰杀" aria-label="搜索武将、技能或牌名">
   </div>
   <div class="search-empty" id="searchEmpty">没有匹配的条目。换个关键词试试？</div>
+
+  <!-- ============ 线下化工具 ============ -->
+  <section id="tools">
+    <div class="sec-head"><h2>线下化工具</h2><span class="en">OFFLINE TOOLS</span></div>
+    <p class="sec-note">用于将线上专属技能带到桌面对局的辅助工具，手机打开即可使用。按势力分组，组内按武将本名拼音排序；点击势力标题可折叠 / 展开。</p>
+
+    <div class="faction f-shu" id="shu-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">蜀</span><h3>蜀</h3><span class="fh-count">1 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>谋·黄月英 · 并才理贤追踪器</h4>
+          <p>【并才】三牌名自选添加进度，【理贤】使用记录与三种不同牌名达成检测，准备 / 结束阶段可发动提示。</p>
+          <button class="tool-open" data-tool="huangyueying" data-name="谋·黄月英 · 并才理贤追踪器">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+
+    <div class="faction f-wei" id="wei-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">魏</span><h3>魏</h3><span class="fh-count">4 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>魔·曹操 · 覆载装备生成器</h4>
+          <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
+          <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>董昭 / 谋董昭 · 先略顺机记录器</h4>
+          <p>双页签合一：董昭【先略】锦囊记录与触发流程、【造王】限定技；谋董昭【顺机】牌名账本与每轮限次、【移势】花色提醒。</p>
+          <button class="tool-open" data-tool="dongzhao" data-name="董昭 / 谋董昭 · 先略顺机记录器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>魔·司马懿 · 骤袭生成器</h4>
+          <p>【骤袭】三选一随机器，内置 OL 官方技能池。</p>
+          <button class="tool-open" data-tool="simayi" data-name="魔·司马懿 · 骤袭生成器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>族·荀攸 · 百出记录表</h4>
+          <p>【百出】4 花色 × 3 类型记录表，点格登记普通锦囊，含奖励提醒与本轮奇策开关。</p>
+          <button class="tool-open" data-tool="xunyou" data-name="族·荀攸 · 百出记录表">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+
+    <div class="faction f-wu" id="wu-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">1 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>魔·孙权 · 权御追踪器</h4>
+          <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+
+    <div class="faction f-qun" id="qun-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">3 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>魔·貂蝉 · 幻惑倾世追踪器</h4>
+          <p>【幻惑】位置报数向导（强制使用与随机弃置），【倾世】公开分发登记、单向状态台账与重发检测。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="diaochan" data-name="魔·貂蝉 · 幻惑倾世追踪器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
+          <p>开局暗登记全员初始手牌（炁），【夺炁】随机指定与重抽、【狂魔】入魔与击败转移、轮末反噬提醒。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>南华老仙 · 青书天书生成器</h4>
+          <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
+          <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+  </section>
 
   <!-- ============ 常见武将牌衍生技 ============ -->
   <section id="derived-skills">
@@ -351,6 +434,9 @@ footer .hist{margin-top:8px}
         <article class="card searchable">
           <h4>族·荀攸</h4>
           <div class="skill"><span class="skill-name">奇策</span><span class="skill-text">出牌阶段限一次，你可以将所有手牌当做一张普通锦囊牌使用。</span></div>
+          <div class="tool-link">🎲 百出：使用线下化记录表 →
+            <button class="tool-open link-style" data-tool="xunyou" data-name="族·荀攸 · 百出记录表">打开百出记录表</button>
+          </div>
         </article>
       </div>
     </div>
@@ -438,44 +524,6 @@ footer .hist{margin-top:8px}
       <article class="dcard searchable">
         <span class="dname">推心置腹</span><span class="dsrc">（承·吕布）</span>
         <div class="dtext">出牌阶段，对距离为 1 的一名其他角色使用。你获得目标角色区域里至多两张牌，然后交给其等量的手牌。</div>
-      </article>
-    </div>
-  </section>
-
-  <!-- ============ 线下化工具 ============ -->
-  <section id="tools">
-    <div class="sec-head"><h2>线下化工具</h2><span class="en">OFFLINE TOOLS</span></div>
-    <p class="sec-note">用于将线上专属技能带到桌面对局的辅助工具，手机打开即可使用。按武将本名拼音排序。</p>
-    <div class="tools">
-      <article class="tool searchable">
-        <h4>魔·曹操 · 覆载装备生成器</h4>
-        <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
-        <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>魔·貂蝉 · 幻惑倾世追踪器</h4>
-        <p>【幻惑】位置报数向导（强制使用与随机弃置），【倾世】公开分发登记、单向状态台账与重发检测。对局进度自动保存。</p>
-        <button class="tool-open" data-tool="diaochan" data-name="魔·貂蝉 · 幻惑倾世追踪器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
-        <p>开局暗登记全员初始手牌（炁），【夺炁】随机指定与重抽、【狂魔】入魔与击败转移、轮末反噬提醒。对局进度自动保存。</p>
-        <button class="tool-open" data-tool="lvbu" data-name="魔·吕布 · 狂魔夺炁追踪器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>南华老仙 · 青书天书生成器</h4>
-        <p>【青书】时机 3 选 1 → 效果 3 选 1，含兼容过滤、持有栏与授术。</p>
-        <button class="tool-open" data-tool="nanhua" data-name="南华老仙 · 青书天书生成器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>魔·司马懿 · 骤袭生成器</h4>
-        <p>【骤袭】三选一随机器，内置 OL 官方技能池。</p>
-        <button class="tool-open" data-tool="simayi" data-name="魔·司马懿 · 骤袭生成器">打开工具 →</button>
-      </article>
-      <article class="tool searchable">
-        <h4>魔·孙权 · 权御追踪器</h4>
-        <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
-        <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
       </article>
     </div>
   </section>
@@ -667,10 +715,11 @@ footer .hist{margin-top:8px}
 
   <footer>
     <strong>更新记录</strong>
-    <span class="latest">v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。</span>
+    <span class="latest">v1.0（2026-07-07）：线下化工具区置顶为首个栏目并按势力分组（蜀 1 / 魏 4 / 吴 1 / 群 3，沿用折叠与侧栏二级目录）；新增三件工具——谋·黄月英「并才理贤追踪器」（tools/huangyueying.html）、族·荀攸「百出记录表」（tools/xunyou.html）、董昭 / 谋董昭「先略顺机记录器」（tools/dongzhao.html，双页签合一）；侧栏重排为「线下化工具 / 衍生内容 / 武将修订」三大块；衍生技区族·荀攸卡新增工具入口。</span>
     <details>
       <summary>展开完整更新历史</summary>
       <div class="hist">
+        v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。<br>
         v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。<br>
         v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
         v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
@@ -706,6 +755,7 @@ footer .hist{margin-top:8px}
 (function(){
   /* ---------- 各分区的势力子目录数据 ---------- */
   var SUBS={
+    'tools':[['蜀','shu-tools'],['魏','wei-tools'],['吴','wu-tools'],['群','qun-tools']],
     'derived-skills':[['蜀','shu-skills'],['魏','wei-skills'],['吴','wu-skills'],['群','qun-skills']],
     'revisions':[['蜀','shu-rev'],['魏','wei-rev'],['吴','wu-rev'],['群','qun-rev']],
     'replacements':[['蜀','shu-rep'],['魏','wei-rep'],['吴','wu-rep'],['群','qun-rep'],['晋','jin-rep']]

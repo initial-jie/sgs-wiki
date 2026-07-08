@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>族荀攸·百出记录表</title>
+<style>
+:root{
+  --bg:#17110f; --panel:#221a16; --panel2:#2b211c; --line:#4a382c;
+  --ink:#e8dcc8; --ink-dim:#a08e76; --verm:#d64541; --verm-deep:#8e2b28;
+  --gold:#d4af37; --gold-dim:#8a6d1f; --red-suit:#e05c50; --shadow:0 4px 16px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f0e7d3; --panel:#f8f2e2; --panel2:#efe5cd; --line:#c9b591;
+    --ink:#3a2a1e; --ink-dim:#8a765c; --verm:#a4262c; --verm-deep:#7c1d21;
+    --gold:#8a6d1f; --gold-dim:#a98d3c; --red-suit:#b3372f; --shadow:0 4px 14px rgba(90,60,20,.18);
+  }
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
+  font-size:16px; line-height:1.55; padding:12px 10px 60px;}
+.wrap{max-width:520px; margin:0 auto;}
+h1{font-size:1.3em; text-align:center; margin:6px 0 2px; letter-spacing:.12em; color:var(--gold);}
+.sub{text-align:center; color:var(--ink-dim); font-size:.82em; margin-bottom:14px;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:12px; box-shadow:var(--shadow);}
+.panel h2{font-size:1.02em; margin:0 0 10px; color:var(--gold);
+  border-bottom:1px solid var(--line); padding-bottom:6px; letter-spacing:.12em;}
+.panel h2 .tag{float:right; font-size:.78em; color:var(--ink-dim); letter-spacing:0;}
+button{font-family:inherit; font-size:.95em; border-radius:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--ink); padding:9px 14px; cursor:pointer;}
+button:active{transform:scale(.97);}
+button.primary{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+button.gold{background:transparent; border-color:var(--gold-dim); color:var(--gold);}
+button.ghost{background:transparent; color:var(--ink-dim);}
+button.danger{background:transparent; border-color:var(--verm); color:var(--verm);}
+button.confirm{background:var(--verm); border-color:var(--verm); color:#fff; animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,65,.5);}50%{box-shadow:0 0 0 6px rgba(214,69,65,0);}}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.row.right{justify-content:flex-end;}
+.hint{font-size:.8em; color:var(--ink-dim); margin-top:6px;}
+.notice{background:var(--panel2); border-left:3px solid var(--gold-dim); padding:8px 10px;
+  border-radius:0 7px 7px 0; font-size:.86em; margin:8px 0;}
+.chip{display:inline-block; font-size:.78em; border:1px solid var(--line); border-radius:20px;
+  padding:2px 10px; margin:2px 3px 2px 0; color:var(--ink-dim);}
+.chip.on{border-color:var(--verm); color:var(--verm);}
+/* 百出表格 */
+table.bc{width:100%; border-collapse:collapse; table-layout:fixed;}
+table.bc th,table.bc td{border:1px solid var(--line); text-align:center; padding:0;}
+table.bc th{font-size:.85em; color:var(--ink-dim); padding:7px 2px; font-weight:normal;}
+table.bc th.suit{font-size:1.2em; width:44px;}
+.suitred{color:var(--red-suit);}
+.cell{display:block; width:100%; min-height:56px; border:none; border-radius:0;
+  background:transparent; color:var(--ink); font-size:.92em; padding:6px 2px;}
+.cell.empty{color:var(--ink-dim); font-size:1.2em;}
+.cell.filled{color:var(--gold);}
+.cell.picking{background:var(--verm-deep); color:#fff;}
+/* 选择器 */
+.picker{border:1.5px solid var(--gold-dim); border-radius:9px; padding:10px 12px; margin-top:10px;
+  background:linear-gradient(160deg,var(--panel2),var(--panel));}
+.picker .pk{margin:3px 4px 3px 0; padding:8px 12px; font-size:.9em;}
+.loglist{font-size:.82em; color:var(--ink-dim); max-height:200px; overflow-y:auto;}
+.loglist div{padding:3px 0; border-bottom:1px dashed var(--line);}
+details{margin-bottom:12px;}
+summary{cursor:pointer; color:var(--gold); font-size:.95em; letter-spacing:.1em; padding:6px 0;}
+.skilltxt{font-size:.86em; color:var(--ink-dim); padding:4px 8px;}
+.skilltxt b{color:var(--verm);}
+.toast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:var(--verm-deep); color:#fff; padding:10px 18px; border-radius:8px;
+  box-shadow:var(--shadow); font-size:.9em; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none;}
+.toast.show{opacity:1;}
+footer{text-align:center; color:var(--ink-dim); font-size:.72em; margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+const LS_KEY='sgs_xunyou_v1';
+let memStore=null;
+function loadState(){try{const s=localStorage.getItem(LS_KEY); if(s)return JSON.parse(s);}catch(e){if(memStore)return memStore;} return null;}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){memStore=JSON.parse(JSON.stringify(S));}}
+function defaultState(){return {grid:{}, qice:false, round:1, pick:null, cf:{}, log:[]};}
+let S=loadState()||defaultState();
+
+const SUITS=[{k:'S',t:'♠',red:false},{k:'H',t:'♥',red:true},{k:'C',t:'♣',red:false},{k:'D',t:'♦',red:true}];
+const TYPES=[{k:'basic',t:'基本牌'},{k:'trick',t:'锦囊牌'},{k:'equip',t:'装备牌'}];
+const JN=['无中生有','顺手牵羊','过河拆桥','无懈可击','万箭齐发','南蛮入侵','火攻','决斗','桃园结义','五谷丰登','借刀杀人','铁索连环'];
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+function addLog(m){const d=new Date();S.log.unshift(('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+'　'+m);if(S.log.length>200)S.log.pop();}
+function cfKey(k){if(S.cf[k]){delete S.cf[k];return true;}S.cf={};S.cf[k]=true;save();render();return false;}
+function clearCf(){S.cf={};}
+function recorded(){return Object.values(S.grid);}
+function remaining(){return JN.filter(n=>!recorded().includes(n));}
+
+function render(){
+  const app=document.getElementById('app');
+  let h='<h1>族·荀攸 · 百出记录表</h1><div class="sub">面杀辅助 · 离线可用 · 进度自动保存</div>';
+  h+=`<details><summary>▸ 技能速查（OL现行）</summary>
+  <div class="skilltxt"><b>【百出】</b>锁定技，当你使用牌后，若此牌：花色和类型组合为你首次使用，你记录一张普通锦囊牌；若不为你首次使用，你于本轮获得"奇策"；牌名以此法记录过，你摸一张牌或回复1点体力。</div>
+  <div class="skilltxt"><b>【蹈节】</b>宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。</div>
+  <div class="skilltxt"><b>【奇策】</b>出牌阶段限一次，你可以将所有手牌当做一张普通锦囊牌使用。</div>
+  </details>`;
+
+  /* 状态条 */
+  h+='<div class="panel"><div class="row">';
+  h+=`<span class="chip">第 ${S.round} 轮</span>`;
+  h+=`<span class="chip ${S.qice?'on':''}">${S.qice?'本轮已获得奇策':'本轮未获得奇策'}</span>`;
+  h+=`<span class="chip">已记录 ${recorded().length}/12 格</span>`;
+  h+='</div></div>';
+
+  /* 百出表格 */
+  h+='<div class="panel"><h2>百出 · 花色×类型<span class="tag">点空格记录 / 点已填格可清除</span></h2>';
+  h+='<table class="bc"><tr><th class="suit"></th>';
+  for(const t of TYPES) h+='<th>'+t.t+'</th>';
+  h+='</tr>';
+  for(const s of SUITS){
+    h+=`<tr><th class="suit"><span class="${s.red?'suitred':''}">${s.t}</span></th>`;
+    for(const t of TYPES){
+      const key=s.k+'-'+t.k;
+      const v=S.grid[key];
+      const picking=S.pick===key;
+      if(v){
+        if(S.cf['clr'+key]) h+=`<td><button class="cell confirm" onclick="cellClear('${key}')">确认清除?</button></td>`;
+        else h+=`<td><button class="cell filled" onclick="cellClear('${key}')">${v}</button></td>`;
+      }else{
+        h+=`<td><button class="cell empty ${picking?'picking':''}" onclick="cellPick('${key}')">${picking?'…':'＋'}</button></td>`;
+      }
+    }
+    h+='</tr>';
+  }
+  h+='</table>';
+  if(S.pick){
+    const s=SUITS.find(x=>x.k===S.pick.split('-')[0]);
+    const t=TYPES.find(x=>x.k===S.pick.split('-')[1]);
+    h+=`<div class="picker"><div style="margin-bottom:6px">首次使用 <b class="${s.red?'suitred':''}">${s.t}</b>${t.t} → 记录一张普通锦囊牌（点选尚未记录的）：</div>`;
+    const rem=remaining();
+    if(rem.length){
+      for(const n of rem) h+=`<button class="pk gold" onclick="pickName('${n}')">${n}</button>`;
+    }else h+='<div class="hint">12 种普通锦囊已全部记录完毕。</div>';
+    h+='<div class="row right" style="margin-top:6px"><button class="ghost" onclick="pickCancel()">取消</button></div></div>';
+  }
+  h+='<div class="notice">使用<b>已记录牌名</b>的牌 → 你摸一张牌或回复1点体力。花色×类型组合<b>非首次</b>使用 → 点上方"本轮未获得奇策"切换为已获得。</div>';
+  h+='<div class="row"><button class="gold" onclick="toggleQice()">'+(S.qice?'✓ 本轮已获得奇策（点击撤销）':'非首次组合 → 本轮获得奇策')+'</button>';
+  if(S.cf['endr']) h+=`<button class="confirm" onclick="endRound()">确认结束本轮？</button>`;
+  else h+=`<button onclick="endRound()">结束本轮 →</button>`;
+  h+='</div></div>';
+
+  /* 已记录清单 */
+  const rec=recorded();
+  h+='<div class="panel"><h2>已记录牌名<span class="tag">共 '+rec.length+' 种</span></h2>';
+  h+=rec.length?('<div class="row">'+rec.map(n=>'<span class="chip on">'+n+'</span>').join('')+'</div>'):'<div class="hint">暂无记录。</div>';
+  h+='</div>';
+
+  h+='<div class="panel"><h2>记 录</h2><div class="loglist">';
+  if(!S.log.length)h+='<div>暂无记录</div>';
+  for(const l of S.log)h+='<div>'+esc(l)+'</div>';
+  h+='</div></div>';
+  h+='<div class="panel"><div class="row right">';
+  if(S.cf['reset'])h+=`<button class="confirm" onclick="resetGame()">确认重开？清空全部记录</button>`;
+  else h+=`<button class="danger" onclick="resetGame()">⟳ 重开一局</button>`;
+  h+='</div></div>';
+  h+='<footer>三国杀线下化工具 · 族荀攸 v1.0</footer>';
+  app.innerHTML=h;
+}
+function keyLabel(key){
+  const s=SUITS.find(x=>x.k===key.split('-')[0]);
+  const t=TYPES.find(x=>x.k===key.split('-')[1]);
+  return s.t+t.t;
+}
+function cellPick(key){
+  S.pick=(S.pick===key)?null:key;
+  clearCf(); save(); render();
+}
+function pickName(n){
+  if(recorded().includes(n)){toast('该锦囊已记录过');return;}
+  S.grid[S.pick]=n;
+  addLog('百出：首次使用 '+keyLabel(S.pick)+'，记录【'+n+'】');
+  toast('已记录【'+n+'】');
+  S.pick=null; clearCf(); save(); render();
+}
+function pickCancel(){S.pick=null; clearCf(); save(); render();}
+function cellClear(key){
+  if(!cfKey('clr'+key))return;
+  addLog('清除格 '+keyLabel(key)+'（原记录【'+S.grid[key]+'】）');
+  delete S.grid[key]; save(); render();
+}
+function toggleQice(){
+  S.qice=!S.qice;
+  addLog(S.qice?'百出：非首次组合，本轮获得奇策':'撤销：本轮奇策标记');
+  clearCf(); save(); render();
+}
+function endRound(){
+  if(!cfKey('endr'))return;
+  addLog('第'+S.round+'轮结束'+(S.qice?'（奇策失效）':''));
+  S.round++; S.qice=false;
+  toast('第'+(S.round-1)+'轮结束');
+  save(); render();
+}
+function resetGame(){
+  if(!cfKey('reset'))return;
+  S=defaultState(); save(); render();
+}
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>董昭 / 谋董昭·先略顺机记录器</title>
+<style>
+:root{
+  --bg:#17110f; --panel:#221a16; --panel2:#2b211c; --line:#4a382c;
+  --ink:#e8dcc8; --ink-dim:#a08e76; --verm:#d64541; --verm-deep:#8e2b28;
+  --gold:#d4af37; --gold-dim:#8a6d1f; --red-suit:#e05c50; --shadow:0 4px 16px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f0e7d3; --panel:#f8f2e2; --panel2:#efe5cd; --line:#c9b591;
+    --ink:#3a2a1e; --ink-dim:#8a765c; --verm:#a4262c; --verm-deep:#7c1d21;
+    --gold:#8a6d1f; --gold-dim:#a98d3c; --red-suit:#b3372f; --shadow:0 4px 14px rgba(90,60,20,.18);
+  }
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
+  font-size:16px; line-height:1.55; padding:12px 10px 60px;}
+.wrap{max-width:520px; margin:0 auto;}
+h1{font-size:1.3em; text-align:center; margin:6px 0 2px; letter-spacing:.12em; color:var(--gold);}
+.sub{text-align:center; color:var(--ink-dim); font-size:.82em; margin-bottom:14px;}
+.tabs{display:flex; gap:8px; margin-bottom:12px;}
+.tabs button{flex:1; padding:11px 6px; font-size:1em; letter-spacing:.08em;}
+.tabs button.on{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:12px; box-shadow:var(--shadow);}
+.panel h2{font-size:1.02em; margin:0 0 10px; color:var(--gold);
+  border-bottom:1px solid var(--line); padding-bottom:6px; letter-spacing:.12em;}
+.panel h2 .tag{float:right; font-size:.78em; color:var(--ink-dim); letter-spacing:0;}
+button{font-family:inherit; font-size:.95em; border-radius:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--ink); padding:9px 14px; cursor:pointer;}
+button:active{transform:scale(.97);}
+button.primary{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+button.gold{background:transparent; border-color:var(--gold-dim); color:var(--gold);}
+button.ghost{background:transparent; color:var(--ink-dim);}
+button.danger{background:transparent; border-color:var(--verm); color:var(--verm);}
+button.confirm{background:var(--verm); border-color:var(--verm); color:#fff; animation:pulse 1s infinite;}
+button:disabled{opacity:.4; cursor:default;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,65,.5);}50%{box-shadow:0 0 0 6px rgba(214,69,65,0);}}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.row.right{justify-content:flex-end;}
+.grow{flex:1;}
+input[type=text]{font-family:inherit; font-size:.95em; background:var(--panel2);
+  color:var(--ink); border:1px solid var(--line); border-radius:7px; padding:8px 10px; width:100%;}
+.hint{font-size:.8em; color:var(--ink-dim); margin-top:6px;}
+.notice{background:var(--panel2); border-left:3px solid var(--gold-dim); padding:8px 10px;
+  border-radius:0 7px 7px 0; font-size:.86em; margin:8px 0;}
+.alert{border-left-color:var(--verm); color:var(--verm);}
+.banner{border:1.5px solid var(--gold); border-radius:9px; padding:9px 12px; margin:8px 0;
+  color:var(--gold); font-size:.92em; background:linear-gradient(160deg,var(--panel2),var(--panel));}
+.chip{display:inline-block; font-size:.82em; border:1px solid var(--line); border-radius:20px;
+  padding:4px 12px; margin:3px 4px 3px 0; color:var(--ink-dim); cursor:pointer;}
+.chip.on{border-color:var(--verm); color:var(--verm);}
+.chip.goldc{border-color:var(--gold-dim); color:var(--gold);}
+.curbig{text-align:center; margin:10px auto; padding:14px 10px; border:2px solid var(--gold-dim);
+  border-radius:12px; background:linear-gradient(160deg,var(--panel2),var(--panel)); box-shadow:var(--shadow);}
+.curbig .t{font-size:.85em; color:var(--ink-dim);}
+.curbig .n{font-size:1.7em; color:var(--gold); letter-spacing:.1em;}
+.jgrid{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0;}
+.jgrid button{padding:8px 11px; font-size:.9em;}
+.suitred{color:var(--red-suit);}
+.pick{min-width:42px; text-align:center; padding:8px 0; font-size:1.05em;}
+.pick.sel{background:var(--verm-deep); border-color:var(--verm); color:#fff;}
+.pick.sel .suitred{color:#ffd7d0;}
+.loglist{font-size:.82em; color:var(--ink-dim); max-height:200px; overflow-y:auto;}
+.loglist div{padding:3px 0; border-bottom:1px dashed var(--line);}
+details{margin-bottom:12px;}
+summary{cursor:pointer; color:var(--gold); font-size:.95em; letter-spacing:.1em; padding:6px 0;}
+.skilltxt{font-size:.86em; color:var(--ink-dim); padding:4px 8px;}
+.skilltxt b{color:var(--verm);}
+.toast{position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:var(--verm-deep); color:#fff; padding:10px 18px; border-radius:8px;
+  box-shadow:var(--shadow); font-size:.9em; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none;
+  max-width:90%; text-align:center;}
+.toast.show{opacity:1;}
+footer{text-align:center; color:var(--ink-dim); font-size:.72em; margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+const LS_KEY='sgs_dongzhao_v1';
+let memStore=null;
+function loadState(){try{const s=localStorage.getItem(LS_KEY); if(s)return JSON.parse(s);}catch(e){if(memStore)return memStore;} return null;}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){memStore=JSON.parse(JSON.stringify(S));}}
+function defaultState(){return {
+  tab:'dz',
+  dz:{cur:null, turnUsed:false, zw:false},
+  mdz:{names:[], seatN:8, seats:{}, round:1, yishi:null, draft:''},
+  cf:{}, log:[]
+};}
+let S=loadState()||defaultState();
+
+const JN=['无中生有','顺手牵羊','过河拆桥','无懈可击','万箭齐发','南蛮入侵','火攻','决斗','桃园结义','五谷丰登','借刀杀人','铁索连环'];
+const SJ_QUICK=['杀','闪','桃','酒','决斗','火攻','过河拆桥','顺手牵羊','无中生有','无懈可击','南蛮入侵','万箭齐发','铁索连环','借刀杀人','五谷丰登','桃园结义','乐不思蜀','兵粮寸断','闪电'];
+const SUITS=[{k:'S',t:'♠',red:false},{k:'H',t:'♥',red:true},{k:'C',t:'♣',red:false},{k:'D',t:'♦',red:true}];
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2800);}
+function addLog(m){const d=new Date();S.log.unshift(('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+'　'+m);if(S.log.length>200)S.log.pop();}
+function cfKey(k){if(S.cf[k]){delete S.cf[k];return true;}S.cf={};S.cf[k]=true;save();render();return false;}
+function clearCf(){S.cf={};}
+
+function render(){
+  const app=document.getElementById('app');
+  let h='<h1>董昭 / 谋董昭 · 先略顺机记录器</h1><div class="sub">面杀辅助 · 离线可用 · 进度自动保存</div>';
+  h+=`<div class="tabs">
+    <button class="${S.tab==='dz'?'on':''}" onclick="setTab('dz')">董昭 · 先略</button>
+    <button class="${S.tab==='mdz'?'on':''}" onclick="setTab('mdz')">谋董昭 · 顺机</button>
+  </div>`;
+  h+=(S.tab==='dz')?viewDz():viewMdz();
+  h+='<div class="panel"><h2>记 录</h2><div class="loglist">';
+  if(!S.log.length)h+='<div>暂无记录</div>';
+  for(const l of S.log)h+='<div>'+esc(l)+'</div>';
+  h+='</div></div>';
+  h+='<div class="panel"><div class="row right">';
+  if(S.cf['reset'])h+=`<button class="confirm" onclick="resetGame()">确认重开？清空两个页签的全部记录</button>`;
+  else h+=`<button class="danger" onclick="resetGame()">⟳ 重开一局</button>`;
+  h+='</div></div>';
+  h+='<footer>三国杀线下化工具 · 董昭/谋董昭 v1.0</footer>';
+  app.innerHTML=h;
+}
+function setTab(t){S.tab=t; clearCf(); save(); render();}
+
+/* ================= 董昭 · 先略 / 造王 ================= */
+function viewDz(){
+  const d=S.dz;
+  let h=`<details><summary>▸ 技能速查（OL现行）</summary>
+  <div class="skilltxt"><b>【先略】</b>主公的回合开始时，你可以记录一张普通锦囊牌。每回合限一次，当其他角色使用记录牌后，你摸两张牌并将之分配给任意角色，然后重新记录一张普通锦囊牌。</div>
+  <div class="skilltxt"><b>【造王】</b>限定技，出牌阶段，你可以令一名角色增加1点体力上限、回复1点体力并摸三张牌，若其为：忠臣，当主公死亡时与主公交换身份牌；反贼，当其被主公或忠臣杀死时，主公方获胜。</div>
+  </details>`;
+  h+='<div class="panel"><h2>先 略</h2>';
+  h+=`<div class="curbig"><div class="t">当前记录牌</div><div class="n">${d.cur?('【'+d.cur+'】'):'（未记录）'}</div></div>`;
+  if(d.cur){
+    h+='<div class="row" style="justify-content:center">';
+    if(d.turnUsed) h+='<span class="chip on">本回合已触发（限一次）</span>';
+    else h+=`<button class="primary" onclick="dzTrigger()">其他角色使用了【${esc(d.cur)}】→ 摸两张分配</button>`;
+    h+='</div>';
+    if(d.turnUsed&&!d.rerecord) h+='';
+  }
+  h+='<div class="notice">主公回合开始时可记录；记录牌被其他角色使用后（每回合限一次）→ <b>摸两张牌分配给任意角色</b>，然后重新记录。连续两次记录<b>可以选同一张</b>。</div>';
+  h+=`<div class="hint" style="margin-bottom:2px">${d.cur?'点选以更换/重新记录：':'点选以记录：'}</div>`;
+  h+='<div class="jgrid">';
+  for(const n of JN){
+    h+=`<button class="${d.cur===n?'gold':''}" onclick="dzRecord('${n}')">${n}</button>`;
+  }
+  h+='</div>';
+  h+='<div class="row" style="margin-top:8px">';
+  h+=`<button class="ghost" onclick="dzNewTurn()">新回合开始（重置每回合限次）</button>`;
+  h+='</div></div>';
+
+  h+='<div class="panel"><h2>造 王<span class="tag">限定技</span></h2>';
+  if(d.zw){
+    h+='<div class="banner">✦ 造王已发动。忠臣：主公死亡时与主公交换身份牌；反贼：被主公或忠臣杀死时主公方获胜。</div>';
+    h+='<div class="row right">';
+    if(S.cf['zwUndo']) h+=`<button class="confirm" onclick="zwUndo()">确认撤销（仅纠错）？</button>`;
+    else h+=`<button class="ghost" onclick="zwUndo()">误触撤销</button>`;
+    h+='</div>';
+  }else{
+    h+='<div class="hint">出牌阶段，令一名角色 +1 体力上限、回复 1 点体力并摸三张牌。</div>';
+    h+='<div class="row" style="margin-top:8px">';
+    if(S.cf['zw']) h+=`<button class="confirm" onclick="zwDo()">确认发动造王？限定技不可再用</button>`;
+    else h+=`<button class="danger" onclick="zwDo()">发动造王</button>`;
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function dzRecord(n){
+  const old=S.dz.cur;
+  S.dz.cur=n;
+  addLog('先略：记录【'+n+'】'+(old?('（原：【'+old+'】）'):''));
+  toast('先略记录：【'+n+'】');
+  clearCf(); save(); render();
+}
+function dzTrigger(){
+  S.dz.turnUsed=true;
+  addLog('先略触发：其他角色使用了记录牌【'+S.dz.cur+'】→ 董昭摸两张牌并分配给任意角色，请重新记录');
+  toast('摸两张牌分配给任意角色，然后重新记录一张锦囊');
+  clearCf(); save(); render();
+}
+function dzNewTurn(){
+  S.dz.turnUsed=false;
+  addLog('先略：新回合，重置每回合限次');
+  clearCf(); save(); render();
+}
+function zwDo(){
+  if(!cfKey('zw'))return;
+  S.dz.zw=true;
+  addLog('造王发动（限定技）');
+  save(); render();
+}
+function zwUndo(){
+  if(!cfKey('zwUndo'))return;
+  S.dz.zw=false;
+  addLog('撤销造王发动标记（纠错）');
+  save(); render();
+}
+
+/* ================= 谋董昭 · 顺机 / 移势 ================= */
+function viewMdz(){
+  const m=S.mdz;
+  let h=`<details><summary>▸ 技能速查（OL现行）</summary>
+  <div class="skilltxt"><b>【顺机】</b>每轮每名角色限一次，当一名角色受到伤害后，你可摸至多两张牌，然后交给其等量张牌。若你因此失去了一个牌名的所有牌（每个牌名限一次），你对其造成一点伤害。</div>
+  <div class="skilltxt"><b>【移势】</b>出牌阶段限一次，你可保留手牌中每个花色各一张牌并展示，将其余牌置入弃牌堆，然后移动场上的一张牌。若你未因此失去手牌，直到你的下个回合开始，你失去与移动牌花色相同的牌后（不因使用），摸一张牌。</div>
+  </details>`;
+
+  /* 顺机·每轮每人限次 */
+  h+=`<div class="panel"><h2>顺机 · 每轮每人限次<span class="tag">第 ${m.round} 轮</span></h2>`;
+  h+='<div class="hint" style="margin:0 0 6px">座位数：</div><div class="row">';
+  for(const n of [3,4,5,6,7,8]){
+    h+=`<button class="pick ${m.seatN===n?'sel':''}" onclick="mdzSeatN(${n})">${n}</button>`;
+  }
+  h+='</div><div class="hint" style="margin:8px 0 4px">本轮已对谁发动过顺机（点击标记/取消）：</div><div class="row">';
+  for(let i=0;i<m.seatN;i++){
+    const on=!!m.seats[i];
+    h+=`<span class="chip ${on?'on':''}" onclick="mdzSeat(${i})">${i+1}号位${on?' ✓':''}</span>`;
+  }
+  h+='</div><div class="row" style="margin-top:8px">';
+  if(S.cf['mdzEndr']) h+=`<button class="confirm" onclick="mdzEndRound()">确认结束本轮？清空全部标记</button>`;
+  else h+=`<button class="gold" onclick="mdzEndRound()">结束本轮，重置限次 →</button>`;
+  h+='</div></div>';
+
+  /* 顺机·牌名账本 */
+  h+=`<div class="panel"><h2>顺机 · 已触发伤害的牌名<span class="tag">每个牌名限一次 · 共 ${m.names.length} 个</span></h2>`;
+  h+='<div class="notice">交出的牌令你失去<b>一个牌名的所有牌</b> → 对其造成 1 点伤害（每个牌名限一次）。触发后在此登记。<b>雷杀 / 火杀均记作"杀"</b>；装备、延时锦囊、基本牌、普通锦囊皆可为牌名。</div>';
+  if(m.names.length){
+    h+='<div class="row" style="margin-bottom:6px">';
+    m.names.forEach((n,i)=>{
+      if(S.cf['nrm'+i]) h+=`<button class="confirm" style="font-size:.82em;padding:4px 10px" onclick="mdzRm(${i})">删除【${esc(n)}】?</button>`;
+      else h+=`<span class="chip goldc" onclick="mdzRm(${i})">${esc(n)} ✕</span>`;
+    });
+    h+='</div>';
+  }
+  h+='<div class="hint" style="margin-bottom:2px">快捷登记（灰色为已登记）：</div><div class="jgrid">';
+  for(const n of SJ_QUICK){
+    const used=m.names.includes(n);
+    h+=`<button ${used?'disabled':''} onclick="mdzAdd('${n}')">${n}</button>`;
+  }
+  h+='</div>';
+  h+=`<div class="row" style="margin-top:6px"><input type="text" class="grow" placeholder="其他牌名（装备等），如：诸葛连弩" value="${esc(m.draft)}" onchange="mdzDraft(this.value)">`;
+  h+=`<button class="gold" onclick="mdzAddCustom()">登记</button></div>`;
+  h+='</div>';
+
+  /* 移势提醒 */
+  h+='<div class="panel"><h2>移 势<span class="tag">出牌阶段限一次</span></h2>';
+  if(m.yishi){
+    const s=SUITS.find(x=>x.k===m.yishi);
+    h+=`<div class="banner">✦ 移势生效中：失去 <b class="${s.red?'suitred':''}" style="font-size:1.2em">${s.t}</b> 牌后（<b>不因使用</b>）→ 摸一张牌。持续至你的下个回合开始。</div>`;
+    h+='<div class="row right"><button class="ghost" onclick="mdzYishiClear()">我的回合开始，清除提醒</button></div>';
+  }else{
+    h+='<div class="hint">发动移势且未因此失去手牌时，选择所移动牌的花色，挂起摸牌提醒：</div>';
+    h+='<div class="row" style="margin-top:6px">';
+    for(const s of SUITS){
+      h+=`<button class="pick" onclick="mdzYishi('${s.k}')"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function mdzSeatN(n){
+  S.mdz.seatN=n;
+  Object.keys(S.mdz.seats).forEach(k=>{if(+k>=n)delete S.mdz.seats[k];});
+  clearCf(); save(); render();
+}
+function mdzSeat(i){
+  S.mdz.seats[i]=!S.mdz.seats[i];
+  if(!S.mdz.seats[i])delete S.mdz.seats[i];
+  else addLog('顺机：本轮已对 '+(i+1)+'号位 发动');
+  clearCf(); save(); render();
+}
+function mdzEndRound(){
+  if(!cfKey('mdzEndr'))return;
+  addLog('顺机：第'+S.mdz.round+'轮结束，限次重置');
+  S.mdz.round++; S.mdz.seats={};
+  toast('新一轮：顺机限次已重置');
+  save(); render();
+}
+function mdzAdd(n){
+  if(S.mdz.names.includes(n)){toast('【'+n+'】已登记过（每个牌名限一次）');return;}
+  S.mdz.names.push(n);
+  addLog('顺机：牌名【'+n+'】触发伤害，登记');
+  toast('已登记【'+n+'】→ 对其造成1点伤害');
+  clearCf(); save(); render();
+}
+function mdzDraft(v){S.mdz.draft=v.trim(); save();}
+function mdzAddCustom(){
+  const n=S.mdz.draft;
+  if(!n){toast('请输入牌名');return;}
+  if(S.mdz.names.includes(n)){toast('【'+n+'】已登记过');return;}
+  S.mdz.names.push(n); S.mdz.draft='';
+  addLog('顺机：牌名【'+n+'】触发伤害，登记');
+  toast('已登记【'+n+'】→ 对其造成1点伤害');
+  clearCf(); save(); render();
+}
+function mdzRm(i){
+  if(!cfKey('nrm'+i))return;
+  addLog('删除顺机牌名【'+S.mdz.names[i]+'】');
+  S.mdz.names.splice(i,1); save(); render();
+}
+function mdzYishi(k){
+  S.mdz.yishi=k;
+  const s=SUITS.find(x=>x.k===k);
+  addLog('移势：移动了'+s.t+'牌，挂起"失去'+s.t+'牌摸一张"提醒');
+  clearCf(); save(); render();
+}
+function mdzYishiClear(){
+  addLog('移势提醒结束（回合开始）');
+  S.mdz.yishi=null; clearCf(); save(); render();
+}
+function resetGame(){
+  if(!cfKey('reset'))return;
+  const keep=S.mdz.seatN;
+  S=defaultState(); S.mdz.seatN=keep;
+  save(); render();
+}
+render();
+</script>
+</body>
+</html>
