@@ -277,7 +277,7 @@ footer .hist{margin-top:8px}
     </div>
     <div class="nav-sub" id="sub-replacements"></div>
   </nav>
-  <div class="updated">最近更新：2026-07-07 · v0.8</div>
+  <div class="updated">最近更新：2026-07-07 · v0.9</div>
 </aside>
 
 <main class="main">
@@ -380,8 +380,14 @@ footer .hist{margin-top:8px}
 
     <!-- 群 -->
     <div class="faction f-qun" id="qun-skills">
-      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">4 将</span><span class="fh-caret">▾</span></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">群</span><h3>群</h3><span class="fh-count">5 将</span><span class="fh-caret">▾</span></div>
       <div class="cards">
+        <article class="card searchable">
+          <h4>魔·貂蝉</h4>
+          <div class="tool-link">🎲 幻惑 / 倾世：使用线下化追踪器 →
+            <button class="tool-open link-style" data-tool="diaochan" data-name="魔·貂蝉 · 幻惑倾世追踪器">打开幻惑倾世追踪器</button>
+          </div>
+        </article>
         <article class="card searchable">
           <h4>谋·董卓</h4>
           <div class="skill"><span class="skill-name">焚城</span><span class="tag tag-limit">限定技</span><span class="skill-text">出牌阶段，你可以选择一名其他角色开始，令所有其他角色依次选择一项：1. 弃置任意张牌（须比上家弃置的牌多）；2. 受到你造成的 2 点火焰伤害。</span></div>
@@ -445,6 +451,11 @@ footer .hist{margin-top:8px}
         <h4>魔·曹操 · 覆载装备生成器</h4>
         <p>按当前血量随机抽取【覆载】对应的武器与防具，附装备效果说明。</p>
         <button class="tool-open" data-tool="caocao" data-name="魔·曹操 · 覆载装备生成器">打开工具 →</button>
+      </article>
+      <article class="tool searchable">
+        <h4>魔·貂蝉 · 幻惑倾世追踪器</h4>
+        <p>【幻惑】位置报数向导（强制使用与随机弃置），【倾世】公开分发登记、单向状态台账与重发检测。对局进度自动保存。</p>
+        <button class="tool-open" data-tool="diaochan" data-name="魔·貂蝉 · 幻惑倾世追踪器">打开工具 →</button>
       </article>
       <article class="tool searchable">
         <h4>魔·吕布 · 狂魔夺炁追踪器</h4>
@@ -656,10 +667,11 @@ footer .hist{margin-top:8px}
 
   <footer>
     <strong>更新记录</strong>
-    <span class="latest">v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。</span>
+    <span class="latest">v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。</span>
     <details>
       <summary>展开完整更新历史</summary>
       <div class="hist">
+        v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。<br>
         v0.7（2026-07-07）：「魔·吕布 · 狂魔夺炁追踪器」上线（tools/lvbu.html：开局炁牌暗登记 / 夺炁随机指定与重抽 / 狂魔入魔·击败转移 / 轮末反噬提醒，进度自动保存）；魔·孙权工具新增断线续档——对局状态实时写入本地存储，关闭浮窗、刷新或换窗口打开均自动恢复原进度。<br>
         v0.6（2026-07-07）：工具改为站内 iframe 弹层（点「打开工具」即在页内浮出，不再跳转外部链接）；四个工具（骤袭 / 权御 / 覆载 / 青书）源码迁入本仓库 tools/ 目录，永久固定、可离线；新增「南华老仙·青书天书生成器」；魔·司马懿工具更新为最新版。<br>
         v0.5（2026-07-06）：修正界·张松、界·郭皇后技能为三国杀 OL 现行版本（此前误用了十周年/标风旧版描述，由用户提供准确文本勘误）。<br>
