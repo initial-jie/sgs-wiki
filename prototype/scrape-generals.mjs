@@ -4,6 +4,7 @@
 import { writeFileSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { applyOverrides } from "./shared/generals-overrides.mjs"; // 人工修正层:线下武将 + 过时技能,re-scrape 不丢
 const pexec = promisify(execFile);
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
@@ -131,7 +132,12 @@ const TOOL_NAMES = {
     else toolReport.push(`✗ ${tool} ← "${nm}" 未在 OL 命中(可能是线下/别名,需手动)`);
   }
 
-  writeFileSync(new URL("./generals.json", import.meta.url), JSON.stringify(ok, null, 2));
+  // 人工修正层:改过时/线下技能 + 追加纯线下武将(OL 没有)。放在 tool 回填之后、写盘之前。
+  const ovr = applyOverrides(ok);
+  console.log(`\n--- overrides:改 ${ovr.skillHits} 条技能,追加 ${ovr.added} 名线下武将 ---`);
+
+  // 写入 app 实际读取的 shared/generals.json(worker import 的就是这个;旧路径 ./generals.json 是错的)
+  writeFileSync(new URL("./shared/generals.json", import.meta.url), JSON.stringify(ok, null, 2));
 
   // 概览
   const byGenre = {}, byFaction = {}, noSkill = [], noHp = [];
