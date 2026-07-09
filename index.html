@@ -250,6 +250,19 @@ footer .hist{margin-top:8px}
 .tm-btn.close{background:var(--seal);border-color:var(--seal)}
 .tm-frame-wrap{flex:1;max-width:720px;width:100%;margin:0 auto;min-height:0;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 .tm-frame-wrap iframe{width:100%;height:100%;border:none;display:block}
+/* ---------- 线下多人房间 CTA ---------- */
+.room-hero{margin-top:26px;border:2px solid var(--seal);border-radius:14px;padding:22px 24px;background:linear-gradient(150deg,rgba(163,46,34,.07),rgba(163,46,34,.015));position:relative;overflow:hidden}
+.room-hero::before{content:"房";position:absolute;right:-6px;top:-24px;font-family:var(--display);font-size:128px;font-weight:900;color:rgba(163,46,34,.06);pointer-events:none;line-height:1}
+.room-hero .rh-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;position:relative}
+.room-hero h2{font-family:var(--display);font-weight:900;font-size:23px;letter-spacing:.05em;color:var(--seal)}
+.room-hero .rh-head .en{font-size:11px;letter-spacing:.22em;color:var(--ink-soft)}
+.room-hero .rh-new{font-size:11px;font-weight:700;color:#fdf5e6;background:var(--seal);border-radius:20px;padding:2px 10px;letter-spacing:.08em}
+.room-hero p{color:var(--ink-soft);font-size:14px;margin-top:10px;max-width:660px;line-height:1.75;position:relative}
+.room-hero .rh-feats{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;position:relative}
+.room-hero .rh-feats span{font-size:12.5px;color:var(--ink-soft);background:rgba(163,46,34,.05);border:1px solid rgba(163,46,34,.2);border-radius:20px;padding:4px 12px}
+.room-hero .rh-cta{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-family:var(--display);font-weight:800;font-size:16px;text-decoration:none;background:var(--seal);color:#fdf5e6;border-radius:10px;padding:11px 24px;letter-spacing:.04em;box-shadow:0 4px 14px rgba(163,46,34,.25);transition:transform .12s ease,box-shadow .12s ease;position:relative}
+.room-hero .rh-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(163,46,34,.34)}
+.room-hero .rh-note{font-size:12px;color:var(--ink-soft);margin-top:11px;position:relative}
 </style>
 </head>
 <body>
@@ -260,6 +273,8 @@ footer .hist{margin-top:8px}
   <div class="site-title">三国杀线下 Wiki</div>
   <div class="site-sub">衍生技 · 衍生牌 · 武将修订</div>
   <nav class="nav" aria-label="页面目录">
+    <div class="nav-group">多人房间</div>
+    <a class="navlink" data-target="room" role="button" tabindex="0" style="color:var(--seal);font-weight:700">线下多人房间 · 新</a>
     <div class="nav-group">线下化工具</div>
     <div class="nav-item">
       <a class="navlink" data-target="tools" role="button" tabindex="0">线下化工具</a>
@@ -285,7 +300,7 @@ footer .hist{margin-top:8px}
     </div>
     <div class="nav-sub" id="sub-replacements"></div>
   </nav>
-  <div class="updated">最近更新：2026-07-08 · v1.1</div>
+  <div class="updated">最近更新：2026-07-08 · v1.2</div>
 </aside>
 
 <main class="main">
@@ -298,6 +313,15 @@ footer .hist{margin-top:8px}
     <input id="search" type="search" placeholder="搜索武将、技能或牌名，如：庞统 / 火计 / 冰杀" aria-label="搜索武将、技能或牌名">
   </div>
   <div class="search-empty" id="searchEmpty">没有匹配的条目。换个关键词试试？</div>
+
+  <!-- ============ 线下多人房间 ============ -->
+  <section id="room" class="room-hero">
+    <div class="rh-head"><h2>线下多人房间</h2><span class="en">OFFLINE ROOM</span><span class="rh-new">新</span></div>
+    <p>牌桌上出现需要这些工具的武将时，不必再传手机——任意玩家开一个 4 位数房间，其他人各自手机加入、选座、编辑自己座位的武将。操作权归座位本人，暗牌 / 暗选 / 未发动天书在服务端按身份过滤后才下发，<b>保密不弱于面杀</b>。零安装、零常驻后端，刷新即恢复。</p>
+    <div class="rh-feats"><span>座位即身份</span><span>各自手机协作</span><span>暗牌 · 暗选保密</span><span>可代持没电的座位</span><span>已支持 12 个武将工具</span></div>
+    <a class="rh-cta" href="https://sgs-room.dujie1995.workers.dev" target="_blank" rel="noopener">进入 / 开设房间 →</a>
+    <div class="rh-note">口报 4 位房间号即可入座 · 手机浏览器直接打开，无需下载。</div>
+  </section>
 
   <!-- ============ 线下化工具 ============ -->
   <section id="tools">
@@ -739,10 +763,11 @@ footer .hist{margin-top:8px}
 
   <footer>
     <strong>更新记录</strong>
-    <span class="latest">v1.1（2026-07-08）：三件新工具上线——神·孙权「驭衡帝力追踪器」（tools/shensunquan.html：弃牌花色 roll 吴势力技能 / 帝力觉醒向导与误触回滚 / 外来技能登记 / 持纲阴阳与权道三叠持牌法）、袁姬「镜花水月追踪器」（tools/yuanji.html：标记牌台账与归位流程 / 节言状态与触发提示）、钟琰「博览技能生成器」（tools/zhongyan.html：随机三技选一 / 自己发动与他人借技双模式 / 18 技池可增删），均支持断线续档；工具区新增晋势力分组（现蜀 1 / 魏 4 / 吴 3 / 群 3 / 晋 1，共 12 件）；同名可替换武将区钟琰卡新增工具入口。</span>
+    <span class="latest">v1.2（2026-07-08）：「线下多人房间」上线——牌桌出现需要工具的武将时，任意玩家开一个 4 位数房间，其他人各自手机加入、选座、编辑自己座位的武将；操作权归座位本人，暗牌 / 暗选 / 未发动天书在服务端按请求者身份过滤后才下发，保密不弱于面杀；座位与设备解耦，可代持没电的座位。首页顶部新增房间入口，全部 12 个武将工具均已接入房间。</span>
     <details>
       <summary>展开完整更新历史</summary>
       <div class="hist">
+        v1.1（2026-07-08）：三件新工具上线——神·孙权「驭衡帝力追踪器」（tools/shensunquan.html：弃牌花色 roll 吴势力技能 / 帝力觉醒向导与误触回滚 / 外来技能登记 / 持纲阴阳与权道三叠持牌法）、袁姬「镜花水月追踪器」（tools/yuanji.html：标记牌台账与归位流程 / 节言状态与触发提示）、钟琰「博览技能生成器」（tools/zhongyan.html：随机三技选一 / 自己发动与他人借技双模式 / 18 技池可增删），均支持断线续档；工具区新增晋势力分组（现蜀 1 / 魏 4 / 吴 3 / 群 3 / 晋 1，共 12 件）；同名可替换武将区钟琰卡新增工具入口。<br>
         v1.0（2026-07-07）：线下化工具区置顶为首个栏目并按势力分组（蜀 1 / 魏 4 / 吴 1 / 群 3，沿用折叠与侧栏二级目录）；新增三件工具——谋·黄月英「并才理贤追踪器」（tools/huangyueying.html）、族·荀攸「百出记录表」（tools/xunyou.html）、董昭 / 谋董昭「先略顺机记录器」（tools/dongzhao.html，双页签合一）；侧栏重排为「线下化工具 / 衍生内容 / 武将修订」三大块；衍生技区族·荀攸卡新增工具入口。<br>
         v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。<br>
         v0.8（2026-07-07）：导航升级——侧栏新增势力二级目录（宽屏内联展开 / 窄屏浮窗下拉）；武将按势力分组可折叠（记忆开合状态，搜索与目录跳转自动展开）；武将、衍生牌与工具均按拼音排序（忽略界 / 谋 / 魔等前缀）；更新记录默认折叠。<br>
