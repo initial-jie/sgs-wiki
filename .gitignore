@@ -1,0 +1,9 @@
+# OS / editor
+.DS_Store
+.idea/
+
+# wrangler / miniflare 本地运行时产物
+prototype/worker/.wrangler/
+
+# node
+node_modules/

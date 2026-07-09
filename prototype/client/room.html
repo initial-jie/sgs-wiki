@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>三国杀线下房间</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ede4d0; --paper2:#f6efdf; --paper3:#e3d7bd;
+  --ink:#26211a; --ink-soft:#5a5142; --seal:#a32e22; --seal-soft:#c0503f;
+  --plate:#332c22; --qi:#a9862f; --ok:#3d7a52; --warn:#b7791f; --line:rgba(60,48,30,.3);
+  --display:'Noto Serif SC','Songti SC','SimSun',serif;
+  --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);
+  background-image:radial-gradient(ellipse at 20% 0%,rgba(255,252,240,.55),transparent 55%),
+    radial-gradient(ellipse at 90% 100%,rgba(120,95,55,.10),transparent 50%);
+  color:var(--ink);font-family:var(--body);line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+h1{font-family:var(--display);font-weight:900;font-size:22px;letter-spacing:.06em;text-align:center;margin:4px 0}
+h1 .mo{color:var(--seal)}
+.sub{text-align:center;color:var(--ink-soft);font-size:12px;letter-spacing:.16em;margin-bottom:12px}
+.card{background:rgba(255,252,244,.75);border:1px solid var(--line);border-top:3px solid var(--seal);
+  border-radius:9px;padding:12px 14px;margin-bottom:11px;box-shadow:0 1px 0 rgba(38,33,26,.1)}
+.card h2{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:.08em;
+  border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:10px}
+.card h2 .tag{float:right;font-size:11px;color:var(--ink-soft);letter-spacing:0;font-weight:400}
+label{font-size:13px;color:var(--ink-soft)}
+input,select{font-family:inherit;font-size:14px;background:rgba(255,252,244,.9);color:var(--ink);
+  border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%}
+button{font-family:inherit;font-size:14px;border-radius:7px;border:1px solid var(--line);
+  background:var(--paper2);color:var(--ink);padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--seal);border-color:var(--seal);color:#f6ecd8;font-weight:600}
+button.ghost{background:transparent;color:var(--ink-soft)}
+button.gold{background:transparent;border-color:var(--qi);color:#856a1f}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1;min-width:0}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:2px 10px;margin:2px 3px 2px 0;color:var(--ink-soft)}
+.chip.on{border-color:var(--seal);color:var(--seal)}
+.chip.gold{border-color:var(--qi);color:#856a1f}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:6px}
+.seat{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;background:rgba(255,252,244,.5)}
+.seat.mine{border-color:var(--seal);background:rgba(163,46,34,.06)}
+.seat .st{font-family:var(--display);font-weight:800;font-size:15px}
+.seat .lb{font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:4px;padding:0 5px;margin-left:6px}
+.seat .kb{font-size:11px;color:#856a1f;border:1px solid var(--qi);border-radius:4px;padding:0 5px;margin-left:5px}
+/* 花色点数选择 */
+.pickgrid{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0}
+.pick{min-width:40px;text-align:center;padding:7px 0;font-size:15px;flex:0 0 auto}
+.pick.sel{background:var(--seal);border-color:var(--seal);color:#f6ecd8}
+.suitred{color:var(--seal-soft)}
+.pick.sel .suitred{color:#ffdcd4}
+.slot{border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-bottom:9px}
+.slot .stt{font-size:12px;color:var(--ink-soft);margin-bottom:3px}
+.vmsg{font-size:12px;margin-top:4px}
+.vmsg.warn{color:var(--warn)} .vmsg.info{color:var(--ink-soft)} .vmsg.ok{color:var(--ok)}
+/* 炁揭示牌(宣纸风) */
+.reveal{position:relative;margin:10px auto;width:150px;height:200px;border-radius:12px;
+  background:linear-gradient(160deg,var(--paper2),var(--paper3));border:2px solid var(--qi);
+  box-shadow:0 4px 14px rgba(90,60,20,.2);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.reveal::before{content:"炁";position:absolute;font-family:var(--display);font-size:120px;color:var(--qi);
+  opacity:.12;top:30px;left:50%;transform:translateX(-50%)}
+.reveal .sr{font-family:var(--display);font-size:40px;font-weight:900;z-index:1}
+.reveal .nm{font-size:15px;margin-top:4px;z-index:1}
+.reveal .own{font-size:11px;color:var(--ink-soft);margin-top:8px;z-index:1}
+/* 炁点 */
+.qidot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;border:1px solid var(--qi);vertical-align:middle}
+.qidot.pool{background:var(--qi)} .qidot.taken{background:transparent;border-style:dashed;opacity:.5}
+.mycard{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;margin:3px 4px 3px 0;font-size:14px}
+.mycard.taken{border-color:var(--seal);background:rgba(163,46,34,.08);color:var(--seal);text-decoration:line-through}
+.loglist{font-size:12px;color:var(--ink-soft);max-height:150px;overflow:auto}
+.loglist div{padding:2px 0;border-bottom:1px dashed var(--line)}
+.toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:var(--plate);color:#f0e6cf;
+  padding:9px 16px;border-radius:8px;font-size:13px;z-index:99;opacity:0;transition:opacity .3s;pointer-events:none;max-width:88%;text-align:center}
+.toast.show{opacity:1}
+footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 牌堆校验(内联,数据同步自 prototype/shared/deck.mjs)============ */
+const SUIT_NAME={S:"黑桃",H:"红桃",C:"梅花",D:"方块"};
+const SUIT_RULES={桃:["H","D"],闪:["H","D"],火杀:["H","D"],雷杀:["S","C"],闪电:["S","H"]};
+const KNOWN_CARDS=new Set(["杀","火杀","雷杀","闪","桃","酒","无中生有","过河拆桥","顺手牵羊","决斗","借刀杀人","五谷丰登","桃园结义","南蛮入侵","万箭齐发","无懈可击","火攻","铁索连环","以逸待劳","知己知彼","远交近攻","调虎离山","乐不思蜀","兵粮寸断","闪电","诸葛连弩","青龙偃月刀","雌雄双股剑","青釭剑","丈八蛇矛","贯石斧","方天画戟","麒麟弓","朱雀羽扇","寒冰剑","古锭刀","银月枪","八卦阵","仁王盾","藤甲","白银狮子","绝影","大宛","紫骍","骐骥","赤兔","的卢","爪黄飞电","骅骝","木牛流马"]);
+function validateCard(c){
+  const name=(c.n||"").trim();
+  if(!name) return {level:"ok"};
+  const rule=SUIT_RULES[name];
+  if(rule&&c.s&&!rule.includes(c.s)) return {level:"warn",reason:`${name}不应是${SUIT_NAME[c.s]},只可能是 ${rule.map(s=>SUIT_NAME[s]).join(" / ")}`};
+  if(!KNOWN_CARDS.has(name)) return {level:"info",reason:`"${name}"不在常见牌库,请确认牌名`};
+  return {level:"ok"};
+}
+
+/* ============ 连接 / 状态 ============ */
+const SUITS=[{k:"S",t:"♠"},{k:"H",t:"♥",red:1},{k:"C",t:"♣"},{k:"D",t:"♦",red:1}];
+const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+let ws=null,state=null,lastReveal=null;
+let deviceId=localStorage.getItem("sgs_device");
+if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage.setItem("sgs_device",deviceId);}
+const draft={}; // seat -> [{s,r,n}]  登记草稿
+
+const $=(s,el=document)=>el.querySelector(s);
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
+function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
+function esc(t){return (t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function suitGlyph(k){const s=SUITS.find(x=>x.k===k);return s?`<span class="${s.red?'suitred':''}">${s.t}</span>`:"";}
+
+function connect(base,code){
+  if(ws)try{ws.close();}catch(e){}
+  ws=new WebSocket(base.replace(/\/+$/,"")+"/api/room/"+code+"/ws");
+  ws.onopen=()=>{send({type:"hello",deviceId});toast("已连接房间 "+code);};
+  ws.onclose=()=>toast("连接已断开");
+  ws.onerror=()=>toast("连接失败,服务端起了吗");
+  ws.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.type==="roomState"){state=m;render();}
+    else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
+    else if(m.type==="error"){toast("操作被拒:"+m.code);}
+  };
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  const app=$("#app");
+  let h='<h1>三国杀线下房间</h1><div class="sub">座位即身份 · 工具随武将登场</div>';
+  if(!state){app.innerHTML=h+viewConnect();bindConnect();return;}
+  h+=viewHeader();
+  h+=viewSeats();
+  const lvbu=Object.values(state.seats).find(s=>s.general==="lvbu");
+  if(lvbu) h+=viewLvbuTool(lvbu);
+  h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
+  app.innerHTML=h;
+  bindAll();
+}
+
+function viewConnect(){
+  const base=localStorage.getItem("sgs_base")||"ws://localhost:8787";
+  return `<div class="card"><h2>加入房间</h2>
+    <div class="row"><label class="grow">服务端<input id="i-base" value="${esc(base)}"></label></div>
+    <div class="row" style="margin-top:8px"><label>房间码<input id="i-code" value="1234" maxlength="4" style="width:90px"></label>
+      <button class="ghost" id="b-rand">随机</button><button class="primary grow" id="b-conn">连接</button></div>
+    <div class="hint">本设备 ID:<b id="did">${esc(deviceId)}</b>(点可改,模拟不同手机)。同一房间码即进同一桌。</div></div>`;
+}
+function bindConnect(){
+  $("#b-rand")&&($("#b-rand").onclick=()=>$("#i-code").value=String(Math.floor(1000+Math.random()*9000)));
+  $("#b-conn")&&($("#b-conn").onclick=()=>{
+    const base=$("#i-base").value,code=$("#i-code").value.trim();
+    if(!/^\d{4}$/.test(code))return toast("房间码要 4 位数字");
+    localStorage.setItem("sgs_base",base);connect(base,code);
+  });
+  $("#did")&&($("#did").onclick=()=>{const v=prompt("设置本设备 ID(模拟不同手机)",deviceId);if(v){deviceId=v;localStorage.setItem("sgs_device",v);render();}});
+}
+
+function viewHeader(){
+  return `<div class="card"><div class="row"><span class="grow">房间 <b>${esc(state.roomCode)}</b></span>
+    <span class="chip">我 ${esc(deviceId)}</span><span class="chip">座位 [${state.youHold.join(",")||"未入座"}]</span>
+    <button class="ghost" data-newroom="1" style="font-size:12px">新开房间</button></div></div>`;
+}
+
+function viewSeats(){
+  let h='<div class="card"><h2>座位<span class="tag">点认领入座 · 可代持没电的座位</span></h2>';
+  const hold=new Set(state.youHold);
+  for(const s of Object.values(state.seats)){
+    const mine=hold.has(s.seatNo);
+    h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
+      +(s.general==="lvbu"?'<span class="lb">吕布</span>':(s.general&&s.general!=="none"?`<span class="kb">${esc(s.general)}</span>`:""))
+      +(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
+    h+=mine?`<button class="ghost" data-rel="${s.seatNo}">释放</button>`:`<button data-claim="${s.seatNo}">认领</button>`;
+    h+=`</div>`;
+    if(mine){
+      const g=s.general||"";
+      const isCustom=g&&g!=="lvbu"&&g!=="none";
+      h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label><select data-gen="${s.seatNo}">`
+        +`<option value="" ${g===""?"selected":""}>未选</option>`
+        +`<option value="lvbu" ${g==="lvbu"?"selected":""}>魔吕布(有工具)</option>`
+        +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
+    }
+    if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
+    h+=`</div>`;
+  }
+  h+='</div>';
+  return h;
+}
+
+/* ---------- 吕布工具 ---------- */
+function viewLvbuTool(lvbu){
+  const ts=lvbu.toolState, hold=new Set(state.youHold);
+  const iAmLvbu=hold.has(lvbu.seatNo);
+  const myOther=state.youHold.filter(n=>n!==lvbu.seatNo);
+  let h="";
+  if(ts.phase==="reg"){
+    // 登记:为我持有的每个座位登记初始炁
+    for(const seat of state.youHold) h+=viewRegSeat(lvbu,seat);
+    if(iAmLvbu) h+=`<div class="card"><div class="row end"><button class="primary" data-finish="${lvbu.seatNo}">全部登记完毕,进入对局 →</button></div>
+      <div class="hint">等所有人(含你)都登记好各自初始牌后再点。</div></div>`;
+    return h;
+  }
+  // 对局
+  h+=viewStatus(lvbu);
+  if(iAmLvbu) h+=viewLvbuPanel(lvbu);
+  for(const seat of myOther) h+=viewMyQi(lvbu,seat);
+  h+=viewPool(lvbu);
+  h+=viewLog(lvbu);
+  return h;
+}
+
+function viewRegSeat(lvbu,seat){
+  const isLvbuSeat=seat===lvbu.seatNo;
+  const mine=lvbu.toolState.qiRegister.mine||{};
+  const already=mine[seat];
+  if(!draft[seat]) draft[seat]=already?already.cards.map(c=>({s:c.s,r:c.r,n:c.n})):[{s:null,r:null,n:""},{s:null,r:null,n:""},{s:null,r:null,n:""},{s:null,r:null,n:""}];
+  let h=`<div class="card"><h2>登记初始炁 · 座位 ${seat}${isLvbuSeat?' (你,吕布本人)':''}<span class="tag">仅你可见</span></h2>`;
+  draft[seat].forEach((c,ci)=>{
+    h+=`<div class="slot"><div class="stt">第 ${ci+1} 张</div><div class="pickgrid">`;
+    for(const s of SUITS) h+=`<button class="pick ${c.s===s.k?'sel':''}" data-ds="${seat}:${ci}:${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+    h+=`</div><div class="pickgrid">`;
+    for(const r of RANKS) h+=`<button class="pick ${c.r===r?'sel':''}" data-dr="${seat}:${ci}:${r}">${r}</button>`;
+    h+=`</div><input data-dn="${seat}:${ci}" placeholder="牌名(如 杀 / 过河拆桥,建议填)" value="${esc(c.n)}">`;
+    const v=validateCard(c);
+    if(v.level!=="ok") h+=`<div class="vmsg ${v.level}">${v.level==="warn"?"⚠":"·"} ${esc(v.reason)}</div>`;
+    h+=`</div>`;
+  });
+  h+=`<div class="row end"><button class="gold" data-addslot="${seat}">+ 加一张</button><button class="primary" data-reg="${seat}">${already?'更新登记':'确认登记'}</button></div></div>`;
+  return h;
+}
+
+function viewStatus(lvbu){
+  const ts=lvbu.toolState;
+  let h='<div class="card"><div class="row">';
+  h+=`<span class="chip ${ts.entered?'on':''}">${ts.entered?'已入魔':'未入魔'}</span>`;
+  if(ts.kuangTarget!=null) h+=`<span class="chip gold">狂:座位${ts.kuangTarget}</span>`;
+  if(ts.entered) h+=`<span class="chip">第 ${ts.round} 轮</span>`;
+  if(ts.stolenThisTurn&&ts.stolenThisTurn.length) h+=`<span class="chip">本回合已夺:${ts.stolenThisTurn.join(",")}</span>`;
+  h+='</div></div>';
+  return h;
+}
+
+function viewLvbuPanel(lvbu){
+  const ts=lvbu.toolState,counts=ts.qiRegister.counts||{};
+  let h='<div class="card"><h2>夺炁<span class="tag">选目标 · 系统随机指定一张</span></h2><div class="row">';
+  for(const s of Object.values(state.seats)){
+    if(s.seatNo===lvbu.seatNo||!s.general) continue;
+    const n=counts[s.seatNo]||0;
+    const locked=(ts.stolenThisTurn||[]).includes(s.seatNo);
+    h+=`<button ${(n===0||locked)?'disabled':''} data-duoqi="${s.seatNo}">座位${s.seatNo}<span style="font-size:11px;color:var(--ink-soft)">(余${n})${locked?' 本回合已夺':''}</span></button>`;
+  }
+  h+=`</div><div class="row" style="margin-top:8px"><button class="gold" data-newturn="1">↻ 开新回合(重置夺炁锁)</button></div>`;
+  if(lastReveal) h+=revealCard(lastReveal.card,"你夺得的炁");
+  h+='</div>';
+
+  // 狂魔
+  const others=Object.values(state.seats).filter(s=>s.seatNo!==lvbu.seatNo&&s.general);
+  h+='<div class="card"><h2>狂魔</h2>';
+  if(!ts.entered){
+    h+='<div class="row"><select id="kuangSel" class="grow">';
+    for(const s of others) h+=`<option value="${s.seatNo}">座位${s.seatNo}</option>`;
+    h+='</select><button class="primary" data-entermo="1">⚔ 入魔并指定</button></div>';
+  }else if(ts.kuangTarget!=null){
+    h+=`<div class="row"><span class="grow">当前狂角色:座位 ${ts.kuangTarget}</span></div>`;
+    h+=`<div class="row" style="margin-top:6px"><button class="primary" data-defeat="1">吕布击败,夺其全部炁</button><button class="ghost" data-kdied="1">狂角色被他人击杀</button></div>`;
+  }else{
+    h+='<div class="row"><span class="grow" style="color:var(--seal)">狂角色空缺,立即在存活玩家中重新指定:</span></div>';
+    h+='<div class="row" style="margin-top:6px"><select id="repickSel" class="grow">';
+    for(const s of others) h+=`<option value="${s.seatNo}">座位${s.seatNo}</option>`;
+    h+='</select><button class="primary" data-repick="1">指定为狂角色</button></div>';
+  }
+  h+='</div>';
+
+  // 已获得的炁 + 每轮 + 被击杀
+  const myInit=(ts.qiRegister.mine||{})[lvbu.seatNo];
+  const initCards=myInit?myInit.cards:[];
+  h+=`<div class="card"><h2>你的炁<span class="tag">罡拳判定用</span></h2>`;
+  h+=`<div class="hint">初始炁(被击杀时交出这些):</div><div>`;
+  h+=initCards.length?initCards.map(c=>`<span class="mycard ${c.taken?'taken':''}">${suitGlyph(c.s)}${c.r}${c.n?' '+esc(c.n):''}${c.taken?' 已交':''}</span>`).join(""):'<span class="hint">未登记</span>';
+  h+=`</div><div class="hint" style="margin-top:8px">夺来的炁(被击杀时不交):</div><div>`;
+  h+=(ts.gained||[]).length?ts.gained.map(g=>`<span class="mycard">${g.label.replace(/([♥♦])/g,'<span class="suitred">$1</span>')}<span style="font-size:11px;color:var(--ink-soft)">${esc(g.from)}</span></span>`).join(""):'<span class="hint">暂无</span>';
+  h+='</div>';
+  if(ts.entered) h+=`<div class="row" style="margin-top:8px"><button class="${ts.dmgThisRound?'primary':'ghost'}" data-dmg="1">${ts.dmgThisRound?'✓ 本轮已造成伤害':'本轮尚未造成伤害'}</button><button class="gold" data-endround="1">结束本轮</button></div>`;
+  h+=`<div class="row end" style="margin-top:8px"><select id="killerSel"><option value="">被谁击杀…</option>`;
+  for(const s of Object.values(state.seats)) if(s.seatNo!==lvbu.seatNo&&s.general) h+=`<option value="${s.seatNo}">座位${s.seatNo}</option>`;
+  h+=`</select><button class="ghost" data-killed="1">吕布被击杀,交出全部炁</button></div></div>`;
+  return h;
+}
+
+function viewMyQi(lvbu,seat){
+  const mine=(lvbu.toolState.qiRegister.mine||{})[seat];
+  if(!mine) return "";
+  let h=`<div class="card"><h2>我的炁 · 座位 ${seat}<span class="tag">划掉=已被吕布夺走,请把该实体牌交给吕布</span></h2><div>`;
+  h+=mine.cards.map(c=>`<span class="mycard ${c.taken?'taken':''}">${suitGlyph(c.s)}${c.r}${c.n?' '+esc(c.n):''}${c.taken?' ⚔':''}</span>`).join("");
+  h+='</div></div>';
+  return h;
+}
+
+function viewPool(lvbu){
+  const counts=lvbu.toolState.qiRegister.counts||{};
+  const seats=Object.keys(counts).map(Number).sort((a,b)=>a-b);
+  let h='<div class="card"><h2>炁池总览<span class="tag">仅数量公开,牌面保密</span></h2>';
+  if(!seats.length) h+='<div class="hint">暂无登记</div>';
+  for(const sn of seats){
+    const n=counts[sn];
+    let dots=""; for(let i=0;i<n;i++) dots+='<span class="qidot pool"></span>';
+    h+=`<div class="row" style="padding:3px 0"><span class="grow">座位 ${sn}${sn===lvbu.seatNo?' (吕布)':''}</span><span>${dots||'<span class="hint">已被夺尽</span>'}</span><span class="hint" style="margin:0 0 0 6px">余 ${n}</span></div>`;
+  }
+  h+='</div>';
+  return h;
+}
+
+function viewLog(lvbu){
+  const log=lvbu.toolState.log||[];
+  return `<div class="card"><h2>公开记录</h2><div class="loglist">${log.length?log.map(l=>`<div>${esc(l)}</div>`).join(""):'<div class="hint">暂无</div>'}</div></div>`;
+}
+
+function revealCard(label,own){
+  const m=label.match(/^([♠♥♣♦])(\S+)\s*(.*)$/)||[,"","",label];
+  const red=m[1]==="♥"||m[1]==="♦";
+  return `<div class="reveal"><div class="sr ${red?'suitred':''}">${m[1]}${m[2]}</div><div class="nm">${esc(m[3])||"(未记牌名)"}</div><div class="own">${esc(own)}</div></div>`;
+}
+
+/* ============ 事件绑定 ============ */
+function bindAll(){
+  const lvbu=Object.values(state.seats).find(s=>s.general==="lvbu");
+  const L=lvbu?lvbu.seatNo:null;
+  const q=(sel)=>document.querySelectorAll(sel);
+  q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
+  q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
+  q("[data-gen]").forEach(sel=>sel.onchange=()=>{
+    const seat=+sel.dataset.gen,cur=state.seats[seat].general||"";
+    let val=sel.value;
+    if(val==="__custom__"){
+      const name=prompt("输入武将名(桌面显示用,该武将暂无专属工具)",(cur&&cur!=="lvbu")?cur:"");
+      if(!name||!name.trim()){render();return;}
+      val=name.trim();
+    }
+    if(cur===val){render();return;}
+    if(cur&&!confirm("改/清除武将会清空该座位已登记的数据,确定?")){render();return;}
+    send({type:"setGeneral",seatNo:seat,generalId:val});
+  });
+  // 登记草稿
+  q("[data-ds]").forEach(b=>b.onclick=()=>{const[s,ci,k]=b.dataset.ds.split(":");draft[+s][+ci].s=k;render();});
+  q("[data-dr]").forEach(b=>b.onclick=()=>{const[s,ci,r]=b.dataset.dr.split(":");draft[+s][+ci].r=r;render();});
+  q("[data-dn]").forEach(inp=>inp.onchange=()=>{const[s,ci]=inp.dataset.dn.split(":");draft[+s][+ci].n=inp.value.trim();render();});
+  q("[data-addslot]").forEach(b=>b.onclick=()=>{draft[+b.dataset.addslot].push({s:null,r:null,n:""});render();});
+  q("[data-reg]").forEach(b=>b.onclick=()=>{
+    const seat=+b.dataset.reg;
+    const filled=draft[seat].filter(c=>c.s||c.r||c.n);
+    const cards=filled.filter(c=>c.s&&c.r).map(c=>({s:c.s,r:c.r,n:c.n}));
+    if(cards.length!==filled.length)return toast("有牌只填了一半(花色/点数需齐)");
+    if(!cards.length)return toast("至少登记一张炁");
+    send({type:"action",targetSeat:L,bySeat:seat,toolAction:{type:"registerQi",cards}});toast("座位"+seat+" 登记完成");
+  });
+  q("[data-finish]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:+b.dataset.finish,toolAction:{type:"finishReg"}}));
+  // 对局
+  q("[data-duoqi]").forEach(b=>b.onclick=()=>{lastReveal=null;send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"duoqi",fromSeat:+b.dataset.duoqi}});});
+  q("[data-newturn]").forEach(b=>b.onclick=()=>{lastReveal=null;send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"newTurn"}});});
+  q("[data-entermo]").forEach(b=>b.onclick=()=>{const v=$("#kuangSel").value;if(v)send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"enterMo",kuangTarget:+v}});});
+  q("[data-defeat]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"defeatKuang"}}));
+  q("[data-kdied]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"kuangDiedByOther"}}));
+  q("[data-repick]").forEach(b=>b.onclick=()=>{const v=$("#repickSel").value;if(v)send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"repickKuang",kuangTarget:+v}});});
+  q("[data-dmg]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"toggleDmg"}}));
+  q("[data-endround]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"endRound"}}));
+  q("[data-killed]").forEach(b=>b.onclick=()=>{const v=$("#killerSel").value;send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"lvbuKilled",killerSeat:v?+v:undefined}});});
+  q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||"ws://localhost:8787",c);});
+}
+
+render();
+</script>
+</body>
+</html>
