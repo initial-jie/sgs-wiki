@@ -180,6 +180,16 @@ export function initToolState(generalId) {
       seq: 0,            // 外来技能 id 自增(worker/sim 一致,不用时间戳)
       log: [],           // 公开事件
     };
+  if (generalId === "diaochan")
+    return {
+      entered: false,       // 倾世入魔(公开)
+      round: 1,             // 轮次(公开)
+      dmgThisRound: false,  // 本轮貂蝉是否已造成伤害(公开)
+      dead: [],             // 已阵亡的房间座位号(工具内追踪,room 不建模死亡;公开)
+      hh: { targets: [], wiz: {} }, // 幻惑:本轮目标座位号 + 各目标向导 {uses,stage,n,roll}(公开)
+      qs: { batch: 0, cards: [] },  // 倾世牌台账 cards=[{owner:座位,typ,custom,s,r,status}](公开)
+      log: [],              // 公开事件
+    };
   return {};
 }
 
@@ -728,6 +738,156 @@ export class RoomCore {
       }
       if (t === "resetGame") {
         if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 魔貂蝉:幻惑倾世(全公开台账 + 花名册绑房间座位;幻惑随机在 DO,报数公开)─────────
+    if (target.general === "diaochan") {
+      const dSeat = targetSeat;
+      const isDiao = bySeat === dSeat && iHold(dSeat); // 貂蝉本人(或代持其座位)
+      const nm = (sn) => "座位" + sn;                   // 日志用座位号(名字由前端按 general 渲染)
+      const wiz = (pl) => ts.hh.wiz[pl];
+      const afterDiscard = (pl) => {                    // 弃置后:满2次→done,否则回下一轮"数可用牌"
+        const w = wiz(pl);
+        if (w.uses >= 2) { w.stage = "done"; this._log(ts, `幻惑·${nm(pl)}:结算完毕`); }
+        else { w.stage = "count-usable"; w.n = 0; }
+      };
+      // —— 幻惑 ——
+      if (t === "hhToggle") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const pl = Number(toolAction.pl);
+        if (pl === dSeat || !this.seats[pl]) return { error: "BAD_TARGET" };
+        const i = ts.hh.targets.indexOf(pl);
+        if (i >= 0) { ts.hh.targets.splice(i, 1); delete ts.hh.wiz[pl]; this._log(ts, `取消幻惑目标:${nm(pl)}`); }
+        else {
+          if (ts.hh.targets.length >= 2) return { error: "HH_MAX_2" }; // 幻惑至多2名目标
+          ts.hh.targets.push(pl); ts.hh.wiz[pl] = { uses: 0, stage: "idle", n: 0, roll: null };
+          this._log(ts, `指定幻惑目标:${nm(pl)}`);
+        }
+        return { ok: true };
+      }
+      if (t === "hhStart") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        w.stage = "count-usable"; w.n = 0; w.roll = null;
+        return { ok: true };
+      }
+      if (t === "hhRollUse") {   // 报"可用牌"数 → DO 随机抽位置强制使用
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        const n = Math.floor(toolAction.n);
+        if (!(n >= 1)) return { error: "BAD_N" };
+        w.n = n; w.roll = 1 + Math.floor(this.rng() * n); w.stage = "show-use";
+        this._log(ts, `幻惑·${nm(toolAction.pl)}:${n}张可用牌中抽中第${w.roll}张,强制使用`);
+        return { ok: true, roll: w.roll };
+      }
+      if (t === "hhNoUsable") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        w.stage = "ended"; this._log(ts, `幻惑·${nm(toolAction.pl)}:无可用手牌,幻惑终止`);
+        return { ok: true };
+      }
+      if (t === "hhUsed") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        w.uses++; w.stage = "count-hand"; w.n = 0;
+        return { ok: true, uses: w.uses };
+      }
+      if (t === "hhRollDiscard") { // 报"全部手牌"数 → DO 随机抽位置弃置(n=0 跳过)
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        const n = Math.floor(toolAction.n);
+        if (isNaN(n) || n < 0) return { error: "BAD_N" };
+        if (n === 0) { this._log(ts, `幻惑·${nm(toolAction.pl)}:使用后已无手牌,跳过随机弃置`); afterDiscard(toolAction.pl); return { ok: true, skipped: true }; }
+        w.n = n; w.roll = 1 + Math.floor(this.rng() * n); w.stage = "show-discard";
+        this._log(ts, `幻惑·${nm(toolAction.pl)}:${n}张手牌中随机弃置第${w.roll}张`);
+        return { ok: true, roll: w.roll };
+      }
+      if (t === "hhDiscarded") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        afterDiscard(toolAction.pl);
+        return { ok: true, stage: w.stage };
+      }
+      if (t === "hhReroll") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const w = wiz(toolAction.pl); if (!w) return { error: "NO_WIZ" };
+        w.stage = toolAction.back === "count-hand" ? "count-hand" : "count-usable"; w.roll = null;
+        this._log(ts, `幻惑·${nm(toolAction.pl)}:报数有误,重新报数`);
+        return { ok: true };
+      }
+      // —— 倾世 ——
+      if (t === "enterQingshi") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        if (ts.entered) return { error: "ALREADY_ENTERED" };
+        ts.entered = true; this._log(ts, "貂蝉入魔(倾世)");
+        return { ok: true };
+      }
+      if (t === "qsDistribute") { // 客户端填好整批(每座位一张)一次性进 DO
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        if (!ts.entered) return { error: "NOT_ENTERED" };
+        const cards = Array.isArray(toolAction.cards) ? toolAction.cards : [];
+        if (!cards.length) return { error: "NO_CARDS" };
+        ts.qs.batch++;
+        ts.qs.cards = cards.map((c) => ({ owner: Number(c.owner), typ: String(c.typ || "").slice(0, 10), custom: String(c.custom || "").slice(0, 20), s: c.s || null, r: c.r || null, status: "hand" }));
+        this._log(ts, `倾世第${ts.qs.batch}批分发完毕(${ts.qs.cards.length}张)`);
+        return { ok: true, batch: ts.qs.batch };
+      }
+      if (t === "qsUse") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const c = ts.qs.cards[toolAction.index]; if (!c) return { error: "NO_CARD" };
+        c.status = "used";
+        if (toolAction.dmg && c.owner === dSeat) ts.dmgThisRound = true; // 貂蝉自己用倾世牌造成伤害计入本轮
+        this._log(ts, `倾世牌(${nm(c.owner)})已使用${toolAction.dmg ? ",造成伤害→貂蝉摸一张" : ",未造成伤害"}`);
+        return { ok: true };
+      }
+      if (t === "qsGot") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const c = ts.qs.cards[toolAction.index]; if (!c) return { error: "NO_CARD" };
+        c.status = "got"; this._log(ts, `倾世牌(${nm(c.owner)})非使用进弃牌堆→貂蝉获得之`);
+        return { ok: true };
+      }
+      if (t === "qsLeft") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const c = ts.qs.cards[toolAction.index]; if (!c) return { error: "NO_CARD" };
+        c.status = "left"; this._log(ts, `倾世牌(${nm(c.owner)})以其他方式离手,标记消散`);
+        return { ok: true };
+      }
+      if (t === "qsUndo") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const c = ts.qs.cards[toolAction.index]; if (!c) return { error: "NO_CARD" };
+        c.status = "hand"; this._log(ts, `撤回:倾世牌(${nm(c.owner)})恢复为"在手"`);
+        return { ok: true };
+      }
+      // —— 轮次 / 阵亡 ——
+      if (t === "toggleDmg") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        ts.dmgThisRound = !ts.dmgThisRound; return { ok: true, dmg: ts.dmgThisRound };
+      }
+      if (t === "endRound") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const lost = ts.entered && !ts.dmgThisRound;
+        this._log(ts, `第${ts.round}轮结束` + (lost ? ":本轮未造成伤害,貂蝉失去1点体力" : ""));
+        ts.round++; ts.dmgThisRound = false; ts.hh = { targets: [], wiz: {} };
+        return { ok: true, lostHp: lost };
+      }
+      if (t === "toggleDead") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        const pl = Number(toolAction.pl);
+        const i = ts.dead.indexOf(pl);
+        if (i >= 0) { ts.dead.splice(i, 1); this._log(ts, `${nm(pl)}取消阵亡标记`); }
+        else {
+          ts.dead.push(pl); this._log(ts, `${nm(pl)}阵亡`);
+          const ti = ts.hh.targets.indexOf(pl); // 阵亡即移出幻惑目标
+          if (ti >= 0) { ts.hh.targets.splice(ti, 1); delete ts.hh.wiz[pl]; }
+        }
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isDiao) return { error: "NOT_DIAO_ACTION" };
         target.toolState = initToolState(target.general);
         return { ok: true, reset: true };
       }

@@ -122,8 +122,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -134,7 +134,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              zhongyan:{view:s=>viewZyTool(s),bind:(s,q)=>bindZy(s,q)},
              simayi:{view:s=>viewSmTool(s),bind:(s,q)=>bindSm(s,q)},
              dongzhao:{view:s=>viewDzTool(s),bind:(s,q)=>bindDz(s,q)},
-             shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)} };
+             shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)},
+             diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)} };
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -299,6 +300,7 @@ function viewSeats(){
         +`<option value="simayi" ${g==="simayi"?"selected":""}>魔司马懿(有工具)</option>`
         +`<option value="dongzhao" ${g==="dongzhao"?"selected":""}>谋董昭(有工具)</option>`
         +`<option value="shensunquan" ${g==="shensunquan"?"selected":""}>神孙权(有工具)</option>`
+        +`<option value="diaochan" ${g==="diaochan"?"selected":""}>魔貂蝉(有工具)</option>`
         +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
@@ -1382,6 +1384,175 @@ function bindSs(ss,q){
   q("[data-sspoolrm]").forEach(b=>b.onclick=()=>{ssPool=ssPool.filter(x=>x.id!==b.dataset.sspoolrm);render();});
   q("[data-sspooladd]").forEach(b=>b.onclick=()=>{const nm=$("#ssPoolName");if(!nm||!nm.value.trim())return;const tx=($("#ssPoolText")||{}).value||"(未填写描述)";ssPool.push({id:"p"+ssPool.length+"_"+nm.value.trim(),name:nm.value.trim(),text:tx,enabled:true,custom:true});render();});
   q("[data-ssreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空体力/技能/外来/觉醒记录,技能池设置保留,座位武将保留。")){ssSuits.clear();ssWizard=null;act({type:"resetGame"});}});
+}
+
+/* ---------- 魔貂蝉工具:幻惑倾世(全公开台账 + 花名册绑房间座位)---------- */
+const DC_TYPES=['杀','雷杀','火杀','决斗','火攻','其他'];
+let dcDist=null; // 倾世分发表单(本机瞬态){order:[座位],idx,saved:[],draft:{typ,custom,s,r}},或 null
+function dcName(sn){ const s=state.seats[sn]; if(!s)return sn+"号"; const g=s.general;
+  const base=hasTool(g)?GENERALS[g].name:((g&&g!=="none"&&g!=="")?g:(sn+"号"));
+  return esc(base); }
+function dcInPlay(){ return Object.values(state.seats).filter(s=>(s.general&&s.general!=="")||(s.holderDevices||[]).length).map(s=>s.seatNo); }
+function dcNewDraft(){ return {typ:null,custom:'',s:null,r:null}; }
+function viewDcTool(dc){
+  const seat=dc.seatNo, ts=dc.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  if(iAm&&dcDist) return viewDcDist(dc);            // 分发表单优先(本机)
+  const dead=ts.dead||[], hh=ts.hh||{targets:[],wiz:{}}, qs=ts.qs||{batch:0,cards:[]};
+  const inPlay=dcInPlay(), alive=sn=>!dead.includes(sn);
+  let h="";
+  // 状态栏(公开)
+  h+=`<div class="card"><div class="row"><span class="chip" style="${ts.entered?'border-color:var(--seal);color:var(--seal)':''}">${ts.entered?'已入魔(倾世)':'未入魔'}</span><span class="chip">第 ${ts.round||1} 轮</span>`;
+  if((hh.targets||[]).length) h+=`<span class="chip gold">幻惑:${hh.targets.map(dcName).join("、")}</span>`;
+  h+=`</div>`;
+  if(ts.entered) h+=`<div class="hint">改目标提醒:其他角色使用倾世牌指定唯一目标时,貂蝉可弃一张牌重新指定(无距离限制)。</div>`;
+  h+=`</div>`;
+  // 幻惑
+  h+=`<div class="card"><h2>幻惑<span class="tag">每轮:摸两张,弃至多两张选等量目标</span></h2>`;
+  if(iAm){
+    h+=`<div class="hint" style="margin:0 0 6px">本轮幻惑目标(至多2名,点选/取消):</div><div class="row">`;
+    for(const sn of inPlay){ if(sn===seat||!alive(sn))continue; const on=(hh.targets||[]).includes(sn);
+      h+=`<button class="${on?'primary':''}" data-dchh="${sn}">${dcName(sn)}</button>`; }
+    h+=`</div>`;
+  }else if(!(hh.targets||[]).length){ h+=`<div class="hint">本轮暂无幻惑目标。</div>`; }
+  for(const pl of (hh.targets||[])) h+=viewDcHhWiz(ts,pl,iAm);
+  h+=`</div>`;
+  // 倾世
+  h+=`<div class="card"><h2>倾世</h2>`;
+  if(!ts.entered){
+    h+=`<div class="hint">准备阶段,貂蝉可入魔:令所有角色获得一张单目标伤害牌。</div>`;
+    if(iAm) h+=`<div class="row" style="margin-top:8px"><button class="gold" data-dcenter="1">✿ 入魔(倾世)</button></div>`;
+  }else{
+    const cards=qs.cards||[], allGone=cards.length>0&&cards.every(c=>c.status!=="hand");
+    if(allGone&&iAm) h+=`<div class="slot" style="border-style:solid;border-color:var(--seal)">本批倾世牌均已离手 → 准备阶段可重新分发。<div class="row" style="margin-top:6px"><button class="gold" data-dcredist="1">重新分发(第 ${(qs.batch||0)+1} 批)→</button></div></div>`;
+    if(cards.length){
+      h+=`<div class="hint" style="margin:8px 0 4px">倾世牌台账(第 ${qs.batch} 批):</div>`;
+      cards.forEach((c,i)=>h+=viewDcQsRow(c,i,iAm));
+    }else if(iAm){ h+=`<div class="hint">已入魔,尚未分发。<div class="row" style="margin-top:6px"><button class="gold" data-dcredist="1">开始分发 →</button></div></div>`; }
+    h+=`<div class="hint">使用进弃堆→结束(造成伤害则貂蝉摸一张);非使用进弃堆→貂蝉获得;其他离手→标记消散。</div>`;
+  }
+  h+=`</div>`;
+  // 每轮结算
+  h+=`<div class="card"><h2>每轮结算<span class="tag">第 ${ts.round||1} 轮</span></h2>`;
+  if(ts.entered&&iAm){
+    h+=`<div class="row"><button class="${ts.dmgThisRound?'primary':''}" data-dcdmg="1">${ts.dmgThisRound?'✓ 本轮貂蝉已造成伤害':'本轮貂蝉尚未造成伤害'}</button></div>`;
+    if(!ts.dmgThisRound) h+=`<div class="hint" style="color:var(--warn)">若以此状态结束本轮,貂蝉失去1点体力。</div>`;
+  }
+  if(iAm) h+=`<div class="row" style="margin-top:8px"><button class="gold" data-dcendr="1">结束本轮 →</button></div>`;
+  h+=`</div>`;
+  // 角色存活
+  if(iAm){
+    h+=`<div class="card"><h2>角色存活<span class="tag">点名字标记阵亡</span></h2><div class="row">`;
+    for(const sn of inPlay){ const d=dead.includes(sn);
+      h+=`<button class="${d?'ghost':''}" style="${d?'text-decoration:line-through;opacity:.5':''}" data-dcdead="${sn}">${dcName(sn)}${sn===seat?' ✿':''}</button>`; }
+    h+=`</div><div class="hint">阵亡者手牌进弃堆:若含倾世牌属"非使用进弃堆"→貂蝉获得,请在台账操作。</div></div>`;
+  }
+  // 日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?ts.log.map(l=>`<div>${esc(l)}</div>`).join(""):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-dcreset="1">⟳ 重开一局</button></div></div>`;
+  return h;
+}
+function viewDcHhWiz(ts,pl,iAm){
+  const w=(ts.hh.wiz||{})[pl]; if(!w) return '';
+  const seq=['使用①','弃置①','使用②','弃置②']; let cur;
+  if(w.stage==='count-usable'||w.stage==='show-use') cur=w.uses*2; else cur=w.uses*2-1;
+  let h=`<div class="slot" style="margin-top:10px"><div class="row"><b class="grow">${dcName(pl)} · 幻惑结算</b><span class="chip ${w.stage==='done'?'gold':''}">已强制使用 ${w.uses}/2</span></div>`;
+  if(w.stage!=='idle'&&w.stage!=='ended'&&w.stage!=='done'){
+    h+=`<div class="row" style="margin-top:4px">`;
+    seq.forEach((s,i)=>h+=`<span class="chip" style="${i<cur?'opacity:.5':i===cur?'border-color:var(--seal);color:var(--seal)':''}">${s}</span>`);
+    h+=`</div>`;
+  }
+  if(!iAm){ // 旁人/被幻惑者:只看当前抽取结果
+    if(w.stage==='show-use') h+=`<div class="hint">强制使用:从左数(只数可用牌)<b style="color:var(--seal)">第 ${w.roll} 张</b>(共 ${w.n} 张可用)</div>`;
+    else if(w.stage==='show-discard') h+=`<div class="hint">随机弃置:从左数(全部手牌)<b style="color:var(--seal)">第 ${w.roll} 张</b>(共 ${w.n} 张)</div>`;
+    else if(w.stage==='done') h+=`<div class="hint">✓ 幻惑结算完毕。</div>`;
+    else if(w.stage==='ended') h+=`<div class="hint">幻惑已终止(无可用手牌)。</div>`;
+    else h+=`<div class="hint">等待貂蝉开始向导。</div>`;
+    return h+`</div>`;
+  }
+  // 貂蝉本人操作
+  if(w.stage==='idle') h+=`<div class="row" style="margin-top:6px"><button class="gold" data-dchhstart="${pl}">其回合到了,开始向导 →</button></div>`;
+  else if(w.stage==='ended') h+=`<div class="hint">幻惑已终止,其恢复自由行动。</div>`;
+  else if(w.stage==='done') h+=`<div class="hint">✓ 已强制使用两张并各随机弃一张。</div>`;
+  else if(w.stage==='count-usable'){
+    h+=`<div class="hint">请其保持手牌左→右顺序不动,<b>只数可用手牌</b>报数:</div><div class="row" style="margin-top:6px"><input id="dcN${pl}" type="number" min="1" placeholder="可用牌数" style="flex:1"><button class="primary" data-dchhuse="${pl}">抽位置</button><button class="ghost" data-dchhno="${pl}">无可用·终止</button></div>`;
+  }else if(w.stage==='show-use'){
+    h+=`<div class="slot" style="border-style:solid;text-align:center"><div class="hint" style="margin:0">强制使用(从左数,只数可用牌)</div><div style="font-size:1.4em;color:var(--seal)">第 ${w.roll} 张</div><div class="hint" style="margin:0">共 ${w.n} 张可用</div></div>`;
+    h+=`<div class="hint">若为倾世牌请同步在台账操作。</div><div class="row"><button class="primary" data-dchhused="${pl}">已使用 → 随机弃牌</button><button class="ghost" data-dchhre="${pl}:count-usable">报数有误</button></div>`;
+  }else if(w.stage==='count-hand'){
+    h+=`<div class="hint">随机弃置:请其报<b>当前全部手牌</b>数:</div><div class="row" style="margin-top:6px"><input id="dcN${pl}" type="number" min="0" placeholder="手牌数" style="flex:1"><button class="primary" data-dchhdisc="${pl}">抽位置</button></div>`;
+  }else if(w.stage==='show-discard'){
+    h+=`<div class="slot" style="border-style:solid;text-align:center"><div class="hint" style="margin:0">随机弃置(从左数,全部手牌)</div><div style="font-size:1.4em;color:var(--seal)">第 ${w.roll} 张</div><div class="hint" style="margin:0">共 ${w.n} 张</div></div>`;
+    h+=`<div class="hint">若弃的是倾世牌→属"非使用进弃堆"→貂蝉获得,请在台账操作。</div><div class="row"><button class="primary" data-dchhdisced="${pl}">已弃置 → 继续</button><button class="ghost" data-dchhre="${pl}:count-hand">报数有误</button></div>`;
+  }
+  return h+`</div>`;
+}
+function viewDcQsRow(c,i,iAm){
+  const stMap={hand:['在手',''],used:['已使用','opacity:.6'],got:['貂蝉已获得','color:var(--seal)'],left:['已离手·消散','opacity:.5']};
+  const st=stMap[c.status]||['?',''];
+  const su=SUITS.find(x=>x.k===c.s), nm=c.typ==='其他'?(c.custom||'自定义'):c.typ;
+  let h=`<div class="slot" style="margin-top:6px"><div class="row"><span class="grow">${dcName(c.owner)} <b class="${su&&su.red?'suitred':''}">${su?su.t:''}${c.r||''}</b> ${esc(nm)}</span><span class="chip" style="${st[1]}">${st[0]}</span></div>`;
+  if(iAm){
+    if(c.status==='hand') h+=`<div class="row" style="margin-top:4px"><button data-dcqsuse="${i}:1">造成伤害(貂蝉摸一张)</button><button data-dcqsuse="${i}:0">未造成伤害·使用</button><button data-dcqsgot="${i}">非使用进弃堆</button><button class="ghost" data-dcqsleft="${i}">其他离手</button></div>`;
+    else h+=`<div class="row end" style="margin-top:4px"><button class="ghost" data-dcqsundo="${i}">撤回为"在手"</button></div>`;
+  }
+  return h+`</div>`;
+}
+function viewDcDist(dc){
+  const d=dcDist, sn=d.order[d.idx], p=state.seats[sn];
+  let h=`<div class="card"><h2>倾世 · 分发登记<span class="tag">${d.idx+1}/${d.order.length}</span></h2>`;
+  h+=`<div class="hint">先从弃牌堆收集单目标伤害牌,不够再翻牌堆顶(非伤害牌弃置,不洗剩余牌堆);凑够后洗混按座次公开发放,边发边登记。</div>`;
+  h+=`<div style="margin:8px 0 4px">当前登记:<b style="color:var(--seal)">${dcName(sn)}</b>${sn===dc.seatNo?' ✿(貂蝉本人也获得)':''} 的牌</div>`;
+  h+=`<div class="row">`; for(const t of DC_TYPES) h+=`<button class="pick ${d.draft.typ===t?'sel':''}" data-dcdtyp="${t}" style="min-width:52px">${t}</button>`; h+=`</div>`;
+  if(d.draft.typ==='其他') h+=`<input id="dcDCustom" placeholder="牌名(如:冰杀)" value="${esc(d.draft.custom)}" style="margin:6px 0">`;
+  h+=`<div class="row" style="margin-top:6px">`; for(const s of SUITS) h+=`<button class="pick ${d.draft.s===s.k?'sel':''}" data-dcdsuit="${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`; h+=`</div>`;
+  h+=`<div class="row" style="margin-top:6px">`; for(const r of RANKS) h+=`<button class="pick ${d.draft.r===r?'sel':''}" data-dcdrank="${r}">${r}</button>`; h+=`</div>`;
+  h+=`<div class="row end" style="margin-top:8px">`;
+  if(d.idx>0) h+=`<button class="ghost" data-dcdback="1">← 上一位</button>`;
+  h+=`<button class="ghost" data-dcdcancel="1">取消分发</button><button class="primary" data-dcdnext="1">${d.idx+1<d.order.length?'确认,下一位 →':'确认,完成分发'}</button></div>`;
+  return h+`</div>`;
+}
+function bindDc(dc,q){
+  const D=dc.seatNo, ts=dc.toolState||{};
+  const act=(o)=>send({type:"action",targetSeat:D,bySeat:D,toolAction:o});
+  // 分发表单(本机瞬态)
+  if(dcDist){
+    q("[data-dcdtyp]").forEach(b=>b.onclick=()=>{dcDist.draft.typ=b.dataset.dcdtyp;render();});
+    q("#dcDCustom").forEach(inp=>inp.onchange=()=>{dcDist.draft.custom=inp.value.trim();});
+    q("[data-dcdsuit]").forEach(b=>b.onclick=()=>{dcDist.draft.s=b.dataset.dcdsuit;render();});
+    q("[data-dcdrank]").forEach(b=>b.onclick=()=>{dcDist.draft.r=b.dataset.dcdrank;render();});
+    q("[data-dcdback]").forEach(b=>b.onclick=()=>{if(dcDist.idx>0){dcDist.idx--;dcDist.draft=dcDist.saved[dcDist.idx]?JSON.parse(JSON.stringify(dcDist.saved[dcDist.idx])):dcNewDraft();render();}});
+    q("[data-dcdcancel]").forEach(b=>b.onclick=()=>{if(confirm("取消本次分发?已填内容丢弃。")){dcDist=null;render();}});
+    q("[data-dcdnext]").forEach(b=>b.onclick=()=>{const dr=dcDist.draft;
+      const cust=$("#dcDCustom"); if(cust)dr.custom=cust.value.trim();
+      if(!dr.typ||!dr.s||!dr.r){toast("请选牌型、花色、点数");return;}
+      if(dr.typ==='其他'&&!dr.custom){toast("请填自定义牌名");return;}
+      dcDist.saved[dcDist.idx]=JSON.parse(JSON.stringify(dr));
+      if(dcDist.idx+1<dcDist.order.length){dcDist.idx++;dcDist.draft=dcDist.saved[dcDist.idx]?JSON.parse(JSON.stringify(dcDist.saved[dcDist.idx])):dcNewDraft();render();}
+      else{const cards=dcDist.order.map((oid,i)=>({owner:oid,typ:dcDist.saved[i].typ,custom:dcDist.saved[i].custom,s:dcDist.saved[i].s,r:dcDist.saved[i].r}));act({type:"qsDistribute",cards});dcDist=null;}});
+    return;
+  }
+  // 幻惑
+  q("[data-dchh]").forEach(b=>b.onclick=()=>act({type:"hhToggle",pl:+b.dataset.dchh}));
+  q("[data-dchhstart]").forEach(b=>b.onclick=()=>act({type:"hhStart",pl:+b.dataset.dchhstart}));
+  q("[data-dchhuse]").forEach(b=>b.onclick=()=>{const pl=+b.dataset.dchhuse,inp=$("#dcN"+pl);const n=inp?parseInt(inp.value,10):NaN;if(!(n>=1)){toast("请输入可用手牌数(≥1),若为0点终止");return;}act({type:"hhRollUse",pl,n});});
+  q("[data-dchhno]").forEach(b=>b.onclick=()=>act({type:"hhNoUsable",pl:+b.dataset.dchhno}));
+  q("[data-dchhused]").forEach(b=>b.onclick=()=>act({type:"hhUsed",pl:+b.dataset.dchhused}));
+  q("[data-dchhdisc]").forEach(b=>b.onclick=()=>{const pl=+b.dataset.dchhdisc,inp=$("#dcN"+pl);const n=inp?parseInt(inp.value,10):NaN;if(isNaN(n)||n<0){toast("请输入当前手牌总数");return;}act({type:"hhRollDiscard",pl,n});});
+  q("[data-dchhdisced]").forEach(b=>b.onclick=()=>act({type:"hhDiscarded",pl:+b.dataset.dchhdisced}));
+  q("[data-dchhre]").forEach(b=>b.onclick=()=>{const[pl,back]=b.dataset.dchhre.split(":");act({type:"hhReroll",pl:+pl,back});});
+  // 倾世
+  q("[data-dcenter]").forEach(b=>b.onclick=()=>{if(confirm("确认入魔(倾世)?不可撤销,每轮结束若未造成伤害失去1点体力。")){act({type:"enterQingshi"});dcDist={order:dcInPlay().filter(sn=>!(ts.dead||[]).includes(sn)),idx:0,saved:[],draft:dcNewDraft()};render();}});
+  q("[data-dcredist]").forEach(b=>b.onclick=()=>{dcDist={order:dcInPlay().filter(sn=>!(ts.dead||[]).includes(sn)),idx:0,saved:[],draft:dcNewDraft()};render();});
+  q("[data-dcqsuse]").forEach(b=>b.onclick=()=>{const[i,dmg]=b.dataset.dcqsuse.split(":");act({type:"qsUse",index:+i,dmg:dmg==="1"});});
+  q("[data-dcqsgot]").forEach(b=>b.onclick=()=>act({type:"qsGot",index:+b.dataset.dcqsgot}));
+  q("[data-dcqsleft]").forEach(b=>b.onclick=()=>{if(confirm("该倾世牌以其他方式离手(标记消散)?"))act({type:"qsLeft",index:+b.dataset.dcqsleft});});
+  q("[data-dcqsundo]").forEach(b=>b.onclick=()=>act({type:"qsUndo",index:+b.dataset.dcqsundo}));
+  // 轮次/阵亡/重置
+  q("[data-dcdmg]").forEach(b=>b.onclick=()=>act({type:"toggleDmg"}));
+  q("[data-dcendr]").forEach(b=>b.onclick=()=>{if(confirm("结束本轮?清空本轮幻惑目标。"))act({type:"endRound"});});
+  q("[data-dcdead]").forEach(b=>b.onclick=()=>act({type:"toggleDead",pl:+b.dataset.dcdead}));
+  q("[data-dcreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空入魔/倾世台账/幻惑/阵亡记录,座位武将保留。")){dcDist=null;act({type:"resetGame"});}});
 }
 
 render();

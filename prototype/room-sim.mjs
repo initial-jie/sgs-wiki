@@ -445,5 +445,63 @@ const ssrst = ssAct(3, 3, { type: "resetGame" });
 check("重置成功、体力回4、技能/外来清空、驭衡回来", ssrst.reset === true && SST(ssd[3]).maxHp === 4 && SST(ssd[3]).custom.length === 0 && SST(ssd[3]).perm.length === 0 && SST(ssd[3]).hasYuheng === true && SST(ssd[3]).awakened === false);
 check("座位武将保留(仍是神孙权)", room10.seats[3].general === "shensunquan");
 
+// ═══════════════ 魔貂蝉:幻惑倾世(全公开台账 + 花名册绑座位;幻惑随机在 DO)═══════════════
+const room11 = new RoomCore("9090", 5, () => 0); // rng=0 → roll 恒为第1张
+const dcd = {}; for (let i = 1; i <= 5; i++) { dcd[i] = `dcd${i}`; room11.claimSeat(dcd[i], i); }
+room11.setGeneral(dcd[1], 1, "diaochan");        // 座位1 = 魔貂蝉
+for (let i = 2; i <= 5; i++) room11.setGeneral(dcd[i], i, "none"); // 其余座位在场(名字前端渲染)
+const DCT = (d) => room11.viewFor(d).seats[1].toolState;
+const dcAct = (d, by, o) => room11.action(dcd[d], { targetSeat: 1, bySeat: by, toolAction: o });
+
+console.log("\n=== 貂蝉1:幻惑目标(至多2名,绑房间座位)+ 公开 ===");
+check("指定幻惑目标座位2成功", dcAct(1, 1, { type: "hhToggle", pl: 2 }).ok && DCT(dcd[1]).hh.targets.includes(2));
+check("★公开:旁人也见幻惑目标", DCT(dcd[3]).hh.targets.includes(2));
+check("不能幻惑貂蝉自己(BAD_TARGET)", dcAct(1, 1, { type: "hhToggle", pl: 1 }).error === "BAD_TARGET");
+check("再指定座位3、座位4 → 超2名被拒(HH_MAX_2)", (dcAct(1, 1, { type: "hhToggle", pl: 3 }), dcAct(1, 1, { type: "hhToggle", pl: 4 }).error === "HH_MAX_2"));
+check("取消座位3", dcAct(1, 1, { type: "hhToggle", pl: 3 }).ok && !DCT(dcd[1]).hh.targets.includes(3));
+
+console.log("\n=== 貂蝉2:幻惑向导 —— 报数→DO随机抽位置→强制使用/随机弃(共2次)===");
+dcAct(1, 1, { type: "hhStart", pl: 2 });
+check("开始向导→count-usable", DCT(dcd[1]).hh.wiz[2].stage === "count-usable");
+const ru = dcAct(1, 1, { type: "hhRollUse", pl: 2, n: 4 });
+check("报4张可用→DO抽中第1张(rng=0)、show-use", ru.roll === 1 && DCT(dcd[1]).hh.wiz[2].stage === "show-use");
+check("★公开:被幻惑者本人也看得到自己的抽取结果", room11.viewFor(dcd[2]).seats[1].toolState.hh.wiz[2].roll === 1);
+check("报0可用被拒(BAD_N)", dcAct(1, 1, { type: "hhRollUse", pl: 2, n: 0 }).error === "BAD_N");
+dcAct(1, 1, { type: "hhUsed", pl: 2 });
+check("已使用→uses=1、count-hand", DCT(dcd[1]).hh.wiz[2].uses === 1 && DCT(dcd[1]).hh.wiz[2].stage === "count-hand");
+dcAct(1, 1, { type: "hhRollDiscard", pl: 2, n: 3 });
+check("报3手牌→抽第1张弃、show-discard", DCT(dcd[1]).hh.wiz[2].roll === 1 && DCT(dcd[1]).hh.wiz[2].stage === "show-discard");
+dcAct(1, 1, { type: "hhDiscarded", pl: 2 });
+check("首轮弃置后未满2次→回 count-usable", DCT(dcd[1]).hh.wiz[2].stage === "count-usable");
+dcAct(1, 1, { type: "hhRollUse", pl: 2, n: 2 }); dcAct(1, 1, { type: "hhUsed", pl: 2 });
+const skip = dcAct(1, 1, { type: "hhRollDiscard", pl: 2, n: 0 });
+check("第2次使用后报0手牌→跳过弃置且满2次→done", skip.skipped === true && DCT(dcd[1]).hh.wiz[2].stage === "done" && DCT(dcd[1]).hh.wiz[2].uses === 2);
+check("无可用牌可随时终止", (dcAct(1, 1, { type: "hhToggle", pl: 5 }), dcAct(1, 1, { type: "hhStart", pl: 5 }), dcAct(1, 1, { type: "hhNoUsable", pl: 5 }).ok && DCT(dcd[1]).hh.wiz[5].stage === "ended"));
+
+console.log("\n=== 貂蝉3:倾世入魔 + 分批分发 + 台账结算 ===");
+check("未入魔不能分发(NOT_ENTERED)", dcAct(1, 1, { type: "qsDistribute", cards: [{ owner: 1, typ: "杀", s: "S", r: "7" }] }).error === "NOT_ENTERED");
+check("入魔成功、公开", dcAct(1, 1, { type: "enterQingshi" }).ok && DCT(dcd[3]).entered === true);
+check("重复入魔被拒(ALREADY_ENTERED)", dcAct(1, 1, { type: "enterQingshi" }).error === "ALREADY_ENTERED");
+const dist = dcAct(1, 1, { type: "qsDistribute", cards: [
+  { owner: 1, typ: "杀", s: "S", r: "7" }, { owner: 2, typ: "决斗", s: "H", r: "K" },
+  { owner: 3, typ: "火杀", s: "D", r: "3" }, { owner: 4, typ: "其他", custom: "冰杀", s: "C", r: "9" }, { owner: 5, typ: "雷杀", s: "S", r: "A" }] });
+check("第1批分发5张成功、batch=1", dist.batch === 1 && DCT(dcd[1]).qs.cards.length === 5);
+check("★公开:旁人看得到倾世台账(座位+牌面)", DCT(dcd[3]).qs.cards[1].owner === 2 && DCT(dcd[3]).qs.cards[1].typ === "决斗");
+check("倾世牌使用(未造成伤害)→used", dcAct(1, 1, { type: "qsUse", index: 1, dmg: false }).ok && DCT(dcd[1]).qs.cards[1].status === "used");
+check("貂蝉自己的倾世牌造成伤害→dmgThisRound=true", dcAct(1, 1, { type: "qsUse", index: 0, dmg: true }).ok && DCT(dcd[1]).dmgThisRound === true);
+check("非使用进弃牌堆→got(貂蝉获得)", dcAct(1, 1, { type: "qsGot", index: 2 }).ok && DCT(dcd[1]).qs.cards[2].status === "got");
+check("其他方式离手→left", dcAct(1, 1, { type: "qsLeft", index: 3 }).ok && DCT(dcd[1]).qs.cards[3].status === "left");
+check("误操作撤回→hand", dcAct(1, 1, { type: "qsUndo", index: 3 }).ok && DCT(dcd[1]).qs.cards[3].status === "hand");
+
+console.log("\n=== 貂蝉4:每轮结算 + 阵亡追踪 + 权限 + 重置 ===");
+check("结束本轮:round→2、清空幻惑、dmg 重置", (() => { const r = dcAct(1, 1, { type: "endRound" }); return r.ok && DCT(dcd[1]).round === 2 && DCT(dcd[1]).hh.targets.length === 0 && DCT(dcd[1]).dmgThisRound === false; })());
+check("标记座位5阵亡、公开", dcAct(1, 1, { type: "toggleDead", pl: 5 }).ok && DCT(dcd[3]).dead.includes(5));
+check("阵亡座位移出幻惑目标", (dcAct(1, 1, { type: "hhToggle", pl: 4 }), dcAct(1, 1, { type: "toggleDead", pl: 4 }), !DCT(dcd[1]).hh.targets.includes(4) && DCT(dcd[1]).dead.includes(4)));
+check("取消阵亡", dcAct(1, 1, { type: "toggleDead", pl: 5 }).ok && !DCT(dcd[1]).dead.includes(5));
+check("非貂蝉不能操作", dcAct(2, 2, { type: "hhToggle", pl: 3 }).error === "NOT_DIAO_ACTION");
+const dcrst = dcAct(1, 1, { type: "resetGame" });
+check("重置成功、入魔/台账/幻惑/阵亡清空、round 回1", dcrst.reset === true && DCT(dcd[1]).entered === false && DCT(dcd[1]).qs.cards.length === 0 && DCT(dcd[1]).hh.targets.length === 0 && DCT(dcd[1]).dead.length === 0 && DCT(dcd[1]).round === 1);
+check("座位武将保留(仍是貂蝉)", room11.seats[1].general === "diaochan");
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
