@@ -82,7 +82,9 @@ async function fetchHero(h) {
     skills,
     characteristic: clean(info.characteristic),
     cover: info.cover || null,
-    avatar: info.avatar || null,
+    // ⚠️ API 的 info.avatar(dianjiang/{id}.png)是错的:低 id 返回别人皮肤、部分 404。
+    // 正确小头像 = cover 的 xingxiang 换 dianjiang(同 {id}00.png,~25KB)。
+    avatar: (info.cover || "").replace("xingxiang", "dianjiang") || null,
     tool: null,                                   // 后处理填 12 工具映射
     offline: false,
   };
