@@ -73,7 +73,10 @@ cd prototype/worker
 npx wrangler login        # 弹浏览器,登你的 Cloudflare 账号
 npx wrangler deploy       # 得到 https://sgs-room.<你的账号>.workers.dev
 ```
-然后把 `client/index.html` 里「服务端」一栏改成 `wss://sgs-room.<你的账号>.workers.dev`,手机浏览器打开这个 client 页即可。(后续会把 client 正式化并挂到 GitHub Pages。)
+**部署即一体化**:worker 把 `client/room.html` 内联打包,根路径 `/` 直接吐客户端页。
+手机浏览器开 `https://sgs-room.<你的账号>.workers.dev/` 就是房间界面,「服务端」一栏
+已自动填成同源 `wss://...`(page 走 https → 自动 wss),**无需手填地址**。各手机填同一
+房间码即进同一桌。(本地 file:// 打开时才回退默认 `ws://localhost:8787`。)
 
 ## 已知原型限制(待正式化时处理)
 

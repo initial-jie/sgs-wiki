@@ -4,6 +4,7 @@
 // 部署:  npx wrangler deploy
 
 import { RoomCore } from "../../shared/room-logic.mjs";
+import ROOM_HTML from "../../client/room.html"; // 文本模块(见 wrangler.toml [[rules]] Text)
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 
@@ -23,6 +24,13 @@ export default {
       const id = env.ROOM.idFromName(m[1]); // 同一短码 -> 同一 DO 实例(单点权威)
       const stub = env.ROOM.get(id);
       return stub.fetch(request);
+    }
+
+    // 其余 GET 一律吐客户端页 —— 手机开 https://<你的域名>/ 即可,"服务端"自动填成同源 wss
+    if (request.method === "GET") {
+      return new Response(ROOM_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
     }
 
     return new Response("sgs-room worker up. use /api/room/new then /api/room/<code>/ws", { status: 200 });

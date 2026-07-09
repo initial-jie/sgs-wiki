@@ -11,3 +11,6 @@ class_name = "RoomDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
+
+# 注:room.html 以文本模块打进 worker,worker 在 "/" 直接吐客户端页(手机可直接开)。
+# .html 默认即 Text 模块,无需额外 [[rules]]。

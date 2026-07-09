@@ -112,9 +112,17 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");cl
 function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
 function esc(t){return (t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function suitGlyph(k){const s=SUITS.find(x=>x.k===k);return s?`<span class="${s.red?'suitred':''}">${s.t}</span>`:"";}
+// 服务端默认地址:页面若从 worker(http/https)载入,直接指向同源(https→wss),真机零配置;file:// 本地调试才回退 localhost。
+function defaultBase(){
+  if(location.protocol==="https:"||location.protocol==="http:")
+    return (location.protocol==="https:"?"wss://":"ws://")+location.host;
+  return "ws://localhost:8787";
+}
 
 function connect(base,code){
   if(ws)try{ws.close();}catch(e){}
+  // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
+  state=null;lastReveal=null;for(const k in draft)delete draft[k];
   ws=new WebSocket(base.replace(/\/+$/,"")+"/api/room/"+code+"/ws");
   ws.onopen=()=>{send({type:"hello",deviceId});toast("已连接房间 "+code);};
   ws.onclose=()=>toast("连接已断开");
@@ -142,7 +150,7 @@ function render(){
 }
 
 function viewConnect(){
-  const base=localStorage.getItem("sgs_base")||"ws://localhost:8787";
+  const base=localStorage.getItem("sgs_base")||defaultBase();
   return `<div class="card"><h2>加入房间</h2>
     <div class="row"><label class="grow">服务端<input id="i-base" value="${esc(base)}"></label></div>
     <div class="row" style="margin-top:8px"><label>房间码<input id="i-code" value="1234" maxlength="4" style="width:90px"></label>
@@ -367,7 +375,7 @@ function bindAll(){
   q("[data-dmg]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"toggleDmg"}}));
   q("[data-endround]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"endRound"}}));
   q("[data-killed]").forEach(b=>b.onclick=()=>{const v=$("#killerSel").value;send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"lvbuKilled",killerSeat:v?+v:undefined}});});
-  q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||"ws://localhost:8787",c);});
+  q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||defaultBase(),c);});
 }
 
 render();
