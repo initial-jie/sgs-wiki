@@ -234,7 +234,7 @@ export class RoomCore {
     this.rng = rng; // 注入随机源:worker 用 Math.random,sim 传确定值以复现
     this.seats = {};
     for (let i = 1; i <= seatCount; i++)
-      this.seats[i] = { seatNo: i, general: null, holderDevices: [], toolState: {} };
+      this.seats[i] = { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {} };
     this.devices = {};
   }
 
@@ -255,6 +255,16 @@ export class RoomCore {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
     this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
+    this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
+    return { ok: true };
+  }
+  // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
+  setFaction(id, n, faction) {
+    n = Number(n);
+    if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
+    const ok = faction == null || ["魏", "蜀", "吴", "群"].includes(faction);
+    if (!ok) return { error: "BAD_FACTION" };
+    this.seats[n].chosenFaction = faction ?? null;
     return { ok: true };
   }
 
@@ -1143,7 +1153,7 @@ export class RoomCore {
     const holds = this.devices[id]?.holds ?? new Set();
     const seats = {};
     for (const [n, s] of Object.entries(this.seats))
-      seats[n] = { seatNo: s.seatNo, general: s.general, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds) };
+      seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds) };
     return { roomCode: this.roomCode, youHold: [...holds], seats };
   }
 }

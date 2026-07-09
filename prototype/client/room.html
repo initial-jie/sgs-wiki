@@ -255,8 +255,9 @@ function openSkillView(general,seatNo){
   const hero=heroForSeat(general);
   if(!hero){toast("该武将暂无技能资料(线下/手输)");return;}
   const mine=state.youHold.includes(seatNo);
-  const fc=FCLS[hero.faction]||"";
-  const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
+  const chosen=state.seats[seatNo]?.chosenFaction||null;
+  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||"shen"):"shen"):(FCLS[hero.faction]||"");
+  const fname=hero.factionSelectable?(chosen?("神 → "+chosen):"神 · 势力自选"):(hero.faction||"?");
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
   const skills=(hero.skills||[]).map(s=>`<div class="skl"><div class="sn">${esc(s.name)}</div><div class="se">${esc(s.effect||"(官网暂无描述)")}</div></div>`).join("")||'<div class="hint">(官网暂无技能描述)</div>';
@@ -419,9 +420,13 @@ function viewSeats(){
     const hero=heroForSeat(s.general);
     const nm=seatGeneralName(s.general);
     let label="";
+    const chosen=s.chosenFaction||null;
     if(hasTool(s.general)) label=`<span class="lb">${esc(nm)}</span>`;
     else if(s.general&&s.general!=="none") label=`<span class="kb">${esc(nm)}</span>`;
-    if(hero) label+=`<span class="fc ${FCLS[hero.faction]||''}">${esc(hero.factionSelectable?"神·自选":(hero.faction||"?"))}</span>`;
+    if(hero){
+      if(hero.factionSelectable) label+=`<span class="fc ${chosen?(FCLS[chosen]||'shen'):'shen'}">${chosen?"神→"+esc(chosen):"神·自选"}</span>`;
+      else label+=`<span class="fc ${FCLS[hero.faction]||''}">${esc(hero.faction||"?")}</span>`;
+    }
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
       +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
     if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
@@ -432,6 +437,11 @@ function viewSeats(){
       h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label>`
         +`<button data-pick="${s.seatNo}" style="font-size:13px">${has?esc(nm)+" ▾":"选武将 ▾"}</button>`
         +(hero&&hero.tool?'<span class="hint" style="margin-left:6px">有专属工具(见下方登场工具)</span>':"")+`</div>`;
+      if(hero&&hero.factionSelectable){
+        h+=`<div class="row" style="margin-top:5px"><label style="font-size:12px;color:var(--ink-soft)">神·自选势力</label>`
+          +["魏","蜀","吴","群"].map(f=>`<button class="pick ${chosen===f?'sel':''}" data-fac="${s.seatNo}:${f}" style="min-width:34px;padding:5px 0">${f}</button>`).join("")
+          +(chosen?`<button class="ghost" data-fac="${s.seatNo}:" style="font-size:12px">清</button>`:"")+`</div>`;
+      }
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
     h+=`</div>`;
@@ -707,6 +717,7 @@ function bindAll(){
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
+  q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});
   // 聚焦某工具时,派发给该工具的 bind
   const fseat=(focus!=null)?state.seats[focus]:null;
   if(fseat&&TOOLS[fseat.general]) TOOLS[fseat.general].bind(fseat,q);

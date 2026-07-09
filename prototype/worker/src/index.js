@@ -94,6 +94,11 @@ export class RoomDO {
         if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); // 别再静默吞错(否则"工具没变"却无提示)
         break;
       }
+      case "setFaction": { // 神将自选势力
+        const r = core.setFaction(this.dev(ws), msg.seatNo, msg.faction);
+        if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error }));
+        break;
+      }
       case "action": {
         const r = core.action(this.dev(ws), msg);
         // 保密结果(如夺炁抽到的牌)只回操作者本人,不进广播

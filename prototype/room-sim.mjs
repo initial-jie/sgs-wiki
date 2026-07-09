@@ -563,5 +563,20 @@ const sqrst = sqAct(1, 1, { type: "resetGame" });
 check("重置:轮次/暗选/used/天恩/乾纲/阵亡清空", sqrst.reset === true && SQT(sd[1]).round === 1 && Object.keys(SQT(sd[1]).picks).length === 0 && Object.keys(SQT(sd[1]).used).length === 0 && SQT(sd[1]).gg === false && SQT(sd[1]).dead.length === 0);
 check("座位武将保留(仍是孙权)", room12.seats[1].general === "sunquan");
 
+// ============ 场景 13:神将自选势力(setFaction,公开,cut 2)============
+console.log("\n=== 场景 13:神将自选势力 ===");
+const roomF = new RoomCore("1357", 4, () => 0);
+const fd = {}; for (let i = 1; i <= 4; i++) { fd[i] = `fd${i}`; roomF.claimSeat(fd[i], i); }
+roomF.setGeneral(fd[1], 1, "229");             // 座位1 = 神典韦(OL id 字符串,无工具)
+check("初始 chosenFaction=null", roomF.seats[1].chosenFaction === null);
+check("非持有者不能设势力", roomF.setFaction(fd[2], 1, "蜀").error === "NOT_HOLDER");
+check("非法势力被拒", roomF.setFaction(fd[1], 1, "神").error === "BAD_FACTION");
+check("本人设蜀成功", roomF.setFaction(fd[1], 1, "蜀").ok === true && roomF.seats[1].chosenFaction === "蜀");
+check("chosenFaction 公开(他设备也看得到)", roomF.viewFor(fd[2]).seats[1].chosenFaction === "蜀");
+check("可清空(null)", roomF.setFaction(fd[1], 1, null).ok === true && roomF.seats[1].chosenFaction === null);
+roomF.setFaction(fd[1], 1, "吴");
+roomF.setGeneral(fd[1], 1, "300");             // 改武将 → 自选势力重置
+check("改武将后 chosenFaction 归零", roomF.seats[1].chosenFaction === null);
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
