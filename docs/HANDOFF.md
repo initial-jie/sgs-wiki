@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 64 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 147 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## 一、项目背景
 
@@ -46,7 +46,7 @@ prototype/
 ├─ client/index.html       早期裸调试页(协议已升级,仅留参考)
 └─ README.md               本地怎么跑(含 Windows、2.5 节 room.html 剧本)
 ```
-基线:`node prototype/room-sim.mjs` → **145 passed**(吕布40 + 南华24 + 荀攸15 + 黄月英15 + 曹操8 + 袁姬14 + 钟琰10 + 司马懿19);`node prototype/deck-test.mjs` → **26 passed**(含 STRICT 精确校验);
+基线:`node prototype/room-sim.mjs` → **147 passed**(吕布40 + 南华24 + 荀攸15 + 黄月英15 + 曹操8 + 袁姬16 + 钟琰10 + 司马懿19);`node prototype/deck-test.mjs` → **26 passed**(含 STRICT 精确校验);
 room.html 内联 JS 可用 `new Function` 语法自检。
 端到端可跑真机逻辑:`cd prototype/worker && npx wrangler dev --local`,再用 node WebSocket 客户端驱动(南华 e2e 脚本见提交历史 73ca74d 的验证过程,10/10)。
 
