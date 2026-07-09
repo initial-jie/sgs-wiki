@@ -44,6 +44,11 @@ export const VISIBILITY = {
     sy: { kind: "ownerSeatOnly" },
     // jieyan / seq / log 默认 public(节言状态全场相关;log 只记张数不记牌名)
   },
+  dongzhao: {
+    // 先略记录的锦囊牌名仅董昭本人可见(暗置,不弱于单机现状);他人只见 {count:0|1}=有无记录
+    rec: { kind: "ownerSeatOnly" },
+    // turnUsed / zw / round / shunji / names / yishi / log 默认 public(顺机账本、造王、移势皆公开信息)
+  },
 };
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -149,6 +154,17 @@ export function initToolState(generalId) {
       held: null,       // 当前骤袭持有技 {skill,hero,note}(公开;随机在客户端,选定才进 DO)
       round: 0,         // 骤袭抽取次数
       history: [],      // 公开事件 [{type,...}](入魔/轮次结算/骤袭选定)
+    };
+  if (generalId === "dongzhao")
+    return {
+      rec: [],          // 先略:0或1个牌名(ownerSeatOnly→他人只见 count;暗置)
+      turnUsed: false,  // 先略本回合已触发(每回合限一次,公开)
+      zw: false,        // 造王已发动(限定技,公开)
+      round: 1,         // 顺机轮次(公开)
+      shunji: [],       // 顺机:本轮已发动过的【房间座位号】(公开;自带花名册绑房间座位环)
+      names: [],        // 顺机:已触发伤害的牌名(每名限一次,公开)
+      yishi: null,      // 移势花色提醒 'S'|'H'|'C'|'D'|null(公开)
+      log: [],          // 公开事件(先略只记"记录了一张",不含牌名)
     };
   return {};
 }
@@ -523,6 +539,91 @@ export class RoomCore {
       if (t === "clearHeld") { if (!isSima) return { error: "NOT_SIMA_ACTION" }; ts.held = null; return { ok: true }; }
       if (t === "resetGame") {
         if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 谋董昭:先略(牌名 ownerSeatOnly 暗置)+ 顺机账本/座位限次 + 造王/移势(公开)─────────
+    if (target.general === "dongzhao") {
+      const dSeat = targetSeat;
+      const isDong = bySeat === dSeat && iHold(dSeat); // 董昭本人(或代持其座位)
+      if (t === "xlRecord") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        const name = String(toolAction.name || "").trim().slice(0, 20);
+        if (!name) return { error: "BAD_NAME" };
+        const had = ts.rec.length > 0;
+        ts.rec = [name]; // 先略始终0或1张;重记录直接覆盖(连续两次可选同一张)
+        this._log(ts, had ? "先略:重新记录了一张锦囊牌" : "先略:记录了一张锦囊牌"); // 不记牌名(暗置)
+        return { ok: true };
+      }
+      if (t === "xlTrigger") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        if (!ts.rec.length) return { error: "NO_RECORD" };
+        if (ts.turnUsed) return { error: "ALREADY_TRIGGERED" }; // 每回合限一次
+        ts.turnUsed = true;
+        this._log(ts, "先略触发:摸两张分配给任意角色,请重新记录");
+        return { ok: true };
+      }
+      if (t === "xlNewTurn") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        ts.turnUsed = false;
+        return { ok: true };
+      }
+      if (t === "zwSet") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        ts.zw = !!toolAction.on;
+        this._log(ts, ts.zw ? "造王发动(限定技)" : "撤销造王发动标记(纠错)");
+        return { ok: true, zw: ts.zw };
+      }
+      if (t === "sjToggle") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        const sn = Number(toolAction.seatNo);
+        if (!this.seats[sn]) return { error: "BAD_SEAT" };
+        const i = ts.shunji.indexOf(sn);
+        if (i >= 0) ts.shunji.splice(i, 1);
+        else { ts.shunji.push(sn); this._log(ts, `顺机:本轮已对座位${sn}发动`); }
+        return { ok: true };
+      }
+      if (t === "sjEndRound") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        this._log(ts, `顺机:第${ts.round}轮结束,限次重置`);
+        ts.round++; ts.shunji = [];
+        return { ok: true, round: ts.round };
+      }
+      if (t === "nameAdd") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        const name = String(toolAction.name || "").trim().slice(0, 20);
+        if (!name) return { error: "BAD_NAME" };
+        if (ts.names.includes(name)) return { error: "NAME_DUP" }; // 每个牌名限一次
+        ts.names.push(name);
+        this._log(ts, `顺机:牌名【${name}】触发伤害,登记`);
+        return { ok: true };
+      }
+      if (t === "nameRm") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        if (ts.names[toolAction.index] == null) return { error: "NO_NAME" };
+        this._log(ts, `删除顺机牌名【${ts.names[toolAction.index]}】`);
+        ts.names.splice(toolAction.index, 1);
+        return { ok: true };
+      }
+      if (t === "yishiSet") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        const su = toolAction.suit;
+        if (!GLYPH[su]) return { error: "BAD_SUIT" };
+        ts.yishi = su;
+        this._log(ts, `移势:移动了${GLYPH[su]}牌,挂起"失去${GLYPH[su]}牌摸一张"提醒`);
+        return { ok: true };
+      }
+      if (t === "yishiClear") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
+        ts.yishi = null;
+        this._log(ts, "移势提醒结束(回合开始)");
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isDong) return { error: "NOT_DONG_ACTION" };
         target.toolState = initToolState(target.general);
         return { ok: true, reset: true };
       }

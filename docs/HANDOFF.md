@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 147 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 173 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## 一、项目背景
 
@@ -28,7 +28,7 @@
 
 - **Cloudflare Workers + Durable Objects**:一个房间 = 一个 DO 实例(按 4 位房间码 `idFromName` 路由),单点权威、内存态、持所有 WebSocket 并广播。DO 空闲无连接会被平台自动回收 ≈ 房间销毁(对刷新友好)。
 - **前端**:静态 HTML(GitHub Pages,`https`),连 `wss://...workers.dev`。注意 https 页必须用 `wss`(本地 dev 才用 `ws://localhost`)。
-- 决策已拍板:状态权威=**方案 a**(DO 存纯数据+过滤,reducer 在前端);房间码=**4 位**;接入顺序=**吕布 ✅ → 南华 ✅ → A档6工具 ✅(荀攸/黄月英/曹操/袁姬/钟琰/司马懿)→ B档花名册3工具(董昭/神孙权/貂蝉)→ 魔孙权(`sunquan.html`,最后)**。
+- 决策已拍板:状态权威=**方案 a**(DO 存纯数据+过滤,reducer 在前端);房间码=**4 位**;接入顺序=**吕布 ✅ → 南华 ✅ → A档6工具 ✅(荀攸/黄月英/曹操/袁姬/钟琰/司马懿)→ B档花名册3工具(董昭 ✅ / 神孙权 / 貂蝉)→ 魔孙权(`sunquan.html`,最后)**。
 - ⚠️ **命名澄清**:**魔孙权 = `tools/sunquan.html`**("魔孙权面杀追踪器",Set+暗选+强座位,唯一硬骨头,排最后);`tools/shensunquan.html` 是"神孙权",属 B档普通直通。
 - **真机已上线**:worker 内联 room.html,根路径 `/` 直出客户端页,服务端地址自动同源 wss(零配置)。用户 Cloudflare 账号已注册,子域名 `dujie1995.workers.dev`,地址 `https://sgs-room.dujie1995.workers.dev`。改代码后需用户重跑 `npx wrangler deploy`。
 
@@ -46,7 +46,7 @@ prototype/
 ├─ client/index.html       早期裸调试页(协议已升级,仅留参考)
 └─ README.md               本地怎么跑(含 Windows、2.5 节 room.html 剧本)
 ```
-基线:`node prototype/room-sim.mjs` → **147 passed**(吕布40 + 南华24 + 荀攸15 + 黄月英15 + 曹操8 + 袁姬16 + 钟琰10 + 司马懿19);`node prototype/deck-test.mjs` → **26 passed**(含 STRICT 精确校验);
+基线:`node prototype/room-sim.mjs` → **173 passed**(吕布40 + 南华24 + 荀攸15 + 黄月英15 + 曹操8 + 袁姬16 + 钟琰10 + 司马懿19 + 董昭26);`node prototype/deck-test.mjs` → **26 passed**(含 STRICT 精确校验);
 room.html 内联 JS 可用 `new Function` 语法自检。
 端到端可跑真机逻辑:`cd prototype/worker && npx wrangler dev --local`,再用 node WebSocket 客户端驱动(南华 e2e 脚本见提交历史 73ca74d 的验证过程,10/10)。
 
@@ -95,7 +95,8 @@ room.html 内联 JS 可用 `new Function` 语法自检。
 | #4 | **真机部署** | ✅ 已上线 `https://sgs-room.dujie1995.workers.dev`,吕布真机联调通过(广播/暗牌保密/夺炁私密)。改代码后需用户重跑 `wrangler deploy` |
 | #5 | **多工具聚焦框架** | ✅ 大厅列"登场工具"→ 点座位进入整屏工具 → 返回大厅 |
 | — | **南华老仙** | ✅ 逻辑+UI 全绿,e2e 10/10。**待用户真机测**(改了代码,需先 deploy) |
-| — | **A档6工具** | ✅ 荀攸/黄月英/曹操/袁姬/钟琰/司马懿 全部接房间,room-sim 147 passed、client JS 语法通过。真机测已修:①荀攸4×3表格对齐(`.pick`的`flex:0 0 auto`盖过`.grow`→改内联`flex:1 1 0`);②袁姬记录牌改「花色+点数→点选牌名」(复用 cardsAt,同吕布);③切武将工具没变(worker 静默吞 setGeneral 错误→已回传 error;RoomCore 座位号统一 `Number()` 防 holds 不匹配)|
+| — | **B档·董昭** | ✅ 谋董昭接房间(半私密):先略牌名暗置(`ownerSeatOnly`)、顺机座位限次绑房间座位环、造王/移势公开。room-sim 173 passed、client JS 语法通过。**待用户真机测**(需先 deploy)|
+| — | **A档6工具** | ✅ 荀攸/黄月英/曹操/袁姬/钟琰/司马懿 全部接房间,client JS 语法通过。真机测已修:①荀攸4×3表格对齐(`.pick`的`flex:0 0 auto`盖过`.grow`→改内联`flex:1 1 0`);②袁姬记录牌改「花色+点数→点选牌名」(复用 cardsAt,同吕布);③切武将工具没变(worker 静默吞 setGeneral 错误→已回传 error;RoomCore 座位号统一 `Number()` 防 holds 不匹配)|
 
 **已知原型限制**(正式化时处理):DO 纯内存态(未加 storage 持久化 + WebSocket hibernation);座位数固定 8。生成器类工具(曹操/钟琰/司马懿)的技能池/自定义配置是**客户端本机**态,刷新即回默认(游戏无关,可接受)。
 
@@ -103,4 +104,6 @@ room.html 内联 JS 可用 `new Function` 语法自检。
 
 1. **真机测 A档6工具 + 南华**(眼下):用户 `npx wrangler deploy` 后多手机测。重点验:①荀攸/黄月英/曹操/钟琰纯公开台账多设备同步;②袁姬镜花/水月旁人只见张数、牌名仅本人可见、节言状态公开;③司马懿诡伏满3入魔→骤袭三选一→持有技公开;④各工具"操作权归本座位、他人只读"、聚焦/返回大厅顺畅。
 2. **牌表**(并行不阻塞):用户拿到完整牌表 → 填 `EXACT_CARDS` 开精确校验(#1)。
-3. **接 B档花名册工具**(下一批):董昭(最轻)→ 神孙权 → 貂蝉(38处roster最重),这三个**自带玩家名单,需绑房间座位环**(复用吕布"按座位"范式)。**魔孙权 `sunquan.html`** 收尾(Set 非纯 JSON + 私密暗选,复用 `ownerOnly`)。
+3. **接 B档花名册工具**(下一批):董昭 ✅ → **神孙权(下一个)** → 貂蝉(38处roster最重),自带玩家名单**绑房间座位环**。**魔孙权 `sunquan.html`** 收尾(Set 非纯 JSON + 私密暗选,复用 `ownerOnly`)。
+
+**董昭接入范式(半私密,已固化)**:先略记录的锦囊牌名 = **暗置**(`rec: ownerSeatOnly`,他人只见 `{count:0|1}`=有无记录、拿不到牌名;log 只记"记录了一张"不记牌名 —— 仿袁姬"不弱于现状")。顺机的自带座位限次(原 `seatN`+`seats{}`)**改绑房间座位号**(`shunji:[座位号]`,`sjToggle{seatNo}` 校验 `this.seats[sn]` 存在)—— 这就是"花名册绑座位"的最小范式,神孙权/貂蝉复用。顺机牌名账本/造王/移势全公开。`toolAction.type` 全集:`xlRecord{name}`/`xlTrigger`/`xlNewTurn`/`zwSet{on}`/`sjToggle{seatNo}`/`sjEndRound`/`nameAdd{name}`/`nameRm{index}`/`yishiSet{suit}`/`yishiClear`/`resetGame`。

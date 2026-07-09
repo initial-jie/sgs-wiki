@@ -344,5 +344,55 @@ const mrst = smAct(3, 3, { type: "resetGame" });
 check("重置:入魔/记录/骤袭清空、roundNo 回1", mrst.reset === true && MT(md[3]).demonized === false && MT(md[3]).records.length === 0 && MT(md[3]).roundNo === 1);
 check("座位武将保留(仍是司马懿)", room8.seats[3].general === "simayi");
 
+// ═══════════════ 谋董昭:先略(牌名 ownerSeatOnly 暗置)+ 顺机(公开台账·绑房间座位)═══════════════
+const room9 = new RoomCore("5656", 5, () => 0);
+const dzd = {}; for (let i = 1; i <= 5; i++) { dzd[i] = `dzd${i}`; room9.claimSeat(dzd[i], i); }
+room9.setGeneral(dzd[2], 2, "dongzhao");         // 座位2 = 谋董昭
+const DZT = (d) => room9.viewFor(d).seats[2].toolState;
+const dzAct = (d, by, o) => room9.action(dzd[d], { targetSeat: 2, bySeat: by, toolAction: o });
+
+console.log("\n=== 董昭1:先略记录 —— 牌名暗置仅本人可见,旁人只见有无 ===");
+check("无记录时触发被拒(NO_RECORD)", dzAct(2, 2, { type: "xlTrigger" }).error === "NO_RECORD");
+check("先略记录成功", dzAct(2, 2, { type: "xlRecord", name: "无中生有" }).ok === true);
+check("董昭本人看得到牌名", Array.isArray(DZT(dzd[2]).rec) && DZT(dzd[2]).rec[0] === "无中生有");
+check("★旁人只见有无记录(count=1),拿不到牌名", !Array.isArray(DZT(dzd[1]).rec) && DZT(dzd[1]).rec.count === 1);
+check("★公开日志不泄露先略牌名", DZT(dzd[1]).log.every((l) => !l.includes("无中生有")));
+check("重记录仍0或1张(覆盖)", dzAct(2, 2, { type: "xlRecord", name: "过河拆桥" }).ok && DZT(dzd[2]).rec.length === 1 && DZT(dzd[2]).rec[0] === "过河拆桥");
+
+console.log("\n=== 董昭2:先略每回合限一次 + 新回合重置 ===");
+check("先略触发成功、turnUsed 公开", dzAct(2, 2, { type: "xlTrigger" }).ok && DZT(dzd[1]).turnUsed === true);
+check("本回合再触发被拒(ALREADY_TRIGGERED)", dzAct(2, 2, { type: "xlTrigger" }).error === "ALREADY_TRIGGERED");
+check("新回合重置限次", dzAct(2, 2, { type: "xlNewTurn" }).ok && DZT(dzd[2]).turnUsed === false);
+
+console.log("\n=== 董昭3:造王(限定技,公开)===");
+check("造王发动、zw 公开", dzAct(2, 2, { type: "zwSet", on: true }).zw === true && DZT(dzd[1]).zw === true);
+check("误触撤销造王", dzAct(2, 2, { type: "zwSet", on: false }).zw === false);
+
+console.log("\n=== 董昭4:顺机座位限次 —— 绑房间座位号,公开台账 ===");
+check("对座位4发动顺机(标记)", dzAct(2, 2, { type: "sjToggle", seatNo: 4 }).ok && DZT(dzd[2]).shunji.includes(4));
+check("★公开:旁人也见 shunji 含座位4", DZT(dzd[3]).shunji.includes(4));
+check("非法座位被拒(BAD_SEAT)", dzAct(2, 2, { type: "sjToggle", seatNo: 99 }).error === "BAD_SEAT");
+check("再点取消标记", dzAct(2, 2, { type: "sjToggle", seatNo: 4 }).ok && !DZT(dzd[2]).shunji.includes(4));
+dzAct(2, 2, { type: "sjToggle", seatNo: 1 }); dzAct(2, 2, { type: "sjToggle", seatNo: 5 });
+const dze = dzAct(2, 2, { type: "sjEndRound" });
+check("结束本轮:round→2 且 shunji 清空", dze.round === 2 && DZT(dzd[2]).shunji.length === 0);
+
+console.log("\n=== 董昭5:顺机牌名账本(每名限一次,公开)===");
+check("登记牌名【杀】成功", dzAct(2, 2, { type: "nameAdd", name: "杀" }).ok && DZT(dzd[2]).names.includes("杀"));
+check("重复牌名被拒(NAME_DUP)", dzAct(2, 2, { type: "nameAdd", name: "杀" }).error === "NAME_DUP");
+check("★公开:旁人也见牌名账本", DZT(dzd[3]).names.includes("杀"));
+check("删除牌名成功", (dzAct(2, 2, { type: "nameAdd", name: "决斗" }), dzAct(2, 2, { type: "nameRm", index: 0 }).ok) && !DZT(dzd[2]).names.includes("杀"));
+
+console.log("\n=== 董昭6:移势花色提醒(公开)===");
+check("移势设♥提醒成功、公开", dzAct(2, 2, { type: "yishiSet", suit: "H" }).ok && DZT(dzd[1]).yishi === "H");
+check("非法花色被拒(BAD_SUIT)", dzAct(2, 2, { type: "yishiSet", suit: "X" }).error === "BAD_SUIT");
+check("清除移势提醒", dzAct(2, 2, { type: "yishiClear" }).ok && DZT(dzd[2]).yishi === null);
+
+console.log("\n=== 董昭7:权限 + 重置 ===");
+check("非董昭不能操作", dzAct(1, 1, { type: "xlRecord", name: "杀" }).error === "NOT_DONG_ACTION");
+const dzrst = dzAct(2, 2, { type: "resetGame" });
+check("董昭重置成功、rec/names/shunji 清空、round 回1", dzrst.reset === true && DZT(dzd[2]).rec.length === 0 && DZT(dzd[2]).names.length === 0 && DZT(dzd[2]).shunji.length === 0 && DZT(dzd[2]).round === 1);
+check("座位武将保留(仍是董昭)", room9.seats[2].general === "dongzhao");
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
