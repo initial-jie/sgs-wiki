@@ -15,6 +15,16 @@
 const GLYPH = { S: "♠", H: "♥", C: "♣", D: "♦" };
 export function cardLabel(c) { return GLYPH[c.s] + c.r + (c.n ? " " + c.n : ""); }
 
+// 荀攸百出:格子 key = "花色-类型",如 "S-basic";用于日志人读标签
+const TYPE_LABEL = { basic: "基本牌", trick: "锦囊牌", equip: "装备牌" };
+export function xyKeyLabel(key) {
+  const [s, t] = String(key).split("-");
+  return (GLYPH[s] || "?") + (TYPE_LABEL[t] || "?");
+}
+
+// 谋黄月英并才:可添加的三个锦囊牌名(理贤牌池 = 无中生有 + 已添加的这些)
+export const HYY_BC_NAMES = ["顺手牵羊", "过河拆桥", "铁索连环"];
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -27,6 +37,12 @@ export const VISIBILITY = {
     // 天书:每册自带 owners(可见者)与 revealed(发动即全场公开);旁人只见占位、能数出"持有N册"
     books: { kind: "ownerOnly" },
     // cap / log 默认 public
+  },
+  yuanji: {
+    // 镜花/水月标记牌 = 袁姬手牌:牌名明细仅袁姬本人/代持可见,他人只见张数(桌上卡夹可数)
+    jh: { kind: "ownerSeatOnly" },
+    sy: { kind: "ownerSeatOnly" },
+    // jieyan / seq / log 默认 public(节言状态全场相关;log 只记张数不记牌名)
   },
 };
 
@@ -89,6 +105,51 @@ export function initToolState(generalId) {
       books: [],// [{owners:[座位…], holder:座位, uses, revealed, timing:{level,text}, effect:{level,text}}]
       log: [],  // 公开事件
     };
+  if (generalId === "xunyou")
+    return {
+      grid: {},    // { "花色-类型": 锦囊牌名 }  百出:每格记录首次使用组合对应的一张普通锦囊
+      qice: false, // 本轮是否已获得奇策
+      round: 1,
+      log: [],     // 公开事件(百出全程公开,无保密)
+    };
+  if (generalId === "huangyueying")
+    return {
+      bc: [],   // 并才:已添加的牌名(HYY_BC_NAMES 子集,≤3 不重复);集齐3个→理贤准备阶段可发
+      lx: [],   // 理贤:使用记录(可重复;取自 无中生有+bc);去重≥3→理贤结束阶段可发
+      log: [],  // 公开事件
+    };
+  if (generalId === "caocao")
+    return {
+      hp: null,   // 当前体力档:'4'|'3'|'2'|'1'|'king'
+      wpn: null,  // 覆载虚拟武器 {n,r,d,sp?}(客户端按血量池随机后解析好的结果,公开)
+      arm: null,  // 覆载虚拟防具 {n,d}
+      log: [],    // 公开事件
+    };
+  if (generalId === "yuanji")
+    return {
+      jh: [],              // 镜花标记牌 [{id,s,r,n}]花色/点数/牌名(ownerSeatOnly:他人只见张数)
+      sy: [],              // 水月标记牌 [{id,s,r,n}]
+      jieyan: "ok",        // 节言状态:'ok' 有效 / 'off' 本回合失效(公开)
+      seq: { jh: 0, sy: 0 },// 标记牌 id 自增计数(不依赖时间戳,worker/sim 一致)
+      log: [],             // 公开事件(只记张数,不记牌名)
+    };
+  if (generalId === "zhongyan")
+    return {
+      active: null,   // 当前生效技能 {id,name,text,owner:'self'|'lend',note}(公开;随机在客户端,选定才进 DO)
+      history: [],    // 博览记录 [{n,name,owner,note,cand:[候选名]}](公开)
+      seq: 0,         // 发动次数计数
+    };
+  if (generalId === "simayi")
+    return {
+      records: [],      // 诡伏伤害记录 [{name,type:'card'|'skill'}](公开;满3可入魔)
+      flashes: 0,       // 诡伏之闪计数(公开)
+      demonized: false, // 是否入魔(公开)
+      dmg: false,       // 入魔后本轮是否已造成伤害(公开)
+      roundNo: 1,       // 入魔后轮次(公开)
+      held: null,       // 当前骤袭持有技 {skill,hero,note}(公开;随机在客户端,选定才进 DO)
+      round: 0,         // 骤袭抽取次数
+      history: [],      // 公开事件 [{type,...}](入魔/轮次结算/骤袭选定)
+    };
   return {};
 }
 
@@ -105,16 +166,19 @@ export class RoomCore {
 
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
   claimSeat(id, n) {
+    n = Number(n); // 座位号统一转数字,holds 与 setGeneral 比对不会因字符串/数字不一致而 NOT_HOLDER
     this.connect(id); this.devices[id].holds.add(n);
     const s = this.seats[n]; if (s && !s.holderDevices.includes(id)) s.holderDevices.push(id);
     return { ok: true };
   }
   releaseSeat(id, n) {
+    n = Number(n);
     this.devices[id]?.holds.delete(n);
     if (this.seats[n]) this.seats[n].holderDevices = this.seats[n].holderDevices.filter((d) => d !== id);
     return { ok: true };
   }
   setGeneral(id, n, g) {
+    n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
     this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
     return { ok: true };
@@ -195,6 +259,273 @@ export class RoomCore {
         return { ok: true, reset: true };
       }
 
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 族荀攸:百出记录表(全程公开台账,无保密;pick/确认等瞬态留客户端)─────────
+    if (target.general === "xunyou") {
+      const xSeat = targetSeat;
+      const isXunyou = bySeat === xSeat && iHold(xSeat); // 荀攸本人(或代持其座位)
+      if (t === "recordCard") {
+        if (!isXunyou) return { error: "NOT_XUNYOU_ACTION" };
+        const { key, name } = toolAction;
+        if (!key || !name) return { error: "BAD_RECORD" };
+        if (ts.grid[key]) return { error: "CELL_FILLED" };                       // 该格已记录
+        if (Object.values(ts.grid).includes(name)) return { error: "NAME_RECORDED" }; // 该锦囊牌名全局唯一
+        ts.grid[key] = name;
+        this._log(ts, `百出:首次使用${xyKeyLabel(key)},记录【${name}】`);
+        return { ok: true };
+      }
+      if (t === "clearCell") {
+        if (!isXunyou) return { error: "NOT_XUNYOU_ACTION" };
+        const old = ts.grid[toolAction.key];
+        if (old == null) return { error: "CELL_EMPTY" };
+        delete ts.grid[toolAction.key];
+        this._log(ts, `清除格${xyKeyLabel(toolAction.key)}(原记录【${old}】)`);
+        return { ok: true };
+      }
+      if (t === "toggleQice") {
+        if (!isXunyou) return { error: "NOT_XUNYOU_ACTION" };
+        ts.qice = !ts.qice;
+        this._log(ts, ts.qice ? "百出:非首次组合,本轮获得奇策" : "撤销:本轮奇策标记");
+        return { ok: true, qice: ts.qice };
+      }
+      if (t === "endRound") {
+        if (!isXunyou) return { error: "NOT_XUNYOU_ACTION" };
+        this._log(ts, `第${ts.round}轮结束${ts.qice ? "(奇策失效)" : ""}`);
+        ts.round++; ts.qice = false;
+        return { ok: true, round: ts.round };
+      }
+      if (t === "resetGame") {
+        if (!isXunyou) return { error: "NOT_XUNYOU_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 谋黄月英:并才理贤(全程公开台账,无保密)─────────
+    if (target.general === "huangyueying") {
+      const hSeat = targetSeat;
+      const isHyy = bySeat === hSeat && iHold(hSeat); // 黄月英本人(或代持其座位)
+      if (t === "bcAdd") {
+        if (!isHyy) return { error: "NOT_HYY_ACTION" };
+        const name = toolAction.name;
+        if (!HYY_BC_NAMES.includes(name)) return { error: "BAD_BC_NAME" };  // 只能是三选之一
+        if (ts.bc.includes(name)) return { error: "BC_DUP" };               // 不可重复
+        if (ts.bc.length >= 3) return { error: "BC_FULL" };
+        ts.bc.push(name);
+        this._log(ts, `并才:为理贤添加牌名【${name}】`);
+        if (ts.bc.length >= 3) this._log(ts, "达成:理贤可于准备阶段发动");
+        return { ok: true };
+      }
+      if (t === "bcRm") {
+        if (!isHyy) return { error: "NOT_HYY_ACTION" };
+        const i = toolAction.index;
+        if (ts.bc[i] == null) return { error: "NO_BC" };
+        this._log(ts, `撤回并才牌名【${ts.bc[i]}】`);
+        ts.bc.splice(i, 1);
+        return { ok: true };
+      }
+      if (t === "lxUse") {
+        if (!isHyy) return { error: "NOT_HYY_ACTION" };
+        const name = toolAction.name;
+        const pool = ["无中生有", ...ts.bc];              // 理贤牌池 = 无中生有 + 已添加
+        if (!pool.includes(name)) return { error: "BAD_LX_NAME" };
+        const before = new Set(ts.lx).size;
+        ts.lx.push(name);
+        this._log(ts, `理贤:将一张牌当【${name}】使用`);
+        if (before < 3 && new Set(ts.lx).size >= 3) this._log(ts, "达成:理贤可于结束阶段发动");
+        return { ok: true };
+      }
+      if (t === "lxRm") {
+        if (!isHyy) return { error: "NOT_HYY_ACTION" };
+        const i = toolAction.index;
+        if (ts.lx[i] == null) return { error: "NO_LX" };
+        this._log(ts, `删除理贤记录:第${i + 1}次【${ts.lx[i]}】`);
+        ts.lx.splice(i, 1);
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isHyy) return { error: "NOT_HYY_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 魔曹操:覆载虚拟装备(公开;随机在客户端跑,只有解析好的结果进 DO)─────────
+    if (target.general === "caocao") {
+      const cSeat = targetSeat;
+      const isCao = bySeat === cSeat && iHold(cSeat); // 曹操本人(或代持其座位)
+      if (t === "setEquip") {
+        if (!isCao) return { error: "NOT_CAO_ACTION" };
+        const { hp, wpn, arm } = toolAction;
+        if (!hp || !wpn || !arm) return { error: "BAD_EQUIP" };
+        ts.hp = hp; ts.wpn = wpn; ts.arm = arm;
+        this._log(ts, `覆载:${hp === "king" ? "主公/地主/5血" : hp + "血"} → 武器【${wpn.n}】(范围${wpn.r})/防具【${arm.n}】`);
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isCao) return { error: "NOT_CAO_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 袁姬:镜花水月标记牌(牌名 ownerSeatOnly,张数/节言公开;prompt 流留客户端)─────────
+    if (target.general === "yuanji") {
+      const ySeat = targetSeat;
+      const isYuanji = bySeat === ySeat && iHold(ySeat); // 袁姬本人(或代持其座位)
+      const ZN = (z) => (z === "jh" ? "镜花" : "水月");
+      const okZone = (z) => z === "jh" || z === "sy";
+      if (t === "addCards") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        const z = toolAction.zone;
+        if (!okZone(z)) return { error: "BAD_ZONE" };
+        const n = Math.max(1, Math.min(10, Math.floor(toolAction.n) || 1));
+        for (let i = 0; i < n; i++) { ts.seq[z]++; ts[z].push({ id: z + ts.seq[z], s: null, r: null, n: "" }); }
+        this._log(ts, `${ZN(z)} +${n}(现持有${ts[z].length})`);
+        return { ok: true };
+      }
+      if (t === "editCard") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        const c = okZone(toolAction.zone) ? ts[toolAction.zone].find((x) => x.id === toolAction.id) : null;
+        if (!c) return { error: "NO_CARD" };
+        // 记录牌身份(花色/点数/牌名),均仅袁姬可见(ownerSeatOnly);像吕布一样选花色+点数再点牌名
+        if ("s" in toolAction) c.s = toolAction.s || null;
+        if ("r" in toolAction) c.r = toolAction.r || null;
+        if ("n" in toolAction) c.n = String(toolAction.n || "").slice(0, 20);
+        return { ok: true };
+      }
+      if (t === "dissipate") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        const z = toolAction.zone;
+        if (!okZone(z)) return { error: "BAD_ZONE" };
+        const before = ts[z].length;
+        ts[z] = ts[z].filter((x) => x.id !== toolAction.id);
+        if (ts[z].length === before) return { error: "NO_CARD" };
+        this._log(ts, `${ZN(z)}牌消散(现持有${ts[z].length})`);
+        return { ok: true };
+      }
+      if (t === "placeZone") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        const z = toolAction.zone;
+        if (!okZone(z)) return { error: "BAD_ZONE" };
+        const n = ts[z].length;
+        ts[z] = [];
+        this._log(ts, n ? `${ZN(z)} ${n} 张置于牌堆${z === "jh" ? "底" : "顶"}` : `${ZN(z)}归位:当前无标记牌`);
+        // 归位恰好2张且节言有效 → 提示袁姬自身可发动节言(prompt 由客户端弹)
+        return { ok: true, triggerJieyan: n === 2 && ts.jieyan === "ok" };
+      }
+      if (t === "jieyanResult") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        if (toolAction.same === false) { ts.jieyan = "off"; this._log(ts, "节言:花色不同,本回合失效"); }
+        else this._log(ts, "节言:两端各摸一张展示,花色相同,技能保持有效");
+        return { ok: true, jieyan: ts.jieyan };
+      }
+      if (t === "resetJieyan") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        ts.jieyan = "ok";
+        this._log(ts, "新回合:节言状态重置为有效");
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 标钟琰:博览生成技能(公开;随机在客户端跑,只有选定结果 + 候选进 DO)─────────
+    if (target.general === "zhongyan") {
+      const zSeat = targetSeat;
+      const isZhong = bySeat === zSeat && iHold(zSeat); // 钟琰本人(或代持其座位)
+      if (t === "setActive") {
+        if (!isZhong) return { error: "NOT_ZHONG_ACTION" };
+        const sk = toolAction.skill || {};
+        if (!sk.name) return { error: "BAD_SKILL" };
+        const owner = toolAction.owner === "lend" ? "lend" : "self";
+        const note = owner === "lend" ? String(toolAction.note || "").slice(0, 40) : "";
+        const cand = Array.isArray(toolAction.cand) ? toolAction.cand.map((x) => String(x).slice(0, 20)) : [];
+        ts.seq++;
+        ts.active = { id: sk.id || "", name: String(sk.name).slice(0, 20), text: String(sk.text || "").slice(0, 200), owner, note };
+        ts.history.push({ n: ts.seq, name: ts.active.name, owner, note, cand });
+        if (ts.history.length > 100) ts.history.shift();
+        return { ok: true };
+      }
+      if (t === "endActive") {
+        if (!isZhong) return { error: "NOT_ZHONG_ACTION" };
+        ts.active = null;
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isZhong) return { error: "NOT_ZHONG_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 魔司马懿:谋变骤袭(全公开;随机在客户端跑,选定结果进 DO;技能池是本机配置)─────────
+    if (target.general === "simayi") {
+      const mSeat = targetSeat;
+      const isSima = bySeat === mSeat && iHold(mSeat); // 司马懿本人(或代持其座位)
+      const hist = (e) => { ts.history.unshift(e); if (ts.history.length > 80) ts.history.pop(); };
+      if (t === "addRecord") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        const name = String(toolAction.name || "").trim().slice(0, 10);
+        const recType = toolAction.recType === "skill" ? "skill" : "card"; // 注意:不能用 toolAction.type,它是 action 类型
+        if (!name) return { error: "BAD_RECORD" };
+        if (ts.records.some((r) => r.name === name)) return { error: "REC_DUP" };
+        ts.records.push({ name, type: recType });
+        return { ok: true, count: ts.records.length };
+      }
+      if (t === "removeRecord") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        if (ts.records[toolAction.index] == null) return { error: "NO_RECORD" };
+        ts.records.splice(toolAction.index, 1);
+        return { ok: true };
+      }
+      if (t === "enterDemon") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        if (ts.demonized) return { error: "ALREADY_DEMON" };
+        if (ts.records.length < 3) return { error: "NEED_3_RECORDS" }; // 谋变:记录满3方可入魔
+        ts.demonized = true; ts.dmg = false; ts.roundNo = 1;
+        const closed = Array.isArray(toolAction.closed) ? toolAction.closed.map((x) => String(x).slice(0, 20)) : [];
+        hist({ type: "demon", txt: `入魔!获得记录:${ts.records.map((r) => r.name).join("、")}` + (closed.length ? `(骤袭池关闭同名技:${closed.join("、")})` : "") });
+        return { ok: true };
+      }
+      if (t === "flashInc") { if (!isSima) return { error: "NOT_SIMA_ACTION" }; ts.flashes++; return { ok: true, flashes: ts.flashes }; }
+      if (t === "flashDec") { if (!isSima) return { error: "NOT_SIMA_ACTION" }; if (ts.flashes > 0) ts.flashes--; return { ok: true, flashes: ts.flashes }; }
+      if (t === "toggleDmg") { if (!isSima) return { error: "NOT_SIMA_ACTION" }; ts.dmg = !ts.dmg; return { ok: true, dmg: ts.dmg }; }
+      if (t === "endRound") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        if (!ts.demonized) return { error: "NOT_DEMON" };
+        const lost = !ts.dmg;
+        hist({ type: "round", txt: lost ? `第${ts.roundNo}轮结束:本轮未造成伤害→失去1点体力` : `第${ts.roundNo}轮结束:受你伤害的角色各视为对你使用一张【杀】` });
+        ts.roundNo++; ts.dmg = false;
+        return { ok: true, lostHp: lost };
+      }
+      if (t === "pickSkill") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        if (!ts.demonized) return { error: "NOT_DEMON" };  // 骤袭需先入魔解锁
+        const sk = toolAction.skill || {};
+        if (!sk.skill) return { error: "BAD_SKILL" };
+        const drew = Array.isArray(toolAction.drew) ? toolAction.drew.map((x) => String(x).slice(0, 20)) : [];
+        ts.round++;
+        ts.held = { skill: String(sk.skill).slice(0, 20), hero: String(sk.hero || "").slice(0, 20), note: String(sk.note || "").slice(0, 200) };
+        hist({ type: "draw", r: ts.round, drew, got: ts.held.skill });
+        return { ok: true };
+      }
+      if (t === "clearHeld") { if (!isSima) return { error: "NOT_SIMA_ACTION" }; ts.held = null; return { ok: true }; }
+      if (t === "resetGame") {
+        if (!isSima) return { error: "NOT_SIMA_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
       return { error: "UNKNOWN_ACTION" };
     }
 

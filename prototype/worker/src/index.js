@@ -77,7 +77,11 @@ export class RoomDO {
         break;
       case "claimSeat":   core.claimSeat(this.dev(ws), msg.seatNo); break;
       case "releaseSeat": core.releaseSeat(this.dev(ws), msg.seatNo); break;
-      case "setGeneral":  core.setGeneral(this.dev(ws), msg.seatNo, msg.generalId); break;
+      case "setGeneral": {
+        const r = core.setGeneral(this.dev(ws), msg.seatNo, msg.generalId);
+        if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); // 别再静默吞错(否则"工具没变"却无提示)
+        break;
+      }
       case "action": {
         const r = core.action(this.dev(ws), msg);
         // 保密结果(如夺炁抽到的牌)只回操作者本人,不进广播

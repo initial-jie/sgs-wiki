@@ -98,6 +98,15 @@ function validateCard(c){
   if(!KNOWN_CARDS.has(name)) return {level:"info",reason:`"${name}"不在常见牌库,请确认牌名`};
   return {level:"ok"};
 }
+/* 军争牌堆索引(花色→点数→可能牌名,数据同步自 deck.mjs 的 CARD_INDEX)。
+   登记炁牌时选完花色+点数即可点选牌名,免手打。 */
+const CARD_INDEX={
+  S:{A:["决斗","闪电","古锭刀"],2:["雌雄双股剑","寒冰剑","八卦阵","藤甲"],3:["酒","顺手牵羊","过河拆桥"],4:["雷杀","顺手牵羊","过河拆桥"],5:["雷杀","青龙偃月刀","绝影"],6:["雷杀","青釭剑","乐不思蜀"],7:["杀","雷杀","南蛮入侵"],8:["杀","雷杀"],9:["杀","酒"],10:["杀","兵粮寸断"],J:["顺手牵羊","无懈可击","铁索连环"],Q:["过河拆桥","丈八蛇矛","铁索连环"],K:["南蛮入侵","无懈可击","大宛"]},
+  H:{A:["万箭齐发","桃园结义","无懈可击"],2:["闪","火攻"],3:["桃","五谷丰登","火攻"],4:["火杀","桃","五谷丰登"],5:["桃","麒麟弓","赤兔"],6:["桃","乐不思蜀"],7:["火杀","桃","无中生有"],8:["闪","桃","无中生有"],9:["闪","桃","无中生有"],10:["杀","火杀"],J:["杀","闪","无中生有"],Q:["桃","闪","闪电","过河拆桥"],K:["闪","无懈可击","爪黄飞电"]},
+  C:{A:["决斗","诸葛连弩","白银狮子"],2:["杀","仁王盾","八卦阵","藤甲"],3:["杀","酒","过河拆桥"],4:["杀","过河拆桥","兵粮寸断"],5:["杀","雷杀","的卢"],6:["杀","雷杀","乐不思蜀"],7:["杀","雷杀","南蛮入侵"],8:["杀","雷杀"],9:["杀","酒"],10:["杀","铁索连环"],J:["杀","铁索连环"],Q:["无懈可击","铁索连环","借刀杀人"],K:["无懈可击","铁索连环","借刀杀人"]},
+  D:{A:["决斗","诸葛连弩","朱雀羽扇"],2:["闪","桃"],3:["闪","桃","顺手牵羊"],4:["火杀","闪","顺手牵羊"],5:["火杀","闪","贯石斧","木牛流马"],6:["杀","闪"],7:["杀","闪"],8:["杀","闪"],9:["杀","闪","酒"],10:["杀","闪"],J:["闪"],Q:["桃","无懈可击","火攻","方天画戟"],K:["杀","紫骍","骅骝"]}
+};
+const cardsAt=(s,r)=>(CARD_INDEX[s]&&CARD_INDEX[s][r])?CARD_INDEX[s][r]:[];
 
 /* ============ 连接 / 状态 ============ */
 const SUITS=[{k:"S",t:"♠"},{k:"H",t:"♥",red:1},{k:"C",t:"♣"},{k:"D",t:"♦",red:1}];
@@ -106,16 +115,24 @@ let ws=null,state=null,lastReveal=null;
 let focus=null;   // 当前聚焦的座位号(null=大厅)—— 多工具聚焦框架
 let nhFlow=null;  // 南华书写流程本地态 {stage,timings,chosenTiming,effects,pending?}
 let nhGive=null;  // 南华授术面板:正在授出的天书全局下标,或 null
+let xyPick=null;  // 荀攸百出:正在为哪个格子(花色-类型)挑锦囊牌名,或 null
+const lbManual=new Set(); // 吕布登记:哪些槽位(seat:ci)切到"手填牌名"模式(扩展/EX 牌逃生口)
 let deviceId=localStorage.getItem("sgs_device");
 if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage.setItem("sgs_device",deviceId);}
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
-             nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)} };
+             nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
+             xunyou:{view:s=>viewXunyouTool(s),bind:(s,q)=>bindXunyou(s,q)},
+             huangyueying:{view:s=>viewHyyTool(s),bind:(s,q)=>bindHyy(s,q)},
+             caocao:{view:s=>viewCaoTool(s),bind:(s,q)=>bindCao(s,q)},
+             yuanji:{view:s=>viewYjTool(s),bind:(s,q)=>bindYj(s,q)},
+             zhongyan:{view:s=>viewZyTool(s),bind:(s,q)=>bindZy(s,q)},
+             simayi:{view:s=>viewSmTool(s),bind:(s,q)=>bindSm(s,q)} };
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -176,7 +193,7 @@ function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80
 function connect(base,code){
   if(ws)try{ws.close();}catch(e){}
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
-  state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;for(const k in draft)delete draft[k];
+  state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k];
   ws=new WebSocket(base.replace(/\/+$/,"")+"/api/room/"+code+"/ws");
   ws.onopen=()=>{send({type:"hello",deviceId});toast("已连接房间 "+code);};
   ws.onclose=()=>toast("连接已断开");
@@ -272,6 +289,12 @@ function viewSeats(){
         +`<option value="" ${g===""?"selected":""}>未选</option>`
         +`<option value="lvbu" ${g==="lvbu"?"selected":""}>魔吕布(有工具)</option>`
         +`<option value="nanhua" ${g==="nanhua"?"selected":""}>南华老仙(有工具)</option>`
+        +`<option value="xunyou" ${g==="xunyou"?"selected":""}>族荀攸(有工具)</option>`
+        +`<option value="huangyueying" ${g==="huangyueying"?"selected":""}>谋黄月英(有工具)</option>`
+        +`<option value="caocao" ${g==="caocao"?"selected":""}>魔曹操(有工具)</option>`
+        +`<option value="yuanji" ${g==="yuanji"?"selected":""}>袁姬(有工具)</option>`
+        +`<option value="zhongyan" ${g==="zhongyan"?"selected":""}>标钟琰(有工具)</option>`
+        +`<option value="simayi" ${g==="simayi"?"selected":""}>魔司马懿(有工具)</option>`
         +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
@@ -314,7 +337,19 @@ function viewRegSeat(lvbu,seat){
     for(const s of SUITS) h+=`<button class="pick ${c.s===s.k?'sel':''}" data-ds="${seat}:${ci}:${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
     h+=`</div><div class="pickgrid">`;
     for(const r of RANKS) h+=`<button class="pick ${c.r===r?'sel':''}" data-dr="${seat}:${ci}:${r}">${r}</button>`;
-    h+=`</div><input data-dn="${seat}:${ci}" placeholder="牌名(如 杀 / 过河拆桥,建议填)" value="${esc(c.n)}">`;
+    h+=`</div>`;
+    // 牌名:选完花色+点数后,直接点选军争该组合的候选牌名(免手打);「其他」逃生口给扩展/EX 牌
+    const key=seat+":"+ci;
+    if(c.s&&c.r){
+      const names=cardsAt(c.s,c.r);
+      const manual=lbManual.has(key)||(c.n&&!names.includes(c.n));
+      h+=`<div class="pickgrid" style="margin-top:6px">`;
+      for(const nm of names) h+=`<button class="pick ${c.n===nm?'sel':''}" data-dpn="${key}:${esc(nm)}">${esc(nm)}</button>`;
+      h+=`<button class="pick ${manual?'sel':''}" data-dother="${key}">其他…</button></div>`;
+      if(manual) h+=`<input data-dn="${key}" placeholder="手填牌名(扩展/EX 牌)" value="${esc(c.n)}">`;
+    }else{
+      h+=`<div class="hint">先选花色 + 点数,再点牌名</div>`;
+    }
     const v=validateCard(c);
     if(v.level!=="ok") h+=`<div class="vmsg ${v.level}">${v.level==="warn"?"⚠":"·"} ${esc(v.reason)}</div>`;
     h+=`</div>`;
@@ -529,8 +564,8 @@ function bindAll(){
   const q=(sel)=>document.querySelectorAll(sel);
   // 通用:换房 / 返回大厅 / 进入工具
   q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||defaultBase(),c);});
-  q("[data-back]").forEach(b=>b.onclick=()=>{focus=null;nhFlow=null;nhGive=null;render();});
-  q("[data-enter]").forEach(b=>b.onclick=()=>{focus=+b.dataset.enter;nhFlow=null;nhGive=null;render();});
+  q("[data-back]").forEach(b=>b.onclick=()=>{focus=null;nhFlow=null;nhGive=null;xyPick=null;yjPrompt=null;yjEdit=null;zyRolled=null;smRolled=null;render();});
+  q("[data-enter]").forEach(b=>b.onclick=()=>{focus=+b.dataset.enter;nhFlow=null;nhGive=null;xyPick=null;yjPrompt=null;yjEdit=null;zyRolled=null;smRolled=null;render();});
   // 大厅:座位认领 / 释放 / 选武将
   q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
@@ -554,9 +589,11 @@ function bindAll(){
 /* ---------- 吕布工具事件 ---------- */
 function bindLvbu(lvbu,q){
   const L=lvbu.seatNo;
-  // 登记草稿
-  q("[data-ds]").forEach(b=>b.onclick=()=>{const[s,ci,k]=b.dataset.ds.split(":");draft[+s][+ci].s=k;render();});
-  q("[data-dr]").forEach(b=>b.onclick=()=>{const[s,ci,r]=b.dataset.dr.split(":");draft[+s][+ci].r=r;render();});
+  // 登记草稿:改花色/点数会令旧牌名失效 → 非手填模式下清空,回到点选
+  q("[data-ds]").forEach(b=>b.onclick=()=>{const[s,ci,k]=b.dataset.ds.split(":");const d=draft[+s][+ci];d.s=k;if(!lbManual.has(s+":"+ci)&&d.n&&d.r&&!cardsAt(k,d.r).includes(d.n))d.n="";render();});
+  q("[data-dr]").forEach(b=>b.onclick=()=>{const[s,ci,r]=b.dataset.dr.split(":");const d=draft[+s][+ci];d.r=r;if(!lbManual.has(s+":"+ci)&&d.n&&d.s&&!cardsAt(d.s,r).includes(d.n))d.n="";render();});
+  q("[data-dpn]").forEach(b=>b.onclick=()=>{const p=b.dataset.dpn.split(":");const s=+p[0],ci=+p[1],nm=p.slice(2).join(":");draft[s][ci].n=nm;lbManual.delete(s+":"+ci);render();});
+  q("[data-dother]").forEach(b=>b.onclick=()=>{const key=b.dataset.dother;const[s,ci]=key.split(":");if(lbManual.has(key)){lbManual.delete(key);}else{lbManual.add(key);draft[+s][+ci].n="";}render();});
   q("[data-dn]").forEach(inp=>inp.onchange=()=>{const[s,ci]=inp.dataset.dn.split(":");draft[+s][+ci].n=inp.value.trim();render();});
   q("[data-addslot]").forEach(b=>b.onclick=()=>{draft[+b.dataset.addslot].push({s:null,r:null,n:""});render();});
   q("[data-reg]").forEach(b=>b.onclick=()=>{
@@ -600,6 +637,509 @@ function bindNanhua(nh,q){
   q("[data-nhgive]").forEach(b=>b.onclick=()=>{nhGive=(nhGive===+b.dataset.nhgive)?null:+b.dataset.nhgive;render();});
   q("[data-nhgiveto]").forEach(b=>b.onclick=()=>{const sel=$("#nhGiveSel");if(sel&&sel.value)send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"giveBook",index:nhGive,toSeat:+sel.value}});nhGive=null;});
   q("[data-nhreset]").forEach(b=>b.onclick=()=>{if(confirm("结束本局并清空所有天书?座位武将保留。"))send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"resetGame"}});});
+}
+
+/* ---------- 族荀攸工具:百出记录表(全程公开)---------- */
+const XY_TYPES=[{k:"basic",t:"基本牌"},{k:"trick",t:"锦囊牌"},{k:"equip",t:"装备牌"}];
+const XY_JN=['无中生有','顺手牵羊','过河拆桥','无懈可击','万箭齐发','南蛮入侵','火攻','决斗','桃园结义','五谷丰登','借刀杀人','铁索连环'];
+function viewXunyouTool(xy){
+  const seat=xy.seatNo, ts=xy.toolState||{}, grid=ts.grid||{};
+  const iAmXunyou=state.youHold.includes(seat);
+  const recorded=Object.values(grid), remaining=XY_JN.filter(n=>!recorded.includes(n));
+  let h="";
+  // 概览
+  h+=`<div class="card"><div class="row"><span class="chip">第 ${ts.round||1} 轮</span>`
+    +`<span class="chip"${ts.qice?' style="border-color:var(--seal);color:var(--seal)"':''}>${ts.qice?"本轮已获得奇策":"本轮未获得奇策"}</span>`
+    +`<span class="chip">已记录 ${recorded.length}/12 格</span></div></div>`;
+  // 百出表格
+  h+=`<div class="card"><h2>百出 · 花色×类型<span class="tag">${iAmXunyou?"点空格记录 / 点已填格清除":"仅荀攸可操作"}</span></h2>`;
+  h+=`<div class="row" style="font-size:12px;color:var(--ink-soft)"><span style="width:34px"></span>`
+    +XY_TYPES.map(tp=>`<span class="grow" style="text-align:center">${tp.t}</span>`).join("")+`</div>`;
+  for(const s of SUITS){
+    h+=`<div class="row" style="margin-top:5px"><span style="width:34px;font-size:18px" class="${s.red?'suitred':''}">${s.t}</span>`;
+    for(const tp of XY_TYPES){
+      const key=s.k+"-"+tp.k, v=grid[key], picking=xyPick===key;
+      // 注:.pick 有 flex:0 0 auto,会盖过 .grow;这里用内联 flex(优先级更高)让三列等宽对齐表头
+      if(v) h+=`<button class="pick ${iAmXunyou?'gold':''}" ${iAmXunyou?`data-xyclear="${key}"`:"disabled"} style="flex:1 1 0;min-height:44px">${esc(v)}</button>`;
+      else h+=`<button class="pick ${picking?'sel':''}" ${iAmXunyou?`data-xypick="${key}"`:"disabled"} style="flex:1 1 0;min-height:44px">${picking?"…":(iAmXunyou?"＋":"—")}</button>`;
+    }
+    h+=`</div>`;
+  }
+  // 记录选择器
+  if(iAmXunyou&&xyPick){
+    const s=SUITS.find(x=>x.k===xyPick.split("-")[0]), tp=XY_TYPES.find(x=>x.k===xyPick.split("-")[1]);
+    h+=`<div class="slot" style="border-style:solid;margin-top:8px"><div class="hint">首次使用 <b class="${s.red?'suitred':''}">${s.t}</b>${tp.t} → 记录一张普通锦囊(点选尚未记录的):</div><div class="row" style="margin-top:6px">`;
+    if(remaining.length) h+=remaining.map(n=>`<button class="pick gold" data-xyname="${esc(n)}">${esc(n)}</button>`).join("");
+    else h+=`<span class="hint">12 种普通锦囊已全部记录完毕。</span>`;
+    h+=`<button class="ghost" data-xycancel="1">取消</button></div></div>`;
+  }
+  // 操作(仅荀攸本人)
+  if(iAmXunyou){
+    h+=`<div class="hint">使用<b>已记录牌名</b>的牌 → 你摸一张或回复1体力。花色×类型组合<b>非首次</b>使用 → 点下方切换奇策。</div>`;
+    h+=`<div class="row" style="margin-top:8px"><button class="${ts.qice?'gold':''}" data-xyqice="1">${ts.qice?"✓ 本轮已获得奇策(点撤销)":"非首次组合 → 获得奇策"}</button>`
+      +`<button data-xyendr="1">结束本轮 →</button></div>`;
+  }
+  h+=`</div>`;
+  // 已记录清单
+  h+=`<div class="card"><h2>已记录牌名<span class="tag">共 ${recorded.length} 种</span></h2>`;
+  h+=recorded.length?(`<div class="row">`+recorded.map(n=>`<span class="chip" style="border-color:var(--seal);color:var(--seal)">${esc(n)}</span>`).join("")+`</div>`):`<div class="hint">暂无记录。</div>`;
+  h+=`</div>`;
+  // 记录日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?(ts.log.map(l=>`<div>${esc(l)}</div>`).join("")):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAmXunyou) h+=`<div class="card"><div class="row end"><button class="ghost" data-xyreset="1">⟳ 重开一局(清空记录)</button></div></div>`;
+  return h;
+}
+function bindXunyou(xy,q){
+  const X=xy.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:X,bySeat:X,toolAction:o});
+  q("[data-xypick]").forEach(b=>b.onclick=()=>{xyPick=(xyPick===b.dataset.xypick)?null:b.dataset.xypick;render();});
+  q("[data-xycancel]").forEach(b=>b.onclick=()=>{xyPick=null;render();});
+  q("[data-xyname]").forEach(b=>b.onclick=()=>{act({type:"recordCard",key:xyPick,name:b.dataset.xyname});xyPick=null;});
+  q("[data-xyclear]").forEach(b=>b.onclick=()=>{if(confirm("清除该格记录?"))act({type:"clearCell",key:b.dataset.xyclear});});
+  q("[data-xyqice]").forEach(b=>b.onclick=()=>act({type:"toggleQice"}));
+  q("[data-xyendr]").forEach(b=>b.onclick=()=>act({type:"endRound"}));
+  q("[data-xyreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空全部百出记录,座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 谋黄月英工具:并才理贤(全程公开)---------- */
+const HYY_BC_NAMES=['顺手牵羊','过河拆桥','铁索连环'];
+function viewHyyTool(hy){
+  const seat=hy.seatNo, ts=hy.toolState||{}, bc=ts.bc||[], lx=ts.lx||[];
+  const iAmHyy=state.youHold.includes(seat);
+  const dist=new Set(lx).size, pool=['无中生有',...bc];
+  let h="";
+  // 并才
+  h+=`<div class="card"><h2>并才<span class="tag">已添加 ${bc.length}/3</span></h2>`;
+  h+=`<div class="hint">每回合首张基本牌被使用时可重铸一张;重铸的是锦囊牌 → 为「理贤」添加一个牌名(自选不重复)。</div>`;
+  if(iAmHyy){
+    h+=`<div class="row" style="margin-top:8px">`;
+    for(const n of HYY_BC_NAMES){const added=bc.includes(n);h+=`<button ${added?"disabled":`data-hbcadd="${esc(n)}"`}>${added?"✓ ":""}${n}</button>`;}
+    h+=`</div>`;
+  }
+  if(bc.length){
+    h+=`<div class="row" style="margin-top:8px">`;
+    bc.forEach((n,i)=>{h+=`<span class="chip" style="border-color:var(--seal);color:var(--seal)">${esc(n)}`+(iAmHyy?`<button class="ghost" data-hbcrm="${i}" style="padding:1px 6px;margin-left:4px">✕</button>`:"")+`</span>`;});
+    h+=`</div>`;
+  }
+  if(bc.length>=3) h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);margin-top:8px;color:var(--seal)">✦ 三个牌名集齐:理贤于<b>准备阶段</b>也可发动!</div>`;
+  h+=`</div>`;
+  // 理贤
+  h+=`<div class="card"><h2>理贤<span class="tag">已用 ${dist}/3 种不同牌名</span></h2>`;
+  h+=`<div class="hint">受到伤害后${bc.length>=3?"、准备阶段":""}${dist>=3?"、结束阶段":""},可将一张牌当下列之一使用,发动后点选记录:</div>`;
+  if(iAmHyy){
+    h+=`<div class="row" style="margin-top:8px">`;
+    for(const n of pool){const used=lx.includes(n);h+=`<button class="${used?'gold':''}" data-hlxuse="${esc(n)}">${used?"✓ ":""}${n}</button>`;}
+    h+=`</div>`;
+  }
+  if(lx.length){
+    h+=`<div style="margin-top:8px">`;
+    lx.forEach((n,i)=>{h+=`<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--line)"><span class="grow">第 ${i+1} 次:当【${esc(n)}】使用</span>`+(iAmHyy?`<button class="ghost" data-hlxrm="${i}">删除</button>`:"")+`</div>`;});
+    h+=`</div>`;
+  }
+  if(dist>=3) h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);margin-top:8px;color:var(--seal)">✦ 已用三种不同牌名:理贤于<b>结束阶段</b>也可发动!</div>`;
+  h+=`</div>`;
+  // 日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?(ts.log.map(l=>`<div>${esc(l)}</div>`).join("")):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAmHyy) h+=`<div class="card"><div class="row end"><button class="ghost" data-hreset="1">⟳ 重开一局(清空记录)</button></div></div>`;
+  return h;
+}
+function bindHyy(hy,q){
+  const H=hy.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:H,bySeat:H,toolAction:o});
+  q("[data-hbcadd]").forEach(b=>b.onclick=()=>act({type:"bcAdd",name:b.dataset.hbcadd}));
+  q("[data-hbcrm]").forEach(b=>b.onclick=()=>{if(confirm("移除该并才牌名?"))act({type:"bcRm",index:+b.dataset.hbcrm});});
+  q("[data-hlxuse]").forEach(b=>b.onclick=()=>act({type:"lxUse",name:b.dataset.hlxuse}));
+  q("[data-hlxrm]").forEach(b=>b.onclick=()=>{if(confirm("删除该理贤记录?"))act({type:"lxRm",index:+b.dataset.hlxrm});});
+  q("[data-hreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空并才/理贤记录,座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 魔曹操工具:覆载虚拟装备(公开;随机在本机跑,只有结果进 DO)---------- */
+const CAO_WPN={
+  fangtian:{n:'方天画戟',r:4,d:'使用【杀】指定唯一目标且手牌只剩这张【杀】时,可额外指定至多两个目标。'},
+  yushan:{n:'朱雀羽扇',r:4,d:'可将普通【杀】当火【杀】使用。'},
+  qinglong:{n:'青龙偃月刀',r:3,d:'【杀】被【闪】抵消后,可对该角色再使用一张【杀】(无距离限制)。'},
+  fu:{n:'贯石斧',r:3,d:'【杀】被【闪】抵消后,可弃两张牌令此【杀】仍造成伤害。'},
+  zhangba:{n:'丈八蛇矛',r:3,d:'可将两张手牌当【杀】使用或打出(颜色不限)。'},
+  guding:{n:'古锭刀',r:2,d:'锁定技,【杀】造成伤害时若目标无手牌,此伤害+1。'},
+  qinggang:{n:'青钢剑',r:2,d:'锁定技,【杀】指定目标后无视其防具。'},
+  hanbing:{n:'寒冰剑',r:2,d:'【杀】造成伤害前可防止此伤害,改为依次弃其两张牌。'},
+  cixiong:{n:'雌雄双股剑',r:2,d:'【杀】指定异性目标后,可令其弃一张手牌或令你摸一张牌。'},
+  qibao:{n:'七宝刀',r:2,sp:1,d:'魔曹操专属:【杀】无视防具;对满血角色【杀】伤害+1。'},
+  baibi:{n:'百辟刀',r:2,sp:1,d:'魔曹操专属:【杀】造成伤害后获得对方一张手牌。'},
+  nu:{n:'诸葛连弩',r:1,d:'出牌阶段使用【杀】无次数限制。'},
+  qilin:{n:'麒麟弓',r:5,d:'【杀】造成伤害时可弃置其装备区一张坐骑牌。'}
+};
+const CAO_ARM={
+  shizi:{n:'白银狮子',d:'锁定技,受到伤害>1时防止多余伤害;失去它后回复1点体力。'},
+  bagua:{n:'八卦阵',d:'需使用/打出【闪】时可判定,红色则视为使用/打出【闪】。'},
+  renwang:{n:'仁王盾',d:'锁定技,黑色【杀】对你无效。'},
+  tengjia:{n:'藤甲',d:'锁定技,【南蛮】【万箭】及普通【杀】无效;受火焰伤害+1。'}
+};
+const CAO_ALL_ARM=['shizi','tengjia','renwang','bagua'];
+const CAO_TABLE={
+  '4':{wpn:['fangtian','yushan'],arm:['shizi']},
+  '3':{wpn:['qinglong','fu','zhangba'],arm:['bagua','renwang']},
+  '2':{wpn:['guding','qinggang','hanbing','cixiong','qibao','baibi'],arm:['tengjia']},
+  '1':{wpn:['nu'],arm:CAO_ALL_ARM},
+  'king':{wpn:['qilin'],arm:CAO_ALL_ARM}
+};
+const CAO_HPS=[{k:'4',t:'4 血',s:'方天/羽扇'},{k:'3',t:'3 血',s:'青龙/斧/丈八'},{k:'2',t:'2 血',s:'六刀多选'},{k:'1',t:'1 血',s:'连弩固定'},{k:'king',t:'主公/地主/5血',s:'麒麟弓·防具随机'}];
+const caoPick=a=>a[Math.floor(Math.random()*a.length)];
+function caoEqCard(kind,eq,extra){
+  return `<div class="slot" style="border-style:solid;margin-top:8px"><div class="row"><span class="chip"${kind==='武器'?' style="border-color:var(--seal);color:var(--seal)"':''}>${kind}</span>`
+    +`<b class="grow" style="margin-left:6px">${esc(eq.n)}${eq.sp?' <span class="chip gold">专属</span>':''}</b>`
+    +`<span class="hint" style="margin:0">${esc(extra)}</span></div><div class="hint" style="margin-top:6px">${esc(eq.d)}</div></div>`;
+}
+function viewCaoTool(cc){
+  const seat=cc.seatNo, ts=cc.toolState||{};
+  const iAmCao=state.youHold.includes(seat);
+  let h="";
+  h+=`<div class="card"><div class="hint"><b style="color:var(--seal)">覆载</b>(锁定技):装备牌只能当【借刀】或【无中生有】。装备区无牌时,视为装备一张武器+防具,随体力值变化。</div></div>`;
+  if(iAmCao){
+    h+=`<div class="card"><h2>选择当前体力值<span class="tag">点血量→抽装备</span></h2><div class="row">`;
+    for(const hp of CAO_HPS) h+=`<button class="${ts.hp===hp.k?'primary':''}" data-caohp="${hp.k}" style="flex:1;min-width:80px">${hp.t}<br><span class="hint" style="margin:0">${hp.s}</span></button>`;
+    h+=`</div><div class="row" style="margin-top:8px"><button class="primary grow" data-caogen="1">✦ 抽取装备 ✦</button></div>`;
+    h+=`<div class="hint">濒死回复/血量变化后可重抽。抽取结果全场公开(覆载虚拟装备是公开信息)。</div></div>`;
+  }
+  // 当前装备(公开)
+  h+=`<div class="card"><h2>当前覆载装备<span class="tag">${ts.hp?(ts.hp==='king'?'主公/地主/5血':ts.hp+'血'):'未抽取'}</span></h2>`;
+  if(ts.wpn&&ts.arm){
+    const wFixed=CAO_TABLE[ts.hp]&&CAO_TABLE[ts.hp].wpn.length===1, aFixed=CAO_TABLE[ts.hp]&&CAO_TABLE[ts.hp].arm.length===1;
+    h+=caoEqCard('武器',ts.wpn,`攻击范围 ${ts.wpn.r}${wFixed?' · 固定':''}`);
+    h+=caoEqCard('防具',ts.arm,aFixed?'固定':'随机');
+  }else h+=`<div class="hint">${iAmCao?'先选血量,再点「抽取装备」。':'魔曹操尚未抽取覆载装备。'}</div>`;
+  h+=`</div>`;
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?(ts.log.map(l=>`<div>${esc(l)}</div>`).join("")):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAmCao&&ts.hp) h+=`<div class="card"><div class="row end"><button class="ghost" data-caoreset="1">⟳ 清空覆载装备</button></div></div>`;
+  return h;
+}
+let caoHpSel=null; // 曹操本机:当前选中的血量档(未抽取前的本地选择)
+function bindCao(cc,q){
+  const C=cc.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:C,bySeat:C,toolAction:o});
+  q("[data-caohp]").forEach(b=>b.onclick=()=>{caoHpSel=b.dataset.caohp;
+    // 立即抽一次给出反馈,与原工具"选血量后抽取"一致——这里选血即高亮,抽取按钮统一出结果
+    q("[data-caohp]").forEach(x=>x.classList.toggle('primary',x.dataset.caohp===caoHpSel));});
+  q("[data-caogen]").forEach(b=>b.onclick=()=>{
+    const hp=caoHpSel||cc.toolState.hp;
+    if(!hp){toast("请先选择当前体力值");return;}
+    const tb=CAO_TABLE[hp];
+    const wpn=CAO_WPN[caoPick(tb.wpn)], arm=CAO_ARM[caoPick(tb.arm)];
+    act({type:"setEquip",hp,wpn,arm});caoHpSel=null;
+  });
+  q("[data-caoreset]").forEach(b=>b.onclick=()=>{if(confirm("清空覆载虚拟装备?"))act({type:"resetGame"});});
+}
+
+/* ---------- 袁姬工具:镜花水月标记牌(牌名仅袁姬可见,张数/节言公开)---------- */
+let yjPrompt=null; // 节言结算提示 {source:'jh'|'sy'|'manual'},仅袁姬本机;committed 结果才进 DO
+let yjEdit=null;   // 袁姬:正在填哪张记录牌 "zone:id",或 null
+const yjManual=new Set(); // 袁姬记录牌:哪些牌切到手填牌名模式
+function yjCardLabel(c){ // 已选花色点数则显示,如 ♠A 杀
+  if(!c.s||!c.r) return '<span class="hint" style="margin:0">未填(点「填牌」)</span>';
+  const su=SUITS.find(x=>x.k===c.s);
+  return `<b class="${su&&su.red?'suitred':''}">${su?su.t:''}${c.r}</b>${c.n?" "+esc(c.n):' <span class="hint" style="margin:0">(未选牌名)</span>'}`;
+}
+function yjCardEditor(z,c){ // 花色+点数→点选牌名,与吕布登记同一套(cardsAt)
+  let h=`<div class="slot" style="margin-top:6px"><div class="pickgrid">`;
+  for(const s of SUITS) h+=`<button class="pick ${c.s===s.k?'sel':''}" data-yjcs="${z}:${c.id}:${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+  h+=`</div><div class="pickgrid">`;
+  for(const r of RANKS) h+=`<button class="pick ${c.r===r?'sel':''}" data-yjcr="${z}:${c.id}:${r}">${r}</button>`;
+  h+=`</div>`;
+  if(c.s&&c.r){
+    const names=cardsAt(c.s,c.r), key=z+":"+c.id, manual=yjManual.has(key)||(c.n&&!names.includes(c.n));
+    h+=`<div class="pickgrid" style="margin-top:6px">`;
+    for(const nm of names) h+=`<button class="pick ${c.n===nm?'sel':''}" data-yjcn="${key}:${esc(nm)}">${esc(nm)}</button>`;
+    h+=`<button class="pick ${manual?'sel':''}" data-yjcother="${key}">其他…</button></div>`;
+    if(manual) h+=`<input data-yjcinput="${key}" placeholder="手填牌名(扩展/EX 牌)" value="${esc(c.n)}">`;
+  }else h+=`<div class="hint">先选花色 + 点数,再点牌名</div>`;
+  h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-yjcdone="1">完成</button></div></div>`;
+  return h;
+}
+function yjZoneView(ts,z,iAm){
+  const val=ts[z], zn=z==="jh"?"镜花":"水月", loc=z==="jh"?"牌堆底":"牌堆顶";
+  const isArr=Array.isArray(val), cnt=isArr?val.length:(val&&val.count)||0;
+  let h=`<div class="slot" style="border-style:solid;margin-top:8px"><div class="row"><b class="grow" style="color:var(--seal)">${zn}牌(归${loc})</b><span class="chip">${cnt} 张</span>`;
+  if(iAm) h+=`<button data-yjadd="${z}:1">＋1</button><button data-yjadd="${z}:2">＋2</button><button class="ghost" data-yjplace="${z}">归位</button>`;
+  h+=`</div>`;
+  if(iAm&&isArr){
+    if(!val.length) h+=`<div class="hint">当前无${zn}标记牌</div>`;
+    else val.forEach(c=>{const key=z+":"+c.id;
+      h+=`<div class="row" style="padding:4px 0"><span class="chip"${z==="jh"?' style="border-color:var(--seal);color:var(--seal)"':''}>${z==="jh"?"镜":"月"}</span>`
+        +`<span class="grow" style="margin-left:6px">${yjCardLabel(c)}</span>`
+        +`<button class="ghost" data-yjedit="${key}">${yjEdit===key?"收起":"填牌"}</button>`
+        +`<button class="ghost" data-yjdis="${key}">消散</button></div>`;
+      if(yjEdit===key) h+=yjCardEditor(z,c);
+    });
+  }else if(!iAm){
+    h+=`<div class="hint">牌的花色点数为袁姬手牌,仅她本人可见;此处只显示张数。</div>`;
+  }
+  h+=`</div>`;
+  return h;
+}
+function viewYjTool(yj){
+  const seat=yj.seatNo, ts=yj.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  const jyOk=ts.jieyan==="ok";
+  let h="";
+  // 节言状态(公开)
+  h+=`<div class="card"><div class="row"><span class="chip" style="border-color:${jyOk?'var(--seal)':'var(--line)'};color:${jyOk?'var(--seal)':'var(--ink-soft)'}">节言 · ${jyOk?"有效":"本回合失效"}</span>`;
+  if(iAm) h+=`<button class="ghost" data-yjresetjy="1">新回合·重置</button><button class="ghost" data-yjmanual="1"${jyOk?"":" disabled"}>手动发动节言</button>`;
+  h+=`</div><div class="hint">任意角色一次性失去恰好两张手牌均可发动(含袁姬归位镜花/水月各2张时)。回合切换后点重置。</div></div>`;
+  // 节言结算提示(仅袁姬本机)
+  if(iAm&&yjPrompt){
+    const src=yjPrompt.source==="jh"?"镜花归位恰好2张":yjPrompt.source==="sy"?"水月归位恰好2张":"有角色一次性失去恰好两张手牌";
+    h+=`<div class="card" style="border-color:var(--seal)"><div class="hint"><b style="color:var(--seal)">〖节言〗</b>${src}:与其从牌堆两端各摸一张展示。结果?</div>`
+      +`<div class="row" style="margin-top:8px"><button class="primary" data-yjres="same">花色相同·保持有效</button>`
+      +`<button data-yjres="diff">花色不同·本回合失效</button><button class="ghost" data-yjres="skip">放弃发动</button></div></div>`;
+  }
+  // 标记牌区
+  h+=`<div class="card"><h2>镜花水月<span class="tag">${iAm?"每轮开始+2镜花/回合结束+2水月":"标记牌台账"}</span></h2>`;
+  h+=yjZoneView(ts,"jh",iAm);
+  h+=yjZoneView(ts,"sy",iAm);
+  h+=`<div class="hint">牌因使用/弃置/被拿走离开手牌时点「消散」;归位=整区置于牌堆${'底/顶'}并清空。</div></div>`;
+  // 日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?(ts.log.map(l=>`<div>${esc(l)}</div>`).join("")):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-yjreset="1">⟳ 重开一局(清空标记牌)</button></div></div>`;
+  return h;
+}
+function bindYj(yj,q){
+  const Y=yj.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:Y,bySeat:Y,toolAction:o});
+  q("[data-yjadd]").forEach(b=>b.onclick=()=>{const[z,n]=b.dataset.yjadd.split(":");act({type:"addCards",zone:z,n:+n});});
+  // 记录牌:填牌(展开/收起)+ 花色/点数/牌名点选(与吕布同一套 cardsAt)
+  q("[data-yjedit]").forEach(b=>b.onclick=()=>{yjEdit=(yjEdit===b.dataset.yjedit)?null:b.dataset.yjedit;render();});
+  q("[data-yjcdone]").forEach(b=>b.onclick=()=>{yjEdit=null;render();});
+  q("[data-yjcs]").forEach(b=>b.onclick=()=>{const[z,id,s]=b.dataset.yjcs.split(":");const c=(yj.toolState[z]||[]).find(x=>x.id===id);
+    const patch={type:"editCard",zone:z,id,s};if(c&&c.n&&c.r&&!cardsAt(s,c.r).includes(c.n)&&!yjManual.has(z+":"+id))patch.n="";act(patch);});
+  q("[data-yjcr]").forEach(b=>b.onclick=()=>{const[z,id,r]=b.dataset.yjcr.split(":");const c=(yj.toolState[z]||[]).find(x=>x.id===id);
+    const patch={type:"editCard",zone:z,id,r};if(c&&c.n&&c.s&&!cardsAt(c.s,r).includes(c.n)&&!yjManual.has(z+":"+id))patch.n="";act(patch);});
+  q("[data-yjcn]").forEach(b=>b.onclick=()=>{const p=b.dataset.yjcn.split(":");const z=p[0],id=p[1],nm=p.slice(2).join(":");yjManual.delete(z+":"+id);act({type:"editCard",zone:z,id,n:nm});});
+  q("[data-yjcother]").forEach(b=>b.onclick=()=>{const key=b.dataset.yjcother;if(yjManual.has(key)){yjManual.delete(key);}else{yjManual.add(key);const[z,id]=key.split(":");act({type:"editCard",zone:z,id,n:""});}render();});
+  q("[data-yjcinput]").forEach(inp=>inp.onchange=()=>{const p=inp.dataset.yjcinput.split(":");act({type:"editCard",zone:p[0],id:p[1],n:inp.value});});
+  q("[data-yjdis]").forEach(b=>b.onclick=()=>{const[z,id]=b.dataset.yjdis.split(":");if(confirm("该标记牌消散(离开手牌)?"))act({type:"dissipate",zone:z,id});});
+  q("[data-yjplace]").forEach(b=>b.onclick=()=>{const z=b.dataset.yjplace;
+    // 归位是本地即时:DO 清区并回 triggerJieyan;这里用一次性 onmessage 钩子不便,改为发送后由下一帧 state 无关,提示走本地判断
+    const arr=yj.toolState[z]; const willTrigger=Array.isArray(arr)&&arr.length===2&&yj.toolState.jieyan==="ok";
+    act({type:"placeZone",zone:z}); if(willTrigger){yjPrompt={source:z};}});
+  q("[data-yjmanual]").forEach(b=>b.onclick=()=>{if(yj.toolState.jieyan==="ok"){yjPrompt={source:"manual"};render();}});
+  q("[data-yjres]").forEach(b=>b.onclick=()=>{const r=b.dataset.yjres;
+    if(r==="skip"){yjPrompt=null;render();return;}
+    act({type:"jieyanResult",same:r==="same"});yjPrompt=null;});
+  q("[data-yjresetjy]").forEach(b=>b.onclick=()=>act({type:"resetJieyan"}));
+  q("[data-yjreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空镜花/水月标记牌与记录,座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 标钟琰工具:博览生成技能(公开;随机在本机跑,选定结果进 DO)---------- */
+const ZY_BUILTIN=[
+ {id:'qingnang',name:'青囊',text:'出牌阶段限一次,弃一张手牌,令一名角色回复1点体力。'},
+ {id:'lijian',name:'离间',text:'出牌阶段限一次,弃一张牌,令一名男性角色视为对另一名男性使用【决斗】。'},
+ {id:'quhu',name:'驱虎',text:'出牌阶段限一次,与体力值大于你的一名角色拼点:赢则令其对其攻击范围内另一角色造成1点伤害;没赢则其对你造成1点伤害。'},
+ {id:'tianyi',name:'天义',text:'出牌阶段限一次,与一名角色拼点:赢则本回合多使用一张【杀】、【杀】无距离限制且可多选一个目标;没赢则本回合不能使用【杀】。'},
+ {id:'lihun',name:'离魂',text:'出牌阶段限一次,弃一张牌并翻面,获得一名男性角色所有手牌;阶段结束时交给其X张牌(X为其体力值)。'},
+ {id:'qiangwu',name:'枪舞',text:'出牌阶段限一次,判定,本回合你使用点数小于判定结果的【杀】无距离限制、大于的无次数限制。'},
+ {id:'gongxin',name:'攻心',text:'出牌阶段限一次,观看一名其他角色手牌,可展示其中一张红桃:弃置或置于牌堆顶。'},
+ {id:'mingce',name:'明策',text:'出牌阶段限一次,将一张装备牌或【杀】交给一名其他角色,其视为对你指定角色使用【杀】或摸一张牌。'},
+ {id:'qice',name:'奇策',text:'出牌阶段限一次,将所有手牌当任意一张普通锦囊牌使用。'},
+ {id:'mizhao',name:'密诏',text:'出牌阶段限一次,将所有手牌交给一名其他角色,令其与另一角色拼点,赢者视为对没赢者使用【杀】。'},
+ {id:'guose',name:'国色',text:'出牌阶段限一次,选一项后摸一张牌:将方块当【乐不思蜀】使用;或弃一张方块并弃场上一张【乐不思蜀】。'},
+ {id:'zhiheng',name:'制衡',text:'出牌阶段限一次,弃任意张牌然后摸等量牌;若弃光手牌则额外摸一张。'},
+ {id:'jieyin',name:'结姻',text:'出牌阶段限一次,选一名男性角色,弃一张手牌或将装备置入其装备区;按体力高低你/其摸牌与回血。'},
+ {id:'qiangxi',name:'强袭',text:'出牌阶段限一次,失去1点体力或弃一张武器牌,对攻击范围内一名其他角色造成1点伤害。'},
+ {id:'tiaoxin',name:'挑衅',text:'出牌阶段限一次,选一名攻击范围含你的角色,除非其对你使用【杀】造成伤害,否则弃其一张牌(此技本回合改为限两次)。'},
+ {id:'sanchen',name:'三陈',text:'出牌阶段限一次,令一名角色摸三张再弃三张;若弃牌种类均不同则其摸一张且此技视为未发动。'},
+ {id:'chuli',name:'除疠',text:'出牌阶段限一次,选任意名势力各不相同的其他角色,弃你与他们各一张牌;被弃黑桃者各摸一张。'},
+ {id:'daoshu',name:'盗书',text:'出牌阶段限一次,选一名角色与一种花色,获得其一张手牌;同花色则对其造成1点伤害且此技视为未发动,不同则交还其一张其他花色手牌。'}
+];
+let zyPool=null;   // 钟琰本机技能池 [{id,name,text,enabled}](含随机源;不进 DO)
+let zyMode='self'; // 'self' | 'lend'
+let zyLendNote=''; // 借技备注
+let zyRolled=null; // 本次随机出的候选 [skill,...] 或 null(仅本机)
+function zyEnsurePool(){ if(!zyPool) zyPool=ZY_BUILTIN.map(s=>({id:s.id,name:s.name,text:s.text,enabled:true})); }
+function zySkillById(id){ zyEnsurePool(); return zyPool.find(s=>s.id===id)||null; }
+function viewZyTool(zy){
+  const seat=zy.seatNo, ts=zy.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  zyEnsurePool();
+  let h="";
+  // 当前生效技能(公开)
+  h+=`<div class="card"><h2>当前生效技能<span class="tag">本阶段</span></h2>`;
+  if(ts.active){
+    const a=ts.active, ownerTxt=a.owner==='self'?"归属:钟琰自己 · 直到本出牌阶段结束":`归属:其他角色${a.note?"("+esc(a.note)+")":""} · 已失去1点体力 · 直到此阶段结束`;
+    h+=`<div class="slot" style="border-style:solid;border-color:var(--seal)"><div><b style="color:var(--seal);font-size:16px">〖${esc(a.name)}〗</b> ${esc(a.text)}</div><div class="hint" style="margin-top:6px">${ownerTxt}</div>`;
+    if(iAm) h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-zyend="1">出牌阶段结束·移除</button></div>`;
+    h+=`</div>`;
+  }else h+=`<div class="hint">${iAm?"下方发动博览,随机三技选一。":"钟琰当前无生效的博览技能。"}</div>`;
+  h+=`</div>`;
+  // 发动博览(仅钟琰)
+  if(iAm){
+    h+=`<div class="card"><h2>发动博览<span class="tag">随机三技选一</span></h2>`;
+    h+=`<div class="row"><button class="${zyMode==='self'?'primary':''}" data-zymode="self">钟琰自己发动</button>`
+      +`<button class="${zyMode==='lend'?'primary':''}" data-zymode="lend">其他角色借技(失1体力)</button></div>`;
+    if(zyMode==='lend') h+=`<div class="row" style="margin-top:6px"><input class="grow" id="zyLendNote" value="${esc(zyLendNote)}" placeholder="借技角色备注(选填,如:3号位·反贼)"></div>`;
+    const enabled=zyPool.filter(s=>s.enabled).length;
+    h+=`<div class="row" style="margin-top:8px"><button class="gold grow" data-zyroll="1">🎲 随机三个技能</button><span class="hint" style="margin:0">池内 ${enabled}/${zyPool.length}</span></div>`;
+    if(zyRolled){
+      if(!zyRolled.length) h+=`<div class="hint">技能池为空,请到下方启用技能。</div>`;
+      else{
+        h+=`<div class="hint" style="margin-top:8px">${zyRolled.length<3?"池内不足三个,已全部列出:":"三选一(由钟琰选择):"}</div>`;
+        zyRolled.forEach(sk=>{h+=`<div class="slot" style="border-style:solid;margin-top:6px"><div><b style="color:var(--seal)">〖${esc(sk.name)}〗</b> ${esc(sk.text)}</div><div class="row end" style="margin-top:6px"><button class="primary" data-zychoose="${sk.id}">选定此技</button></div></div>`;});
+        h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-zycancelroll="1">取消本次</button></div>`;
+      }
+    }
+    h+=`</div>`;
+    // 技能池管理(本机)
+    h+=`<details class="card"><summary style="cursor:pointer;font-family:var(--display);font-weight:800;font-size:15px">技能池管理(本机,取消勾选临时移出随机池)</summary><div style="margin-top:8px">`;
+    zyPool.forEach(sk=>{h+=`<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--line)"><label class="grow" style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-zytgl="${sk.id}" ${sk.enabled?"checked":""}><span class="${sk.enabled?'':'hint'}"><b style="color:var(--seal)">〖${esc(sk.name)}〗</b> ${esc(sk.text)}</span></label></div>`;});
+    h+=`</div></details>`;
+  }
+  // 记录(公开)
+  h+=`<div class="card"><h2>本局记录<span class="tag">共 ${(ts.history||[]).length} 次</span></h2><div class="loglist">`;
+  const hist=(ts.history||[]).slice().reverse();
+  if(!hist.length) h+=`<div class="hint">暂无</div>`;
+  else h+=hist.map(x=>`<div>第${x.n}次 · <b>〖${esc(x.name)}〗</b> · ${x.owner==='self'?"钟琰自己":"借技"+(x.note?"("+esc(x.note)+")":"")}<br><span class="hint">候选:${(x.cand||[]).map(esc).join(" / ")}</span></div>`).join("");
+  h+=`</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-zyreset="1">⟳ 重开一局(清空技能与记录)</button></div></div>`;
+  return h;
+}
+function bindZy(zy,q){
+  const Z=zy.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:Z,bySeat:Z,toolAction:o});
+  q("[data-zymode]").forEach(b=>b.onclick=()=>{zyMode=b.dataset.zymode;render();});
+  const zyLn=$("#zyLendNote"); if(zyLn) zyLn.onchange=()=>{zyLendNote=zyLn.value;};
+  q("[data-zyroll]").forEach(b=>b.onclick=()=>{
+    if($("#zyLendNote")) zyLendNote=$("#zyLendNote").value; // 抓取输入框最新值
+    zyEnsurePool();
+    const bag=zyPool.filter(s=>s.enabled).slice(), picked=[], n=Math.min(3,bag.length);
+    for(let i=0;i<n;i++) picked.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
+    zyRolled=picked;render();});
+  q("[data-zycancelroll]").forEach(b=>b.onclick=()=>{zyRolled=null;render();});
+  q("[data-zychoose]").forEach(b=>b.onclick=()=>{const sk=zySkillById(b.dataset.zychoose);if(!sk)return;
+    const cand=(zyRolled||[]).map(x=>x.name);
+    act({type:"setActive",skill:{id:sk.id,name:sk.name,text:sk.text},owner:zyMode,note:zyMode==='lend'?zyLendNote:"",cand});
+    zyRolled=null;if(zyMode==='lend')zyLendNote='';});
+  q("[data-zyend]").forEach(b=>b.onclick=()=>act({type:"endActive"}));
+  q("[data-zytgl]").forEach(cb=>cb.onchange=()=>{const sk=zySkillById(cb.dataset.zytgl);if(sk){sk.enabled=!sk.enabled;render();}});
+  q("[data-zyreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空生效技能与记录(技能池设置保留),座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 魔司马懿工具:谋变骤袭(全公开;随机在本机跑,选定结果进 DO)---------- */
+const SM_DEFAULT_POOL=[
+ ["盗书","蒋干","出牌阶段限一次,选一种花色获得其他角色一张手牌;同花色则对其造成1点伤害且视为未发动,不同则交还其一张其他花色手牌。"],
+ ["雪恨","关银屏","出牌阶段限一次,弃一张红色牌并选至多X名角色(X为已损失体力且至少1),横置这些角色并对其一名造成1点火焰伤害。"],
+ ["雷击","界张角","使用/打出【闪】或使用【闪电】时可判定;判定牌生效后若黑色可选一名角色:黑桃造成2点雷电伤害,梅花回血1并造成1点雷电伤害。"],
+ ["天劫","神张角","一名角色回合结束时若本回合洗过牌,可对至多三名其他角色各造成X点雷电伤害(X为其手牌【闪】数且至少1)。"],
+ ["溃诛","孙亮","弃牌阶段结束时选一项:令至多X名角色各摸一张;或对体力和为X的角色各造成1点伤害(X为本阶段弃牌数)。"],
+ ["绝策","界李儒","结束阶段,可对一名手牌数不大于你的其他角色造成1点伤害。"],
+ ["鸩毒","何太后","一名角色出牌阶段开始时,可弃一张手牌:令其视为使用【酒】;若其不为你则对其造成1点伤害。"],
+ ["烈誓","族荀采","出牌阶段选一项:废判定区受1点火焰伤害/弃所有【闪】/弃所有【杀】,然后令一名其他角色选其余两项之一。"],
+ ["驱虎","荀彧","出牌阶段限一次,与体力值大于你的角色拼点,赢则令其对其攻击范围内你选的角色造成1点伤害,否则其对你造成1点伤害。"],
+ ["束辎","韩馥","出牌阶段限一次,交给一名其他角色两张手牌,其回你一张;若你给的牌有同名,可对其造成1点伤害或移动场上一张牌至其区域。"],
+ ["强袭","典韦","出牌阶段限两次,失1点体力或弃一张武器牌,对一名其他角色造成1点伤害(每名每阶段限一次)。"],
+ ["哲妇","郭槐","回合外使用/打出牌后,可令一名有手牌的其他角色选:弃一张同名牌;或受你1点伤害。"],
+ ["黩武","诸葛恪","出牌阶段弃X张牌对攻击范围内一名其他角色造成1点伤害(X为其体力);若其濒死被救则你失1体力且本回合此技失效。"],
+ ["刚烈","界夏侯惇","受到1点伤害后可判定:红色对伤害来源造成1点伤害;黑色弃其一张牌。"],
+ ["剑合","张华","出牌阶段每名角色限一次,重铸至少两张同名或装备牌,令一名角色选:重铸等量此类牌;或受你1点雷电伤害。"],
+ ["散谣","马谡","出牌阶段每项各限一次,弃一张牌对全场体力最大/手牌最多的一名角色造成1点伤害。"]
+];
+const SM_QUICK=["杀","决斗","南蛮入侵","万箭齐发","火攻","闪电"];
+let smPool=null;   // 司马懿本机骤袭技能池 [{id,skill,hero,note,enabled}](随机源;不进 DO)
+let smRolled=null; // 本次骤袭抽出的3技对象(仅本机),或 null
+function smEnsurePool(){ if(!smPool) smPool=SM_DEFAULT_POOL.map((x,i)=>({id:"d"+i,skill:x[0],hero:x[1],note:x[2]||"",enabled:true})); }
+function viewSmTool(sm){
+  const seat=sm.seatNo, ts=sm.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  smEnsurePool();
+  const recs=ts.records||[], n=recs.length;
+  let h="";
+  // 状态徽标
+  h+=`<div class="card"><div class="row"><span class="chip" style="border-color:${ts.demonized?'var(--seal)':'var(--line)'};color:${ts.demonized?'var(--seal)':'var(--ink-soft)'}">${ts.demonized?"已入魔":"蛰伏中"}</span>`
+    +(ts.demonized?`<span class="chip">入魔第 ${ts.roundNo} 轮</span><span class="chip"${ts.dmg?' style="border-color:var(--seal);color:var(--seal)"':''}>${ts.dmg?"本轮已造成伤害":"本轮未造成伤害"}</span>`:`<span class="chip">诡伏 ${Math.min(n,3)}/3</span>`)
+    +`<span class="chip">诡伏之闪 ${ts.flashes||0}</span></div></div>`;
+  // 诡伏记录
+  h+=`<div class="card"><h2>诡伏 · 伤害记录<span class="tag">牌/技造成伤害后记录其名</span></h2>`;
+  if(recs.length){ h+=`<div class="row">`; recs.forEach((r,i)=>{h+=`<span class="chip"${r.type==="skill"?' style="border-color:var(--seal);color:var(--seal)"':''}>${r.type==="skill"?"技":"牌"}·${esc(r.name)}`+(iAm?`<button class="ghost" data-smrmrec="${i}" style="padding:1px 6px;margin-left:4px">×</button>`:"")+`</span>`;}); h+=`</div>`; }
+  else h+=`<div class="hint">尚无记录。技能或牌造成伤害后记录其名,满3项可入魔。</div>`;
+  if(iAm){
+    h+=`<div class="row" style="margin-top:8px">`; for(const c of SM_QUICK) h+=`<button data-smquick="${esc(c)}">${c}</button>`; h+=`</div>`;
+    h+=`<div class="row" style="margin-top:6px"><input class="grow" id="smRecInput" maxlength="10" placeholder="自定义牌名/技能名"><select id="smRecType"><option value="card">牌</option><option value="skill">技</option></select><button class="primary" data-smaddrec="1">记录</button></div>`;
+    // 诡伏之闪
+    h+=`<div class="row" style="margin-top:8px"><span class="grow hint" style="margin:0">诡伏之【闪】(每轮开始/体力变化+1)</span><button data-smflash="dec">−</button><b style="min-width:24px;text-align:center;color:var(--seal)">${ts.flashes||0}</b><button data-smflash="inc">＋</button></div>`;
+    // 入魔按钮
+    if(!ts.demonized) h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-smdemon="1"${n<3?" disabled":""}>${n<3?`入魔(还需${3-n}项)`:"入 魔"}</button></div>`;
+  }
+  h+=`</div>`;
+  // 入魔面板
+  if(ts.demonized){
+    h+=`<div class="card"><h2>入魔 · 第 ${ts.roundNo} 轮<span class="tag">未造成伤害→失1体力</span></h2>`;
+    if(iAm){
+      h+=`<div class="row"><button class="${ts.dmg?'primary':''} grow" data-smdmg="1">${ts.dmg?"✓ 本轮已造成伤害":"本轮尚未造成伤害"}</button><button class="ghost" data-smendround="1">结束本轮</button></div>`;
+      h+=`<div class="hint">${ts.dmg?"本轮结束时受你伤害的角色各视为对你使用一张【杀】。":"本轮结束仍未造成伤害将失去1点体力(体力变化别忘+1诡伏闪)。"}</div>`;
+    }else h+=`<div class="hint">${ts.dmg?"本轮已造成伤害。":"本轮尚未造成伤害。"}</div>`;
+    h+=`</div>`;
+  }
+  // 骤袭
+  h+=`<div class="card"><h2>骤袭 · 三选一<span class="tag">准备阶段随机三技选一</span></h2>`;
+  if(ts.held){
+    h+=`<div class="slot" style="border-style:solid;border-color:var(--seal)"><div><b style="color:var(--seal);font-size:16px">【${esc(ts.held.skill)}】</b> <span class="hint">${esc(ts.held.hero)}</span></div>`
+      +(ts.held.note?`<div class="hint" style="margin-top:4px">${esc(ts.held.note)}</div>`:"")+`<div class="hint">生效至你的下回合开始。</div>`
+      +(iAm?`<div class="row end" style="margin-top:6px"><button class="ghost" data-smclearheld="1">下回合·技能失效</button></div>`:"")+`</div>`;
+  }
+  if(iAm){
+    if(!ts.demonized) h+=`<div class="hint">入魔后解锁骤袭。</div>`;
+    else{
+      const enabled=smPool.filter(p=>p.enabled).length;
+      h+=`<div class="row" style="margin-top:8px"><button class="gold grow" data-smdraw="1">🎲 抽取三技</button><span class="hint" style="margin:0">池内 ${enabled}/${smPool.length}</span></div>`;
+      if(smRolled){
+        if(!smRolled.length) h+=`<div class="hint">技能池为空,请到下方启用/添加技能。</div>`;
+        else{ h+=`<div class="hint" style="margin-top:8px">${smRolled.length<3?"池内不足三个,已全部列出:":"三选一:"}</div>`;
+          smRolled.forEach(p=>{h+=`<div class="slot" style="border-style:solid;margin-top:6px"><div><b style="color:var(--seal)">【${esc(p.skill)}】</b> <span class="hint">${esc(p.hero)}</span></div>`+(p.note?`<div class="hint" style="margin-top:4px">${esc(p.note)}</div>`:"")+`<div class="row end" style="margin-top:6px"><button class="primary" data-smchoose="${p.id}">选定此技</button></div></div>`;});
+          h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-smcancelroll="1">取消本次</button></div>`;
+        }
+      }
+      // 技能池管理(本机)
+      h+=`<details class="card" style="margin-top:8px"><summary style="cursor:pointer;font-family:var(--display);font-weight:800;font-size:15px">骤袭技能池(本机)</summary><div style="margin-top:8px">`;
+      h+=`<div class="hint">入魔时诡伏记录的技能若与池中同名,请自行取消勾选(已获得的不会再抽到)。</div>`;
+      smPool.forEach(p=>{h+=`<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--line)"><label class="grow" style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-smtgl="${p.id}" ${p.enabled?"checked":""}><span class="${p.enabled?'':'hint'}"><b style="color:var(--seal)">【${esc(p.skill)}】</b> <span class="hint">${esc(p.hero)}</span></span></label>`+(p.custom?`<button class="ghost" data-smpoolrm="${p.id}">删</button>`:"")+`</div>`;});
+      h+=`<div class="row" style="margin-top:8px"><button class="ghost" data-smpooladd="1">＋ 添加自定义技能</button><button class="ghost" data-smpoolreset="1">恢复默认16技</button></div>`;
+      h+=`</div></details>`;
+    }
+  }
+  h+=`</div>`;
+  // 历史
+  h+=`<div class="card"><h2>本局历史</h2><div class="loglist">`;
+  const H=ts.history||[];
+  if(!H.length) h+=`<div class="hint">尚无记录</div>`;
+  else h+=H.map(e=>e.type==="draw"?`<div>骤袭第${e.r}次 · 抽到 ${(e.drew||[]).map(esc).join(" / ")} → 选 <b>【${esc(e.got)}】</b></div>`:`<div>${esc(e.txt)}</div>`).join("");
+  h+=`</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-smreset="1">⟳ 重开一局(技能池设置保留)</button></div></div>`;
+  return h;
+}
+function bindSm(sm,q){
+  const M=sm.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:M,bySeat:M,toolAction:o});
+  smEnsurePool();
+  q("[data-smquick]").forEach(b=>b.onclick=()=>act({type:"addRecord",name:b.dataset.smquick,recType:"card"}));
+  q("[data-smaddrec]").forEach(b=>b.onclick=()=>{const inp=$("#smRecInput");if(!inp||!inp.value.trim())return;act({type:"addRecord",name:inp.value,recType:$("#smRecType").value});});
+  q("[data-smrmrec]").forEach(b=>b.onclick=()=>act({type:"removeRecord",index:+b.dataset.smrmrec}));
+  q("[data-smflash]").forEach(b=>b.onclick=()=>act({type:b.dataset.smflash==="inc"?"flashInc":"flashDec"}));
+  q("[data-smdemon]").forEach(b=>b.onclick=()=>{if(!confirm("确认入魔?获得诡伏记录的牌与技能并解锁骤袭。"))return;
+    // 诡伏记录的技能与池中同名→本机自动关闭,并把关闭名单带给 DO 记日志
+    const skillRecs=(sm.toolState.records||[]).filter(r=>r.type==="skill").map(r=>r.name);
+    const closed=[]; smPool.forEach(p=>{if(p.enabled&&skillRecs.includes(p.skill)){p.enabled=false;closed.push(p.skill);}});
+    act({type:"enterDemon",closed});});
+  q("[data-smdmg]").forEach(b=>b.onclick=()=>act({type:"toggleDmg"}));
+  q("[data-smendround]").forEach(b=>b.onclick=()=>{if(confirm("结束本轮?将按是否造成伤害结算。"))act({type:"endRound"});});
+  q("[data-smclearheld]").forEach(b=>b.onclick=()=>act({type:"clearHeld"}));
+  q("[data-smdraw]").forEach(b=>b.onclick=()=>{const bag=smPool.filter(p=>p.enabled).slice(),pick=[],k=Math.min(3,bag.length);
+    for(let i=0;i<k;i++)pick.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);smRolled=pick;render();});
+  q("[data-smcancelroll]").forEach(b=>b.onclick=()=>{smRolled=null;render();});
+  q("[data-smchoose]").forEach(b=>b.onclick=()=>{const p=smPool.find(x=>x.id===b.dataset.smchoose);if(!p)return;
+    act({type:"pickSkill",skill:{skill:p.skill,hero:p.hero,note:p.note},drew:(smRolled||[]).map(x=>x.skill)});smRolled=null;});
+  q("[data-smtgl]").forEach(cb=>cb.onchange=()=>{const p=smPool.find(x=>x.id===cb.dataset.smtgl);if(p){p.enabled=!p.enabled;render();}});
+  q("[data-smpoolrm]").forEach(b=>b.onclick=()=>{smPool=smPool.filter(x=>x.id!==b.dataset.smpoolrm);render();});
+  q("[data-smpooladd]").forEach(b=>b.onclick=()=>{const skill=(prompt("技能名")||"").trim();if(!skill)return;const hero=(prompt("所属武将(选填)")||"").trim();const note=(prompt("技能描述(选填)")||"").trim();smPool.push({id:"u"+smPool.length+"_"+skill,skill,hero,note,enabled:true,custom:true});render();});
+  q("[data-smpoolreset]").forEach(b=>b.onclick=()=>{if(confirm("恢复默认16技?自定义技能将移除。")){smPool=null;smEnsurePool();render();}});
+  q("[data-smreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空诡伏/入魔/骤袭对局状态(技能池设置保留),座位武将保留。"))act({type:"resetGame"});});
 }
 
 render();
