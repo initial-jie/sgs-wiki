@@ -103,9 +103,19 @@ function validateCard(c){
 const SUITS=[{k:"S",t:"♠"},{k:"H",t:"♥",red:1},{k:"C",t:"♣"},{k:"D",t:"♦",red:1}];
 const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 let ws=null,state=null,lastReveal=null;
+let focus=null;   // 当前聚焦的座位号(null=大厅)—— 多工具聚焦框架
+let nhFlow=null;  // 南华书写流程本地态 {stage,timings,chosenTiming,effects,pending?}
+let nhGive=null;  // 南华授术面板:正在授出的天书全局下标,或 null
 let deviceId=localStorage.getItem("sgs_device");
 if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage.setItem("sgs_device",deviceId);}
 const draft={}; // seat -> [{s,r,n}]  登记草稿
+
+/* ============ 武将 / 工具注册表 ============ */
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua";
+// 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
+const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
+             nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)} };
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -119,10 +129,54 @@ function defaultBase(){
   return "ws://localhost:8787";
 }
 
+/* ============ 南华天书数据 + 抽牌(客户端跑,只有成册进 DO)============
+   数据同步自 tools/nanhua.html。抽牌只在南华手机上进行、候选不外泄,对其他玩家的保密天然成立。*/
+const TIMINGS=[
+  {id:1,level:1,text:'当你使用牌后'},{id:2,level:1,text:'其他角色对你使用牌后'},{id:3,level:1,text:'你失去手牌后'},
+  {id:4,level:2,text:'出牌阶段开始时'},{id:5,level:2,text:'你受到伤害后',ctx:['dmg_deal']},{id:6,level:2,text:'准备阶段'},
+  {id:7,level:2,text:'结束阶段'},{id:8,level:2,text:'你造成伤害后',ctx:['dmg_deal']},{id:9,level:2,text:'你成为【杀】的目标时',ctx:['target']},
+  {id:10,level:2,text:'你使用或打出【闪】时'},{id:11,level:2,text:'当一张判定牌生效前',ctx:['judge','judge_before']},{id:12,level:2,text:'你使用的牌被抵消后'},
+  {id:13,level:2,text:'当一张判定牌生效后',ctx:['judge']},{id:14,level:2,text:'你于回合外失去红色牌后'},{id:15,level:2,text:'弃牌阶段开始时'},
+  {id:16,level:2,text:'一名角色受到【杀】的伤害后',ctx:['dmg_deal']},{id:17,level:2,text:'摸牌阶段开始时'},{id:18,level:2,text:'你成为普通锦囊牌的目标后',ctx:['target']},
+  {id:19,level:2,text:'一名角色进入连环状态后'},{id:20,level:2,text:'你的体力值变化后'},{id:21,level:2,text:'每轮开始时'},
+  {id:22,level:2,text:'一名角色造成伤害时',ctx:['dmg_deal','dmg_when']},{id:23,level:2,text:'一名角色受到伤害时',ctx:['dmg_when']},
+  {id:24,level:3,text:'一名角色进入濒死时'},{id:25,level:3,text:'你失去装备牌后'},{id:26,level:3,text:'一名其他角色死亡后'},
+  {id:27,level:3,text:'【南蛮入侵】或【万箭齐发】结算后'},{id:28,level:3,text:'你使用【杀】造成伤害后',ctx:['dmg_deal']},
+  {id:29,level:3,text:'一名角色受到属性伤害后',ctx:['dmg_deal']},{id:30,level:3,text:'一名角色失去最后的手牌后'}
+];
+const EFFECTS=[
+  {id:1,level:1,text:'你可以摸 1 张牌'},{id:2,level:1,text:'你可以弃置一名角色区域内的一张牌'},
+  {id:3,level:1,text:'你可以观看牌堆的 3 张牌,以任意顺序置于牌堆顶或牌堆底'},{id:4,level:1,text:'你可弃置任意张牌,摸等量牌'},
+  {id:5,level:1,text:'你可以视为使用一张无距离次数限制的【杀】'},{id:6,level:1,text:'你可令一名角色的手牌上限 +2 直到其回合结束'},
+  {id:7,level:2,text:'你可以获得造成伤害的牌',req:'dmg_deal'},{id:8,level:2,text:'你可以获得一名角色区域内的一张牌'},
+  {id:9,level:2,text:'你可以回复 1 点体力'},{id:10,level:2,text:'你可令此牌对你无效',req:'target'},
+  {id:11,level:2,text:'你可以令一名其他角色判定,若结果为黑桃,你对其造成 2 点雷电伤害'},{id:12,level:2,text:'你可以用一张手牌替换判定牌',req:'judge_before'},
+  {id:13,level:2,text:'你可以获得此判定牌',req:'judge'},{id:14,level:2,text:'若你不是体力上限最高的角色,你可增加 1 点体力上限'},
+  {id:15,level:2,text:'你可与一名已受伤角色拼点,若你赢,你获得其两张牌'},{id:16,level:2,text:'你可令至多两名角色各摸一张牌'},
+  {id:17,level:2,text:'你可弃置两张牌,令你和一名其他角色回复 1 点体力'},{id:18,level:2,text:'你可令此伤害值 +1',req:'dmg_when'},
+  {id:19,level:2,text:'你可以失去 1 点体力,摸 3 张牌'},{id:20,level:2,text:'你可防止此伤害,令伤害来源摸 3 张牌',req:'dmg_when'},
+  {id:21,level:3,text:'你可以摸 3 张牌,弃置 1 张牌'},{id:22,level:3,text:'你可摸牌至体力上限(至多摸 5 张)'},
+  {id:23,level:3,text:'你可令一名角色非锁定技失效直到下个回合开始'},{id:24,level:3,text:'你可令一名角色摸 2 张牌并翻面'},
+  {id:25,level:3,text:'你可获得两张非基本牌'},{id:26,level:3,text:'你可获得两张锦囊牌'},{id:27,level:3,text:'你可以摸 3 张牌并翻面'},
+  {id:28,level:3,text:'你可令你对一名角色使用牌无次数距离限制直到你的回合结束'},{id:29,level:3,text:'你可交换两名角色装备区的牌'},
+  {id:30,level:3,text:'你可交换两名角色手牌区的牌'}
+];
+const TIMING_LEVEL_DIST=[{lv:1,p:.40},{lv:2,p:.35},{lv:3,p:.25}];
+const EFFECT_LEVEL_DIST={1:[{lv:1,p:.85},{lv:2,p:.15}],2:[{lv:2,p:.85},{lv:3,p:.15}],3:[{lv:3,p:1}]};
+const LVMAP={1:"一",2:"二",3:"三"};
+const byLevel=(l,lv)=>l.filter(x=>x.level===lv);
+const pickRnd=a=>a[Math.floor(Math.random()*a.length)];
+function rollByDist(d){let r=Math.random(),a=0;for(const x of d){a+=x.p;if(r<=a)return x.lv;}return d[d.length-1].lv;}
+function draw3Timings(){const out=[],used={};let g=0;while(out.length<3&&g++<50){const lv=rollByDist(TIMING_LEVEL_DIST);const pool=byLevel(TIMINGS,lv).filter(x=>!used[x.id]);if(!pool.length)continue;const o=pickRnd(pool);used[o.id]=1;out.push(o);}return out;}
+const effCompat=(e,t)=>!e.req||(t.ctx||[]).includes(e.req);
+function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80){const lv=rollByDist(EFFECT_LEVEL_DIST[t.level]);const pool=byLevel(EFFECTS,lv).filter(x=>!used[x.id]&&effCompat(x,t));if(!pool.length)continue;const o=pickRnd(pool);used[o.id]=1;out.push(o);}
+  if(out.length<3){const all=EFFECTS.filter(x=>!used[x.id]&&effCompat(x,t)&&EFFECT_LEVEL_DIST[t.level].some(d=>d.lv===x.level));while(out.length<3&&all.length)out.push(all.splice(Math.floor(Math.random()*all.length),1)[0]);}
+  return out;}
+
 function connect(base,code){
   if(ws)try{ws.close();}catch(e){}
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
-  state=null;lastReveal=null;for(const k in draft)delete draft[k];
+  state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;for(const k in draft)delete draft[k];
   ws=new WebSocket(base.replace(/\/+$/,"")+"/api/room/"+code+"/ws");
   ws.onopen=()=>{send({type:"hello",deviceId});toast("已连接房间 "+code);};
   ws.onclose=()=>toast("连接已断开");
@@ -140,13 +194,41 @@ function render(){
   const app=$("#app");
   let h='<h1>三国杀线下房间</h1><div class="sub">座位即身份 · 工具随武将登场</div>';
   if(!state){app.innerHTML=h+viewConnect();bindConnect();return;}
-  h+=viewHeader();
-  h+=viewSeats();
-  const lvbu=Object.values(state.seats).find(s=>s.general==="lvbu");
-  if(lvbu) h+=viewLvbuTool(lvbu);
+  const fseat=(focus!=null)?state.seats[focus]:null;
+  if(fseat&&hasTool(fseat.general)){
+    // 聚焦某座位的武将工具:整屏只渲染该工具(操作/查看视身份而定)
+    h+=viewFocusHeader(fseat);
+    h+=TOOLS[fseat.general].view(fseat);
+  }else{
+    focus=null;
+    h+=viewHeader();
+    h+=viewSeats();
+    h+=viewToolsIndex();
+  }
   h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
   app.innerHTML=h;
   bindAll();
+}
+
+function viewFocusHeader(seat){
+  const nm=GENERALS[seat.general]?.name||esc(seat.general);
+  const mine=state.youHold.includes(seat.seatNo);
+  return `<div class="card"><div class="row"><button class="ghost" data-back="1">← 返回大厅</button>
+    <span class="grow" style="text-align:right"><b>${esc(nm)}</b> · 座位 ${seat.seatNo}`
+    +(mine?' <span class="lb">你的座位</span>':' <span class="chip">查看</span>')+`</span></div></div>`;
+}
+
+function viewToolsIndex(){
+  const tools=Object.values(state.seats).filter(s=>hasTool(s.general));
+  let h='<div class="card"><h2>登场工具<span class="tag">点进入操作 / 查看</span></h2>';
+  if(!tools.length) h+='<div class="hint">还没有武将带工具。在上方座位选「魔吕布」或「南华老仙」即可登场。</div>';
+  for(const s of tools){
+    const nm=GENERALS[s.general].name, mine=state.youHold.includes(s.seatNo);
+    h+=`<div class="row" style="padding:5px 0"><span class="grow"><b>${esc(nm)}</b> · 座位 ${s.seatNo}</span>`
+      +`<button class="${mine?'primary':''}" data-enter="${s.seatNo}">进入 →</button></div>`;
+  }
+  h+='</div>';
+  return h;
 }
 
 function viewConnect(){
@@ -179,16 +261,17 @@ function viewSeats(){
   for(const s of Object.values(state.seats)){
     const mine=hold.has(s.seatNo);
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
-      +(s.general==="lvbu"?'<span class="lb">吕布</span>':(s.general&&s.general!=="none"?`<span class="kb">${esc(s.general)}</span>`:""))
+      +(hasTool(s.general)?`<span class="lb">${esc(GENERALS[s.general].name)}</span>`:(s.general&&s.general!=="none"?`<span class="kb">${esc(s.general)}</span>`:""))
       +(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
     h+=mine?`<button class="ghost" data-rel="${s.seatNo}">释放</button>`:`<button data-claim="${s.seatNo}">认领</button>`;
     h+=`</div>`;
     if(mine){
       const g=s.general||"";
-      const isCustom=g&&g!=="lvbu"&&g!=="none";
+      const isCustom=g&&!hasTool(g)&&g!=="none";
       h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label><select data-gen="${s.seatNo}">`
         +`<option value="" ${g===""?"selected":""}>未选</option>`
         +`<option value="lvbu" ${g==="lvbu"?"selected":""}>魔吕布(有工具)</option>`
+        +`<option value="nanhua" ${g==="nanhua"?"selected":""}>南华老仙(有工具)</option>`
         +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
@@ -332,18 +415,130 @@ function revealCard(label,own){
   return `<div class="reveal"><div class="sr ${red?'suitred':''}">${m[1]}${m[2]}</div><div class="nm">${esc(m[3])||"(未记牌名)"}</div><div class="own">${esc(own)}</div></div>`;
 }
 
+/* ---------- 南华老仙工具 ---------- */
+function bookLine(b){
+  const tl=b.timing?`<span class="chip gold">${LVMAP[b.timing.level]||"?"}级</span>`:"";
+  return `${tl}<b>${esc(b.timing?b.timing.text:"?")}</b> ＋ ${esc(b.effect?b.effect.text:"?")}`;
+}
+function viewNhFlow(seat){
+  if(!nhFlow) return "";
+  let h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">';
+  if(nhFlow.stage==="timing"){
+    h+='<div class="hint">① 选择时机(3 选 1)</div>';
+    nhFlow.timings.forEach((t,i)=>h+=`<button class="slot" style="width:100%;text-align:left;border-style:solid;margin-top:5px" data-nhti="${i}"><span class="chip gold">${LVMAP[t.level]}级</span> ${esc(t.text)}</button>`);
+    h+='<div class="row end" style="margin-top:6px"><button class="ghost" data-nhcancel="1">取消书写</button></div>';
+  }else if(nhFlow.stage==="effect"){
+    h+=`<div class="hint">时机:<b>${esc(nhFlow.chosenTiming.text)}</b></div><div class="hint">② 选择效果(3 选 1)</div>`;
+    nhFlow.effects.forEach((e,i)=>h+=`<button class="slot" style="width:100%;text-align:left;border-style:solid;margin-top:5px" data-nhei="${i}"><span class="chip gold">${LVMAP[e.level]}级</span> ${esc(e.text)}</button>`);
+    h+='<div class="row end" style="margin-top:6px"><button class="ghost" data-nhcancel="1">取消书写</button></div>';
+  }else if(nhFlow.stage==="replace"){
+    const nb=nhFlow.pending;
+    h+=`<div class="hint">持有栏已满。新天书:<b>${esc(nb.timing.text)}</b> ＋ ${esc(nb.effect.text)}<br>点击要替换的旧册:</div>`;
+    (state.seats[seat].toolState.books||[]).forEach((b,gi)=>{ if(b.holder!==seat) return;
+      h+=`<button class="slot" style="width:100%;text-align:left;border-style:solid;margin-top:5px" data-nhrep="${gi}">${bookLine(b)} <span class="hint">(剩 ${b.uses} 次)</span></button>`; });
+    h+='<div class="row end" style="margin-top:6px"><button class="ghost" data-nhcancel="1">放弃新天书</button></div>';
+  }
+  h+='</div>';
+  return h;
+}
+function nhGivePanel(seat,books){
+  const eligible=Object.values(state.seats).filter(s=>s.seatNo!==seat&&s.holderDevices.length>0&&!books.some(b=>b.holder===s.seatNo));
+  let h='<div class="row" style="margin-top:6px;padding:8px;background:rgba(163,46,34,.05);border-radius:7px">';
+  if(!eligible.length) h+='<span class="hint">暂无可授术玩家(需已入座且当前无天书)</span>';
+  else h+='<label class="grow">授予 <select id="nhGiveSel">'+eligible.map(s=>`<option value="${s.seatNo}">座位 ${s.seatNo}</option>`).join("")+'</select></label>'
+    +'<button class="primary" data-nhgiveto="1">确定</button>';
+  h+='</div>';
+  return h;
+}
+function viewNhBrowse(){
+  const rows=list=>[1,2,3].map(lv=>`<div class="hint" style="margin-top:6px;color:var(--seal)">${LVMAP[lv]}级 · ${byLevel(list,lv).length} 条</div>`
+    +byLevel(list,lv).map(x=>`<div style="font-size:12px;padding:2px 0;border-bottom:1px dashed var(--line)">${esc(x.text)}</div>`).join("")).join("");
+  return `<details class="card"><summary style="cursor:pointer;font-family:var(--display);font-weight:800;font-size:15px">时机表 ${TIMINGS.length} · 效果表 ${EFFECTS.length}</summary>`
+    +`<div style="margin-top:8px"><b>时机</b>${rows(TIMINGS)}<b style="display:block;margin-top:10px">效果</b>${rows(EFFECTS)}</div></details>`;
+}
+function viewNhLog(ts){
+  const log=ts.log||[];
+  return `<div class="card"><h2>公开记录</h2><div class="loglist">${log.length?log.map(l=>`<div>${esc(l)}</div>`).join(""):'<div class="hint">暂无</div>'}</div></div>`;
+}
+function viewNanhuaTool(nh){
+  const seat=nh.seatNo, ts=nh.toolState||{}, hold=new Set(state.youHold);
+  const iAmNanhua=hold.has(seat);
+  const cap=ts.cap||2, books=ts.books||[];
+  const own=books.filter(b=>b.holder===seat);
+  const others=books.filter(b=>b.holder!==seat);
+  let h="";
+
+  // 概览
+  h+=`<div class="card"><div class="row"><span class="chip gold">合道上限 ${cap} 册</span>`
+    +`<span class="chip">南华持有 ${own.length} 册</span>`
+    +(others.length?`<span class="chip">授术在外 ${others.length} 册</span>`:"")+`</div></div>`;
+
+  // 操作区(仅南华本人)
+  if(iAmNanhua){
+    h+=`<div class="card"><h2>对局设置<span class="tag">濒死后升3册</span></h2><div class="row">`
+      +`<button class="${cap===2?'primary':''}" data-cap="2">2 册(初始)</button>`
+      +`<button class="${cap===3?'primary':''}" data-cap="3">3 册(濒死后)</button></div></div>`;
+    h+=`<div class="card"><h2>书写天书<span class="tag">时机3选1 → 效果3选1</span></h2>`
+      +`<button class="primary" data-nhwrite="1" style="width:100%">✦ 书写一册天书 ✦</button>`
+      +viewNhFlow(seat)
+      +`<div class="hint">游戏开始/每个准备阶段/每个结束阶段各可书写一次。抽到的候选只有你能看到。</div></div>`;
+  }
+
+  // 南华持有栏
+  h+=`<div class="card"><h2>南华老仙持有栏<span class="tag">${iAmNanhua?"每册2次·授术需未动用":"内容仅南华可见"}</span></h2>`;
+  if(iAmNanhua){
+    for(let i=0;i<cap;i++){
+      const b=own[i];
+      if(b){
+        const gi=books.indexOf(b);
+        h+=`<div class="slot" style="border-style:solid"><div>${bookLine(b)}</div><div class="row end" style="margin-top:6px">`
+          +(b.uses>=2?`<button class="gold" data-nhgive="${gi}">授术</button>`:"")
+          +`<button class="primary" data-nhuse="${gi}">发动(×${b.uses})</button></div>`
+          +(nhGive===gi?nhGivePanel(seat,books):"")+`</div>`;
+      }else h+=`<div class="slot"><span class="hint">— 空栏位 —</span></div>`;
+    }
+  }else{
+    h+=`<div class="hint">南华持有 ${own.filter(b=>b.hidden).length} 册未公开天书。</div>`;
+    for(const b of own) if(!b.hidden) h+=`<div class="slot" style="border-style:solid">${bookLine(b)} <span class="chip">已公开</span></div>`;
+  }
+  h+='</div>';
+
+  // 其他玩家天书
+  h+=`<div class="card"><h2>其他玩家天书<span class="tag">授术</span></h2>`;
+  if(!others.length) h+='<div class="hint">暂无 · 南华可在持有栏点「授术」交给他人</div>';
+  for(const b of others){
+    const gi=books.indexOf(b), iHoldIt=hold.has(b.holder);
+    h+=`<div class="slot" style="border-style:solid"><div class="row"><span style="color:var(--seal);font-weight:700;flex:none">座位 ${b.holder}</span>`;
+    if(b.hidden) h+=`<span class="grow hint" style="margin-left:8px">持有 1 册(内容未公开)</span></div>`;
+    else{
+      h+=`<span class="grow" style="margin-left:8px">${bookLine(b)}</span>`+(b.revealed?`<span class="chip">已公开</span>`:"")+`</div>`;
+      if(iHoldIt) h+=`<div class="row end" style="margin-top:6px"><button class="primary" data-nhuse="${gi}">发动(×${b.uses})</button></div>`;
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+
+  h+=viewNhBrowse();
+  if(iAmNanhua) h+=`<div class="card"><div class="row end"><button class="ghost" data-nhreset="1">结束本局 / 全部重置</button></div></div>`;
+  h+=viewNhLog(ts);
+  return h;
+}
+
 /* ============ 事件绑定 ============ */
 function bindAll(){
-  const lvbu=Object.values(state.seats).find(s=>s.general==="lvbu");
-  const L=lvbu?lvbu.seatNo:null;
   const q=(sel)=>document.querySelectorAll(sel);
+  // 通用:换房 / 返回大厅 / 进入工具
+  q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||defaultBase(),c);});
+  q("[data-back]").forEach(b=>b.onclick=()=>{focus=null;nhFlow=null;nhGive=null;render();});
+  q("[data-enter]").forEach(b=>b.onclick=()=>{focus=+b.dataset.enter;nhFlow=null;nhGive=null;render();});
+  // 大厅:座位认领 / 释放 / 选武将
   q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
   q("[data-gen]").forEach(sel=>sel.onchange=()=>{
     const seat=+sel.dataset.gen,cur=state.seats[seat].general||"";
     let val=sel.value;
     if(val==="__custom__"){
-      const name=prompt("输入武将名(桌面显示用,该武将暂无专属工具)",(cur&&cur!=="lvbu")?cur:"");
+      const name=prompt("输入武将名(桌面显示用,该武将暂无专属工具)",(cur&&!hasTool(cur))?cur:"");
       if(!name||!name.trim()){render();return;}
       val=name.trim();
     }
@@ -351,6 +546,14 @@ function bindAll(){
     if(cur&&!confirm("改/清除武将会清空该座位已登记的数据,确定?")){render();return;}
     send({type:"setGeneral",seatNo:seat,generalId:val});
   });
+  // 聚焦某工具时,派发给该工具的 bind
+  const fseat=(focus!=null)?state.seats[focus]:null;
+  if(fseat&&TOOLS[fseat.general]) TOOLS[fseat.general].bind(fseat,q);
+}
+
+/* ---------- 吕布工具事件 ---------- */
+function bindLvbu(lvbu,q){
+  const L=lvbu.seatNo;
   // 登记草稿
   q("[data-ds]").forEach(b=>b.onclick=()=>{const[s,ci,k]=b.dataset.ds.split(":");draft[+s][+ci].s=k;render();});
   q("[data-dr]").forEach(b=>b.onclick=()=>{const[s,ci,r]=b.dataset.dr.split(":");draft[+s][+ci].r=r;render();});
@@ -375,7 +578,28 @@ function bindAll(){
   q("[data-dmg]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"toggleDmg"}}));
   q("[data-endround]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"endRound"}}));
   q("[data-killed]").forEach(b=>b.onclick=()=>{const v=$("#killerSel").value;send({type:"action",targetSeat:L,bySeat:L,toolAction:{type:"lvbuKilled",killerSeat:v?+v:undefined}});});
-  q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||defaultBase(),c);});
+}
+
+/* ---------- 南华工具事件 ---------- */
+function nhWriteFinish(nh,e){
+  const seat=nh.seatNo, ts=nh.toolState||{}, cap=ts.cap||2;
+  const own=(ts.books||[]).filter(b=>b.holder===seat);
+  const book={timing:{level:nhFlow.chosenTiming.level,text:nhFlow.chosenTiming.text},effect:{level:e.level,text:e.text}};
+  if(own.length>=cap){ nhFlow={stage:"replace",pending:book}; render(); }
+  else{ send({type:"action",targetSeat:seat,bySeat:seat,toolAction:{type:"writeBook",book}}); nhFlow=null; render(); }
+}
+function bindNanhua(nh,q){
+  const T=nh.seatNo;
+  q("[data-cap]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"setCap",cap:+b.dataset.cap}}));
+  q("[data-nhwrite]").forEach(b=>b.onclick=()=>{nhFlow={stage:"timing",timings:draw3Timings(),chosenTiming:null,effects:[]};render();});
+  q("[data-nhti]").forEach(b=>b.onclick=()=>{const t=nhFlow.timings[+b.dataset.nhti];nhFlow.chosenTiming=t;nhFlow.effects=draw3Effects(t);nhFlow.stage="effect";render();});
+  q("[data-nhei]").forEach(b=>b.onclick=()=>nhWriteFinish(nh,nhFlow.effects[+b.dataset.nhei]));
+  q("[data-nhcancel]").forEach(b=>b.onclick=()=>{nhFlow=null;render();});
+  q("[data-nhrep]").forEach(b=>b.onclick=()=>{send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"writeBook",book:nhFlow.pending,replaceIndex:+b.dataset.nhrep}});nhFlow=null;});
+  q("[data-nhuse]").forEach(b=>b.onclick=()=>send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"useBook",index:+b.dataset.nhuse}}));
+  q("[data-nhgive]").forEach(b=>b.onclick=()=>{nhGive=(nhGive===+b.dataset.nhgive)?null:+b.dataset.nhgive;render();});
+  q("[data-nhgiveto]").forEach(b=>b.onclick=()=>{const sel=$("#nhGiveSel");if(sel&&sel.value)send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"giveBook",index:nhGive,toSeat:+sel.value}});nhGive=null;});
+  q("[data-nhreset]").forEach(b=>b.onclick=()=>{if(confirm("结束本局并清空所有天书?座位武将保留。"))send({type:"action",targetSeat:T,bySeat:T,toolAction:{type:"resetGame"}});});
 }
 
 render();
