@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>神典韦 · 挈挟武器生成器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --shen:#d9b23d; --shen-deep:#8f7420;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --shen:#a3801a; --shen-deep:#7a6014;
+    --ok:#3f7d4e; --warn:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"挈";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--shen);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--shen-deep);color:#f7efd6;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-shen{background:linear-gradient(160deg,var(--shen),var(--shen-deep));border-color:transparent;color:#241a08}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.note-warn{color:var(--warn)}
+input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;color:var(--ink);padding:8px 10px;font-size:14px;font-family:inherit}
+textarea{width:100%;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;color:var(--ink);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:44px}
+.card{border:1px solid var(--gold-dim);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--panel2)}
+.card.eq{border-left:3px solid var(--shen);box-shadow:inset 0 0 0 1px var(--shen-deep)}
+.card.cand{border-left:3px solid var(--gold-dim)}
+.card .top{display:flex;align-items:center;gap:8px}
+.card .nm{font-weight:bold;font-size:16px;color:var(--ink)}
+.chip{font-size:11px;padding:1px 8px;border-radius:20px;background:var(--bg2);border:1px solid var(--gold-dim);color:var(--ink-dim);white-space:nowrap}
+.chip.rng{color:var(--shen);border-color:var(--shen-deep)}
+.sk{margin-top:6px;font-size:13px}
+.sk .skname{font-size:13px}
+.banner{border:1px solid var(--shen);border-radius:var(--radius);background:linear-gradient(160deg,rgba(217,178,61,.14),var(--panel));padding:12px 14px;margin-bottom:14px}
+.banner .tag{font-size:11px;color:#f7efd6;background:var(--shen-deep);border-radius:20px;padding:1px 8px;letter-spacing:1px}
+.reminder{border:1px dashed var(--gold-dim);border-radius:8px;padding:8px 12px;margin-top:10px;font-size:13px;color:var(--ink-dim)}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+.pool-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px dashed var(--gold-dim)}
+.pool-item:last-child{border-bottom:none}
+.pool-item .tgl{margin-top:4px;flex-shrink:0;width:18px;height:18px;accent-color:var(--shen)}
+.pool-item.off .nm,.pool-item.off .sk{opacity:.35}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.count-pill{font-size:12px;color:var(--ink-dim)}
+.spacer{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">神</span>神典韦 · 挈挟武器生成器</h1>
+  <div class="sub">准备阶段抽 5 张武将牌当武器 · 捐甲武器栏 ×2 · v1.0</div>
+</header>
+
+<!-- 技能原文 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖捐甲〗</span>锁定技，游戏开始时，你废除防具栏并获得一个额外的武器栏。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖挈挟〗</span>准备阶段，你从随机的五张武将牌中选择任意张，将其当作武器牌置于你的装备区。此武器牌无花色点数，攻击范围为牌面武将的体力上限，效果为该武将描述中含“杀”字的技能。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖摧决〗</span>出牌阶段，你可以弃置一张牌，对你攻击范围内最远的一名其他角色造成 1 点伤害。每名角色每回合限一次。</p>
+  </div>
+</section>
+
+<!-- 当前武器 -->
+<div id="weaponBox"></div>
+
+<!-- 挈挟抽牌 -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secRoll')">挈挟抽牌<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secRoll">
+    <div class="row">
+      <button class="btn btn-shen grow" id="rollBtn" onclick="doRoll()">挈挟 · 抽 5 张</button>
+      <button class="btn" id="turnBtn" onclick="newTurn()">下一轮 · 清抽</button>
+    </div>
+    <div class="row" style="margin-top:6px"><span class="count-pill" id="poolCount"></span><span class="spacer"></span><span class="count-pill" id="roundPill"></span></div>
+    <div id="candBox" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- 本局记录 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<!-- 将池管理 -->
+<section>
+  <div class="sec-h" onclick="toggleSec('secPool')">将池管理<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secPool">
+    <div class="note">取消勾选可临时移出抽牌池；自定义武将牌可增删（线下 / 未收录武将）。设置在重开一局后保留。关羽 / 张飞互斥（同一次抽牌至多出一张）。</div>
+    <div id="poolBox"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--gold-dim);padding-top:10px">
+      <div class="note">添加自定义武将牌：</div>
+      <div class="row" style="margin-bottom:6px">
+        <input type="text" id="addName" placeholder="武将名" class="grow" style="min-width:120px">
+        <input type="text" id="addRange" placeholder="范围(体力上限)" style="width:120px">
+      </div>
+      <textarea id="addSkill" placeholder="带杀技能：格式「技能名 效果」，留空则为白板武器"></textarea>
+      <div style="text-align:right;margin-top:6px"><button class="btn btn-sm" onclick="addCustom()">添加</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 重开 -->
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">清空武器与记录、轮次归 1，保留将池设置</div>
+  </div>
+</section>
+
+<footer>神典韦 · 挈挟武器生成器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+/* ================= 数据 =================
+   将池与房间版 prototype/shared/room-logic.mjs 的 DIANWEI_POOL 保持一致。
+   28 张:16 特殊(带杀技能)+12 白板;关羽/张飞互斥(ex:gy_zf)。 */
+const BUILTIN = [
+  {"name":"关羽","range":4,"ex":"gy_zf","skills":[{"name":"武圣","effect":"你可以将一张红色牌当【杀】使用或打出。"}]},
+  {"name":"张飞","range":4,"ex":"gy_zf","skills":[{"name":"咆哮","effect":"锁定技，你使用【杀】无次数限制。"}]},
+  {"name":"赵云","range":4,"skills":[{"name":"龙胆","effect":"你可以将一张【杀】当【闪】、【闪】当【杀】使用或打出。"}]},
+  {"name":"马超","range":4,"skills":[{"name":"铁骑","effect":"当你使用【杀】指定目标后，你可以判定，若为红色，其不能使用【闪】响应此【杀】。"}]},
+  {"name":"许褚","range":4,"skills":[{"name":"裸衣","effect":"摸牌阶段，你可以少摸一张牌，然后你本回合使用【杀】或【决斗】造成的伤害+1。"}]},
+  {"name":"吕布","range":4,"skills":[{"name":"无双","effect":"锁定技，你使用的【杀】需两张【闪】才能抵消；与你【决斗】的角色每次需打出两张【杀】。"}]},
+  {"name":"吕蒙","range":4,"skills":[{"name":"克己","effect":"若你未于本回合出牌阶段使用或打出过【杀】，你可以跳过弃牌阶段。"}]},
+  {"name":"大乔","range":3,"skills":[{"name":"流离","effect":"当你成为【杀】的目标时，你可以弃置一张牌并将此【杀】转移给你攻击范围内的一名其他角色。"}]},
+  {"name":"诸葛亮","range":3,"skills":[{"name":"空城","effect":"锁定技，若你没有手牌，你不能成为【杀】或【决斗】的目标。"}]},
+  {"name":"界黄忠","range":4,"skills":[{"name":"烈弓","effect":"你【杀】的攻击范围为此【杀】点数。当你使用【杀】指定目标后，你可以执行以下效果：1.若其手牌数不大于你，其不能抵消此【杀】；2.若其体力值不小于你，此【杀】伤害值+1。"}]},
+  {"name":"夏侯渊","range":4,"skills":[{"name":"神速","effect":"你可以选择至多三项：1.跳过判定阶段和摸牌阶段；2.跳过出牌阶段并弃置一张装备牌；3.跳过弃牌阶段并翻面。你每选择一项，你视为使用一张无距离限制的【杀】。"}]},
+  {"name":"谋关羽","range":4,"skills":[{"name":"威临","effect":"每回合限一次，你可以将一张牌当【酒】或任意【杀】使用，此牌目标角色与此牌颜色相同的手牌视为【杀】直到回合结束。"}]},
+  {"name":"韩遂","range":4,"skills":[{"name":"骁袭","effect":"每轮首个回合开始时，你可以视为使用一张无距离限制的【杀】。"},{"name":"逆乱","effect":"体力值大于你的角色的结束阶段，若其此回合使用过【杀】，你可以将一张黑色牌当【杀】对其使用。"}]},
+  {"name":"族荀粲","range":3,"skills":[{"name":"熨身","effect":"出牌阶段限一次，你可以令一名其他角色回复1点体力并视为你对其或其对你使用一张冰【杀】。"}]},
+  {"name":"雅丹","range":4,"skills":[{"name":"倾轧","effect":"当你使用【杀】指定唯一目标后，你可以弃置你与其之间的角色各一张手牌，然后可以于本回合下个阶段结束时使用其中一张牌。"}]},
+  {"name":"界姜维","range":4,"skills":[{"name":"挑衅","effect":"出牌阶段限一次，你可以选择一名攻击范围内包含你的角色，然后除非其对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后本阶段本技能限两次。"}]},
+  {"name":"刘备","range":4,"blank":true},
+  {"name":"孙权","range":4,"blank":true},
+  {"name":"曹操","range":4,"blank":true},
+  {"name":"甘宁","range":4,"blank":true},
+  {"name":"黄盖","range":4,"blank":true},
+  {"name":"张辽","range":4,"blank":true},
+  {"name":"夏侯惇","range":4,"blank":true},
+  {"name":"司马懿","range":3,"blank":true},
+  {"name":"陆逊","range":3,"blank":true},
+  {"name":"周瑜","range":3,"blank":true},
+  {"name":"黄月英","range":3,"blank":true},
+  {"name":"貂蝉","range":3,"blank":true}
+];
+const SLOTS = 2;            // 捐甲:武器栏 ×2
+const LS_KEY = 'sgs_dianwei_v1';
+let S = null, memFallback = null, pend = {};
+
+function defaultState(){
+  return {
+    pool: BUILTIN.map(p=>({id:p.name, name:p.name, range:p.range, ex:p.ex||null, blank:!!p.blank, skills:p.skills||[], enabled:true, custom:false})),
+    round:1,
+    rolled:null,     // [id...] 本轮抽出的 5 张,或 null
+    weapons:[],      // [id...] 已装备(≤SLOTS)
+    history:[], seq:0
+  };
+}
+function save(){ const raw=JSON.stringify(S); try{ localStorage.setItem(LS_KEY,raw); }catch(e){ memFallback=raw; } }
+function load(){
+  let raw=null;
+  try{ raw=localStorage.getItem(LS_KEY); }catch(e){ raw=memFallback; }
+  S=defaultState();
+  if(raw){ try{ const o=JSON.parse(raw); if(o&&Array.isArray(o.pool)) S=Object.assign(defaultState(),o); }catch(e){} }
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function cardById(id){ return S.pool.find(p=>p.id===id) || null; }
+
+/* ================= 逻辑 ================= */
+function doRoll(){
+  const bag = S.pool.filter(p=>p.enabled).slice();
+  const picked=[], usedEx=new Set();
+  while(picked.length<5 && bag.length){
+    const p = bag.splice(Math.floor(Math.random()*bag.length),1)[0];
+    if(p.ex && usedEx.has(p.ex)) continue;   // 互斥组已出过 → 跳过
+    if(p.ex) usedEx.add(p.ex);
+    picked.push(p.id);
+  }
+  S.rolled = picked;
+  S.seq++;
+  S.history.push({n:S.seq, round:S.round, cards:picked.map(id=>{const c=cardById(id);return c?c.name:id;})});
+  save(); render();
+}
+function newTurn(){ S.round++; S.rolled=null; save(); render(); }
+function equipToggle(id){
+  const at = S.weapons.indexOf(id);
+  if(at>=0){ S.weapons.splice(at,1); save(); render(); return; }   // 卸下随时可
+  if(!S.rolled || S.rolled.indexOf(id)<0) return;                  // 装备须来自本轮抽出
+  if(S.weapons.length>=SLOTS){ pend.full=true; render(); setTimeout(()=>{pend.full=false;render();},2500); return; }
+  S.weapons.push(id); save(); render();
+}
+function clearWeapons(){
+  if(!pend.clr){ pend.clr=true; render(); setTimeout(()=>{if(pend.clr){pend.clr=false;render();}},4000); return; }
+  pend.clr=false; S.weapons=[]; save(); render();
+}
+function togglePool(id){ const c=cardById(id); if(!c)return; c.enabled=!c.enabled; save(); render(); }
+function addCustom(){
+  const nm=document.getElementById('addName').value.trim();
+  const rg=parseInt(document.getElementById('addRange').value,10);
+  const skRaw=document.getElementById('addSkill').value.trim();
+  if(!nm) return;
+  const range=(rg>=1&&rg<=9)?rg:4;
+  let skills=[], blank=true;
+  if(skRaw){ const sp=skRaw.indexOf(' '); const snm=sp>0?skRaw.slice(0,sp):skRaw; const eff=sp>0?skRaw.slice(sp+1):''; skills=[{name:snm,effect:eff}]; blank=false; }
+  S.pool.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), name:nm, range:range, ex:null, blank:blank, skills:skills, enabled:true, custom:true});
+  document.getElementById('addName').value=''; document.getElementById('addRange').value=''; document.getElementById('addSkill').value='';
+  save(); render();
+}
+function removeCustom(id){
+  if(pend.rm!==id){ pend.rm=id; render(); setTimeout(()=>{if(pend.rm===id){pend.rm=null;render();}},4000); return; }
+  pend.rm=null;
+  S.pool=S.pool.filter(p=>p.id!==id);
+  S.weapons=S.weapons.filter(w=>w!==id);
+  if(S.rolled) S.rolled=S.rolled.filter(r=>r!==id);
+  save(); render();
+}
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{if(pend.reset){pend.reset=false;render();}},5000); return; }
+  pend.reset=false;
+  const keep=S.pool;
+  S=defaultState(); S.pool=keep;
+  save(); render();
+}
+
+/* ================= 渲染 ================= */
+function toggleSec(id){
+  const b=document.getElementById(id); if(!b)return;
+  b.classList.toggle('hidden');
+  const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open', !b.classList.contains('hidden'));
+}
+function cardHTML(c, kind){
+  // kind: 'weapon'(装备栏,可卸) | 'cand'(候选,可装/卸)
+  const rng = '<span class="chip rng">范围 '+esc(c.range)+'</span>';
+  const blankChip = c.blank ? '<span class="chip">白板</span>' : '';
+  const sk = c.blank ? '<div class="sk note" style="margin:0">白板（无技能）</div>'
+    : (c.skills||[]).map(s=>'<div class="sk skilltext"><span class="skname">'+esc(s.name)+'</span> '+esc(s.effect)+'</div>').join('');
+  let btn='';
+  const equipped = S.weapons.indexOf(c.id)>=0;
+  if(kind==='weapon'){ btn='<button class="btn btn-sm" onclick="equipToggle(\''+esc(c.id)+'\')">卸下</button>'; }
+  else if(kind==='cand'){ btn='<button class="btn btn-sm '+(equipped?'btn-shen':'')+'" onclick="equipToggle(\''+esc(c.id)+'\')">'+(equipped?'卸下':'装备')+'</button>'; }
+  return '<div class="card '+(kind==='weapon'?'eq':'cand')+'"><div class="top"><span class="nm grow">'+esc(c.name)+'</span>'+rng+blankChip+btn+'</div>'+sk+'</div>';
+}
+function render(){
+  // 当前武器
+  const wb=document.getElementById('weaponBox');
+  if(wb){
+    const weps=S.weapons.map(cardById).filter(Boolean);
+    const maxR=weps.length?Math.max.apply(null,weps.map(w=>w.range)):0;
+    let h='<div class="banner"><span class="tag">武器栏 '+weps.length+' / '+SLOTS+'</span>';
+    if(!weps.length) h+='<div class="note" style="margin-top:8px">尚未装备武器。挈挟抽 5 张后点「装备」放入（至多 '+SLOTS+' 张）。</div>';
+    else{ h+='<div style="margin-top:8px">'+weps.map(w=>cardHTML(w,'weapon')).join('')+'</div>';
+      h+='<div class="row"><span class="note grow">摧决可及：当前最大攻击范围 <b style="color:var(--shen)">'+maxR+'</b>（弃一张牌打最远的其他角色 1 点，每人每回合限一次）</span>'+
+        '<button class="btn btn-sm '+(pend.clr?'btn-confirm':'')+'" onclick="clearWeapons()">'+(pend.clr?'确认清空':'清空武器')+'</button></div>'; }
+    h+='</div>';
+    wb.innerHTML=h;
+  }
+  // 计数 / 轮次
+  const pc=document.getElementById('poolCount'); if(pc) pc.textContent='池内 '+S.pool.filter(p=>p.enabled).length+' / '+S.pool.length;
+  const rp=document.getElementById('roundPill'); if(rp) rp.textContent='第 '+S.round+' 轮';
+  const tb=document.getElementById('turnBtn'); if(tb){ tb.disabled = !S.rolled; }
+  // 候选
+  const cb=document.getElementById('candBox');
+  if(cb){
+    if(!S.rolled){ cb.innerHTML='<div class="note">点「挈挟 · 抽 5 张」开始本轮。</div>'; }
+    else if(!S.rolled.length){ cb.innerHTML='<div class="note note-warn">将池为空，请在下方「将池管理」启用武将牌。</div>'; }
+    else{
+      let h='<div class="note">本轮抽出（点「装备」放入武器栏，至多 '+SLOTS+' 张）'+(pend.full?'<span class="note-warn"> · 武器栏已满，先卸下一张</span>':'')+'：</div>';
+      h+=S.rolled.map(id=>{const c=cardById(id);return c?cardHTML(c,'cand'):'';}).join('');
+      cb.innerHTML=h;
+    }
+  }
+  // 记录
+  const lb=document.getElementById('logBox');
+  if(lb){
+    if(!S.history.length){ lb.innerHTML='暂无记录'; }
+    else lb.innerHTML=S.history.slice().reverse().slice(0,30).map(h=>'<div class="log-item">第'+h.round+'轮 · 挈挟抽出：<b>'+h.cards.map(esc).join('、')+'</b></div>').join('');
+  }
+  // 将池
+  const pb=document.getElementById('poolBox');
+  if(pb){
+    pb.innerHTML=S.pool.map(c=>{
+      const rm=c.custom?'<button class="btn btn-sm '+(pend.rm===c.id?'btn-confirm':'')+'" onclick="removeCustom(\''+esc(c.id)+'\')">'+(pend.rm===c.id?'确认删除':'删除')+'</button>':'';
+      const skName=c.blank?'<span style="font-size:11px;color:var(--ink-dim)">白板</span>':(c.skills||[]).map(s=>'<span class="skname" style="font-size:12px">'+esc(s.name)+'</span>').join(' ');
+      return '<div class="pool-item'+(c.enabled?'':' off')+'">'+
+        '<input class="tgl" type="checkbox" '+(c.enabled?'checked':'')+' onchange="togglePool(\''+esc(c.id)+'\')">'+
+        '<div class="grow"><span class="nm" style="font-size:14px">'+esc(c.name)+'</span> <span class="chip rng">范围'+esc(c.range)+'</span> '+skName+(c.custom?' <span style="font-size:11px;color:var(--ink-dim)">(自定义)</span>':'')+'</div>'+rm+'</div>';
+    }).join('');
+  }
+  // 重开
+  const rb=document.getElementById('resetBtn');
+  if(rb){ rb.textContent=pend.reset?'再点一次确认重开':'重开一局'; if(rb.classList) rb.classList.toggle('btn-confirm', !!pend.reset); }
+}
+/* ================= 启动 ================= */
+load();
+render();
+</script>
+</body>
+</html>

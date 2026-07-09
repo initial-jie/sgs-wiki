@@ -19,6 +19,7 @@
   --wu:#3d7a4c;
   --qun:#7d6c4e;
   --jin:#5f4a86;
+  --shen:#c2982f;
   --display:'Noto Serif SC','Songti SC','SimSun',serif;
   --kai:'Kaiti SC','KaiTi','STKaiti','FangSong',serif;
   --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
@@ -137,7 +138,7 @@ section{margin-top:52px;scroll-margin-top:24px}
 body.searching .faction .cards,body.searching .faction .tools{display:grid !important}
 .f-shu .faction-seal{background:var(--shu)} .f-wei .faction-seal{background:var(--wei)}
 .f-wu  .faction-seal{background:var(--wu)}  .f-qun .faction-seal{background:var(--qun)}
-.f-jin .faction-seal{background:var(--jin)}
+.f-jin .faction-seal{background:var(--jin)} .f-shen .faction-seal{background:var(--shen)}
 
 /* ---------- general cards ---------- */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
@@ -149,7 +150,7 @@ body.searching .faction .cards,body.searching .faction .tools{display:grid !impo
   box-shadow:0 1px 0 rgba(38,33,26,.12);
 }
 .f-shu .card{--fc:var(--shu)} .f-wei .card{--fc:var(--wei)}
-.f-wu .card{--fc:var(--wu)}   .f-qun .card{--fc:var(--qun)} .f-jin .card{--fc:var(--jin)}
+.f-wu .card{--fc:var(--wu)}   .f-qun .card{--fc:var(--qun)} .f-jin .card{--fc:var(--jin)} .f-shen .card{--fc:var(--shen)}
 .card h4{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.04em;color:var(--fc,var(--ink))}
 .skill{margin-top:11px;font-size:14.5px}
 .skill-name{
@@ -191,7 +192,7 @@ body.searching .faction .cards,body.searching .faction .tools{display:grid !impo
 .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:20px}
 .faction .tools{margin-top:0}
 .faction .tool{border-top:4px solid var(--fc,var(--ink))}
-.f-shu .tool{--fc:var(--shu)} .f-wei .tool{--fc:var(--wei)} .f-wu .tool{--fc:var(--wu)} .f-qun .tool{--fc:var(--qun)} .f-jin .tool{--fc:var(--jin)}
+.f-shu .tool{--fc:var(--shu)} .f-wei .tool{--fc:var(--wei)} .f-wu .tool{--fc:var(--wu)} .f-qun .tool{--fc:var(--qun)} .f-jin .tool{--fc:var(--jin)} .f-shen .tool{--fc:var(--shen)}
 .tool{
   background:rgba(255,252,244,.72);border:1px solid rgba(60,48,30,.32);
   border-radius:9px;padding:15px 17px;
@@ -366,17 +367,12 @@ footer .hist{margin-top:8px}
     </div>
 
     <div class="faction f-wu" id="wu-tools">
-      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">3 个</span><span class="fh-caret">▾</span></div>
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">吴</span><h3>吴</h3><span class="fh-count">2 个</span><span class="fh-caret">▾</span></div>
       <div class="tools">
         <article class="tool searchable">
           <h4>魔·孙权 · 权御追踪器</h4>
           <p>【权御】六效果盘、【天恩】目标比对、【乾纲】入魔状态与各轮历史。对局进度自动保存。</p>
           <button class="tool-open" data-tool="sunquan" data-name="魔·孙权 · 权御追踪器">打开工具 →</button>
-        </article>
-        <article class="tool searchable">
-          <h4>神·孙权 · 驭衡帝力追踪器</h4>
-          <p>【驭衡】按弃牌花色随机获得吴势力技能，【帝力】觉醒向导与误触回滚，含外来技能登记、持纲阴阳翻面与权道三叠持牌法。对局进度自动保存。</p>
-          <button class="tool-open" data-tool="shensunquan" data-name="神·孙权 · 驭衡帝力追踪器">打开工具 →</button>
         </article>
         <article class="tool searchable">
           <h4>袁姬 · 镜花水月追踪器</h4>
@@ -414,6 +410,22 @@ footer .hist{margin-top:8px}
           <h4>钟琰 · 博览技能生成器</h4>
           <p>【博览】随机三技选一，自己发动 / 他人借技双模式（借技提醒失去 1 点体力），内置 18 技池可增删。对局进度自动保存。</p>
           <button class="tool-open" data-tool="zhongyan" data-name="钟琰 · 博览技能生成器">打开工具 →</button>
+        </article>
+      </div>
+    </div>
+
+    <div class="faction f-shen" id="shen-tools">
+      <div class="faction-head" role="button" tabindex="0" aria-expanded="true"><span class="faction-seal" aria-hidden="true">神</span><h3>神</h3><span class="fh-count">2 个</span><span class="fh-caret">▾</span></div>
+      <div class="tools">
+        <article class="tool searchable">
+          <h4>神·典韦 · 挈挟武器生成器</h4>
+          <p>【挈挟】准备阶段从 28 张武将牌随机抽 5，任选至多 2 张（【捐甲】武器栏 ×2）当武器（范围＝牌面体力上限，效果＝其「带杀」技能），关羽 / 张飞互斥；【摧决】最远打击提示。将池可增删（自定义线下武将）。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="dianwei" data-name="神·典韦 · 挈挟武器生成器">打开工具 →</button>
+        </article>
+        <article class="tool searchable">
+          <h4>神·孙权 · 驭衡帝力追踪器</h4>
+          <p>【驭衡】按弃牌花色随机获得吴势力技能，【帝力】觉醒向导与误触回滚，含外来技能登记、持纲阴阳翻面与权道三叠持牌法。对局进度自动保存。</p>
+          <button class="tool-open" data-tool="shensunquan" data-name="神·孙权 · 驭衡帝力追踪器">打开工具 →</button>
         </article>
       </div>
     </div>
@@ -763,10 +775,11 @@ footer .hist{margin-top:8px}
 
   <footer>
     <strong>更新记录</strong>
-    <span class="latest">v1.2（2026-07-08）：「线下多人房间」上线——牌桌出现需要工具的武将时，任意玩家开一个 4 位数房间，其他人各自手机加入、选座、编辑自己座位的武将；操作权归座位本人，暗牌 / 暗选 / 未发动天书在服务端按请求者身份过滤后才下发，保密不弱于面杀；座位与设备解耦，可代持没电的座位。首页顶部新增房间入口，全部 12 个武将工具均已接入房间。</span>
+    <span class="latest">v1.3（2026-07-09）：新增「神·典韦 · 挈挟武器生成器」（tools/dianwei.html：28 张武将牌池随机抽 5 选武器 / 【捐甲】武器栏 ×2 / 范围＝体力上限、效果＝「带杀」技能 / 关羽张飞互斥 / 将池可增删，进度自动保存）；工具区新增「神」势力分组，神·孙权归入其下（现蜀 1 / 魏 4 / 吴 2 / 群 3 / 晋 1 / 神 2，共 13 件）；线下多人房间同步接入神典韦（13 工具）、新增 OL 全量 681 将武将库（点座位查技能）与神将自选势力。</span>
     <details>
       <summary>展开完整更新历史</summary>
       <div class="hist">
+        v1.2（2026-07-08）：「线下多人房间」上线——牌桌出现需要工具的武将时，任意玩家开一个 4 位数房间，其他人各自手机加入、选座、编辑自己座位的武将；操作权归座位本人，暗牌 / 暗选 / 未发动天书在服务端按请求者身份过滤后才下发，保密不弱于面杀；座位与设备解耦，可代持没电的座位。首页顶部新增房间入口，全部武将工具均已接入房间。<br>
         v1.1（2026-07-08）：三件新工具上线——神·孙权「驭衡帝力追踪器」（tools/shensunquan.html：弃牌花色 roll 吴势力技能 / 帝力觉醒向导与误触回滚 / 外来技能登记 / 持纲阴阳与权道三叠持牌法）、袁姬「镜花水月追踪器」（tools/yuanji.html：标记牌台账与归位流程 / 节言状态与触发提示）、钟琰「博览技能生成器」（tools/zhongyan.html：随机三技选一 / 自己发动与他人借技双模式 / 18 技池可增删），均支持断线续档；工具区新增晋势力分组（现蜀 1 / 魏 4 / 吴 3 / 群 3 / 晋 1，共 12 件）；同名可替换武将区钟琰卡新增工具入口。<br>
         v1.0（2026-07-07）：线下化工具区置顶为首个栏目并按势力分组（蜀 1 / 魏 4 / 吴 1 / 群 3，沿用折叠与侧栏二级目录）；新增三件工具——谋·黄月英「并才理贤追踪器」（tools/huangyueying.html）、族·荀攸「百出记录表」（tools/xunyou.html）、董昭 / 谋董昭「先略顺机记录器」（tools/dongzhao.html，双页签合一）；侧栏重排为「线下化工具 / 衍生内容 / 武将修订」三大块；衍生技区族·荀攸卡新增工具入口。<br>
         v0.9（2026-07-07）：「魔·貂蝉 · 幻惑倾世追踪器」上线（tools/diaochan.html：幻惑位置报数向导 / 倾世公开分发登记与状态台账 / 重发检测 / 轮末反噬提醒，进度自动保存），群势力衍生技区同步新增魔·貂蝉入口。<br>
@@ -805,7 +818,7 @@ footer .hist{margin-top:8px}
 (function(){
   /* ---------- 各分区的势力子目录数据 ---------- */
   var SUBS={
-    'tools':[['蜀','shu-tools'],['魏','wei-tools'],['吴','wu-tools'],['群','qun-tools'],['晋','jin-tools']],
+    'tools':[['蜀','shu-tools'],['魏','wei-tools'],['吴','wu-tools'],['群','qun-tools'],['晋','jin-tools'],['神','shen-tools']],
     'derived-skills':[['蜀','shu-skills'],['魏','wei-skills'],['吴','wu-skills'],['群','qun-skills']],
     'revisions':[['蜀','shu-rev'],['魏','wei-rev'],['吴','wu-rev'],['群','qun-rev']],
     'replacements':[['蜀','shu-rep'],['魏','wei-rep'],['吴','wu-rep'],['群','qun-rep'],['晋','jin-rep']]
