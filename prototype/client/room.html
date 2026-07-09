@@ -122,8 +122,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -135,7 +135,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              simayi:{view:s=>viewSmTool(s),bind:(s,q)=>bindSm(s,q)},
              dongzhao:{view:s=>viewDzTool(s),bind:(s,q)=>bindDz(s,q)},
              shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)},
-             diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)} };
+             diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)},
+             sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)} };
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -301,6 +302,7 @@ function viewSeats(){
         +`<option value="dongzhao" ${g==="dongzhao"?"selected":""}>谋董昭(有工具)</option>`
         +`<option value="shensunquan" ${g==="shensunquan"?"selected":""}>神孙权(有工具)</option>`
         +`<option value="diaochan" ${g==="diaochan"?"selected":""}>魔貂蝉(有工具)</option>`
+        +`<option value="sunquan" ${g==="sunquan"?"selected":""}>魔孙权(有工具)</option>`
         +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
@@ -1553,6 +1555,128 @@ function bindDc(dc,q){
   q("[data-dcendr]").forEach(b=>b.onclick=()=>{if(confirm("结束本轮?清空本轮幻惑目标。"))act({type:"endRound"});});
   q("[data-dcdead]").forEach(b=>b.onclick=()=>act({type:"toggleDead",pl:+b.dataset.dcdead}));
   q("[data-dcreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空入魔/倾世台账/幻惑/阵亡记录,座位武将保留。")){dcDist=null;act({type:"resetGame"});}});
+}
+
+/* ---------- 魔孙权工具:权御暗选(密封同时揭示)+ 天恩/乾纲(公开)---------- */
+const SQ_EFF=[{n:'白虹',d:'伤害+1'},{n:'青冥',d:'额外指定一个目标'},{n:'辟邪',d:'无视防具'},{n:'紫电',d:'不可响应'},{n:'百里',d:'额外结算一次'},{n:'流星',d:'无次数限制'}];
+let sqTeTarget=null; // 天恩·不同项:当前选中的目标座位(本机瞬态)
+function viewSqTool(sq){
+  const seat=sq.seatNo, ts=sq.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  const dead=ts.dead||[], used=ts.used||{}, picks=ts.picks||{};
+  const inPlay=dcInPlay(), alive=sn=>!dead.includes(sn);
+  const aliveInPlay=inPlay.filter(alive);
+  const myPickSeats=state.youHold.filter(sn=>inPlay.includes(sn)&&alive(sn)); // 我可为之暗选的座位(含代持)
+  let h="";
+  // 状态栏
+  h+=`<div class="card"><div class="row"><span class="chip">第 ${ts.round||1} 轮</span><span class="chip" style="${ts.gg?'border-color:var(--seal);color:var(--seal)':''}">${ts.gg?'已入魔(乾纲)':'未入魔'}</span>`;
+  const phMap={idle:'待开始暗选',picking:'暗选中',revealed:'已翻开'}; h+=`<span class="chip">${phMap[ts.phase]||ts.phase}</span></div>`;
+  if(ts.gg&&iAm){ h+=`<div class="row" style="margin-top:6px"><button class="${ts.dmgThisRound?'primary':''}" data-sqdmg="1">${ts.dmgThisRound?'✓ 本轮孙权已造成伤害':'本轮孙权尚未造成伤害'}</button></div>`;
+    if(!ts.dmgThisRound) h+=`<div class="hint" style="color:var(--warn)">入魔角色一轮未造成伤害,该轮结束失1点体力。</div>`; }
+  h+=`</div>`;
+  // 权御暗选
+  h+=`<div class="card"><h2>权御 · 暗选<span class="tag">每人每项限一次</span></h2>`;
+  if(ts.phase==='idle'){
+    if(iAm) h+=`<div class="row"><button class="primary grow" data-sqstart="1">开始第 ${ts.round||1} 轮权御暗选</button></div>`;
+    else h+=`<div class="hint">等待孙权开始本轮暗选。</div>`;
+    if(ts.lastReveal) h+=viewSqReveal(ts,ts.lastReveal,seat);
+  }else if(ts.phase==='picking'){
+    // 我的暗选面板(为自己/代持座位各选一项;内容仅我可见)
+    for(const sn of myPickSeats){
+      const pk=picks[sn], u=used[sn]||[];
+      h+=`<div class="slot" style="border-style:solid;margin-top:8px"><div class="row"><b class="grow">${dcName(sn)} 的秘密选择</b>${pk&&pk.effect!=null?`<span class="chip" style="border-color:var(--seal);color:var(--seal)">已选:${SQ_EFF[pk.effect].n}</span>`:'<span class="chip">未选</span>'}</div>`;
+      h+=`<div class="hint">仅你本人可见,翻开前无人(含孙权)能看到。可改选。</div><div class="row">`;
+      SQ_EFF.forEach((e,ei)=>{ const dis=u.includes(ei); const on=pk&&pk.effect===ei;
+        h+=`<button class="pick ${on?'sel':''}" ${dis?'disabled':''} data-sqpick="${sn}:${ei}" style="min-width:64px"><b>${e.n}</b><br><span class="hint" style="margin:0">${e.d}</span></button>`; });
+      h+=`</div></div>`;
+    }
+    if(!myPickSeats.length) h+=`<div class="hint">你未认领在场存活座位,无需暗选,等待翻开。</div>`;
+    // 进度(公开:谁已选,不含内容)
+    h+=`<div class="hint" style="margin-top:8px">暗选进度(仅显示是否已选,不泄露内容):</div><div class="row">`;
+    for(const sn of aliveInPlay){ const done=!!picks[sn]; h+=`<span class="chip" style="${done?'border-color:var(--seal);color:var(--seal)':''}">${dcName(sn)}${done?' ✓':' …'}</span>`; }
+    h+=`</div>`;
+    if(iAm) h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-sqreveal="1">同时翻开(${Object.keys(picks).length}/${aliveInPlay.length} 已选)</button></div>`;
+  }else if(ts.phase==='revealed'){
+    h+=viewSqReveal(ts,ts.lastReveal,seat);
+    if(iAm) h+=`<div class="hint" style="margin-top:6px">结束本轮后进入下一轮暗选(下方每轮结算)。</div>`;
+  }
+  h+=`</div>`;
+  // 天恩 / 乾纲(孙权操作)
+  h+=`<div class="card"><h2>天恩<span class="tag">每回合各限一次</span></h2>`;
+  if(ts.gg){
+    h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);color:var(--seal)">已入魔(乾纲):天恩已永久失去。使用【杀】指定唯一目标时,执行下表中该目标勾选过的所有效果。</div>`;
+    if(iAm) h+=`<div class="row end"><button class="ghost" data-sqgg="0">撤销入魔(误触回滚)</button></div>`;
+  }else{
+    h+=`<div class="row"><span class="chip" style="${ts.te&&ts.te.diff?'border-color:var(--ok,var(--seal));color:var(--seal)':''}">不同项${ts.te&&ts.te.diff?'·已用':''}</span><span class="chip" style="${ts.te&&ts.te.same?'border-color:var(--seal);color:var(--seal)':''}">相同项${ts.te&&ts.te.same?'·已用':''}</span></div>`;
+    if(ts.teNote) h+=`<div class="hint">${esc(ts.teNote)}</div>`;
+    if(iAm){
+      if(!(ts.te&&ts.te.diff)){
+        const cands=aliveInPlay.filter(sn=>sn!==seat);
+        h+=`<div class="hint" style="margin-top:6px">天恩·不同项(弃目标一张牌,令其追加一项权御):</div><div class="row"><select data-sqtetarget>`;
+        h+=`<option value="">选目标角色</option>`;
+        for(const sn of cands) h+=`<option value="${sn}" ${sqTeTarget===sn?'selected':''}>${dcName(sn)}</option>`;
+        h+=`</select></div>`;
+        if(sqTeTarget!=null&&cands.includes(sqTeTarget)){
+          const u=used[sqTeTarget]||[];
+          h+=`<div class="hint" style="margin-top:6px">${dcName(sqTeTarget)} 追加一项(灰=已用):</div><div class="row">`;
+          SQ_EFF.forEach((e,ei)=>h+=`<button class="pick" ${u.includes(ei)?'disabled':''} data-sqte="${ei}" style="min-width:60px"><b>${e.n}</b></button>`);
+          h+=`<button class="ghost" data-sqte="null">六项已满·仅记录</button></div>`;
+        }
+      }
+      h+=`<div class="row" style="margin-top:8px"><button class="${ts.te&&ts.te.same?'primary':''}" data-sqtesame="${ts.te&&ts.te.same?0:1}">相同项(从牌堆得一张杀)${ts.te&&ts.te.same?'·撤销':''}</button><button class="ghost" data-sqtereset="1">下一回合·重置天恩</button></div>`;
+      h+=`<div class="row" style="margin-top:8px"><button class="gold" data-sqgg="1">发动乾纲:失去天恩并入魔</button></div>`;
+    }
+  }
+  h+=`</div>`;
+  // 权御历史(公开表)
+  h+=`<div class="card"><h2>权御历史<span class="tag">每人每项限一次</span></h2><div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;min-width:420px"><tr><th style="text-align:left;padding:3px 6px">角色</th>`;
+  SQ_EFF.forEach(e=>h+=`<th style="padding:3px 4px">${e.n}</th>`); h+=`</tr>`;
+  for(const sn of inPlay){ const u=used[sn]||[]; h+=`<tr style="${alive(sn)?'':'opacity:.4'}"><td style="padding:3px 6px;border-top:1px solid var(--line)">${dcName(sn)}${sn===seat?' ✿':''}</td>`;
+    SQ_EFF.forEach((e,ei)=>h+=`<td style="text-align:center;padding:3px 4px;border-top:1px solid var(--line);color:var(--seal)">${u.includes(ei)?'✓':''}</td>`);
+    h+=`</tr>`; }
+  h+=`</table></div></div>`;
+  // 角色存活(孙权)
+  if(iAm){
+    h+=`<div class="card"><h2>角色存活<span class="tag">点名字切换</span></h2><div class="row">`;
+    for(const sn of inPlay){ const d=dead.includes(sn); h+=`<button class="${d?'ghost':''}" style="${d?'text-decoration:line-through;opacity:.5':''}" data-sqalive="${sn}">${dcName(sn)}${sn===seat?' ✿':''}</button>`; }
+    h+=`</div></div>`;
+  }
+  // 每轮结算(孙权)
+  if(iAm) h+=`<div class="card"><h2>每轮结算<span class="tag">第 ${ts.round||1} 轮</span></h2><div class="row"><button class="gold grow" data-sqendr="1">结束本轮,进入下一轮 →</button></div><div class="hint">结束后清空本轮暗选与天恩,重新开始暗选。</div></div>`;
+  // 日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?ts.log.map(l=>`<div>${esc(l)}</div>`).join(""):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-sqreset="1">⟳ 重开一局</button></div></div>`;
+  return h;
+}
+function viewSqReveal(ts,r,sqSeat){
+  if(!r) return '';
+  let h=`<div class="slot" style="margin-top:10px"><b>第 ${r.round} 轮翻开结果</b><div class="row" style="margin-top:6px">`;
+  for(const [i,ei] of r.entries){
+    const isSq=i===sqSeat, same=(!isSq&&ei!=null&&r.sqPick!=null&&ei===r.sqPick);
+    h+=`<div class="slot" style="margin:0;min-width:96px;${isSq?'border-color:var(--seal)':''}"><div class="hint" style="margin:0">${dcName(i)}${isSq?' ✿':''}</div><b>${ei==null?'无可选':SQ_EFF[ei].n}</b>`
+      +(isSq?'':`<div class="hint" style="margin:0;color:${same?'var(--seal)':'var(--ink-soft)'}">${same?'与孙权相同':'不同'}</div>`)+`</div>`;
+  }
+  h+=`</div>`;
+  if(r.sqPick!=null) h+=`<div class="hint" style="margin-top:6px">与孙权相同(含自己)<b style="color:var(--seal)">${r.match+1}</b> 人 → 孙权摸 <b style="color:var(--seal)">${r.draw}</b> 张(至多3);本轮孙权【杀】执行:<b>${SQ_EFF[r.sqPick].n}(${SQ_EFF[r.sqPick].d})</b>${ts.gg?',入魔后另执行目标勾选过的所有效果':''}</div>`;
+  else h+=`<div class="hint" style="margin-top:6px">孙权本轮未选/已阵亡,不结算摸牌。</div>`;
+  return h+`</div>`;
+}
+function bindSq(sq,q){
+  const SQ=sq.seatNo, ts=sq.toolState||{};
+  const sqAct=(by,o)=>send({type:"action",targetSeat:SQ,bySeat:by,toolAction:o});
+  const act=(o)=>sqAct(SQ,o); // 孙权本人操作
+  q("[data-sqstart]").forEach(b=>b.onclick=()=>act({type:"startPick"}));
+  q("[data-sqpick]").forEach(b=>b.onclick=()=>{const[sn,ei]=b.dataset.sqpick.split(":");sqAct(+sn,{type:"pick",effect:+ei});}); // bySeat=选牌者本人
+  q("[data-sqreveal]").forEach(b=>b.onclick=()=>{const need=dcInPlay().filter(s=>!(ts.dead||[]).includes(s)).length,got=Object.keys(ts.picks||{}).length;if(got<need&&!confirm("还有 "+(need-got)+" 名存活角色未暗选,仍要翻开?未选者按无处理。"))return;act({type:"reveal"});});
+  q("[data-sqtetarget]").forEach(s=>s.onchange=()=>{sqTeTarget=s.value===""?null:+s.value;render();});
+  q("[data-sqte]").forEach(b=>b.onclick=()=>{if(sqTeTarget==null)return;const v=b.dataset.sqte;act({type:"teDiff",target:sqTeTarget,effect:v==="null"?null:+v});sqTeTarget=null;});
+  q("[data-sqtesame]").forEach(b=>b.onclick=()=>act({type:"teSame",on:b.dataset.sqtesame==="1"}));
+  q("[data-sqtereset]").forEach(b=>b.onclick=()=>act({type:"teReset"}));
+  q("[data-sqgg]").forEach(b=>b.onclick=()=>{const on=b.dataset.sqgg==="1";if(on){if(confirm("确定发动乾纲?永久失去天恩并入魔。"))act({type:"gg",on:true});}else{if(confirm("撤销乾纲入魔(仅纠错)?"))act({type:"gg",on:false});}});
+  q("[data-sqdmg]").forEach(b=>b.onclick=()=>act({type:"toggleDmg"}));
+  q("[data-sqalive]").forEach(b=>b.onclick=()=>act({type:"toggleAlive",seat:+b.dataset.sqalive}));
+  q("[data-sqendr]").forEach(b=>b.onclick=()=>{if(confirm("结束本轮?清空本轮暗选与天恩。"))act({type:"endRound"});});
+  q("[data-sqreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空暗选/历史/天恩/乾纲/阵亡,座位武将保留。")){sqTeTarget=null;act({type:"resetGame"});}});
 }
 
 render();

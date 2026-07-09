@@ -25,6 +25,12 @@ export function xyKeyLabel(key) {
 // 谋黄月英并才:可添加的三个锦囊牌名(理贤牌池 = 无中生有 + 已添加的这些)
 export const HYY_BC_NAMES = ["顺手牵羊", "过河拆桥", "铁索连环"];
 
+// 魔孙权权御六效果(下标固定;DO 用于校验与日志,client 同一份用于展示)
+export const SQ_EFFECTS = [
+  { n: "白虹", d: "伤害+1" }, { n: "青冥", d: "额外指定一个目标" }, { n: "辟邪", d: "无视防具" },
+  { n: "紫电", d: "不可响应" }, { n: "百里", d: "额外结算一次" }, { n: "流星", d: "无次数限制" },
+];
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -48,6 +54,11 @@ export const VISIBILITY = {
     // 先略记录的锦囊牌名仅董昭本人可见(暗置,不弱于单机现状);他人只见 {count:0|1}=有无记录
     rec: { kind: "ownerSeatOnly" },
     // turnUsed / zw / round / shunji / names / yishi / log 默认 public(顺机账本、造王、移势皆公开信息)
+  },
+  sunquan: {
+    // 权御暗选:每份 pick 自带 revealed;翻开前仅本人可见内容,他人只见"该座位已选"占位(含孙权的也藏)
+    picks: { kind: "secretPick" },
+    // round / dead / used / phase / lastReveal / te / gg / dmgThisRound / log 默认 public
   },
 };
 
@@ -74,6 +85,15 @@ export function filterState(seat, holds) {
       out[field] = holds.has(seat.seatNo)
         ? clone(val)
         : { count: Array.isArray(val) ? val.length : Object.keys(val).length };
+      continue;
+    }
+    // secretPick:键值对象 { [座位]: {holder,effect,revealed} }。翻开前仅本人(或代持)可见内容,
+    // 他人只见 {holder,hidden} —— 能知道"该座位已选",数得出进度,但看不到选了什么(孙权的也一样藏)。
+    if (rule.kind === "secretPick") {
+      const out2 = {};
+      for (const [s, pk] of Object.entries(val || {}))
+        out2[s] = (pk.revealed || holds.has(Number(s))) ? clone(pk) : { holder: pk.holder, hidden: true };
+      out[field] = out2;
       continue;
     }
     // ownerOnly:val 是"每册自带 owners 名单"的数组。发动(revealed)后转公开;
@@ -189,6 +209,20 @@ export function initToolState(generalId) {
       hh: { targets: [], wiz: {} }, // 幻惑:本轮目标座位号 + 各目标向导 {uses,stage,n,roll}(公开)
       qs: { batch: 0, cards: [] },  // 倾世牌台账 cards=[{owner:座位,typ,custom,s,r,status}](公开)
       log: [],              // 公开事件
+    };
+  if (generalId === "sunquan")
+    return {
+      round: 1,
+      dead: [],            // 已阵亡座位号(工具内追踪;公开)
+      used: {},            // { [座位]: [ei...] } 每座位已用权御效果下标(替代 Set;公开)
+      phase: "idle",       // idle | picking | revealed(公开)
+      picks: {},           // { [座位]: {holder,effect,revealed} } 权御暗选(secretPick:翻开前仅本人可见内容)
+      lastReveal: null,    // {round,entries:[[座位,ei]],sqPick,match,draw}(reveal 后填,公开)
+      te: { diff: false, same: false }, // 天恩本回合两项(公开)
+      teNote: "",          // 天恩·不同项备注(公开)
+      gg: false,           // 乾纲入魔(公开)
+      dmgThisRound: false, // 入魔本轮是否已造成伤害(公开)
+      log: [],
     };
   return {};
 }
@@ -888,6 +922,109 @@ export class RoomCore {
       }
       if (t === "resetGame") {
         if (!isDiao) return { error: "NOT_DIAO_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 魔孙权:权御暗选(secretPick 密封同时揭示)+ 天恩/乾纲(公开)+ 花名册绑座位 ─────────
+    if (target.general === "sunquan") {
+      const sq = targetSeat;
+      const isSun = bySeat === sq && iHold(sq);        // 孙权本人(或代持其座位)
+      const aliveOf = (s) => !ts.dead.includes(s);
+      const usedOf = (s) => (ts.used[s] || (ts.used[s] = []));
+      const EFFN = SQ_EFFECTS.length;                  // 6
+      const en = (ei) => SQ_EFFECTS[ei] ? SQ_EFFECTS[ei].n : "?";
+
+      if (t === "startPick") {                         // 孙权开启本轮暗选
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        ts.phase = "picking"; ts.picks = {};
+        this._log(ts, `第${ts.round}轮权御暗选开始`);
+        return { ok: true };
+      }
+      // 任意存活座位为【自己】暗选(含孙权);内容保密到 reveal —— 跨座位写自己那份,像 registerQi
+      if (t === "pick") {
+        if (!iHold(bySeat)) return { error: "BYSEAT_NOT_HELD" };
+        if (ts.phase !== "picking") return { error: "NOT_PICKING" };
+        if (!aliveOf(bySeat)) return { error: "DEAD" };
+        const ei = toolAction.effect;
+        if (ei !== null) {
+          if (!(ei >= 0 && ei < EFFN)) return { error: "BAD_EFFECT" };
+          if (usedOf(bySeat).includes(ei)) return { error: "EFFECT_USED" }; // 每人每项限一次
+        }
+        ts.picks[bySeat] = { holder: bySeat, effect: ei ?? null, revealed: false };
+        return { ok: true }; // 不记日志(暗选,连"谁选了"都靠占位体现,不泄露内容)
+      }
+      // 孙权:同时翻开 → DO 原子结算(翻开 + 写 used + 算相同数与摸牌)。孙权无法提前偷看=不弱于现状
+      if (t === "reveal") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        if (ts.phase !== "picking") return { error: "NOT_PICKING" };
+        const entries = Object.values(ts.picks).map((p) => [p.holder, p.effect]);
+        for (const p of Object.values(ts.picks)) {
+          p.revealed = true;
+          if (p.effect !== null && !usedOf(p.holder).includes(p.effect)) usedOf(p.holder).push(p.effect);
+        }
+        const sqPick = (ts.picks[sq] && aliveOf(sq)) ? ts.picks[sq].effect : null;
+        let match = 0;
+        if (sqPick !== null && sqPick !== undefined) for (const [i, ei] of entries) if (i !== sq && ei === sqPick) match++;
+        const draw = (sqPick !== null && sqPick !== undefined) ? Math.min(match + 1, 3) : 0;
+        ts.lastReveal = { round: ts.round, entries, sqPick, match, draw };
+        ts.phase = "revealed";
+        this._log(ts, `第${ts.round}轮翻开:与孙权相同${match}人${sqPick != null ? `,孙权【杀】执行${en(sqPick)},摸${draw}张` : "(孙权未选/已阵亡)"}`);
+        return { ok: true, match, draw };
+      }
+      // 天恩·不同项(孙权:弃目标一张牌 → 令其追加一项权御,记入 used 历史;公开)
+      if (t === "teDiff") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        if (ts.gg) return { error: "GG_NO_TE" };       // 乾纲入魔后永久失去天恩
+        const tgt = Number(toolAction.target);
+        if (tgt === sq || !this.seats[tgt] || !aliveOf(tgt)) return { error: "BAD_TARGET" };
+        const ei = toolAction.effect;
+        if (ei !== null && ei !== undefined) {
+          if (!(ei >= 0 && ei < EFFN)) return { error: "BAD_EFFECT" };
+          if (!usedOf(tgt).includes(ei)) usedOf(tgt).push(ei);
+          ts.teNote = `目标座位${tgt}:随机弃一张牌,追加权御【${en(ei)}】`;
+        } else ts.teNote = `目标座位${tgt}:随机弃一张牌,六项已满无可追加`;
+        ts.te.diff = true; this._log(ts, ts.teNote);
+        return { ok: true };
+      }
+      if (t === "teSame") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        if (ts.gg) return { error: "GG_NO_TE" };
+        ts.te.same = !!toolAction.on; return { ok: true, same: ts.te.same };
+      }
+      if (t === "teReset") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        ts.te = { diff: false, same: false }; ts.teNote = ""; return { ok: true };
+      }
+      if (t === "gg") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        ts.gg = !!toolAction.on;
+        this._log(ts, ts.gg ? "发动乾纲:永久失去天恩并入魔" : "撤销乾纲入魔(误触回滚)");
+        return { ok: true, gg: ts.gg };
+      }
+      if (t === "toggleDmg") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        ts.dmgThisRound = !ts.dmgThisRound; return { ok: true, dmg: ts.dmgThisRound };
+      }
+      if (t === "toggleAlive") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        const s = Number(toolAction.seat);
+        const i = ts.dead.indexOf(s);
+        if (i >= 0) { ts.dead.splice(i, 1); this._log(ts, `座位${s}取消阵亡`); }
+        else { ts.dead.push(s); this._log(ts, `座位${s}阵亡`); }
+        return { ok: true };
+      }
+      if (t === "endRound") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        const lost = ts.gg && aliveOf(sq) && !ts.dmgThisRound;
+        this._log(ts, `第${ts.round}轮结束` + (lost ? ":入魔本轮未造成伤害,孙权失去1点体力" : ""));
+        ts.round++; ts.dmgThisRound = false; ts.te = { diff: false, same: false }; ts.teNote = ""; ts.phase = "idle"; ts.picks = {};
+        return { ok: true, lostHp: lost };
+      }
+      if (t === "resetGame") {
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
         target.toolState = initToolState(target.general);
         return { ok: true, reset: true };
       }

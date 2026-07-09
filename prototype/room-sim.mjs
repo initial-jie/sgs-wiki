@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -502,6 +502,66 @@ check("非貂蝉不能操作", dcAct(2, 2, { type: "hhToggle", pl: 3 }).error ==
 const dcrst = dcAct(1, 1, { type: "resetGame" });
 check("重置成功、入魔/台账/幻惑/阵亡清空、round 回1", dcrst.reset === true && DCT(dcd[1]).entered === false && DCT(dcd[1]).qs.cards.length === 0 && DCT(dcd[1]).hh.targets.length === 0 && DCT(dcd[1]).dead.length === 0 && DCT(dcd[1]).round === 1);
 check("座位武将保留(仍是貂蝉)", room11.seats[1].general === "diaochan");
+
+// ═══════════════ 魔孙权:权御暗选(secretPick 密封同时揭示)+ 天恩/乾纲 ═══════════════
+const room12 = new RoomCore("1357", 5, () => 0);
+const sd = {}; for (let i = 1; i <= 5; i++) { sd[i] = `sd${i}`; room12.claimSeat(sd[i], i); }
+room12.setGeneral(sd[1], 1, "sunquan");          // 座位1 = 魔孙权
+for (let i = 2; i <= 5; i++) room12.setGeneral(sd[i], i, "none");
+const SQT = (d) => room12.viewFor(d).seats[1].toolState;
+const sqAct = (d, by, o) => room12.action(sd[d], { targetSeat: 1, bySeat: by, toolAction: o });
+
+console.log("\n=== 孙权1:权御暗选 —— 各自秘密选,翻开前谁都看不到内容(含孙权)===");
+check("非孙权不能开启暗选", sqAct(2, 2, { type: "startPick" }).error === "NOT_SUN_ACTION");
+check("孙权开启暗选→picking", sqAct(1, 1, { type: "startPick" }).ok && SQT(sd[1]).phase === "picking");
+check("座位3为自己暗选白虹(0)成功", sqAct(3, 3, { type: "pick", effect: 0 }).ok);
+check("座位3本人看得到自己的选择", SQT(sd[3]).picks[3].effect === 0 && SQT(sd[3]).picks[3].revealed === false);
+check("★孙权也偷看不到座位3的内容(只见占位 hidden)", SQT(sd[1]).picks[3].hidden === true && SQT(sd[1]).picks[3].effect === undefined);
+check("★旁人座位2也看不到座位3内容", SQT(sd[2]).picks[3].hidden === true);
+check("孙权自己也暗选白虹(0)", sqAct(1, 1, { type: "pick", effect: 0 }).ok && SQT(sd[1]).picks[1].effect === 0);
+check("★孙权的选择别人也看不到", SQT(sd[3]).picks[1].hidden === true && SQT(sd[3]).picks[1].effect === undefined);
+check("能数出已选进度(座位1、3 各有占位)", Object.keys(SQT(sd[2]).picks).length === 2);
+check("不能替别的座位选(BYSEAT_NOT_HELD)", sqAct(2, 3, { type: "pick", effect: 1 }).error === "BYSEAT_NOT_HELD");
+check("非法效果被拒(BAD_EFFECT)", sqAct(3, 3, { type: "pick", effect: 9 }).error === "BAD_EFFECT");
+
+console.log("\n=== 孙权2:同时翻开 —— DO 原子结算相同数与摸牌,全场公开 ===");
+sqAct(2, 2, { type: "pick", effect: 0 }); // 座位2 白虹(与孙权同)
+sqAct(4, 4, { type: "pick", effect: 1 }); // 座位4 青冥(不同)
+sqAct(5, 5, { type: "pick", effect: 0 }); // 座位5 白虹(与孙权同)
+const rv = sqAct(1, 1, { type: "reveal" });
+check("翻开:与孙权相同3人(座位2/3/5)、孙权摸3张(至多3)", rv.match === 3 && rv.draw === 3);
+check("★翻开后全场公开:旁人看得到孙权与各座位的选择", SQT(sd[4]).picks[1].effect === 0 && SQT(sd[4]).picks[3].effect === 0 && SQT(sd[4]).picks[3].revealed === true);
+check("phase→revealed、lastReveal 记录", SQT(sd[1]).phase === "revealed" && SQT(sd[1]).lastReveal.match === 3 && SQT(sd[1]).lastReveal.draw === 3);
+check("翻开后写入 used(每人所选记入历史,公开)", SQT(sd[2]).used["3"].includes(0) && SQT(sd[2]).used["4"].includes(1));
+
+console.log("\n=== 孙权3:每人每项限一次 + 换项 ===");
+sqAct(1, 1, { type: "endRound" });
+check("结束本轮→round2、phase idle、picks 清空", SQT(sd[1]).round === 2 && SQT(sd[1]).phase === "idle" && Object.keys(SQT(sd[1]).picks).length === 0);
+sqAct(1, 1, { type: "startPick" });
+check("座位3重复选白虹被拒(EFFECT_USED)", sqAct(3, 3, { type: "pick", effect: 0 }).error === "EFFECT_USED");
+check("座位3改选青冥(1)成功", sqAct(3, 3, { type: "pick", effect: 1 }).ok && SQT(sd[3]).picks[3].effect === 1);
+
+console.log("\n=== 孙权4:天恩(不同项/相同项)+ 乾纲入魔失天恩 ===");
+const td = sqAct(1, 1, { type: "teDiff", target: 4, effect: 2 });
+check("天恩不同项:目标座位4追加辟邪(2)、记入 used、公开", td.ok && SQT(sd[2]).used["4"].includes(2) && SQT(sd[1]).te.diff === true);
+check("天恩目标不能是孙权自己(BAD_TARGET)", sqAct(1, 1, { type: "teDiff", target: 1, effect: 3 }).error === "BAD_TARGET");
+check("天恩相同项开关、公开", sqAct(1, 1, { type: "teSame", on: true }).same === true && SQT(sd[3]).te.same === true);
+check("天恩重置", sqAct(1, 1, { type: "teReset" }).ok && SQT(sd[1]).te.diff === false && SQT(sd[1]).te.same === false);
+check("发动乾纲入魔、公开", sqAct(1, 1, { type: "gg", on: true }).gg === true && SQT(sd[4]).gg === true);
+check("★入魔后天恩永久失效(GG_NO_TE)", sqAct(1, 1, { type: "teDiff", target: 4, effect: 3 }).error === "GG_NO_TE");
+check("撤销入魔(误触回滚)", sqAct(1, 1, { type: "gg", on: false }).gg === false);
+
+console.log("\n=== 孙权5:阵亡追踪 + 入魔反噬 + 权限 + 重置 ===");
+check("标记座位5阵亡、公开", sqAct(1, 1, { type: "toggleAlive", seat: 5 }).ok && SQT(sd[3]).dead.includes(5));
+check("阵亡座位不能暗选(DEAD)", (sqAct(5, 5, { type: "pick", effect: 3 })).error === "DEAD");
+sqAct(1, 1, { type: "gg", on: true });
+const er = sqAct(1, 1, { type: "endRound" }); // gg && 孙权存活 && 本轮未造成伤害 → 失体力
+check("入魔本轮未造成伤害→结束时失1点体力", er.lostHp === true);
+check("非孙权不能翻开", sqAct(2, 2, { type: "reveal" }).error === "NOT_SUN_ACTION");
+check("SQ_EFFECTS 导出6项", SQ_EFFECTS.length === 6 && SQ_EFFECTS[0].n === "白虹");
+const sqrst = sqAct(1, 1, { type: "resetGame" });
+check("重置:轮次/暗选/used/天恩/乾纲/阵亡清空", sqrst.reset === true && SQT(sd[1]).round === 1 && Object.keys(SQT(sd[1]).picks).length === 0 && Object.keys(SQT(sd[1]).used).length === 0 && SQT(sd[1]).gg === false && SQT(sd[1]).dead.length === 0);
+check("座位武将保留(仍是孙权)", room12.seats[1].general === "sunquan");
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
