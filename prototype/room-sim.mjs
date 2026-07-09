@@ -394,5 +394,56 @@ const dzrst = dzAct(2, 2, { type: "resetGame" });
 check("董昭重置成功、rec/names/shunji 清空、round 回1", dzrst.reset === true && DZT(dzd[2]).rec.length === 0 && DZT(dzd[2]).names.length === 0 && DZT(dzd[2]).shunji.length === 0 && DZT(dzd[2]).round === 1);
 check("座位武将保留(仍是董昭)", room9.seats[2].general === "dongzhao");
 
+// ═══════════════ 神孙权:驭衡帝力(全公开生成器直通;随机在客户端,解析结果进 DO)═══════════════
+const room10 = new RoomCore("7878", 5, () => 0);
+const ssd = {}; for (let i = 1; i <= 5; i++) { ssd[i] = `ssd${i}`; room10.claimSeat(ssd[i], i); }
+room10.setGeneral(ssd[3], 3, "shensunquan");     // 座位3 = 神孙权
+const SST = (d) => room10.viewFor(d).seats[3].toolState;
+const ssAct = (d, by, o) => room10.action(ssd[d], { targetSeat: 3, bySeat: by, toolAction: o });
+const SK = (id, name) => ({ id, name, text: name + "的技能描述" });
+
+console.log("\n=== 神孙权1:驭衡弃置随机获得(客户端 roll,结果进 DO;全公开)===");
+check("设体力上限=4", ssAct(3, 3, { type: "setMaxHp", hp: 4 }).maxHp === 4);
+const rl = ssAct(3, 3, { type: "rollYuheng", suits: ["s", "h"], skills: [SK("zhiheng", "制衡"), SK("anguo", "安国")] });
+check("驭衡获得2个临时技能成功", rl.ok && SST(ssd[3]).temp.length === 2);
+check("★公开:旁人也看得到临时技能名+全文", SST(ssd[1]).temp[0].name === "制衡" && SST(ssd[1]).temp[0].text.includes("制衡"));
+check("临时技能生效时再驭衡被拒(TEMP_ACTIVE)", ssAct(3, 3, { type: "rollYuheng", suits: ["c"], skills: [SK("xiashu", "下书")] }).error === "TEMP_ACTIVE");
+check("空技能列表被拒(NO_SKILLS)", (ssAct(3, 3, { type: "turnEnd" }), ssAct(3, 3, { type: "rollYuheng", suits: ["s"], skills: [] }).error === "NO_SKILLS"));
+
+console.log("\n=== 神孙权2:回合结束失去临时技能 + 外来技能增删 ===");
+ssAct(3, 3, { type: "rollYuheng", suits: ["s", "h", "c"], skills: [SK("zhiheng", "制衡"), SK("anguo", "安国"), SK("dimeng", "缔盟")] });
+const te = ssAct(3, 3, { type: "turnEnd" });
+check("回合结束:失去3临时技能、摸3张", te.drew === 3 && SST(ssd[3]).temp.length === 0);
+check("添加外来技能成功、公开", ssAct(3, 3, { type: "addExt", name: "观星", note: "SP诸葛" }).ok && SST(ssd[1]).custom.length === 1 && SST(ssd[1]).custom[0].name === "观星");
+const extId = SST(ssd[3]).custom[0].id;
+check("移除外来技能成功", ssAct(3, 3, { type: "rmExt", id: extId }).ok && SST(ssd[3]).custom.length === 0);
+
+console.log("\n=== 神孙权3:帝力觉醒 —— 失去技能换圣质/权道/持纲 + 临时固化 ===");
+ssAct(3, 3, { type: "rollYuheng", suits: ["s", "h"], skills: [SK("zhiheng", "制衡"), SK("anguo", "安国")] });
+ssAct(3, 3, { type: "addExt", name: "观星", note: "" });
+const cId = SST(ssd[3]).custom[0].id;
+// 失去:驭衡 + 1个临时(制衡) + 1个外来(观星) = 3个 → 获得圣质/权道/持纲
+const aw = ssAct(3, 3, { type: "awaken", lose: ["yuheng", "t:zhiheng", "c:" + cId] });
+check("觉醒成功、体力上限-1(4→3)", aw.ok && SST(ssd[3]).maxHp === 3);
+check("失去驭衡(hasYuheng=false)", SST(ssd[3]).hasYuheng === false);
+check("获得圣质/权道/持纲3个", SST(ssd[3]).gained.length === 3 && SST(ssd[3]).gained.join() === "shengzhi,quandao,chigang");
+check("★驭衡已失去→未勾选的临时技能(安国)固化为永久", SST(ssd[3]).perm.length === 1 && SST(ssd[3]).perm[0].name === "安国" && SST(ssd[3]).temp.length === 0);
+check("★公开:旁人看得到觉醒技能与永久技能", SST(ssd[2]).gained.length === 3 && SST(ssd[2]).perm[0].name === "安国");
+check("重复觉醒被拒(ALREADY_AWAKENED)", ssAct(3, 3, { type: "awaken", lose: [] }).error === "ALREADY_AWAKENED");
+
+console.log("\n=== 神孙权4:持纲翻面 + 觉醒回滚 ===");
+check("持纲初始阳", SST(ssd[3]).chigangYang === true);
+check("翻面→阴", ssAct(3, 3, { type: "flipChigang" }).yang === false && SST(ssd[3]).chigangYang === false);
+const rb = ssAct(3, 3, { type: "rollbackAwaken" });
+check("回滚觉醒成功", rb.ok === true);
+check("回滚后体力上限恢复4、驭衡回来、觉醒清空", SST(ssd[3]).maxHp === 4 && SST(ssd[3]).hasYuheng === true && SST(ssd[3]).awakened === false && SST(ssd[3]).gained.length === 0);
+check("无快照再回滚被拒(NO_SNAPSHOT)", ssAct(3, 3, { type: "rollbackAwaken" }).error === "NO_SNAPSHOT");
+
+console.log("\n=== 神孙权5:权限 + 重置 ===");
+check("非神孙权不能操作", ssAct(1, 1, { type: "setMaxHp", hp: 5 }).error === "NOT_SHEN_ACTION");
+const ssrst = ssAct(3, 3, { type: "resetGame" });
+check("重置成功、体力回4、技能/外来清空、驭衡回来", ssrst.reset === true && SST(ssd[3]).maxHp === 4 && SST(ssd[3]).custom.length === 0 && SST(ssd[3]).perm.length === 0 && SST(ssd[3]).hasYuheng === true && SST(ssd[3]).awakened === false);
+check("座位武将保留(仍是神孙权)", room10.seats[3].general === "shensunquan");
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

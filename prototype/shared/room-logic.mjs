@@ -166,6 +166,20 @@ export function initToolState(generalId) {
       yishi: null,      // 移势花色提醒 'S'|'H'|'C'|'D'|null(公开)
       log: [],          // 公开事件(先略只记"记录了一张",不含牌名)
     };
+  if (generalId === "shensunquan")
+    return {
+      maxHp: 4,          // 体力上限(公开)
+      temp: [],          // [{id,name,text}] 驭衡当回合临时技能(客户端 roll 后送解析结果;公开)
+      perm: [],          // [{id,name,text}] 驭衡失去后固化的本局永久技能(公开)
+      custom: [],        // [{id,name,note}] 外来获得的技能(公开)
+      hasYuheng: true,   // 是否仍有驭衡(觉醒可失去;公开)
+      awakened: false,   // 帝力是否已觉醒(公开)
+      gained: [],        // ['shengzhi'|'quandao'|'chigang'] 觉醒获得前 N 个(公开;客户端有全文)
+      chigangYang: true, // 持纲阴阳(转换技翻面;公开)
+      preAwaken: null,   // 觉醒前快照(误触回滚用;公开无妨)
+      seq: 0,            // 外来技能 id 自增(worker/sim 一致,不用时间戳)
+      log: [],           // 公开事件
+    };
   return {};
 }
 
@@ -624,6 +638,96 @@ export class RoomCore {
       }
       if (t === "resetGame") {
         if (!isDong) return { error: "NOT_DONG_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 神孙权:驭衡帝力(全公开生成器直通;随机在客户端跑,只把解析好的技能进 DO)─────────
+    if (target.general === "shensunquan") {
+      const sSeat = targetSeat;
+      const isShen = bySeat === sSeat && iHold(sSeat); // 神孙权本人(或代持其座位)
+      const GAIN_ORDER = ["shengzhi", "quandao", "chigang"];      // 圣质/权道/持纲(固定顺序;客户端有全文)
+      const GAIN_NAME = { shengzhi: "圣质", quandao: "权道", chigang: "持纲" };
+      if (t === "setMaxHp") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        ts.maxHp = Math.max(1, Math.min(12, Math.floor(toolAction.hp) || 1));
+        return { ok: true, maxHp: ts.maxHp };
+      }
+      if (t === "rollYuheng") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        if (!ts.hasYuheng) return { error: "NO_YUHENG" };
+        if (ts.temp.length) return { error: "TEMP_ACTIVE" };        // 先结算回合结束再下次驭衡
+        const skills = Array.isArray(toolAction.skills) ? toolAction.skills : [];
+        if (!skills.length) return { error: "NO_SKILLS" };
+        ts.temp = skills.map((s) => ({ id: String(s.id || "").slice(0, 40), name: String(s.name || "").slice(0, 20), text: String(s.text || "").slice(0, 300) }));
+        const suitTxt = (Array.isArray(toolAction.suits) ? toolAction.suits : []).map((k) => GLYPH[String(k).toUpperCase()] || "").join("");
+        this._log(ts, `驭衡:弃置${ts.temp.length}张(${suitTxt})→获得${ts.temp.map((s) => "〖" + s.name + "〗").join("")}`);
+        return { ok: true };
+      }
+      if (t === "turnEnd") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        const n = ts.temp.length;
+        if (n) this._log(ts, `回合结束:失去${n}个临时技能,摸${n}张牌`);
+        ts.temp = [];
+        return { ok: true, drew: n };
+      }
+      if (t === "addExt") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        const name = String(toolAction.name || "").trim().slice(0, 20);
+        if (!name) return { error: "BAD_NAME" };
+        const note = String(toolAction.note || "").trim().slice(0, 40);
+        ts.seq++;
+        ts.custom.push({ id: "e" + ts.seq, name, note });
+        this._log(ts, `外来技能 +〖${name}〗${note ? "(" + note + ")" : ""}`);
+        return { ok: true };
+      }
+      if (t === "rmExt") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        const c = ts.custom.find((x) => x.id === toolAction.id);
+        if (!c) return { error: "NO_EXT" };
+        ts.custom = ts.custom.filter((x) => x.id !== toolAction.id);
+        this._log(ts, `外来技能 −〖${c.name}〗`);
+        return { ok: true };
+      }
+      if (t === "awaken") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        if (ts.awakened) return { error: "ALREADY_AWAKENED" };
+        const lose = Array.isArray(toolAction.lose) ? toolAction.lose : [];
+        ts.preAwaken = clone({ maxHp: ts.maxHp, temp: ts.temp, perm: ts.perm, custom: ts.custom, hasYuheng: ts.hasYuheng, gained: ts.gained, awakened: ts.awakened, chigangYang: ts.chigangYang });
+        ts.maxHp = Math.max(1, ts.maxHp - 1);
+        const lostNames = [];
+        lose.forEach((key) => {
+          if (key === "yuheng") { ts.hasYuheng = false; lostNames.push("驭衡"); }
+          else if (key.slice(0, 2) === "t:") { const id = key.slice(2); const sk = ts.temp.find((x) => x.id === id); if (sk) { ts.temp = ts.temp.filter((x) => x.id !== id); lostNames.push(sk.name); } }
+          else if (key.slice(0, 2) === "c:") { const id = key.slice(2); const c = ts.custom.find((x) => x.id === id); if (c) { ts.custom = ts.custom.filter((x) => x.id !== id); lostNames.push(c.name); } }
+        });
+        const n = Math.min(lose.length, 3);
+        ts.gained = GAIN_ORDER.slice(0, n);
+        ts.awakened = true; ts.chigangYang = true;
+        this._log(ts, `帝力觉醒:体力上限-1(现${ts.maxHp}),失去${lose.length}个技能${lostNames.length ? "(" + lostNames.join("/") + ")" : ""},获得${ts.gained.map((id) => "〖" + GAIN_NAME[id] + "〗").join("")}`);
+        if (!ts.hasYuheng && ts.temp.length) { ts.perm = ts.perm.concat(ts.temp); this._log(ts, `驭衡已失去:${ts.temp.length}个临时技能固化为本局永久技能`); ts.temp = []; }
+        return { ok: true, awakened: true };
+      }
+      if (t === "rollbackAwaken") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        if (!ts.preAwaken) return { error: "NO_SNAPSHOT" };
+        const p = ts.preAwaken;
+        ts.maxHp = p.maxHp; ts.temp = p.temp; ts.perm = p.perm || []; ts.custom = p.custom;
+        ts.hasYuheng = p.hasYuheng; ts.gained = p.gained; ts.awakened = p.awakened; ts.chigangYang = p.chigangYang;
+        ts.preAwaken = null;
+        this._log(ts, "已回滚帝力觉醒(误触撤销)");
+        return { ok: true };
+      }
+      if (t === "flipChigang") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
+        ts.chigangYang = !ts.chigangYang;
+        this._log(ts, `持纲翻面:现为${ts.chigangYang ? "阳(判定→摸牌)" : "阴(判定→出牌)"}`);
+        return { ok: true, yang: ts.chigangYang };
+      }
+      if (t === "resetGame") {
+        if (!isShen) return { error: "NOT_SHEN_ACTION" };
         target.toolState = initToolState(target.general);
         return { ok: true, reset: true };
       }

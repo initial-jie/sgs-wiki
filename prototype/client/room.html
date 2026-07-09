@@ -122,8 +122,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -133,7 +133,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              yuanji:{view:s=>viewYjTool(s),bind:(s,q)=>bindYj(s,q)},
              zhongyan:{view:s=>viewZyTool(s),bind:(s,q)=>bindZy(s,q)},
              simayi:{view:s=>viewSmTool(s),bind:(s,q)=>bindSm(s,q)},
-             dongzhao:{view:s=>viewDzTool(s),bind:(s,q)=>bindDz(s,q)} };
+             dongzhao:{view:s=>viewDzTool(s),bind:(s,q)=>bindDz(s,q)},
+             shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)} };
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -297,6 +298,7 @@ function viewSeats(){
         +`<option value="zhongyan" ${g==="zhongyan"?"selected":""}>标钟琰(有工具)</option>`
         +`<option value="simayi" ${g==="simayi"?"selected":""}>魔司马懿(有工具)</option>`
         +`<option value="dongzhao" ${g==="dongzhao"?"selected":""}>谋董昭(有工具)</option>`
+        +`<option value="shensunquan" ${g==="shensunquan"?"selected":""}>神孙权(有工具)</option>`
         +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
@@ -1237,6 +1239,149 @@ function bindDz(dz,q){
   q("[data-dzyishi]").forEach(b=>b.onclick=()=>act({type:"yishiSet",suit:b.dataset.dzyishi}));
   q("[data-dzyishiclr]").forEach(b=>b.onclick=()=>act({type:"yishiClear"}));
   q("[data-dzreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空先略/顺机/造王/移势全部记录,座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 神孙权工具:驭衡帝力(全公开生成器;随机在本机跑,解析结果进 DO)---------- */
+const SS_BUILTIN=[
+ {id:'shenxing',name:'慎行',text:'出牌阶段,你可以弃置两张牌,然后摸一张牌。'},
+ {id:'bingyi',name:'秉壹',text:'每阶段限一次,当你的牌因弃置置入弃牌堆后,你可以展示所有手牌:若颜色均相同,你可以与至多X名其他角色各摸一张牌(X为你的手牌数)。'},
+ {id:'zhiheng',name:'制衡',text:'出牌阶段限一次,你可以弃置任意张牌,然后摸等量张牌,若你以此法弃置了所有手牌,你额外摸一张牌。'},
+ {id:'xiashu',name:'下书',text:'出牌阶段开始时,你可以交给一名其他角色所有手牌,然后其展示任意张手牌,你选择一项:1.获得展示牌;2.获得其未展示的手牌。'},
+ {id:'anguo',name:'安国',text:'出牌阶段限一次,选一名其他角色,按其手牌/体力/装备是否全场最少给予相应收益,然后你执行其未满足但你满足条件的效果。'},
+ {id:'dimeng',name:'缔盟',text:'出牌阶段限一次,选两名其他角色并弃置X张牌(X为两者手牌数之差),然后交换两者手牌。'},
+ {id:'lanjiang',name:'澜疆',text:'结束阶段,令手牌数不小于你的角色依次选择是否令你摸一张;然后可对手牌数等于你的一名角色造成1点伤害,并令手牌数小于你的一名角色摸一张。'},
+ {id:'guanwei',name:'观微',text:'每回合限一次,每名角色出牌阶段结束时,若其本回合使用过至少两张牌且花色均相同,你可以弃一张牌令其摸两张并执行额外出牌阶段。'},
+ {id:'diaodu',name:'调度',text:'与你势力相同的角色使用装备牌时其可摸一张;出牌阶段开始时,你可以获得同势力一名角色装备区一张牌,并可转交另一名角色。'},
+ {id:'anxu',name:'安恤',text:'出牌阶段限一次,令一名其他角色获得另一名手牌数大于其的角色一张手牌并展示,若非黑桃你摸一张。'},
+ {id:'hongyuan',name:'弘援',text:'每阶段限一次,当你一次获得至少两张牌后,你可以交给至多两名其他角色各一张牌。'},
+ {id:'xingxue',name:'兴学',text:'结束阶段,令至多X名角色依次摸一张并将一张牌置于牌堆顶(X为你的体力值)。'},
+ {id:'bizheng',name:'弼政',text:'摸牌阶段结束时,令一名其他角色摸两张,然后你与其中手牌数大于体力上限者弃两张牌。'},
+ {id:'youdi',name:'诱敌',text:'结束阶段,令一名其他角色弃你一张手牌,若不为【杀】你获得其一张牌,若不为黑色牌你摸一张。'}
+];
+const SS_GAIN=[
+ {id:'shengzhi',name:'圣质',text:'锁定技,当你发动非锁定技后,你本回合使用的下一张牌无距离和次数限制。'},
+ {id:'quandao',name:'权道',text:'锁定技,当你使用【杀】或普通锦囊牌时,你将手牌中的【杀】或普通锦囊牌弃至两者中的最小值并摸一张牌。'},
+ {id:'chigang',name:'持纲',text:'转换技,锁定技,①你的判定阶段改为摸牌阶段;②你的判定阶段改为出牌阶段。'}
+];
+const SS_SUITS=[{k:'S',t:'♠'},{k:'H',t:'♥',red:1},{k:'C',t:'♣'},{k:'D',t:'♦',red:1}];
+let ssPool=null;              // 神孙权本机吴技能池 [{id,name,text,enabled,custom}](随机源;不进 DO)
+const ssSuits=new Set();      // 本次驭衡选中的花色(本机瞬态)
+let ssWizard=null;            // 觉醒向导 {lose:[keys]}(本机瞬态,confirm 才进 DO)
+function ssEnsurePool(){ if(!ssPool) ssPool=SS_BUILTIN.map(s=>({id:s.id,name:s.name,text:s.text,enabled:true,custom:false})); }
+function ssSkillCount(ts){ return (ts.hasYuheng?1:0)+1+(ts.temp||[]).length+(ts.perm||[]).length+(ts.custom||[]).length+(ts.gained||[]).length; }
+function ssGainName(id){ const g=SS_GAIN.find(x=>x.id===id); return g?g.name:id; }
+function viewSsTool(ss){
+  const seat=ss.seatNo, ts=ss.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  ssEnsurePool();
+  const cnt=ssSkillCount(ts), canAwaken=!ts.awakened&&cnt>ts.maxHp;
+  let h="";
+  // 状态栏(公开)
+  const parts=[]; if(ts.hasYuheng)parts.push("驭衡"); parts.push("帝力");
+  if((ts.temp||[]).length)parts.push("临时×"+ts.temp.length);
+  if((ts.perm||[]).length)parts.push("永久×"+ts.perm.length);
+  if((ts.custom||[]).length)parts.push("外来×"+ts.custom.length);
+  if((ts.gained||[]).length)parts.push("觉醒×"+ts.gained.length);
+  h+=`<div class="card"><div class="row"><div class="grow"><div class="hint" style="margin:0">体力上限</div><div style="font-size:1.4em;color:var(--gold,var(--qi))">${iAm?`<button data-sshp="-1" style="padding:2px 10px">−</button> `:''}${ts.maxHp}${iAm?` <button data-sshp="1" style="padding:2px 10px">＋</button>`:''}</div></div>`
+    +`<div class="grow"><div class="hint" style="margin:0">当前技能数</div><div style="font-size:1.4em;color:var(--seal)">${cnt}</div><div class="hint" style="margin:0">${parts.join(" + ")}</div></div></div>`;
+  if(canAwaken) h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);margin-top:8px;color:var(--seal)">⚡ 技能数(${cnt})已超过体力上限(${ts.maxHp}),可发动〖帝力〗觉醒(见下方)。</div>`;
+  h+=`</div>`;
+  // 驭衡(仅神孙权可操作;临时技能列表公开)
+  h+=`<div class="card"><h2>驭衡 · 回合开始<span class="tag">锁定技</span></h2>`;
+  if(!ts.hasYuheng){
+    h+=`<div class="hint">〖驭衡〗已随帝力觉醒失去。${(ts.perm||[]).length?'以下技能已固化为本局永久技能:':''}</div>`;
+  }else if(iAm){
+    if((ts.temp||[]).length){
+      h+=`<div class="hint">本回合临时技能生效中,先结算回合结束再进行下次驭衡。</div>`;
+    }else{
+      h+=`<div class="hint">选择本次弃置的牌的花色(互不相同),弃几张随机获得几个吴技能:</div><div class="row" style="margin-top:6px">`;
+      for(const s of SS_SUITS) h+=`<button class="pick ${ssSuits.has(s.k)?'sel':''}" data-sssuit="${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+      h+=`</div><div class="row" style="margin-top:8px"><button class="primary grow" data-ssroll="1" ${ssSuits.size?'':'disabled'}>弃置${ssSuits.size||''}张 · 随机获得${ssSuits.size||''}个技能</button><span class="hint" style="margin:0">池 ${ssPool.filter(p=>p.enabled).length}/${ssPool.length}</span></div>`;
+    }
+  }else{
+    h+=`<div class="hint">驭衡的随机由神孙权本人操作,获得技能公开如下。</div>`;
+  }
+  // 临时 + 永久技能(公开)
+  for(const s of (ts.temp||[])) h+=`<div class="slot" style="border-left:3px solid var(--seal);margin-top:8px"><div class="hint" style="margin:0">本回合临时技能</div><b style="color:var(--gold,var(--qi))">〖${esc(s.name)}〗</b>${esc(s.text)}</div>`;
+  for(const s of (ts.perm||[])) h+=`<div class="slot" style="border-left:3px solid var(--qi);margin-top:8px"><div class="hint" style="margin:0">本局永久技能(驭衡失去后固化)</div><b style="color:var(--gold,var(--qi))">〖${esc(s.name)}〗</b>${esc(s.text)}</div>`;
+  if(iAm&&(ts.temp||[]).length) h+=`<div class="row end" style="margin-top:8px"><button class="gold" data-ssturnend="1">回合结束:失去${ts.temp.length}个临时技能并摸${ts.temp.length}张</button></div>`;
+  h+=`</div>`;
+  // 外来技能(公开)
+  h+=`<div class="card"><h2>外来获得的技能<span class="tag">计入觉醒判定</span></h2>`;
+  if(!(ts.custom||[]).length) h+=`<div class="hint">暂无外来技能</div>`;
+  else for(const c of ts.custom) h+=`<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--line)"><span class="grow"><b style="color:var(--gold,var(--qi))">〖${esc(c.name)}〗</b>${c.note?`<span class="hint" style="margin:0">(${esc(c.note)})</span>`:''}</span>${iAm?`<button class="ghost" data-ssrmext="${esc(c.id)}">移除</button>`:''}</span></div>`;
+  if(iAm) h+=`<div class="row" style="margin-top:8px"><input id="ssExtName" placeholder="技能名" style="flex:1"><input id="ssExtNote" placeholder="来源备注(选填)" style="flex:1.4"><button class="ghost" data-ssaddext="1">添加</button></div>`;
+  h+=`</div>`;
+  // 帝力觉醒
+  h+=`<div class="card"><h2>帝力 · 觉醒<span class="tag">觉醒技</span></h2>`;
+  if(ts.awakened){
+    h+=`<div class="hint">已觉醒 ✔ 体力上限已 -1,觉醒技能见下方。</div>`;
+    if(iAm&&ts.preAwaken) h+=`<div class="row end"><button class="ghost" data-ssrollback="1">撤销觉醒(误触回滚)</button></div>`;
+  }else if(iAm&&ssWizard){
+    const items=[];
+    if(ts.hasYuheng) items.push({key:'yuheng',label:'〖驭衡〗(锁定技·本体技能)'});
+    (ts.temp||[]).forEach(s=>items.push({key:'t:'+s.id,label:'〖'+s.name+'〗(本回合临时)'}));
+    (ts.custom||[]).forEach(c=>items.push({key:'c:'+c.id,label:'〖'+c.name+'〗(外来)'}));
+    const n=ssWizard.lose.length, gn=SS_GAIN.slice(0,Math.min(n,3)).map(g=>'〖'+g.name+'〗').join('');
+    const loseY=ssWizard.lose.includes('yuheng'), keepTemp=(ts.temp||[]).filter(s=>!ssWizard.lose.includes('t:'+s.id)).length;
+    h+=`<div class="slot" style="border-style:solid;border-color:var(--qi)"><b style="color:var(--gold,var(--qi))">帝力觉醒流程</b> 体力上限将 -1,勾选要失去的技能(帝力不可失去):`;
+    for(const it of items) h+=`<div class="row" style="padding:3px 0"><input type="checkbox" ${ssWizard.lose.includes(it.key)?'checked':''} data-sslose="${esc(it.key)}"><span style="margin-left:6px">${it.label}</span></div>`;
+    h+=`<div class="hint">将失去 <b>${n}</b> 个 → 获得前 <b>${Math.min(n,3)}</b> 个:${n?gn:'(无)'}${n>3?'(超过3个仅得3个)':''}</div>`;
+    if(loseY&&keepTemp>0) h+=`<div class="hint" style="color:var(--warn)">失去驭衡后,未勾选的 ${keepTemp} 个临时技能将固化为本局永久技能。</div>`;
+    h+=`<div class="row end" style="margin-top:8px"><button class="ghost" data-sswizcancel="1">取消</button><button class="gold" data-ssawaken="1">确认觉醒</button></div></div>`;
+  }else{
+    h+=`<div class="hint">条件:技能数超过体力上限(当前 ${cnt} / ${ts.maxHp})。</div>`;
+    if(iAm) h+=`<button class="gold" data-sswizopen="1" ${canAwaken?'':'disabled'}>发动帝力 · 觉醒</button>`;
+  }
+  h+=`</div>`;
+  // 觉醒技能(公开;持纲太极翻面)
+  if((ts.gained||[]).length){
+    h+=`<div class="card"><h2>觉醒技能</h2>`;
+    for(const id of ts.gained){ const g=SS_GAIN.find(x=>x.id===id); if(!g)continue;
+      h+=`<div class="slot" style="border-left:3px solid var(--qi);margin-top:6px"><b style="color:var(--gold,var(--qi))">〖${g.name}〗</b>${g.text}`;
+      if(id==='quandao') h+=`<div class="hint" style="margin-top:4px"><b>三叠持牌法(免展示):</b>手牌分【杀】/普通锦囊/其余三叠,发动时数前两叠张数,多者弃至与少者相同后摸一张,无需亮牌。</div>`;
+      if(id==='chigang') h+=`<div class="row" style="margin-top:6px"><span class="chip" style="border-color:var(--seal);color:var(--seal)">${ts.chigangYang?'阳':'阴'}</span><span class="grow" style="margin-left:6px">${ts.chigangYang?'① 判定阶段改为摸牌阶段':'② 判定阶段改为出牌阶段'}</span>${iAm?`<button class="ghost" data-ssflip="1">翻面</button>`:''}</span>`;
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  }
+  // 技能池管理(本机;仅神孙权)
+  if(iAm){
+    h+=`<div class="card"><h2>吴技能池管理<span class="tag">本机 · 刷新回默认</span></h2><div class="hint">取消勾选=临时移出随机池;自定义可增删。</div>`;
+    for(const sk of ssPool) h+=`<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--line)"><input type="checkbox" ${sk.enabled?'checked':''} data-sspool="${esc(sk.id)}"><span class="grow" style="margin-left:6px;${sk.enabled?'':'opacity:.4'}"><b style="color:var(--gold,var(--qi))">〖${esc(sk.name)}〗</b>${sk.custom?'<span class="hint" style="margin:0">(自定义)</span>':''}${esc(sk.text)}</span>${sk.custom?`<button class="ghost" data-sspoolrm="${esc(sk.id)}">删</button>`:''}</span></div>`;
+    h+=`<div class="row" style="margin-top:8px"><input id="ssPoolName" placeholder="技能名" style="flex:1"><input id="ssPoolText" placeholder="描述" style="flex:1.6"><button class="ghost" data-sspooladd="1">添加</button></div></div>`;
+  }
+  // 日志
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?ts.log.slice().reverse().map(l=>`<div>${esc(l)}</div>`).join(""):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-ssreset="1">⟳ 重开一局(技能池设置保留)</button></div></div>`;
+  return h;
+}
+function bindSs(ss,q){
+  const S2=ss.seatNo, ts=ss.toolState||{};
+  const act=(o)=>send({type:"action",targetSeat:S2,bySeat:S2,toolAction:o});
+  ssEnsurePool();
+  q("[data-sshp]").forEach(b=>b.onclick=()=>act({type:"setMaxHp",hp:(ts.maxHp||4)+(+b.dataset.sshp)}));
+  q("[data-sssuit]").forEach(b=>b.onclick=()=>{const k=b.dataset.sssuit;if(ssSuits.has(k))ssSuits.delete(k);else ssSuits.add(k);render();});
+  q("[data-ssroll]").forEach(b=>b.onclick=()=>{
+    const suits=[...ssSuits]; if(!suits.length)return;
+    const bag=ssPool.filter(p=>p.enabled).slice(), pick=[], k=Math.min(suits.length,bag.length);
+    for(let i=0;i<k;i++)pick.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
+    if(!pick.length){toast("技能池为空,无法获得");return;}
+    act({type:"rollYuheng",suits,skills:pick.map(p=>({id:p.id,name:p.name,text:p.text}))}); ssSuits.clear();
+  });
+  q("[data-ssturnend]").forEach(b=>b.onclick=()=>{if(confirm("回合结束?失去全部临时技能并摸等量牌。"))act({type:"turnEnd"});});
+  q("[data-ssaddext]").forEach(b=>b.onclick=()=>{const nm=$("#ssExtName");if(!nm||!nm.value.trim())return;act({type:"addExt",name:nm.value,note:($("#ssExtNote")||{}).value||""});});
+  q("[data-ssrmext]").forEach(b=>b.onclick=()=>{if(confirm("移除该外来技能?"))act({type:"rmExt",id:b.dataset.ssrmext});});
+  q("[data-sswizopen]").forEach(b=>b.onclick=()=>{ssWizard={lose:[]};render();});
+  q("[data-sswizcancel]").forEach(b=>b.onclick=()=>{ssWizard=null;render();});
+  q("[data-sslose]").forEach(cb=>cb.onchange=()=>{const key=cb.dataset.sslose;const i=ssWizard.lose.indexOf(key);if(i>=0)ssWizard.lose.splice(i,1);else ssWizard.lose.push(key);render();});
+  q("[data-ssawaken]").forEach(b=>b.onclick=()=>{if(!ssWizard)return;if(confirm("确认帝力觉醒?体力上限-1,失去所勾选技能。"))  {act({type:"awaken",lose:ssWizard.lose.slice()});ssWizard=null;}});
+  q("[data-ssrollback]").forEach(b=>b.onclick=()=>{if(confirm("撤销帝力觉醒(仅纠错)?"))act({type:"rollbackAwaken"});});
+  q("[data-ssflip]").forEach(b=>b.onclick=()=>act({type:"flipChigang"}));
+  q("[data-sspool]").forEach(cb=>cb.onchange=()=>{const p=ssPool.find(x=>x.id===cb.dataset.sspool);if(p){p.enabled=!p.enabled;render();}});
+  q("[data-sspoolrm]").forEach(b=>b.onclick=()=>{ssPool=ssPool.filter(x=>x.id!==b.dataset.sspoolrm);render();});
+  q("[data-sspooladd]").forEach(b=>b.onclick=()=>{const nm=$("#ssPoolName");if(!nm||!nm.value.trim())return;const tx=($("#ssPoolText")||{}).value||"(未填写描述)";ssPool.push({id:"p"+ssPool.length+"_"+nm.value.trim(),name:nm.value.trim(),text:tx,enabled:true,custom:true});render();});
+  q("[data-ssreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空体力/技能/外来/觉醒记录,技能池设置保留,座位武将保留。")){ssSuits.clear();ssWizard=null;act({type:"resetGame"});}});
 }
 
 render();
