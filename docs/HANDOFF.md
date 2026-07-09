@@ -2,6 +2,15 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 258 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
+## 零、当前状态(2026-07-08 会话收尾)
+
+- ✅ **12/12 武将工具全部接房间**:吕布/南华/A档6(荀攸/黄月英/曹操/袁姬/钟琰/司马懿)/董昭/神孙权/貂蝉/魔孙权。room-sim **258 passed**、deck **26 passed**、前端 view/bind node+vm 冒烟全绿。
+- ✅ **已合并并推送到 `main`**(用户已 push,merge commit `c6f02c8`);**worker 已由用户 `wrangler deploy` 重新部署**——线上 `https://sgs-room.dujie1995.workers.dev` 现含全部 12 工具。
+- ✅ **前端首页已上线房间入口**:`index.html` 线下工具区上方的「线下多人房间」大 section(v1.2),直达 worker。GitHub Pages 会随 push 自动更新。
+- ✅ git remote 已切 SSH(`git@github.com:initial-jie/sgs-wiki.git`);用户需把 `~/.ssh/id_ed25519.pub` 加到 GitHub `initial-jie` 账号后即可 `git push` 免密。
+- 🔜 **下一步 = 真机多人测反馈**:用户 2026-07-09 拉朋友多手机实测。重点验:魔孙权权御暗选(各自手机秘密选、翻开前含孙权都偷看不到)、貂蝉幻惑位置报数向导、董昭先略暗置、各工具"操作权归本座位/他人只读"、聚焦↔大厅。**明天带着真机问题清单来,逐个调**。
+- 可选后续(非阻塞):DO storage 持久化 + WebSocket hibernation 正式化;军争 `EXACT_CARDS` 已开 STRICT(#1 完成)。
+
 ## 一、项目背景
 
 - **sgs-wiki**:三国杀线下速查 Wiki + 12 个武将线下化工具,纯静态 HTML,GitHub Pages 托管。仓库 `github.com/initial-jie/sgs-wiki`,本地 `/Users/bytedance/sgs-wiki`。已上线 v1.1。
