@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SGS 房间 · 调试客户端</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, system-ui, "PingFang SC", sans-serif;
+         background: #14161a; color: #e6e8eb; padding: 12px; }
+  h1 { font-size: 17px; margin: 0 0 10px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  input, select, button { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid #333;
+          background: #1e2127; color: #e6e8eb; }
+  input { min-width: 60px; }
+  button { cursor: pointer; background: #2b6cb0; border-color: #2b6cb0; }
+  button.sec { background: #2a2d34; border-color: #3a3d44; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .me { color: #7dd3fc; font-weight: 600; }
+  .seat { border: 1px solid #2a2d34; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .seat.mine { border-color: #2b6cb0; background: #172029; }
+  .seat h3 { margin: 0 0 6px; font-size: 15px; }
+  .tag { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #2a2d34; margin-left: 6px; }
+  .lvbu { margin-top: 8px; padding: 8px; border-radius: 6px; background: #201a17; border: 1px solid #4a3426; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+  .muted { color: #8b909a; }
+  .cards { font-family: ui-monospace, monospace; color: #fbbf24; }
+  .secret { color: #6b7280; font-style: italic; }
+  #log { font-family: ui-monospace, monospace; font-size: 12px; background: #0d0f12; border: 1px solid #222;
+         border-radius: 6px; padding: 8px; height: 110px; overflow: auto; white-space: pre-wrap; margin-top: 8px; }
+  details { margin-top: 8px; } summary { cursor: pointer; color: #8b909a; }
+  pre { font-size: 11px; overflow: auto; background: #0d0f12; padding: 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>SGS 房间 · 调试客户端</h1>
+
+<div class="bar">
+  <label>服务端 <input id="base" value="ws://localhost:8787" size="22" /></label>
+  <label>房间码 <input id="code" value="1234" size="5" maxlength="4" /></label>
+  <button class="sec" id="rand">随机</button>
+  <button id="conn">连接</button>
+  <span class="muted">本设备:</span> <span class="me" id="did"></span>
+  <span class="muted" id="hold"></span>
+</div>
+
+<div id="seats"></div>
+<div id="log"></div>
+
+<details>
+  <summary>收到的原始 roomState(调试用)</summary>
+  <pre id="raw"></pre>
+</details>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let ws = null, state = null;
+
+// 每个浏览器标签 = 一台"设备"。deviceId 存 localStorage,重连即恢复身份。
+// 想在同机模拟多台设备:用不同浏览器 / 隐身窗口,或在下方手动改 deviceId。
+let deviceId = localStorage.getItem("sgs_device");
+if (!deviceId) { deviceId = "dev-" + Math.random().toString(36).slice(2, 7); localStorage.setItem("sgs_device", deviceId); }
+$("did").textContent = deviceId;
+$("did").title = "点击可改(模拟另一台设备)";
+$("did").style.cursor = "pointer";
+$("did").onclick = () => {
+  const v = prompt("设置本设备 deviceId(模拟不同手机)", deviceId);
+  if (v) { deviceId = v; localStorage.setItem("sgs_device", v); $("did").textContent = v; }
+};
+
+$("rand").onclick = () => { $("code").value = String(Math.floor(1000 + Math.random() * 9000)); };
+
+function log(msg) {
+  const el = $("log");
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+
+function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+$("conn").onclick = () => {
+  const base = $("base").value.replace(/\/+$/, "");
+  const code = $("code").value.trim();
+  if (!/^\d{4}$/.test(code)) { alert("房间码要 4 位数字"); return; }
+  if (ws) try { ws.close(); } catch {}
+  ws = new WebSocket(base + "/api/room/" + code + "/ws");
+  ws.onopen = () => { log("已连接房间 " + code); send({ type: "hello", deviceId }); };
+  ws.onclose = () => log("连接关闭");
+  ws.onerror = () => log("连接出错(服务端起了吗?wrangler dev)");
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === "roomState") { state = m; render(); }
+    else if (m.type === "actionResult") log("★ 夺到炁牌:" + m.card + "(仅你可见)");
+    else if (m.type === "error") log("✗ 错误:" + m.code);
+  };
+};
+
+function render() {
+  $("hold").textContent = "认领座位: [" + (state.youHold.join(", ") || "无") + "]";
+  $("raw").textContent = JSON.stringify(state, null, 2);
+  const hold = new Set(state.youHold);
+  const lvbuSeat = Object.values(state.seats).find((s) => s.general === "lvbu");
+  const box = $("seats");
+  box.innerHTML = "";
+
+  for (const s of Object.values(state.seats)) {
+    const mine = hold.has(s.seatNo);
+    const d = document.createElement("div");
+    d.className = "seat" + (mine ? " mine" : "");
+    let h = `<h3>座位 ${s.seatNo}${mine ? '<span class="tag" style="background:#2b6cb0">我</span>' : ""}` +
+            `<span class="tag">${s.general || "未选武将"}</span>` +
+            `<span class="tag">持有设备 ${s.holderDevices.length}</span></h3>`;
+
+    h += `<div class="row">`;
+    h += mine
+      ? `<button class="sec" data-act="release" data-n="${s.seatNo}">释放</button>`
+      : `<button class="sec" data-act="claim" data-n="${s.seatNo}">认领(可代持)</button>`;
+    if (mine && !s.general)
+      h += `<select data-gen="${s.seatNo}"><option value="">选武将…</option>` +
+           `<option value="lvbu">魔吕布</option><option value="none">其他(公开占位)</option></select>`;
+    h += `</div>`;
+
+    // 吕布工具区
+    if (s.general === "lvbu") {
+      const ts = s.toolState;
+      h += `<div class="lvbu"><b>魔吕布 · 炁台账</b>`;
+      // 各座位数量(全场公开)
+      const counts = ts.qiRegister?.counts || {};
+      h += `<div class="row muted">各座位已登记数量: ${Object.keys(counts).length ? Object.entries(counts).map(([k, v]) => `座位${k}=${v}`).join("  ") : "(暂无)"}</div>`;
+
+      // 我以某个非吕布座位身份登记初始牌
+      const myOther = state.youHold.filter((n) => n !== s.seatNo);
+      for (const bySeat of myOther) {
+        const my = ts.qiRegister?.mine?.[bySeat];
+        h += `<div class="row"><span>以座位 ${bySeat} 登记我的初始牌为炁:</span>` +
+             `<input data-reg="${bySeat}" data-lvbu="${s.seatNo}" placeholder="杀,闪,桃" size="16" />` +
+             `<button data-regbtn="${bySeat}" data-lvbu="${s.seatNo}">登记</button>` +
+             (my ? `<span class="cards">已登记: ${my.cards.join(" ")}</span>` : "") + `</div>`;
+      }
+
+      // 我就是吕布本人
+      if (hold.has(s.seatNo)) {
+        h += `<div class="row"><span class="me">吕布视角(看不到别人牌面):</span></div>`;
+        h += `<div class="row"><span>夺炁 — 从座位</span>` +
+             `<input data-from="${s.seatNo}" placeholder="4" size="3" />` +
+             `<span>第</span><input data-idx="${s.seatNo}" placeholder="0" size="3" value="0" /><span>张</span>` +
+             `<button data-duoqi="${s.seatNo}">夺炁(系统抽取)</button></div>`;
+        h += `<div class="row">夺获区: <span class="cards">${(ts.gained || []).join(" ") || "(空)"}</span></div>`;
+        const dl = ts.duoqiLog || [];
+        h += `<div class="row muted">夺炁记录: ${dl.length ? dl.map((e) => e.note).join("；") : "(无)"}</div>`;
+      } else {
+        // 旁观者:证明看不到吕布夺获明细
+        const g = ts.gained;
+        h += `<div class="row secret">你不是吕布:夺获区明细不可见,仅数量 = ${g && g.count !== undefined ? g.count : (Array.isArray(g) ? g.length : 0)}</div>`;
+        const dl = ts.duoqiLog || [];
+        h += `<div class="row muted">夺炁记录(公开): ${dl.length ? dl.map((e) => e.note).join("；") : "(无)"}</div>`;
+      }
+      h += `</div>`;
+    }
+
+    d.innerHTML = h;
+    box.appendChild(d);
+  }
+
+  // 绑事件
+  box.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => {
+    const n = +b.dataset.n;
+    send({ type: b.dataset.act === "claim" ? "claimSeat" : "releaseSeat", seatNo: n });
+  });
+  box.querySelectorAll("[data-gen]").forEach((sel) => sel.onchange = () => {
+    if (sel.value) send({ type: "setGeneral", seatNo: +sel.dataset.gen, generalId: sel.value });
+  });
+  box.querySelectorAll("[data-regbtn]").forEach((b) => b.onclick = () => {
+    const bySeat = +b.dataset.regbtn, lvbuSeat = +b.dataset.lvbu;
+    const inp = box.querySelector(`[data-reg="${bySeat}"]`);
+    const cards = inp.value.split(/[,，\s]+/).filter(Boolean);
+    if (!cards.length) return;
+    send({ type: "action", targetSeat: lvbuSeat, bySeat, toolAction: { type: "registerQi", cards } });
+    inp.value = "";
+  });
+  box.querySelectorAll("[data-duoqi]").forEach((b) => b.onclick = () => {
+    const lvbuSeat = +b.dataset.duoqi;
+    const from = +box.querySelector(`[data-from="${lvbuSeat}"]`).value;
+    const idx = +box.querySelector(`[data-idx="${lvbuSeat}"]`).value || 0;
+    if (!from) { alert("填从哪个座位夺"); return; }
+    send({ type: "action", targetSeat: lvbuSeat, bySeat: lvbuSeat, toolAction: { type: "duoqi", fromSeat: from, index: idx } });
+  });
+}
+</script>
+</body>
+</html>
