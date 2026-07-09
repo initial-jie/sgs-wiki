@@ -96,5 +96,59 @@ check("入魔状态清空", LT(dev[1]).entered === false);
 check("座位武将保留(仍是吕布)", room.seats[1].general === "lvbu");
 check("非吕布不能重置", room.action(dev[3], { targetSeat: 1, bySeat: 3, toolAction: { type: "resetGame" } }).error === "NOT_LVBU_ACTION");
 
+// ═══════════════ 南华老仙:天书(ownerOnly 条件公开)═══════════════
+const room2 = new RoomCore("5555", 5, () => 0);
+const nd = {}; for (let i = 1; i <= 5; i++) { nd[i] = `nd${i}`; room2.claimSeat(nd[i], i); }
+room2.setGeneral(nd[2], 2, "nanhua");           // 座位2 = 南华老仙
+const NT = (d) => room2.viewFor(d).seats[2].toolState;
+const own = (d) => NT(d).books.filter((b) => b.holder === 2);
+const bookA = { timing: { level: 2, text: "准备阶段" }, effect: { level: 2, text: "你可以回复 1 点体力" } };
+const bookB = { timing: { level: 1, text: "当你使用牌后" }, effect: { level: 1, text: "你可以摸 1 张牌" } };
+const bookC = { timing: { level: 3, text: "一名其他角色死亡后" }, effect: { level: 3, text: "你可获得两张锦囊牌" } };
+
+console.log("\n=== 南华1:书写天书,内容仅本人可见,旁人只见占位 ===");
+const nw = room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "writeBook", book: bookA } });
+check("南华写书成功", nw.ok === true, JSON.stringify(nw));
+check("南华本人看得到时机+效果", NT(nd[2]).books[0].timing.text === "准备阶段" && NT(nd[2]).books[0].effect.text.includes("回复"));
+check("新书 uses=2、未发动", NT(nd[2]).books[0].uses === 2 && NT(nd[2]).books[0].revealed === false);
+check("★旁人只见占位(hidden),看不到内容", NT(nd[3]).books[0].hidden === true && NT(nd[3]).books[0].timing === undefined);
+check("旁人仍能数出南华持有1册", NT(nd[3]).books.filter((b) => b.holder === 2).length === 1);
+
+console.log("\n=== 南华2:合道上限 —— 满栏须替换,濒死升3册 ===");
+room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "writeBook", book: bookB } });
+check("cap=2 满栏后直接再写被拒(须替换)", room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "writeBook", book: bookA } }).error === "NEED_REPLACE");
+const rep = room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "writeBook", book: bookC, replaceIndex: 0 } });
+check("指定替换第0册成功", rep.ok && NT(nd[2]).books[0].timing.text === "一名其他角色死亡后");
+check("升到 cap=3 后可写第3册", room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "setCap", cap: 3 } }).ok
+  && room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "writeBook", book: bookA } }).ok);
+check("南华现自留3册", own(nd[2]).length === 3);
+
+console.log("\n=== 南华3:授术 —— 仅南华+受术者可见,第三方仍占位 ===");
+// books: [0]=C(自留) [1]=B(自留) [2]=A(自留)
+const gv = room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "giveBook", index: 0, toSeat: 4 } });
+check("授术座位4 成功", gv.ok === true, JSON.stringify(gv));
+check("南华仍能看到已授术天书内容", NT(nd[2]).books.find((b) => b.holder === 4)?.timing?.text === "一名其他角色死亡后");
+check("★受术者座位4 能看到该天书内容", room2.viewFor(nd[4]).seats[2].toolState.books.find((b) => b.holder === 4)?.effect?.text.includes("锦囊"));
+check("★第三方座位3 对该天书仅见占位", room2.viewFor(nd[3]).seats[2].toolState.books.find((b) => b.holder === 4)?.hidden === true);
+check("授术后该册 uses=1、离开南华持有栏", NT(nd[2]).books.find((b) => b.holder === 4).uses === 1 && own(nd[2]).length === 2);
+check("同一玩家已持一册,再授术被拒", room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "giveBook", index: 1, toSeat: 4 } }).error === "TARGET_HAS_BOOK");
+
+console.log("\n=== 南华4:发动 —— 全场公开 + 用尽移除 ===");
+const us = room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "useBook", index: 1 } }); // 发动自留 B(uses2→1)
+check("南华发动自己天书成功", us.ok && us.revealed === true);
+check("发动后 uses 减为1、未移除", NT(nd[2]).books[1].uses === 1);
+check("★发动后第三方座位3 现在看得到内容", room2.viewFor(nd[3]).seats[2].toolState.books[1].timing?.text === "当你使用牌后");
+const idx4 = NT(nd[2]).books.findIndex((b) => b.holder === 4);
+room2.action(nd[4], { targetSeat: 2, bySeat: 4, toolAction: { type: "useBook", index: idx4 } }); // 受术者发动其 uses1 册
+check("受术天书(uses1)发动后用尽移除", !NT(nd[2]).books.some((b) => b.holder === 4));
+
+console.log("\n=== 南华5:权限与重置 ===");
+check("非南华不能写书", room2.action(nd[3], { targetSeat: 2, bySeat: 3, toolAction: { type: "writeBook", book: bookA } }).error === "NOT_NANHUA_ACTION");
+check("非持有者不能发动他人天书", room2.action(nd[3], { targetSeat: 2, bySeat: 3, toolAction: { type: "useBook", index: 0 } }).error === "NOT_BOOK_HOLDER");
+const nrst = room2.action(nd[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "resetGame" } });
+check("南华重置成功", nrst.ok && nrst.reset === true);
+check("重置后天书清空、cap 回2", NT(nd[2]).books.length === 0 && NT(nd[2]).cap === 2);
+check("座位武将保留(仍是南华)", room2.seats[2].general === "nanhua");
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

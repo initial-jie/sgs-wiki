@@ -23,6 +23,11 @@ export const VISIBILITY = {
     given: { kind: "ownerSeatOnly" },      // 吕布死亡交出的炁:仅吕布座位可见明细(他人见数量)
     // entered / kuangTarget / round / dmgThisRound / phase / stolenThisTurn / log 默认 public
   },
+  nanhua: {
+    // 天书:每册自带 owners(可见者)与 revealed(发动即全场公开);旁人只见占位、能数出"持有N册"
+    books: { kind: "ownerOnly" },
+    // cap / log 默认 public
+  },
 };
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -50,6 +55,16 @@ export function filterState(seat, holds) {
         : { count: Array.isArray(val) ? val.length : Object.keys(val).length };
       continue;
     }
+    // ownerOnly:val 是"每册自带 owners 名单"的数组。发动(revealed)后转公开;
+    // 否则仅当请求者代持某位 owner 时给全量,旁人只见占位(保留 holder → 可数出持有册数)。
+    if (rule.kind === "ownerOnly") {
+      out[field] = (val || []).map((bk) =>
+        (bk.revealed || (bk.owners || []).some((s) => holds.has(s)))
+          ? clone(bk)
+          : { holder: bk.holder, hidden: true }
+      );
+      continue;
+    }
   }
   return out;
 }
@@ -67,6 +82,12 @@ export function initToolState(generalId) {
       gained: [],            // [{label, from}]  吕布现有的炁(罡拳用)
       given: [],             // [{label, toSeat}] 吕布死亡时交出的炁
       log: [],               // 公开事件
+    };
+  if (generalId === "nanhua")
+    return {
+      cap: 2,   // 合道上限:2(初始)/ 3(濒死后)—— 仅约束南华本人持有栏
+      books: [],// [{owners:[座位…], holder:座位, uses, revealed, timing:{level,text}, effect:{level,text}}]
+      log: [],  // 公开事件
     };
   return {};
 }
@@ -110,6 +131,72 @@ export class RoomCore {
     const t = toolAction.type;
     const iHold = (s) => dev.holds.has(s);
     const isLvbu = bySeat === targetSeat && iHold(bySeat); // 吕布本人(或代持吕布座位)
+
+    // ───────── 南华老仙:天书(条件公开 ownerOnly)。随机抽牌在客户端跑,只有成册进 DO ─────────
+    if (target.general === "nanhua") {
+      const nSeat = targetSeat;                       // 天书工具挂在南华座位上
+      const isNanhua = bySeat === nSeat && iHold(nSeat); // 南华本人(或代持南华座位)
+      const ownCount = () => ts.books.filter((b) => b.holder === nSeat).length;
+
+      if (t === "setCap") {
+        if (!isNanhua) return { error: "NOT_NANHUA_ACTION" };
+        ts.cap = toolAction.cap === 3 ? 3 : 2;
+        // 降上限:从尾部丢弃南华自留超出的册(授出的不算在持有栏内)
+        while (ownCount() > ts.cap) {
+          const i = ts.books.map((b, j) => j).reverse().find((j) => ts.books[j].holder === nSeat);
+          ts.books.splice(i, 1);
+        }
+        return { ok: true, cap: ts.cap };
+      }
+
+      if (t === "writeBook") {
+        if (!isNanhua) return { error: "NOT_NANHUA_ACTION" };
+        const b = toolAction.book || {};
+        if (!b.timing || !b.effect) return { error: "BAD_BOOK" };
+        const book = { owners: [nSeat], holder: nSeat, uses: 2, revealed: false, timing: b.timing, effect: b.effect };
+        if (ownCount() >= ts.cap) {
+          const ri = toolAction.replaceIndex; // 满栏必须指定替换哪一册(books 全局下标,须是自留)
+          if (ri == null || ts.books[ri]?.holder !== nSeat) return { error: "NEED_REPLACE" };
+          ts.books[ri] = book;
+        } else {
+          ts.books.push(book);
+        }
+        this._log(ts, "南华书写天书一册");
+        return { ok: true };
+      }
+
+      if (t === "giveBook") {
+        if (!isNanhua) return { error: "NOT_NANHUA_ACTION" };
+        const bk = ts.books[toolAction.index];
+        if (!bk || bk.holder !== nSeat) return { error: "NOT_OWN_BOOK" };
+        if (bk.uses < 2) return { error: "USED_CANT_GIVE" };  // 只能授术未动用(2次)的天书
+        const to = toolAction.toSeat;
+        if (to === nSeat) return { error: "CANT_GIVE_SELF" };
+        if (ts.books.some((b) => b.holder === to)) return { error: "TARGET_HAS_BOOK" }; // 每名他人同持一册
+        bk.holder = to; bk.owners = [nSeat, to]; bk.uses = 1;
+        this._log(ts, `南华授术天书给座位${to}`);
+        return { ok: true };
+      }
+
+      if (t === "useBook") {
+        const bk = ts.books[toolAction.index];
+        if (!bk) return { error: "NO_BOOK" };
+        if (!iHold(bk.holder)) return { error: "NOT_BOOK_HOLDER" }; // 操作权归持有座位本人
+        bk.revealed = true; // 发动即全场公开(宣示时机+效果)
+        bk.uses -= 1;
+        this._log(ts, `座位${bk.holder}发动天书:${bk.timing.text} → ${bk.effect.text}`);
+        if (bk.uses <= 0) ts.books.splice(toolAction.index, 1);
+        return { ok: true, revealed: true };
+      }
+
+      if (t === "resetGame") {
+        if (!isNanhua) return { error: "NOT_NANHUA_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+
+      return { error: "UNKNOWN_ACTION" };
+    }
 
     // 任意座位登记自己(或代持)那份初始炁(含吕布本人)
     if (t === "registerQi") {
