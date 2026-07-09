@@ -153,8 +153,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -167,7 +167,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              dongzhao:{view:s=>viewDzTool(s),bind:(s,q)=>bindDz(s,q)},
              shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)},
              diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)},
-             sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)} };
+             sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)},
+             dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -1806,6 +1807,46 @@ function bindSq(sq,q){
   q("[data-sqalive]").forEach(b=>b.onclick=()=>act({type:"toggleAlive",seat:+b.dataset.sqalive}));
   q("[data-sqendr]").forEach(b=>b.onclick=()=>{if(confirm("结束本轮?清空本轮暗选与天恩。"))act({type:"endRound"});});
   q("[data-sqreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空暗选/历史/天恩/乾纲/阵亡,座位武将保留。")){sqTeTarget=null;act({type:"resetGame"});}});
+}
+
+/* ---------- 神典韦工具(挈挟 roll 池;全公开生成器)---------- */
+function dwWeaponCard(p,toggleOn){
+  const skills=p.blank?'<span class="hint">白板(无技能)</span>':(p.skills||[]).map(s=>`<div style="margin-top:3px"><b style="color:var(--seal)">${esc(s.name)}</b> <span style="font-size:12px">${esc(s.effect)}</span></div>`).join("");
+  const btn=(toggleOn!==undefined)?`<button class="${toggleOn?'primary':''}" data-dwequip="${esc(p.name)}" style="font-size:12px;padding:4px 10px;flex:none">${toggleOn?'卸下':'装备'}</button>`:"";
+  return `<div class="slot" style="${toggleOn?'border-style:solid;border-color:var(--qi)':''}"><div class="row"><span class="grow"><b>${esc(p.name)}</b> <span class="chip gold">范围 ${p.range}</span>${p.blank?' <span class="chip">白板</span>':''}</span>${btn}</div>${skills}</div>`;
+}
+function viewDwTool(dw){
+  const ts=dw.toolState||{}, iAm=state.youHold.includes(dw.seatNo), slots=ts.slots||2;
+  const weps=ts.weapons||[], maxRange=weps.length?Math.max(...weps.map(w=>w.range)):0;
+  let h=`<div class="card"><h2>神典韦 · 挈挟<span class="tag">第 ${ts.round||1} 轮 · 武器栏 ${slots}</span></h2>`;
+  h+=`<div class="hint">捐甲:废防具栏,+1 武器栏(共 ${slots} 个)。挈挟:准备阶段抽 5 张武将牌,任选至多 ${slots} 张当武器(范围=牌面体力上限,效果=其「带杀」技能)。</div>`;
+  h+=`<div style="margin-top:8px"><b>当前武器</b> `+(weps.length?"":'<span class="hint">未装备</span>')+`</div>`;
+  h+=weps.map(w=>dwWeaponCard(w,iAm?true:undefined)).join("");
+  if(maxRange) h+=`<div class="hint" style="margin-top:5px">摧决可及:当前最大攻击范围 <b style="color:var(--seal)">${maxRange}</b>——出牌阶段弃一张牌,对范围内最远的其他角色造成1点伤害(每名角色每回合限一次)。</div>`;
+  h+=`</div>`;
+  if(iAm){
+    h+=`<div class="card"><div class="row"><button class="primary" data-dwroll="1">挈挟:抽 5 张</button>`
+      +(ts.rolled?'<button class="ghost" data-dwnewturn="1">下一轮(清抽)</button>':"")
+      +(weps.length?'<button class="ghost" data-dwclear="1">清空武器</button>':"")
+      +'<button class="ghost" data-dwreset="1" style="font-size:12px">重开</button></div>';
+    if(ts.rolled){
+      h+=`<div class="hint" style="margin-top:6px">本轮抽出(点「装备」放入武器栏,至多 ${slots} 张):</div>`;
+      h+=ts.rolled.map(p=>dwWeaponCard(p,weps.some(w=>w.name===p.name))).join("");
+    } else h+='<div class="hint" style="margin-top:6px">点「挈挟:抽 5 张」开始本轮。</div>';
+    h+=`</div>`;
+  } else if(ts.rolled){
+    h+=`<div class="card"><h2>本轮抽出<span class="tag">神典韦操作 · 你只读</span></h2>`+ts.rolled.map(p=>dwWeaponCard(p)).join("")+`</div>`;
+  }
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindDw(dw,q){
+  const D=dw.seatNo, act=(o)=>send({type:"action",targetSeat:D,bySeat:D,toolAction:o});
+  q("[data-dwroll]").forEach(b=>b.onclick=()=>act({type:"qiexie"}));
+  q("[data-dwequip]").forEach(b=>b.onclick=()=>act({type:"equipToggle",name:b.dataset.dwequip}));
+  q("[data-dwclear]").forEach(b=>b.onclick=()=>{if(confirm("清空当前武器?"))act({type:"clearWeapons"});});
+  q("[data-dwnewturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
+  q("[data-dwreset]").forEach(b=>b.onclick=()=>{if(confirm("重开神典韦工具?清空武器与抽牌、轮次归1。"))act({type:"resetGame"});});
 }
 
 loadHeroes(); // 拉 OL 武将库(点座位看技能)

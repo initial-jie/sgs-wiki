@@ -4481,7 +4481,7 @@
     "characteristic": "能把人当武器挥舞，还能使用这些人含有杀字的技能，非常霸道。",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/22900.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/22900.png",
-    "tool": null,
+    "tool": "dianwei",
     "offline": false
   },
   {

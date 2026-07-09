@@ -31,6 +31,52 @@ export const SQ_EFFECTS = [
   { n: "紫电", d: "不可响应" }, { n: "百里", d: "额外结算一次" }, { n: "流星", d: "无次数限制" },
 ];
 
+// ---------- 神典韦【挈挟】roll 池(28 张武将牌:范围=牌面体力上限,带杀技能或白板;关羽/张飞互斥)----------
+// 数据从 generals.json 派生(见 scripts 生成)。挈挟随机在 DO 跑(公开、可 seed 复现,不弱于洗一副28牌)。
+export const DIANWEI_POOL = [
+  {"name":"关羽","range":4,"ex":"gy_zf","skills":[{"name":"武圣","effect":"你可以将一张红色牌当【杀】使用或打出。"}]},
+  {"name":"张飞","range":4,"ex":"gy_zf","skills":[{"name":"咆哮","effect":"锁定技，你使用【杀】无次数限制。"}]},
+  {"name":"赵云","range":4,"skills":[{"name":"龙胆","effect":"你可以将一张【杀】当【闪】、【闪】当【杀】使用或打出。"}]},
+  {"name":"马超","range":4,"skills":[{"name":"铁骑","effect":"当你使用【杀】指定目标后，你可以判定，若为红色，其不能使用【闪】响应此【杀】。"}]},
+  {"name":"许褚","range":4,"skills":[{"name":"裸衣","effect":"摸牌阶段，你可以少摸一张牌，然后你本回合使用【杀】或【决斗】造成的伤害+1。"}]},
+  {"name":"吕布","range":4,"skills":[{"name":"无双","effect":"锁定技，你使用的【杀】需两张【闪】才能抵消；与你【决斗】的角色每次需打出两张【杀】。"}]},
+  {"name":"吕蒙","range":4,"skills":[{"name":"克己","effect":"若你未于本回合出牌阶段使用或打出过【杀】，你可以跳过弃牌阶段。"}]},
+  {"name":"大乔","range":3,"skills":[{"name":"流离","effect":"当你成为【杀】的目标时，你可以弃置一张牌并将此【杀】转移给你攻击范围内的一名其他角色。"}]},
+  {"name":"诸葛亮","range":3,"skills":[{"name":"空城","effect":"锁定技，若你没有手牌，你不能成为【杀】或【决斗】的目标。"}]},
+  {"name":"界黄忠","range":4,"skills":[{"name":"烈弓","effect":"你【杀】的攻击范围为此【杀】点数。当你使用【杀】指定目标后，你可以执行以下效果：1.若其手牌数不大于你，其不能抵消此【杀】；2.若其体力值不小于你，此【杀】伤害值+1。"}]},
+  {"name":"夏侯渊","range":4,"skills":[{"name":"神速","effect":"你可以选择至多三项：1.跳过判定阶段和摸牌阶段；2.跳过出牌阶段并弃置一张装备牌；3.跳过弃牌阶段并翻面。你每选择一项，你视为使用一张无距离限制的【杀】。"}]},
+  {"name":"谋关羽","range":4,"skills":[{"name":"威临","effect":"每回合限一次，你可以将一张牌当【酒】或任意【杀】使用，此牌目标角色与此牌颜色相同的手牌视为【杀】直到回合结束。"}]},
+  {"name":"韩遂","range":4,"skills":[{"name":"骁袭","effect":"每轮首个回合开始时，你可以视为使用一张无距离限制的【杀】。"},{"name":"逆乱","effect":"体力值大于你的角色的结束阶段，若其此回合使用过【杀】，你可以将一张黑色牌当【杀】对其使用。"}]},
+  {"name":"族荀粲","range":3,"skills":[{"name":"熨身","effect":"出牌阶段限一次，你可以令一名其他角色回复1点体力并视为你对其或其对你使用一张冰【杀】。"}]},
+  {"name":"雅丹","range":4,"skills":[{"name":"倾轧","effect":"当你使用【杀】指定唯一目标后，你可以弃置你与其之间的角色各一张手牌，然后可以于本回合下个阶段结束时使用其中一张牌。"}]},
+  {"name":"界姜维","range":4,"skills":[{"name":"挑衅","effect":"出牌阶段限一次，你可以选择一名攻击范围内包含你的角色，然后除非其对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后本阶段本技能限两次。"}]},
+  {"name":"刘备","range":4,"blank":true},
+  {"name":"孙权","range":4,"blank":true},
+  {"name":"曹操","range":4,"blank":true},
+  {"name":"甘宁","range":4,"blank":true},
+  {"name":"黄盖","range":4,"blank":true},
+  {"name":"张辽","range":4,"blank":true},
+  {"name":"夏侯惇","range":4,"blank":true},
+  {"name":"司马懿","range":3,"blank":true},
+  {"name":"陆逊","range":3,"blank":true},
+  {"name":"周瑜","range":3,"blank":true},
+  {"name":"黄月英","range":3,"blank":true},
+  {"name":"貂蝉","range":3,"blank":true},
+];
+// 从池中抽 n 张(默认5):无放回;同一互斥组(ex)至多出一张。rng 注入以便 sim 复现。
+export function rollQiexie(rng = Math.random, n = 5) {
+  const cand = DIANWEI_POOL.map((_, i) => i);
+  const out = [], usedEx = new Set();
+  while (out.length < n && cand.length) {
+    const idx = cand.splice(Math.floor(rng() * cand.length), 1)[0];
+    const p = DIANWEI_POOL[idx];
+    if (p.ex && usedEx.has(p.ex)) continue; // 互斥组已出过 → 跳过
+    if (p.ex) usedEx.add(p.ex);
+    out.push(p);
+  }
+  return out;
+}
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -224,6 +270,14 @@ export function initToolState(generalId) {
       dmgThisRound: false, // 入魔本轮是否已造成伤害(公开)
       log: [],
     };
+  if (generalId === "dianwei")
+    return {
+      slots: 2,      // 武器栏数(捐甲:废防具栏 + 1 额外武器栏 = 2)
+      round: 1,
+      rolled: null,  // 本次挈挟抽出的 5 张(公开),或 null=未抽
+      weapons: [],   // 已装备的武器(从 rolled 里选,≤slots;公开)
+      log: [],
+    };
   return {};
 }
 
@@ -279,6 +333,36 @@ export class RoomCore {
     const t = toolAction.type;
     const iHold = (s) => dev.holds.has(s);
     const isLvbu = bySeat === targetSeat && iHold(bySeat); // 吕布本人(或代持吕布座位)
+
+    // ───────── 神典韦:挈挟 roll 池(全公开生成器)。抽 5 在 DO 跑(可 seed 复现),神典韦选任意张当武器 ─────────
+    if (target.general === "dianwei") {
+      const dSeat = targetSeat;
+      const isDw = bySeat === dSeat && iHold(dSeat); // 神典韦本人(或代持)
+      if (t === "qiexie") { // 挈挟:抽 5 张
+        if (!isDw) return { error: "NOT_DW_ACTION" };
+        ts.rolled = rollQiexie(this.rng);
+        this._log(ts, `挈挟抽出:${ts.rolled.map((p) => p.name).join("、")}`);
+        return { ok: true };
+      }
+      if (t === "equipToggle") { // 装备/卸下一张武器。卸下随时可(即便已不在本轮抽牌里);装备须来自本轮抽出的 5 张且未满栏
+        if (!isDw) return { error: "NOT_DW_ACTION" };
+        const at = ts.weapons.findIndex((w) => w.name === toolAction.name);
+        if (at >= 0) { const c = ts.weapons[at]; ts.weapons.splice(at, 1); this._log(ts, `卸下武器【${c.name}】`); return { ok: true }; }
+        const card = (ts.rolled || []).find((p) => p.name === toolAction.name);
+        if (!card) return { error: "NOT_ROLLED" };
+        if (ts.weapons.length >= ts.slots) return { error: "SLOTS_FULL" };
+        ts.weapons.push(card); this._log(ts, `装备武器【${card.name}】(范围${card.range})`);
+        return { ok: true };
+      }
+      if (t === "clearWeapons") { if (!isDw) return { error: "NOT_DW_ACTION" }; ts.weapons = []; return { ok: true }; }
+      if (t === "newTurn") { // 下一轮准备阶段:清掉本次抽的 5 张(武器保留),轮次+1
+        if (!isDw) return { error: "NOT_DW_ACTION" };
+        ts.round++; ts.rolled = null; this._log(ts, `进入第${ts.round}轮准备阶段`);
+        return { ok: true };
+      }
+      if (t === "resetGame") { if (!isDw) return { error: "NOT_DW_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
 
     // ───────── 南华老仙:天书(条件公开 ownerOnly)。随机抽牌在客户端跑,只有成册进 DO ─────────
     if (target.general === "nanhua") {

@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -577,6 +577,34 @@ check("可清空(null)", roomF.setFaction(fd[1], 1, null).ok === true && roomF.s
 roomF.setFaction(fd[1], 1, "吴");
 roomF.setGeneral(fd[1], 1, "300");             // 改武将 → 自选势力重置
 check("改武将后 chosenFaction 归零", roomF.seats[1].chosenFaction === null);
+
+// ============ 场景 14:神典韦 挈挟 roll 池(生成器,cut 3)============
+console.log("\n=== 场景 14:神典韦 挈挟 ===");
+check("池共28张(16特殊+12白板)", DIANWEI_POOL.length === 28 && DIANWEI_POOL.filter(p => p.blank).length === 12);
+const roll0 = rollQiexie(() => 0);
+check("rng=0 抽5张确定性", roll0.length === 5 && roll0.map(p => p.name).join(",") === "关羽,赵云,马超,许褚,吕布");
+check("关羽/张飞互斥(关羽在则无张飞)", roll0.some(p => p.name === "关羽") && !roll0.some(p => p.name === "张飞"));
+const roomD = new RoomCore("2468", 4, () => 0);
+const dd = {}; for (let i = 1; i <= 4; i++) { dd[i] = `dd${i}`; roomD.claimSeat(dd[i], i); }
+roomD.setGeneral(dd[1], 1, "dianwei");
+const dwAct = (by, o) => roomD.action(dd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const DT = () => roomD.seats[1].toolState;
+check("initToolState:slots2/round1/rolled null/weapons空", DT().slots === 2 && DT().round === 1 && DT().rolled === null && DT().weapons.length === 0);
+check("非神典韦不能抽", dwAct(2, { type: "qiexie" }).error === "NOT_DW_ACTION");
+dwAct(1, { type: "qiexie" });
+check("挈挟抽出5张(公开可见)", DT().rolled.length === 5 && roomD.viewFor(dd[2]).seats[1].toolState.rolled.length === 5);
+check("装备不在抽牌里的将被拒", dwAct(1, { type: "equipToggle", name: "貂蝉" }).error === "NOT_ROLLED");
+dwAct(1, { type: "equipToggle", name: "关羽" });
+dwAct(1, { type: "equipToggle", name: "赵云" });
+check("装备2张成功", DT().weapons.length === 2 && DT().weapons[0].name === "关羽" && DT().weapons[0].range === 4);
+check("满栏(slots=2)再装被拒", dwAct(1, { type: "equipToggle", name: "马超" }).error === "SLOTS_FULL");
+dwAct(1, { type: "equipToggle", name: "关羽" }); // 卸下
+check("卸下后可再装", DT().weapons.length === 1 && dwAct(1, { type: "equipToggle", name: "马超" }).ok === true && DT().weapons.length === 2);
+dwAct(1, { type: "newTurn" });
+check("下一轮:清抽牌、保留武器、轮次+1", DT().rolled === null && DT().weapons.length === 2 && DT().round === 2);
+check("卸下已不在抽牌里的持留武器仍可(马超)", dwAct(1, { type: "equipToggle", name: "马超" }).ok === true && DT().weapons.length === 1);
+check("重开清空", dwAct(1, { type: "resetGame" }).reset === true && DT().round === 1 && DT().weapons.length === 0 && DT().rolled === null);
+check("重开后座位武将仍是神典韦", roomD.seats[1].general === "dianwei");
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
