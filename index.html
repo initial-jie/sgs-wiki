@@ -319,7 +319,7 @@ footer .hist{margin-top:8px}
   <section id="room" class="room-hero">
     <div class="rh-head"><h2>线下多人房间</h2><span class="en">OFFLINE ROOM</span><span class="rh-new">新</span></div>
     <p>牌桌上出现需要这些工具的武将时，不必再传手机——任意玩家开一个 4 位数房间，其他人各自手机加入、选座、编辑自己座位的武将。操作权归座位本人，暗牌 / 暗选 / 未发动天书在服务端按身份过滤后才下发，<b>保密不弱于面杀</b>。零安装、零常驻后端，刷新即恢复。</p>
-    <div class="rh-feats"><span>座位即身份</span><span>各自手机协作</span><span>暗牌 · 暗选保密</span><span>可代持没电的座位</span><span>已支持 12 个武将工具</span></div>
+    <div class="rh-feats"><span>座位即身份</span><span>各自手机协作</span><span>暗牌 · 暗选保密</span><span>可代持没电的座位</span><span id="roomToolCount">已支持 12 个武将工具</span></div>
     <a class="rh-cta" href="https://sgs-room.dujie1995.workers.dev" target="_blank" rel="noopener">进入 / 开设房间 →</a>
     <div class="rh-note">口报 4 位房间号即可入座 · 手机浏览器直接打开，无需下载。</div>
   </section>
@@ -823,6 +823,15 @@ footer .hist{margin-top:8px}
     'revisions':[['蜀','shu-rev'],['魏','wei-rev'],['吴','wu-rev'],['群','qun-rev']],
     'replacements':[['蜀','shu-rep'],['魏','wei-rep'],['吴','wu-rep'],['群','qun-rep'],['晋','jin-rep']]
   };
+
+  /* ---------- 房间卡:工具数动态跟随（= 去重后的 data-tool 数，加一个工具即自动 +1） ---------- */
+  (function(){
+    var set={};
+    document.querySelectorAll('.tool-open').forEach(function(b){var t=b.getAttribute('data-tool');if(t)set[t]=1;});
+    var n=Object.keys(set).length;
+    var el=document.getElementById('roomToolCount');
+    if(el&&n) el.textContent='已支持 '+n+' 个武将工具';
+  })();
 
   /* ---------- 势力折叠（记忆状态） ---------- */
   var FOLD_KEY='sgs_wiki_fold_v1';

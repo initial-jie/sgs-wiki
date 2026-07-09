@@ -379,7 +379,7 @@ function viewFocusHeader(seat){
 function viewToolsIndex(){
   const tools=Object.values(state.seats).filter(s=>hasTool(s.general));
   let h='<div class="card"><h2>登场工具<span class="tag">点进入操作 / 查看</span></h2>';
-  if(!tools.length) h+='<div class="hint">还没有武将带工具。在上方座位选「魔吕布」或「南华老仙」即可登场。</div>';
+  if(!tools.length) h+='<div class="hint">还没有武将带工具。在上方座位选择带有线下工具的武将即可登场。</div>';
   for(const s of tools){
     const nm=GENERALS[s.general].name, mine=state.youHold.includes(s.seatNo);
     h+=`<div class="row" style="padding:5px 0"><span class="grow"><b>${esc(nm)}</b> · 座位 ${s.seatNo}</span>`

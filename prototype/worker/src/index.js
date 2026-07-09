@@ -33,7 +33,8 @@ export default {
       return new Response(GENERALS_JSON, {
         headers: {
           "content-type": "application/json; charset=utf-8",
-          "cache-control": "public, max-age=86400", // 数据基本不变,缓存一天
+          // 数据只在 deploy 时变;缓存 1h + 后台再验,改完最多 1h 生效(不再卡一整天)
+          "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
         },
       });
     }
@@ -41,7 +42,11 @@ export default {
     // 其余 GET 一律吐客户端页 —— 手机开 https://<你的域名>/ 即可,"服务端"自动填成同源 wss
     if (request.method === "GET") {
       return new Response(ROOM_HTML, {
-        headers: { "content-type": "text/html; charset=utf-8" },
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          // 客户端页每次都回源校验,deploy 后刷新即拿新版(不再有桌面浏览器缓存旧页的坑)
+          "cache-control": "no-cache",
+        },
       });
     }
 
