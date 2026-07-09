@@ -1,0 +1,16 @@
+name = "sgs-room"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# Durable Object 绑定:一个房间 = 一个 RoomDO 实例
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+# 用 SQLite-backed Durable Object —— Workers 免费计划即可使用
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
+
+# 注:room.html 以文本模块打进 worker,worker 在 "/" 直接吐客户端页(手机可直接开)。
+# .html 默认即 Text 模块,无需额外 [[rules]]。
