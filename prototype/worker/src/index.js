@@ -5,8 +5,10 @@
 
 import { RoomCore } from "../../shared/room-logic.mjs";
 import ROOM_HTML from "../../client/room.html"; // 文本模块(见 wrangler.toml [[rules]] Text)
+import GENERALS_DATA from "../../shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
+const GENERALS_JSON = JSON.stringify(GENERALS_DATA); // 一次序列化,静态资源直接吐
 
 export default {
   async fetch(request, env) {
@@ -24,6 +26,16 @@ export default {
       const id = env.ROOM.idFromName(m[1]); // 同一短码 -> 同一 DO 实例(单点权威)
       const stub = env.ROOM.get(id);
       return stub.fetch(request);
+    }
+
+    // 武将库(只读参考数据):点座位看技能 / 神典韦roll池 共用。同源、可缓存,别被下面的 catch-all 吞掉。
+    if (url.pathname === "/generals.json" && request.method === "GET") {
+      return new Response(GENERALS_JSON, {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=86400", // 数据基本不变,缓存一天
+        },
+      });
     }
 
     // 其余 GET 一律吐客户端页 —— 手机开 https://<你的域名>/ 即可,"服务端"自动填成同源 wss

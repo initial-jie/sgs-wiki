@@ -2,7 +2,16 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 258 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
-## 零、当前状态(2026-07-08 会话收尾)
+## 零、当前状态(2026-07-09 会话收尾)
+
+- ✅ **新功能「点座位看技能」已做完(cut 1)**:room.html 座位卡加了「查看技能」按钮 + 「选武将」搜索弹层,可从 **OL 全量 681 将** 里选武将、点任意座位看该将技能(名/势力/体力勾玉/定位/技能全文/立绘)。**纯客户端只读、零 RoomCore/协议改动**,room-sim 仍 **258 passed**、UI vm+DOM 冒烟 14/14、Preview 真渲染截图确认(魔孙权/神典韦/神甘宁 6血起始3 全对)。**待用户 `wrangler deploy` 后真机测**。
+- ✅ **武将库数据源打通**:`prototype/shared/generals.json` = 官网 OL **681 将**全量(id/name/genre/series/faction/factionSelectable/quality/hp/initialHp/tags/skills/characteristic/cover/avatar/tool/offline)。爬虫 `prototype/scrape-generals.mjs`(node shell 出 curl,~3.5min 可重抓)。**数据来源见 memory `ol-hero-scrape`**(列表 ld+json 花名册 + `/api/v1/hero/info` 拿 hp/势力/品质 + 详情页 HTML 拿技能;移动版 sanguosha.cn 相差太远弃用,必须 OL sanguosha.com)。12 工具已全部映射到 OL id(钟琰=7014)。
+- 🔜 **下一步(feature 收尾)**:①**神将势力自选**持久化(cut 2,现仅显示「神·自选」,真正落座时让玩家选魏蜀吴群并存进座位——需给 RoomCore 加个 seat.chosenFaction 小字段 + setGeneral 带上,动 sim);②**神典韦工具**(cut 3,生成器范式;roll 池规格用户已给全,见本节末);③可选:wiki 单人版复用 generals.json + RoomCore「本地模式」(refactor 调研结论=逻辑只写一份,详见 memory `room-project`)。
+- ⚠️ **worker 改了**(新增 `/generals.json` 路由 + `import generals.json`):**必须重 `cd prototype/worker && npx wrangler deploy`** 新前端才生效(否则 `/generals.json` 404、武将库加载失败,room.html 会 console.warn 但降级——12 工具仍可用)。留意 deploy 时 bundle 体积(+749KB JSON,gzip 后约 200KB,免费计划 3MB 限额内)。
+
+**神典韦【挈挟】roll 池规格(用户 2026-07-09 提供,给 cut 3 用)**:共 **28 张武将牌**可抽,出框概率 标风包>界限突破包>璀璨包>族包>谋包。抽出的牌=武器,无花色点数,攻击距离=牌面武将体力上限。**17 个「带杀」技能**(关羽牌与张飞牌互斥):关羽武圣/张飞咆哮/赵云龙胆/马超铁骑/许褚裸衣/吕布无双/吕蒙克己/大乔流离/诸葛亮空城/界黄忠烈弓/夏侯渊神速/谋关羽威临/韩遂骁袭+逆乱/族荀粲熨身/雅丹倾轧/界姜维挑衅。**12 张「白板武器」**(仅名字不触发技能):刘备/孙权/曹操/甘宁/黄盖/张辽/夏侯惇/司马懿/陆逊/周瑜/黄月英/貂蝉。(16 特殊将含互斥 + 12 白板 = 28)
+
+## 附:2026-07-08 状态(12 工具接房间收尾)
 
 - ✅ **12/12 武将工具全部接房间**:吕布/南华/A档6(荀攸/黄月英/曹操/袁姬/钟琰/司马懿)/董昭/神孙权/貂蝉/魔孙权。room-sim **258 passed**、deck **26 passed**、前端 view/bind node+vm 冒烟全绿。
 - ✅ **已合并并推送到 `main`**(用户已 push,merge commit `c6f02c8`);**worker 已由用户 `wrangler deploy` 重新部署**——线上 `https://sgs-room.dujie1995.workers.dev` 现含全部 12 工具。

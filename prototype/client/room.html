@@ -79,10 +79,41 @@ button:disabled{opacity:.4;cursor:default}
   padding:9px 16px;border-radius:8px;font-size:13px;z-index:99;opacity:0;transition:opacity .3s;pointer-events:none;max-width:88%;text-align:center}
 .toast.show{opacity:1}
 footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;letter-spacing:.06em}
+/* ===== 弹层(武将选择 / 查看技能)===== */
+.mask{position:fixed;inset:0;background:rgba(30,24,16,.5);z-index:80;display:flex;align-items:flex-start;
+  justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--paper2);border:1px solid var(--line);border-top:3px solid var(--seal);border-radius:11px;
+  width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(38,33,26,.35)}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.06em;
+  border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--ink-soft);cursor:pointer;padding:0 4px}
+.gsearch{position:sticky;top:0;background:var(--paper2);padding-bottom:8px;z-index:1}
+.glist{max-height:56vh;overflow:auto;margin-top:4px}
+.grow-item{display:flex;align-items:center;gap:9px;padding:8px 6px;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:6px}
+.grow-item:active{background:rgba(163,46,34,.07)}
+.grow-item .ava{width:34px;height:34px;border-radius:6px;object-fit:cover;background:var(--paper3);flex:none;border:1px solid var(--line)}
+.grow-item .gn{font-family:var(--display);font-weight:700;font-size:15px}
+.grow-item .gmeta{font-size:11px;color:var(--ink-soft)}
+.fc{display:inline-block;font-size:11px;border-radius:4px;padding:0 5px;border:1px solid var(--line);color:var(--ink-soft);margin-left:5px}
+.fc.wei{color:#2b5fa5;border-color:#2b5fa5}.fc.shu{color:#a33322;border-color:#a33322}
+.fc.wu{color:#2f7d4f;border-color:#2f7d4f}.fc.qun{color:#7a6320;border-color:#7a6320}
+.fc.jin{color:#6b4a86;border-color:#6b4a86}.fc.shen{color:#a06a1a;border-color:#a06a1a;background:rgba(160,106,26,.08)}
+/* 技能卡 */
+.herohead{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.herohead img{width:60px;height:60px;border-radius:8px;object-fit:cover;background:var(--paper3);border:1px solid var(--line);flex:none}
+.herohead .hn{font-family:var(--display);font-weight:900;font-size:20px}
+.herohead .hmeta{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.hp-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:2px;vertical-align:middle;border:1px solid var(--seal)}
+.hp-dot.full{background:var(--seal)} .hp-dot.empty{background:transparent}
+.skl{border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:8px;background:rgba(255,252,244,.6)}
+.skl .sn{font-family:var(--display);font-weight:800;font-size:15px;color:var(--seal);margin-bottom:3px}
+.skl .se{font-size:13px;line-height:1.7}
+.btn-skill{font-size:12px;padding:5px 10px}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="modal"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -122,7 +153,7 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"标钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"} };
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"} };
 const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
@@ -137,6 +168,110 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)},
              diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)},
              sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)} };
+
+/* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
+   座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
+let HEROES=[];                 // 全量 681 将
+const HERO_BY_ID=new Map();    // id(数字) -> hero
+const HERO_BY_TOOL=new Map();  // toolId -> hero
+const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
+function loadHeroes(){
+  fetch("/generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(list=>{
+    HEROES=list;HERO_BY_ID.clear();HERO_BY_TOOL.clear();
+    for(const h of list){HERO_BY_ID.set(h.id,h);if(h.tool)HERO_BY_TOOL.set(h.tool,h);}
+    for(const [tool,h] of HERO_BY_TOOL) if(GENERALS[tool]) GENERALS[tool].name=h.name; // 用官方名覆盖(如 钟琰)
+    if(state)render();
+  }).catch(e=>console.warn("武将库加载失败(worker 可能未更新):",e));
+}
+function heroForSeat(general){
+  if(!general||general==="none")return null;
+  if(HERO_BY_TOOL.has(general))return HERO_BY_TOOL.get(general);
+  if(/^\d+$/.test(general))return HERO_BY_ID.get(+general)||null;
+  return null;
+}
+function seatGeneralName(general){
+  if(!general||general==="none")return "";
+  if(hasTool(general))return GENERALS[general]?.name||general;
+  const h=heroForSeat(general);return h?h.name:general;
+}
+
+/* ---------- 弹层:选武将 / 查看技能 ---------- */
+let pickerSeat=null;
+function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;}
+function maskClose(){document.querySelectorAll("[data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b)closeModal();});}
+function openHeroPicker(seatNo){
+  if(!HEROES.length){toast("武将库还在加载…稍等再试");return;}
+  pickerSeat=seatNo;
+  const cur=state.seats[seatNo].general||"";
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
+    <h2>选武将 · 座位 ${seatNo}<span class="x" data-mclose="1">×</span></h2>
+    <div class="gsearch"><input id="gq" placeholder="输入武将名搜索(如 关羽 / 神典韦 / 界)" autocomplete="off" autocapitalize="off">
+      <div class="row" style="margin-top:6px">
+        <button class="ghost" data-manual="1" style="font-size:12px">手动输入(线下/自定义)</button>
+        ${cur?'<button class="ghost" data-clr="1" style="font-size:12px">清除武将</button>':""}
+        <span class="grow hint" style="text-align:right">当前:${cur?esc(seatGeneralName(cur)):"未选"}</span></div></div>
+    <div class="glist" id="glist"></div></div></div>`;
+  const inp=$("#gq");renderPickerList("");inp.oninput=()=>renderPickerList(inp.value.trim());
+  maskClose();
+  document.querySelectorAll("[data-manual]").forEach(b=>b.onclick=()=>{
+    const c=state.seats[seatNo].general||"";
+    const name=prompt("输入武将名(桌面显示用,无专属工具/技能资料)",(c&&!hasTool(c)&&!/^\d+$/.test(c))?c:"");
+    if(!name||!name.trim())return;
+    if(c&&!confirm("改武将会清空该座位已登记的数据,确定?"))return;
+    send({type:"setGeneral",seatNo,generalId:name.trim()});closeModal();
+  });
+  document.querySelectorAll("[data-clr]").forEach(b=>b.onclick=()=>{
+    if(!confirm("清除武将会清空该座位已登记的数据,确定?"))return;
+    send({type:"setGeneral",seatNo,generalId:""});closeModal();
+  });
+  try{inp.focus();}catch(e){}
+}
+function renderPickerList(qstr){
+  const box=$("#glist");if(!box)return;
+  const list=qstr?HEROES.filter(h=>h.name.includes(qstr)):HEROES;
+  const shown=list.slice(0,60);
+  let h=shown.map(hero=>{
+    const fc=FCLS[hero.faction]||"";
+    const fname=hero.factionSelectable?"神·自选":(hero.faction||"?");
+    return `<div class="grow-item" data-pickid="${hero.id}">
+      <img class="ava" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
+      <div class="grow"><div class="gn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
+      <div class="gmeta">${esc(hero.genre||"")} · ${hero.hp??"?"}血${hero.tool?" · 有工具":""} · ${(hero.skills||[]).map(s=>esc(s.name)).join("/")}</div></div></div>`;
+  }).join("");
+  if(!shown.length)h=`<div class="hint" style="padding:12px">没找到「${esc(qstr)}」。可点上方「手动输入」。</div>`;
+  else if(list.length>60)h+=`<div class="hint" style="padding:8px">共 ${list.length} 个,仅显示前 60,继续输入缩小…</div>`;
+  box.innerHTML=h;
+  box.querySelectorAll("[data-pickid]").forEach(el=>el.onclick=()=>choosePick(+el.dataset.pickid));
+}
+function choosePick(id){
+  const hero=HERO_BY_ID.get(id);if(!hero)return;
+  const seat=pickerSeat,cur=state.seats[seat].general||"";
+  const val=hero.tool?hero.tool:String(hero.id); // 有工具→工具id(工具逻辑不变);否则→OL id字符串
+  if(cur===val){closeModal();return;}
+  if(cur&&!confirm("改武将会清空该座位已登记的数据,确定?"))return;
+  send({type:"setGeneral",seatNo:seat,generalId:val});closeModal();
+}
+function openSkillView(general,seatNo){
+  const hero=heroForSeat(general);
+  if(!hero){toast("该武将暂无技能资料(线下/手输)");return;}
+  const mine=state.youHold.includes(seatNo);
+  const fc=FCLS[hero.faction]||"";
+  const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
+  const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
+  let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
+  const skills=(hero.skills||[]).map(s=>`<div class="skl"><div class="sn">${esc(s.name)}</div><div class="se">${esc(s.effect||"(官网暂无描述)")}</div></div>`).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
+    <h2>武将技能<span class="x" data-mclose="1">×</span></h2>
+    <div class="herohead"><img src="${esc(hero.cover||hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
+      <div><div class="hn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
+        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""} · 座位 ${seatNo}${mine?"(你)":""}</div>
+        <div class="hmeta" style="margin-top:3px">${dots} ${cap}体力上限${start!==cap?"(起始 "+start+")":""}</div>
+        <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
+    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
+    ${skills}
+    ${hero.tool?'<div class="hint">此武将有专属线下工具,在大厅「登场工具」处进入。</div>':""}</div></div>`;
+  maskClose();
+}
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
@@ -281,29 +416,22 @@ function viewSeats(){
   const hold=new Set(state.youHold);
   for(const s of Object.values(state.seats)){
     const mine=hold.has(s.seatNo);
+    const hero=heroForSeat(s.general);
+    const nm=seatGeneralName(s.general);
+    let label="";
+    if(hasTool(s.general)) label=`<span class="lb">${esc(nm)}</span>`;
+    else if(s.general&&s.general!=="none") label=`<span class="kb">${esc(nm)}</span>`;
+    if(hero) label+=`<span class="fc ${FCLS[hero.faction]||''}">${esc(hero.factionSelectable?"神·自选":(hero.faction||"?"))}</span>`;
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
-      +(hasTool(s.general)?`<span class="lb">${esc(GENERALS[s.general].name)}</span>`:(s.general&&s.general!=="none"?`<span class="kb">${esc(s.general)}</span>`:""))
-      +(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
+      +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
+    if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
     h+=mine?`<button class="ghost" data-rel="${s.seatNo}">释放</button>`:`<button data-claim="${s.seatNo}">认领</button>`;
     h+=`</div>`;
     if(mine){
-      const g=s.general||"";
-      const isCustom=g&&!hasTool(g)&&g!=="none";
-      h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label><select data-gen="${s.seatNo}">`
-        +`<option value="" ${g===""?"selected":""}>未选</option>`
-        +`<option value="lvbu" ${g==="lvbu"?"selected":""}>魔吕布(有工具)</option>`
-        +`<option value="nanhua" ${g==="nanhua"?"selected":""}>南华老仙(有工具)</option>`
-        +`<option value="xunyou" ${g==="xunyou"?"selected":""}>族荀攸(有工具)</option>`
-        +`<option value="huangyueying" ${g==="huangyueying"?"selected":""}>谋黄月英(有工具)</option>`
-        +`<option value="caocao" ${g==="caocao"?"selected":""}>魔曹操(有工具)</option>`
-        +`<option value="yuanji" ${g==="yuanji"?"selected":""}>袁姬(有工具)</option>`
-        +`<option value="zhongyan" ${g==="zhongyan"?"selected":""}>标钟琰(有工具)</option>`
-        +`<option value="simayi" ${g==="simayi"?"selected":""}>魔司马懿(有工具)</option>`
-        +`<option value="dongzhao" ${g==="dongzhao"?"selected":""}>谋董昭(有工具)</option>`
-        +`<option value="shensunquan" ${g==="shensunquan"?"selected":""}>神孙权(有工具)</option>`
-        +`<option value="diaochan" ${g==="diaochan"?"selected":""}>魔貂蝉(有工具)</option>`
-        +`<option value="sunquan" ${g==="sunquan"?"selected":""}>魔孙权(有工具)</option>`
-        +`<option value="__custom__" ${isCustom?"selected":""}>其他武将,手动输入${isCustom?"("+esc(g)+")":""}</option></select></div>`;
+      const has=s.general&&s.general!=="none";
+      h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label>`
+        +`<button data-pick="${s.seatNo}" style="font-size:13px">${has?esc(nm)+" ▾":"选武将 ▾"}</button>`
+        +(hero&&hero.tool?'<span class="hint" style="margin-left:6px">有专属工具(见下方登场工具)</span>':"")+`</div>`;
     }
     if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
     h+=`</div>`;
@@ -577,18 +705,8 @@ function bindAll(){
   // 大厅:座位认领 / 释放 / 选武将
   q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
-  q("[data-gen]").forEach(sel=>sel.onchange=()=>{
-    const seat=+sel.dataset.gen,cur=state.seats[seat].general||"";
-    let val=sel.value;
-    if(val==="__custom__"){
-      const name=prompt("输入武将名(桌面显示用,该武将暂无专属工具)",(cur&&!hasTool(cur))?cur:"");
-      if(!name||!name.trim()){render();return;}
-      val=name.trim();
-    }
-    if(cur===val){render();return;}
-    if(cur&&!confirm("改/清除武将会清空该座位已登记的数据,确定?")){render();return;}
-    send({type:"setGeneral",seatNo:seat,generalId:val});
-  });
+  q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
+  q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   // 聚焦某工具时,派发给该工具的 bind
   const fseat=(focus!=null)?state.seats[focus]:null;
   if(fseat&&TOOLS[fseat.general]) TOOLS[fseat.general].bind(fseat,q);
@@ -1679,6 +1797,7 @@ function bindSq(sq,q){
   q("[data-sqreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空暗选/历史/天恩/乾纲/阵亡,座位武将保留。")){sqTeTarget=null;act({type:"resetGame"});}});
 }
 
+loadHeroes(); // 拉 OL 武将库(点座位看技能)
 render();
 </script>
 </body>
