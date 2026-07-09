@@ -37,13 +37,13 @@
 
 ```
 prototype/
-├─ shared/room-logic.mjs   核心权威逻辑(RoomCore + 可见性 + 8 工具状态机),sim 与 worker 共用
+├─ shared/room-logic.mjs   核心权威逻辑(RoomCore + 可见性 + 11 工具状态机),sim 与 worker 共用
 ├─ shared/deck.mjs         牌堆数据 + 登记牌合法性校验(花色级软规则;EXACT_CARDS 待补)
-├─ room-sim.mjs            可执行规格:8 工具全流程 145 条 node 断言
+├─ room-sim.mjs            可执行规格:11 工具全流程 226 条 node 断言
 ├─ deck-test.mjs           牌堆校验 19 条断言
 ├─ worker/src/index.js     Cloudflare Worker + RoomDO(WebSocket/广播/路由),通用不含业务
 ├─ worker/wrangler.toml    DO 绑定(SQLite-backed,免费计划可用)
-├─ client/room.html        ★ 正式房间前端(多工具聚焦框架 + 8 工具,宣纸风,内联 deck 校验)
+├─ client/room.html        ★ 正式房间前端(多工具聚焦框架 + 11 工具,宣纸风,内联 deck 校验)
 ├─ client/index.html       早期裸调试页(协议已升级,仅留参考)
 └─ README.md               本地怎么跑(含 Windows、2.5 节 room.html 剧本)
 ```
