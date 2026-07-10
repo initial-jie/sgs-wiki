@@ -38,6 +38,32 @@ export const OFFLINE_HEROES = [
     characteristic: "移动版武将线下化。",
     cover: null, avatar: null, tool: null, offline: true,
   },
+  // 谋贾诩 —— OL 新将(官网未收录,先手录)。⚠ 临时:官网上线重爬后应从这里删掉,让 scrape 接管(会有真 id + 立绘)
+  {
+    id: 9002, name: "谋贾诩", genre: "谋", series: "谋", faction: "群",
+    factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
+    tags: ["控制", "过牌", "加伤"],
+    skills: [
+      { name: "乱朝", effect: "限定技，每轮开始时，你可令所有角色依次选择从牌堆获得一张【杀】或【闪】。获得【杀】的角色本轮首次造成的伤害+1。" },
+      { name: "完策", effect: "出牌阶段限一次，你可指定一名角色并声明一张指定唯一目标的普通锦囊牌，然后其依次将X张手牌当此牌使用（X为游戏轮数且至多为3）。其以此法指定目标时，你可弃置一张牌并更改目标。" },
+      { name: "沉智", effect: "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。" },
+    ],
+    characteristic: "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
+  // 裴秀 —— OL 新将(官网未收录,先手录)。地图机制,后续要开工具(暂缓,需完整机制)。⚠ 同样:官网上线后从这里删,让 scrape 接管
+  {
+    id: 9003, name: "裴秀", genre: "其他", series: "标", faction: "魏",
+    factionSelectable: false, quality: "限定", hp: 4, initialHp: null,
+    tags: ["进攻", "防御", "过牌"],
+    skills: [
+      { name: "茂著", effect: "锁定技，回合开始时，或你绘制了一幅“地图”的所有城市，你将手牌中的花色补至4，并展开一幅“地图”。回合结束时，你获得一个本回合已展开的“地图”技能，直到你下回合结束。" },
+      { name: "尽览", effect: "当你于回合内使用♠/♥/♣/♦牌后，你可以绘制东/西/南/北方位的所有“地图”。你绘制一处城市后，执行对应城市的效果。" },
+      { name: "采风", effect: "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。" },
+    ],
+    characteristic: "可以在牌局中绘制地图赚取收益。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
 ];
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
@@ -57,5 +83,10 @@ export function applyOverrides(list, warn = (m) => console.warn(m)) {
     const clone = JSON.parse(JSON.stringify(oh));
     if (i >= 0) list[i] = clone; else { list.push(clone); added++; }
   }
+  // 安全网:重名 = 某个"临时手录"的将已 graduate 到 OL(scrape 也有了),提醒从 OFFLINE_HEROES 删掉,否则库里两条
+  const seen = {};
+  for (const h of list) seen[h.name] = (seen[h.name] || 0) + 1;
+  for (const [nm, c] of Object.entries(seen))
+    if (c > 1) warn(`[overrides] ⚠ 重名 ${c}×「${nm}」—— 可能官网已收录该将,应从 OFFLINE_HEROES 删除临时条目`);
   return { list, skillHits, added };
 }
