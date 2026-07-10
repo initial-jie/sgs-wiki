@@ -93,6 +93,29 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/xianxia-xushi.jpg",
     tool: "xushi", offline: true,
   },
+  // 留赞 —— 三国杀移动版(sanguosha.cn/hero-detail-93),OL 无此将故不加前缀。⚠ hp 页面未暴露,按 4 血录入待确认
+  {
+    id: 9005, name: "留赞", genre: "移动版", series: "移动版", faction: "吴",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["过牌"],
+    skills: [
+      { name: "奋音", effect: "你的回合内，每当你使用了一张与上一张颜色不同的牌时，你摸一张牌。" },
+    ],
+    characteristic: "使用颜色不同的牌可以摸牌。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
+  // 移动版谋韩当 —— 三国杀移动版(sanguosha.cn/hero-detail-589)。OL 有韩当/界韩当,故加「移动版」前缀区分。⚠ hp 按 4 血录入待确认
+  {
+    id: 9006, name: "移动版谋韩当", genre: "移动版", series: "移动版", faction: "吴",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["进攻", "控制", "爆发"],
+    skills: [
+      { name: "弓骑", effect: "你的攻击范围+4。出牌阶段开始时，你可弃一张牌，若如此做，则此阶段你使用的牌其他角色只能使用或打出虚拟牌或与你弃置牌颜色相同的手牌响应。" },
+      { name: "解烦", effect: "出牌阶段限一次，你可指定一名角色，令其选择一项：1.攻击范围内含有其的角色依次弃一张牌；2.其摸此时攻击范围内有其的角色数的牌；背水：此技能失效直至你杀死一名角色。" },
+    ],
+    characteristic: "可弃牌来让牌指定颜色方可响应，可以背水爆发摸牌并令其他人弃牌。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
 ];
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
