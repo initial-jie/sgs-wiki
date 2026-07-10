@@ -42,7 +42,10 @@ export const OFFLINE_HEROES = [
       { name: "莲华", effect: "当你成为【杀】的目标时，你摸一张牌，然后若你修改“莲华”，使用者需弃置一张牌，否则此【杀】对你无效。" },
     ],
     characteristic: "移动版武将线下化。",
-    cover: null, avatar: null, tool: null, offline: true,
+    // 原画在仓库 assets/heros/(GitHub Pages 托管);room 页跨源加载无 CSP 问题。一图两用(缩略图34px/技能弹层60px,均 object-fit:cover)
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heros/sunhanhua.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heros/sunhanhua.jpg",
+    tool: null, offline: true,
   },
   // 谋贾诩 —— OL 新将(官网未收录,先手录)。⚠ 临时:官网上线重爬后应从这里删掉,让 scrape 接管(会有真 id + 立绘)
   {
@@ -55,7 +58,9 @@ export const OFFLINE_HEROES = [
       { name: "沉智", effect: "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。" },
     ],
     characteristic: "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    cover: null, avatar: null, tool: null, offline: true,
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heros/moujiaxu.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heros/moujiaxu.jpg",
+    tool: null, offline: true,
   },
   // 裴秀 —— OL 新将(官网未收录,先手录)。地图机制,后续要开工具(暂缓,需完整机制)。⚠ 同样:官网上线后从这里删,让 scrape 接管
   {
@@ -68,7 +73,9 @@ export const OFFLINE_HEROES = [
       { name: "采风", effect: "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。" },
     ],
     characteristic: "可以在牌局中绘制地图赚取收益。",
-    cover: null, avatar: null, tool: null, offline: true,
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heros/peixiu.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heros/peixiu.jpg",
+    tool: null, offline: true,
   },
 ];
 

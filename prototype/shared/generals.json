@@ -20631,8 +20631,8 @@
       }
     ],
     "characteristic": "移动版武将线下化。",
-    "cover": null,
-    "avatar": null,
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heros/sunhanhua.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heros/sunhanhua.jpg",
     "tool": null,
     "offline": true
   },
@@ -20666,8 +20666,8 @@
       }
     ],
     "characteristic": "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    "cover": null,
-    "avatar": null,
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heros/moujiaxu.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heros/moujiaxu.jpg",
     "tool": null,
     "offline": true
   },
@@ -20701,8 +20701,8 @@
       }
     ],
     "characteristic": "可以在牌局中绘制地图赚取收益。",
-    "cover": null,
-    "avatar": null,
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heros/peixiu.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heros/peixiu.jpg",
     "tool": null,
     "offline": true
   }
