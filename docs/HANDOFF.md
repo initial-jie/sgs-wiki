@@ -11,6 +11,8 @@
 - **基线更新:room-sim 279 passed**(+7 神势力 +14 神典韦)、UI vm+DOM 冒烟全绿、Preview 真渲染确认全部三块。**cut1+头像修+cut2 已 push 到 main(1faed7c);cut3 待 commit+push+deploy**。
 - ✅ **人工修正层已建**(`generals-overrides.mjs`,commit `7eb809f`):OL 过时技能/线下武将写这里,re-scrape 不丢。已修 曹纯缮甲/鲍三娘许身/神张角三技(线下版)+ 新增线下武将孙寒华(id9001,吴/3血)→ 库 682 将。顺带修了 scraper 写盘路径(→shared/)。后续过时武将同法进覆盖层。
 - 🔜 **TODO(孙寒华原画)**:用户暂接受无头像,后补图片(放 `prototype/client/assets/sunhanhua.jpg` 或给 URL)后,接 overrides 里孙寒华的 `avatar`/`cover`;线下武将无 OL 图床,可能要给 worker 加 `/assets/*` 静态图路由。
+- 🔜 **TODO(裴秀工具)**:裴秀(9002... 实为9003,魏/4/限定,地图机制)已入 room 库供查技能,但**地图机制复杂需完整了解后再开工具**,暂缓。
+- 🔜 **TODO(新将 graduate)**:谋贾诩(9002)/裴秀(9003)是 OL 新将官网未收录时的临时录入,**官网上线后重爬要从 OFFLINE_HEROES 删掉**(重名告警会提醒)。更新武将 json 的完整决策树见 `generals-overrides.mjs` 头部注释。
 - 🔜 **下一步**:①可选 wiki 单人版复用 generals.json + RoomCore「本地模式」(refactor 调研结论=逻辑只写一份,详见 memory `room-project`);②神典韦 roll 池后续可扩(用户说不止标将,已给 28 张;概率权重 标风>界>璀璨>族>谋 暂未实现,当前等概率无放回);③继续真机测其余工具问题清单。
 - ⚠️ **worker 改了**(新增 `/generals.json` 路由 + `import generals.json`):**必须重 `cd prototype/worker && npx wrangler deploy`** 新前端才生效(否则 `/generals.json` 404、武将库加载失败,room.html 会 console.warn 但降级——12 工具仍可用)。留意 deploy 时 bundle 体积(+749KB JSON,gzip 后约 200KB,免费计划 3MB 限额内)。
 

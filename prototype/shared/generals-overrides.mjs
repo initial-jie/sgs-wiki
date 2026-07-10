@@ -1,9 +1,15 @@
 // 人工修正层 —— generals.json 由 scrape-generals.mjs 自动生成,手改会被 re-scrape 覆盖。
 // 这里是"人工真相"单一来源:爬虫跑完(及现在)都 applyOverrides 一遍,改动永不丢失。
-// 两类:
-//   ① SKILL_OVERRIDES —— 改现有 OL 条目的技能全文(官方wiki过时 / 线下与线上不一致),其余技能不动。
-//   ② OFFLINE_HEROES  —— 纯线下武将(OL 没有),整条新增。
 //
+// ┌─ 更新武将 json 决策树(遇到要加/改的将,对号入座)──────────────────────────
+// │ A. 官网有、技能也对          → 不碰这里。加进 scraper roster / 直接重爬即可。
+// │ B. 官网有、但技能过时或错     → SKILL_OVERRIDES[id]={skills:{技能名:"新全文"}}。只改这几技,其余照爬。
+// │ C. 官网没有 / 线下 / 其他服   → OFFLINE_HEROES 整条手录:
+// │    C1 纯线下(永不上OL)       → 9000+ id,永久留着(例:孙寒华 9001)。
+// │    C2 官网迟早会收(新将lag)  → 也先手录(9000+ id),等官网上线【重爬】后 scrape 带来真条目,
+// │                                 届时【从 OFFLINE_HEROES 删掉这条】让 scrape 接管(真 id+立绘)。
+// │                                 applyOverrides 末尾有重名告警:库里出现两个同名 = 该删了。
+// └──────────────────────────────────────────────────────────────────────
 // 维护:每条注明来源/原因;OFFLINE_HEROES 用 9000+ id 段,与 OL(≤7020)隔离。
 
 export const SKILL_OVERRIDES = {
