@@ -4,7 +4,7 @@
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
-- ✅ **线徐氏(线下带工具将)+ 龙鳞贝工具 → 现 16 个工具**:线下/同人卡「徐氏」(江魂龙谶),OL 已有同名「徐氏」(id390,问卦/伏诛)故命名 **线徐氏**(id9004,tool=`xushi`,重名告警据此才没报)。工具 `xushi`:投龙鳞贝=2枚阴/阳→圣贝(1阴1阳,执行两次)/阳贝(双阳,+1龙怒)/阴贝(双阴,+2龙怒),自动累计`longnu`、手动±(守心移1)、`天泣`觉醒开关(龙怒达3高亮可发动),`lastRoll`公开。DO 端 rng 可 seed。room.html 注册 + `viewXsTool/bindXs`;`tools/xushi.html` 单人版(吴绿主题);index.html 吴区 2→3;原画 `assets/heroes/xianxia-xushi.jpg`(Pages 直链,一图两用)。**room-sim 309 passed**、Preview 房间+单人版渲染确认。
+- ✅ **SP徐氏(线下带工具将)+ 龙鳞贝工具 → 现 16 个工具**:线下/同人卡「徐氏」(江魂龙谶),OL 已有同名「徐氏」(id390,问卦/伏诛)故命名 **SP徐氏**(id9004,tool=`xushi`,重名告警据此才没报)。工具 `xushi`:投龙鳞贝=2枚阴/阳→圣贝(1阴1阳,执行两次)/阳贝(双阳,+1龙怒)/阴贝(双阴,+2龙怒),自动累计`longnu`、手动±(守心移1)、`天泣`觉醒开关(龙怒达3高亮可发动),`lastRoll`公开。DO 端 rng 可 seed。room.html 注册 + `viewXsTool/bindXs`;`tools/xushi.html` 单人版(吴绿主题);index.html 吴区 2→3;原画 `assets/heroes/xianxia-xushi.jpg`(Pages 直链,一图两用)。**room-sim 309 passed**、Preview 房间+单人版渲染确认。
 
 - ✅ **新增两个简单工具 → 现 15 个工具**:`lijue`(李傕狼袭:掷 0~2 随机伤害,DO 端 rng 可 seed)+ `xurong`(徐荣暴戾:marks 0~3 计数、凶镬发放给座位、出牌阶段三选一结算 `XURONG_EFFECTS`、杀绝濒死+1;`lastResolve` 公开)。均全公开无保密,worker 无需改(走通用 action)。room.html 注册 + view/bind;`tools/lijue.html`+`tools/xurong.html` 单人版;index.html 群区 3→5;generals.json 李傕(418)/徐荣(417) tool 映射 + scraper TOOL_NAMES。**room-sim 298 passed**(+7李傕 +12徐荣)、Preview 房间双工具 + 单人版渲染确认。**待 deploy**(room 侧 `wrangler deploy`;wiki 侧 push 即 Pages 自动)。
 

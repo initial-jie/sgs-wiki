@@ -77,10 +77,10 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
     tool: null, offline: true,
   },
-  // 线徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
-  // ⚠ 命名:OL 已有「徐氏」(id390,问卦/伏诛),故线下版叫「线徐氏」区分(线前缀,搜"徐氏"仍命中),否则重名告警+选将歧义。
+  // SP徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
+  // ⚠ 命名:OL 已有「徐氏」(id390,问卦/伏诛),故线下版叫「SP徐氏」区分(SP前缀,搜"徐氏"仍命中),否则重名告警+选将歧义。
   {
-    id: 9004, name: "线徐氏", genre: "线下", series: "线下", faction: "吴",
+    id: 9004, name: "SP徐氏", genre: "线下", series: "线下", faction: "吴",
     factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
     tags: ["爆发", "恢复"],
     skills: [

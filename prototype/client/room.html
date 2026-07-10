@@ -153,7 +153,7 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"线徐氏"} };
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"} };
 const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
@@ -1912,7 +1912,7 @@ function bindXr(xr,q){
 function viewXsTool(xs){
   const ts=xs.toolState||{}, iAm=state.youHold.includes(xs.seatNo);
   const nu=ts.longnu??0, canAwaken=nu>=3;
-  let h=`<div class="card"><h2>线徐氏 · 龙鳞贝<span class="tag">龙怒 ${nu}${ts.awakened?" · 已觉醒":""}</span></h2>`;
+  let h=`<div class="card"><h2>SP徐氏 · 龙鳞贝<span class="tag">龙怒 ${nu}${ts.awakened?" · 已觉醒":""}</span></h2>`;
   h+=`<div class="hint">龙谶:出牌阶段选一项(1雷伤 / 摸1回1),投龙鳞贝定阴阳。圣贝(1阴1阳)执行两次;阳贝(双阳)执行+1龙怒;阴贝(双阴)不执行+2龙怒。</div>`;
   if(ts.lastRoll){ const r=ts.lastRoll;
     h+=`<div class="slot" style="border-style:solid;border-color:var(--qi);text-align:center;margin-top:10px"><div style="font-size:15px;color:var(--ink-soft);letter-spacing:6px">${esc(r.coins.join(" "))}</div><div style="font-size:26px;font-weight:900;color:var(--seal)">${esc(r.bei)}</div><div style="font-size:13px">${esc(r.effect)}</div></div>`; }
