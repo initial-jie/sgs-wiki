@@ -289,6 +289,8 @@ export function initToolState(generalId) {
     return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
   if (generalId === "xurong")
     return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
+  if (generalId === "xushi")
+    return { longnu: 0, awakened: false, lastRoll: null, log: [] }; // longnu=龙怒(达3可觉醒);awakened=天泣已觉醒;lastRoll=最近龙鳞贝
   return {};
 }
 
@@ -422,6 +424,41 @@ export class RoomCore {
         return { ok: true, effect: ts.lastResolve };
       }
       if (t === "resetGame") { if (!isXu) return { error: "NOT_XURONG_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 徐氏:龙鳞贝(全公开生成器)。投 2 枚阴/阳定贝、自动加龙怒、天泣觉醒开关 ─────────
+    if (target.general === "xushi") {
+      const sSeat = targetSeat;
+      const isXs = bySeat === sSeat && iHold(sSeat); // 徐氏本人(或代持)
+      if (t === "rollBei") { // 投龙鳞贝:2 枚各随机阴/阳
+        if (!isXs) return { error: "NOT_XUSHI_ACTION" };
+        const a = this.rng() < 0.5 ? "阳" : "阴";
+        const b = this.rng() < 0.5 ? "阳" : "阴";
+        const yang = (a === "阳" ? 1 : 0) + (b === "阳" ? 1 : 0);
+        let bei, gain, effect;
+        if (yang === 1) { bei = "圣贝"; gain = 0; effect = "一阴一阳:执行两次所选效果"; }
+        else if (yang === 2) { bei = "阳贝"; gain = 1; effect = "双阳:执行所选效果,获得1枚龙怒"; }
+        else { bei = "阴贝"; gain = 2; effect = "双阴:不执行所选效果,获得2枚龙怒"; }
+        ts.longnu += gain;
+        ts.lastRoll = { coins: [a, b], bei, gain, effect };
+        this._log(ts, `龙鳞贝【${bei}】(${a}${b})→ ${effect};龙怒${ts.longnu}`);
+        return { ok: true, roll: ts.lastRoll };
+      }
+      if (t === "adjustNu") { // 手动增减龙怒(守心移去1、修正等)
+        if (!isXs) return { error: "NOT_XUSHI_ACTION" };
+        const d = Number(toolAction.delta) || 0;
+        ts.longnu = Math.max(0, ts.longnu + d);
+        this._log(ts, `龙怒 ${d > 0 ? "+" : ""}${d} → ${ts.longnu}`);
+        return { ok: true };
+      }
+      if (t === "toggleAwaken") { // 天泣觉醒开关
+        if (!isXs) return { error: "NOT_XUSHI_ACTION" };
+        ts.awakened = !ts.awakened;
+        this._log(ts, ts.awakened ? "天泣觉醒:减1体力上限回满、获得守心、对所有男性1雷伤" : "撤销天泣觉醒");
+        return { ok: true, awakened: ts.awakened };
+      }
+      if (t === "resetGame") { if (!isXs) return { error: "NOT_XUSHI_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

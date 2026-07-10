@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>徐氏 · 龙鳞贝追踪器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --wu:#4f9e77; --wu-deep:#2f7a56;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --wu:#2e7d5b; --wu-deep:#236247;
+    --ok:#3f7d4e; --warn:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"龙";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--wu);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--wu-deep);color:#eafaf1;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-wu{background:linear-gradient(160deg,var(--wu),var(--wu-deep));border-color:transparent;color:#eafaf1}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.nu-box{text-align:center;padding:6px 0 2px}
+.nu-num{font-size:52px;font-weight:900;color:var(--verm);line-height:1.05;font-family:"Kaiti SC","STKaiti",KaiTi,serif}
+.nu-label{font-size:13px;color:var(--ink-dim)}
+.bei{border:1px solid var(--wu);border-radius:8px;padding:12px 14px;margin-top:10px;text-align:center;background:linear-gradient(160deg,rgba(79,158,119,.15),var(--panel2))}
+.bei .coins{font-size:20px;letter-spacing:8px;color:var(--ink-dim)}
+.bei .name{font-size:24px;color:var(--gold);font-weight:bold;font-family:"Kaiti SC","STKaiti",KaiTi,serif;margin-top:2px}
+.awaken-tip{border:1px dashed var(--wu);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;color:var(--wu)}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.grow{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">吴</span>徐氏 · 龙鳞贝追踪器</h1>
+  <div class="sub">投贝定阴阳 · 龙怒计数 · 天泣觉醒 · v1.0</div>
+</header>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖龙谶〗</span>出牌阶段限一次，你可以选择一项：1.对一名角色造成 1 点雷电伤害；2.令一名角色摸一张牌并回复 1 点体力。执行前你投掷龙鳞贝问询神明：〖圣贝〗一阴一阳，执行两次所选效果；〖阳贝〗双阳，执行所选效果并获得 1 枚“龙怒”；〖阴贝〗双阴，不执行所选效果并获得 2 枚“龙怒”。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖天泣〗</span>觉醒技，准备阶段若“龙怒”达到 3 枚，或当你处于濒死状态时，你减 1 点体力上限并回复体力至上限，然后你获得“守心”，并对所有男性角色各造成 1 点雷电伤害。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖守心〗</span>当你造成属性伤害后，你摸一张牌。当你成为其他角色使用牌的目标时，你可以移去 1 枚“龙怒”并取消之。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h open" onclick="toggleSec('secMain')">投贝 · 龙怒<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secMain">
+    <div class="nu-box"><div class="nu-num" id="nuNum">0</div><div class="nu-label">龙怒(达 3 可觉醒天泣)</div></div>
+    <div id="beiBox"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn btn-wu grow" onclick="roll()">投龙鳞贝</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn btn-sm" onclick="adj(1)">龙怒 +1</button>
+      <button class="btn btn-sm" onclick="adj(-1)">−1（守心移去）</button>
+    </div>
+    <div id="awakenBox"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">龙怒归 0、清觉醒与记录</div>
+  </div>
+</section>
+
+<footer>徐氏 · 龙鳞贝追踪器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+const LS_KEY='sgs_xushi_v1';
+let S=null, memFallback=null, pend={};
+function defaultState(){ return { longnu:0, awakened:false, last:null, history:[], seq:0 }; }
+function save(){ const r=JSON.stringify(S); try{localStorage.setItem(LS_KEY,r);}catch(e){memFallback=r;} }
+function load(){ let r=null; try{r=localStorage.getItem(LS_KEY);}catch(e){r=memFallback;} S=defaultState(); if(r){try{const o=JSON.parse(r); if(o&&typeof o.longnu==='number') S=Object.assign(defaultState(),o);}catch(e){}} }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function roll(){
+  const a=Math.random()<0.5?'阳':'阴', b=Math.random()<0.5?'阳':'阴';
+  const yang=(a==='阳'?1:0)+(b==='阳'?1:0);
+  let bei,gain,eff;
+  if(yang===1){ bei='圣贝'; gain=0; eff='一阴一阳：执行两次所选效果'; }
+  else if(yang===2){ bei='阳贝'; gain=1; eff='双阳：执行所选效果，获得 1 枚龙怒'; }
+  else { bei='阴贝'; gain=2; eff='双阴：不执行所选效果，获得 2 枚龙怒'; }
+  S.longnu+=gain; S.seq++;
+  S.last={coins:[a,b],bei:bei,eff:eff};
+  S.history.push({t:'龙鳞贝【'+bei+'】('+a+b+')，龙怒 '+S.longnu});
+  save(); render();
+}
+function adj(d){ S.longnu=Math.max(0,S.longnu+d); S.history.push({t:'龙怒 '+(d>0?'+':'')+d+' → '+S.longnu}); save(); render(); }
+function toggleAwaken(){ S.awakened=!S.awakened; S.history.push({t:S.awakened?'天泣觉醒':'撤销天泣觉醒'}); save(); render(); }
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{if(pend.reset){pend.reset=false;render();}},4000); return; }
+  pend.reset=false; S=defaultState(); save(); render();
+}
+function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
+function render(){
+  const nn=document.getElementById('nuNum'); if(nn) nn.textContent=S.longnu;
+  const bb=document.getElementById('beiBox');
+  if(bb) bb.innerHTML = S.last ? '<div class="bei"><div class="coins">'+esc(S.last.coins.join(' '))+'</div><div class="name">'+esc(S.last.bei)+'</div><div class="skilltext" style="margin-top:2px">'+esc(S.last.eff)+'</div></div>' : '';
+  const ab=document.getElementById('awakenBox');
+  if(ab){
+    const can=S.longnu>=3;
+    let h='<div class="row" style="margin-top:10px"><button class="btn '+(S.awakened?'':'btn-wu')+'" onclick="toggleAwaken()">'+(S.awakened?'撤销天泣觉醒':'天泣觉醒'+(can?'（可发动）':''))+'</button></div>';
+    if(can&&!S.awakened) h+='<div class="awaken-tip">龙怒已达 3，准备阶段可觉醒天泣。</div>';
+    if(S.awakened) h+='<div class="awaken-tip">天泣已觉醒：减 1 点体力上限并回复至上限、获得〖守心〗、对所有男性角色各造成 1 点雷电伤害。</div>';
+    ab.innerHTML=h;
+  }
+  const lb=document.getElementById('logBox');
+  if(lb) lb.innerHTML = S.history.length? S.history.slice().reverse().slice(0,30).map(h=>'<div class="log-item">'+esc(h.t)+'</div>').join('') : '暂无记录';
+  const rb=document.getElementById('resetBtn'); if(rb){ rb.textContent=pend.reset?'再点一次确认重开':'重开一局'; if(rb.classList) rb.classList.toggle('btn-confirm',!!pend.reset); }
+}
+load(); render();
+</script>
+</body>
+</html>

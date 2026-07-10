@@ -153,8 +153,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"线徐氏"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -170,7 +170,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)},
              dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)},
              lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
-             xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)} };
+             xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
+             xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -1905,6 +1906,32 @@ function bindXr(xr,q){
   q("[data-xrgive]").forEach(b=>b.onclick=()=>act({type:"giveMark",toSeat:+b.dataset.xrgive}));
   q("[data-xrresolve]").forEach(b=>b.onclick=()=>act({type:"resolveMark",seat:+b.dataset.xrresolve}));
   q("[data-xrreset]").forEach(b=>b.onclick=()=>{if(confirm("重开徐荣工具?暴戾归3、清空发放。"))act({type:"resetGame"});});
+}
+
+/* ---------- 徐氏工具(龙鳞贝投阴阳 + 龙怒计数 + 天泣觉醒;全公开)---------- */
+function viewXsTool(xs){
+  const ts=xs.toolState||{}, iAm=state.youHold.includes(xs.seatNo);
+  const nu=ts.longnu??0, canAwaken=nu>=3;
+  let h=`<div class="card"><h2>线徐氏 · 龙鳞贝<span class="tag">龙怒 ${nu}${ts.awakened?" · 已觉醒":""}</span></h2>`;
+  h+=`<div class="hint">龙谶:出牌阶段选一项(1雷伤 / 摸1回1),投龙鳞贝定阴阳。圣贝(1阴1阳)执行两次;阳贝(双阳)执行+1龙怒;阴贝(双阴)不执行+2龙怒。</div>`;
+  if(ts.lastRoll){ const r=ts.lastRoll;
+    h+=`<div class="slot" style="border-style:solid;border-color:var(--qi);text-align:center;margin-top:10px"><div style="font-size:15px;color:var(--ink-soft);letter-spacing:6px">${esc(r.coins.join(" "))}</div><div style="font-size:26px;font-weight:900;color:var(--seal)">${esc(r.bei)}</div><div style="font-size:13px">${esc(r.effect)}</div></div>`; }
+  if(iAm){
+    h+=`<div class="row" style="margin-top:10px"><button class="primary" data-xsroll="1">投龙鳞贝</button><button class="ghost" data-xsnu="1">龙怒 +1</button><button class="ghost" data-xsnu="-1">−1(守心)</button><button class="ghost" data-xsreset="1" style="font-size:12px">重开</button></div>`;
+    h+=`<div class="row" style="margin-top:8px"><button class="${ts.awakened?'ghost':'gold'}" data-xsawaken="1">${ts.awakened?'撤销天泣觉醒':'天泣觉醒'+(canAwaken?'(可发动)':'')}</button>`
+      +(canAwaken&&!ts.awakened?`<span class="hint">龙怒已达3,准备阶段可觉醒</span>`:"")+`</div>`;
+  } else h+=`<div class="hint">徐氏本人操作,你只读。</div>`;
+  if(ts.awakened) h+=`<div class="hint" style="margin-top:6px;color:var(--seal)">天泣已觉醒:减1体力上限回满、获得〖守心〗、对所有男性角色各1点雷电伤害。</div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindXs(xs,q){
+  const X=xs.seatNo, act=(o)=>send({type:"action",targetSeat:X,bySeat:X,toolAction:o});
+  q("[data-xsroll]").forEach(b=>b.onclick=()=>act({type:"rollBei"}));
+  q("[data-xsnu]").forEach(b=>b.onclick=()=>act({type:"adjustNu",delta:+b.dataset.xsnu}));
+  q("[data-xsawaken]").forEach(b=>b.onclick=()=>act({type:"toggleAwaken"}));
+  q("[data-xsreset]").forEach(b=>b.onclick=()=>{if(confirm("重开徐氏工具?龙怒归0、清觉醒。"))act({type:"resetGame"});});
 }
 
 loadHeroes(); // 拉 OL 武将库(点座位看技能)

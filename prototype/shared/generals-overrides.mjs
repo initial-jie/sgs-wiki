@@ -77,6 +77,22 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
     tool: null, offline: true,
   },
+  // 线徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
+  // ⚠ 命名:OL 已有「徐氏」(id390,问卦/伏诛),故线下版叫「线徐氏」区分(线前缀,搜"徐氏"仍命中),否则重名告警+选将歧义。
+  {
+    id: 9004, name: "线徐氏", genre: "线下", series: "线下", faction: "吴",
+    factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
+    tags: ["爆发", "恢复"],
+    skills: [
+      { name: "龙谶", effect: "出牌阶段限一次，你可以选择一项：1.对一名角色造成1点雷电伤害；2.令一名角色摸一张牌并回复1点体力。执行前你投掷龙鳞贝问询神明：〖圣贝〗一阴一阳，执行两次所选效果；〖阳贝〗双阳，执行所选效果并获得1枚“龙怒”；〖阴贝〗双阴，不执行所选效果并获得2枚“龙怒”。" },
+      { name: "天泣", effect: "觉醒技，准备阶段若“龙怒”达到3枚，或当你处于濒死状态时，你减1点体力上限并回复体力至上限，然后你获得“守心”，并对所有男性角色各造成1点雷电伤害。" },
+      { name: "守心", effect: "当你造成属性伤害后，你摸一张牌。当你成为其他角色使用牌的目标时，你可以移去1枚“龙怒”并取消之。" },
+    ],
+    characteristic: "投龙鳞贝定阴阳、攒龙怒觉醒天泣。",
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/xianxia-xushi.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/xianxia-xushi.jpg",
+    tool: "xushi", offline: true,
+  },
 ];
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。

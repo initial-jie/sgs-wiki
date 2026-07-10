@@ -646,5 +646,29 @@ check("座位2本人结算成功(rng0→灼伤)", xrRv.ok === true && xrRv.effec
 check("lastResolve 公开可见", roomX.viewFor(xd[4]).seats[1].toolState.lastResolve.n === "灼伤");
 check("重开:marks归3、pending/lastResolve清", xrAct(1, { type: "resetGame" }).reset === true && XRT().marks === 3 && XRT().lastResolve === null);
 
+// ============ 场景 17:徐氏 龙鳞贝(投2枚阴/阳定贝 + 龙怒 + 天泣觉醒)============
+console.log("\n=== 场景 17:徐氏 龙鳞贝 ===");
+let xsSeq = [];
+const roomXs = new RoomCore("2580", 3, () => (xsSeq.length ? xsSeq.shift() : 0)); // 每次投贝消耗2个值:<.5=阳 ≥.5=阴
+const xsd = {}; for (let i = 1; i <= 3; i++) { xsd[i] = `xsd${i}`; roomXs.claimSeat(xsd[i], i); }
+roomXs.setGeneral(xsd[1], 1, "xushi");
+const xsAct = (by, o) => roomXs.action(xsd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const XST = () => roomXs.seats[1].toolState;
+check("init:龙怒0/未觉醒/无roll", XST().longnu === 0 && XST().awakened === false && XST().lastRoll === null);
+check("非徐氏不能投", xsAct(2, { type: "rollBei" }).error === "NOT_XUSHI_ACTION");
+xsSeq = [0, 0]; const xsR1 = xsAct(1, { type: "rollBei" });
+check("双阳→阳贝+1龙怒", xsR1.roll.bei === "阳贝" && xsR1.roll.gain === 1 && XST().longnu === 1);
+xsSeq = [0.9, 0.9]; const xsR2 = xsAct(1, { type: "rollBei" });
+check("双阴→阴贝+2龙怒(共3)", xsR2.roll.bei === "阴贝" && xsR2.roll.gain === 2 && XST().longnu === 3);
+xsSeq = [0, 0.9]; const xsR3 = xsAct(1, { type: "rollBei" });
+check("一阴一阳→圣贝+0", xsR3.roll.bei === "圣贝" && xsR3.roll.gain === 0 && XST().longnu === 3);
+check("龙怒公开可见", roomXs.viewFor(xsd[2]).seats[1].toolState.longnu === 3);
+xsAct(1, { type: "adjustNu", delta: -1 }); check("守心移去1→2", XST().longnu === 2);
+xsAct(1, { type: "adjustNu", delta: -10 }); check("龙怒不低于0", XST().longnu === 0);
+check("觉醒开关 on", xsAct(1, { type: "toggleAwaken" }).awakened === true && XST().awakened === true);
+check("再点撤销觉醒", xsAct(1, { type: "toggleAwaken" }).awakened === false);
+xsAct(1, { type: "adjustNu", delta: 2 }); xsAct(1, { type: "toggleAwaken" });
+check("重开:龙怒0/未觉醒", xsAct(1, { type: "resetGame" }).reset === true && XST().longnu === 0 && XST().awakened === false);
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
