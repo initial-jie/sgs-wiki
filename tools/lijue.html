@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>李傕 · 狼袭掷伤器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --qun:#a98a4e; --qun-deep:#6f5a2f;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --qun:#8a6f38; --qun-deep:#6f5a2f;
+    --ok:#3f7d4e; --warn:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"狼";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--qun);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--qun-deep);color:#f4ecd8;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.roll-box{text-align:center;padding:18px 0}
+.roll-label{font-size:13px;color:var(--ink-dim)}
+.roll-num{font-size:64px;font-weight:900;color:var(--verm);line-height:1.05;font-family:"Kaiti SC","STKaiti",KaiTi,serif}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">群</span>李傕 · 狼袭掷伤器</h1>
+  <div class="sub">准备阶段随机 0~2 点伤害 · v1.0</div>
+</header>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖狼袭〗</span>准备阶段，你可以对一名体力值不大于你的其他角色造成 0~2 点随机伤害。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖亦算〗</span>出牌阶段限一次，当你使用的锦囊牌置入弃牌堆时，你可以减少 1 点体力上限获得之。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-b roll-box">
+    <div class="roll-label">本次狼袭伤害</div>
+    <div class="roll-num" id="rollNum">—</div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn btn-primary" onclick="doRoll()">狼袭 · 掷伤害</button>
+      <button class="btn" onclick="askReset()" id="resetBtn">重开</button>
+    </div>
+    <div class="note">等概率 0 / 1 / 2</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<footer>李傕 · 狼袭掷伤器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+const LS_KEY='sgs_lijue_v1';
+let S=null, memFallback=null, pend={};
+function defaultState(){ return { last:null, history:[], seq:0 }; }
+function save(){ const r=JSON.stringify(S); try{localStorage.setItem(LS_KEY,r);}catch(e){memFallback=r;} }
+function load(){ let r=null; try{r=localStorage.getItem(LS_KEY);}catch(e){r=memFallback;} S=defaultState(); if(r){try{const o=JSON.parse(r); if(o&&Array.isArray(o.history)) S=Object.assign(defaultState(),o);}catch(e){}} }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function doRoll(){ const d=Math.floor(Math.random()*3); S.seq++; S.last=d; S.history.push({n:S.seq,d:d}); save(); render(); }
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{if(pend.reset){pend.reset=false;render();}},4000); return; }
+  pend.reset=false; S=defaultState(); save(); render();
+}
+function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
+function render(){
+  const rn=document.getElementById('rollNum'); if(rn) rn.textContent = S.last==null?'—':S.last;
+  const lb=document.getElementById('logBox');
+  if(lb) lb.innerHTML = S.history.length? S.history.slice().reverse().slice(0,30).map(h=>'<div class="log-item">第'+h.n+'次 · 狼袭 <b>'+h.d+'</b> 点</div>').join('') : '暂无记录';
+  const rb=document.getElementById('resetBtn'); if(rb){ rb.textContent=pend.reset?'再点一次确认':'重开'; if(rb.classList) rb.classList.toggle('btn-confirm',!!pend.reset); }
+}
+load(); render();
+</script>
+</body>
+</html>

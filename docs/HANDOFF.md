@@ -1,8 +1,10 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 258 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 298 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## 零、当前状态(2026-07-09 会话收尾)
+
+- ✅ **新增两个简单工具 → 现 15 个工具**:`lijue`(李傕狼袭:掷 0~2 随机伤害,DO 端 rng 可 seed)+ `xurong`(徐荣暴戾:marks 0~3 计数、凶镬发放给座位、出牌阶段三选一结算 `XURONG_EFFECTS`、杀绝濒死+1;`lastResolve` 公开)。均全公开无保密,worker 无需改(走通用 action)。room.html 注册 + view/bind;`tools/lijue.html`+`tools/xurong.html` 单人版;index.html 群区 3→5;generals.json 李傕(418)/徐荣(417) tool 映射 + scraper TOOL_NAMES。**room-sim 298 passed**(+7李傕 +12徐荣)、Preview 房间双工具 + 单人版渲染确认。**待 deploy**(room 侧 `wrangler deploy`;wiki 侧 push 即 Pages 自动)。
 
 - ✅ **新功能「点座位看技能」已做完(cut 1)**:room.html 座位卡加了「查看技能」按钮 + 「选武将」搜索弹层,可从 **OL 全量 681 将** 里选武将、点任意座位看该将技能(名/势力/体力勾玉/定位/技能全文/立绘)。**纯客户端只读、零 RoomCore/协议改动**,room-sim 仍 **258 passed**、UI vm+DOM 冒烟 14/14、Preview 真渲染截图确认(魔孙权/神典韦/神甘宁 6血起始3 全对)。**待用户 `wrangler deploy` 后真机测**。
 - ✅ **武将库数据源打通**:`prototype/shared/generals.json` = 官网 OL **681 将**全量(id/name/genre/series/faction/factionSelectable/quality/hp/initialHp/tags/skills/characteristic/cover/avatar/tool/offline)。爬虫 `prototype/scrape-generals.mjs`(node shell 出 curl,~3.5min 可重抓)。**数据来源见 memory `ol-hero-scrape`**(列表 ld+json 花名册 + `/api/v1/hero/info` 拿 hp/势力/品质 + 详情页 HTML 拿技能;移动版 sanguosha.cn 相差太远弃用,必须 OL sanguosha.com)。12 工具已全部映射到 OL id(钟琰=7014)。

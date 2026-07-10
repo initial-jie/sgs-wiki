@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>徐荣 · 暴戾追踪器</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --qun:#a98a4e; --qun-deep:#6f5a2f;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --qun:#8a6f38; --qun-deep:#6f5a2f;
+    --ok:#3f7d4e; --warn:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"暴";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--qun);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--qun-deep);color:#f4ecd8;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn-primary{background:linear-gradient(160deg,var(--verm),var(--verm2));border-color:transparent;color:#f7ead9}
+.btn-qun{background:linear-gradient(160deg,var(--qun),var(--qun-deep));border-color:transparent;color:#241a08}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-confirm{background:var(--warn);border-color:transparent;color:#231a0d}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.marks{text-align:center;padding:6px 0 2px}
+.marks .dots{font-size:40px;letter-spacing:10px;color:var(--verm)}
+.marks .cnt{font-size:13px;color:var(--ink-dim);margin-top:2px}
+.eff{border:1px solid var(--qun);border-radius:8px;padding:12px 14px;margin-top:10px;background:linear-gradient(160deg,rgba(169,138,78,.15),var(--panel2))}
+.eff .en{font-size:11px;color:var(--ink-dim)}
+.eff .ename{font-size:18px;color:var(--gold);font-weight:bold;font-family:"Kaiti SC","STKaiti",KaiTi,serif}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">群</span>徐荣 · 暴戾追踪器</h1>
+  <div class="sub">暴戾计数(上限3) · 凶镬三选一结算 · v1.0</div>
+</header>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖凶镬〗</span>游戏开始时，你获得 3 枚“暴戾”标记(标记上限为 3)。出牌阶段，你可以交给一名其他角色 1 枚“暴戾”标记，你对其造成的伤害 +1，且其出牌阶段开始时移除“暴戾”标记并随机执行一项：1.受到 1 点火焰伤害且本回合不能使用【杀】指定你为目标；2.失去 1 点体力且本回合手牌上限 -1；3.你随机获得其一张手牌和一张装备区里的牌。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖杀绝〗</span>锁定技，当其他角色进入濒死状态时，你获得 1 枚“暴戾”标记，然后若其需要超过一张【桃】或【酒】救回，你获得使其进入此濒死状态的牌。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h open" onclick="toggleSec('secMain')">暴戾计数<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secMain">
+    <div class="marks"><div class="dots" id="dots">● ● ●</div><div class="cnt" id="cnt">3 / 3 枚</div></div>
+    <div class="row" style="justify-content:center;margin-top:8px">
+      <button class="btn" id="gainBtn" onclick="gain()">有人濒死 +1</button>
+      <button class="btn" id="giveBtn" onclick="give()">发出一枚 −1</button>
+    </div>
+    <div class="note" style="text-align:center">发出=交给一名其他角色(记得：你对其伤害 +1)</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h open" onclick="toggleSec('secEff')">凶镬结算<span class="arrow">▶</span></div>
+  <div class="sec-b" id="secEff">
+    <div class="note">收到暴戾的角色其出牌阶段开始时，点此随机结算三选一：</div>
+    <div class="row"><button class="btn btn-qun grow" onclick="resolve()">结算 · 随机三选一</button></div>
+    <div id="effBox"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<section>
+  <div class="sec-b" style="text-align:center">
+    <button class="btn" id="resetBtn" onclick="askReset()">重开一局</button>
+    <div class="note">暴戾归 3、清空结算与记录</div>
+  </div>
+</section>
+
+<footer>徐荣 · 暴戾追踪器 v1.0<br>完全离线可用 · 数据仅保存在本机浏览器 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+const EFFECTS=[
+  {n:'灼伤',d:'受到 1 点火焰伤害，且本回合不能使用【杀】指定徐荣为目标。'},
+  {n:'损元',d:'失去 1 点体力，且本回合手牌上限 -1。'},
+  {n:'劫掠',d:'徐荣随机获得其一张手牌和一张装备区里的牌。'}
+];
+const MAX=3, LS_KEY='sgs_xurong_v1';
+let S=null, memFallback=null, pend={};
+function defaultState(){ return { marks:3, last:null, history:[], seq:0 }; }
+function save(){ const r=JSON.stringify(S); try{localStorage.setItem(LS_KEY,r);}catch(e){memFallback=r;} }
+function load(){ let r=null; try{r=localStorage.getItem(LS_KEY);}catch(e){r=memFallback;} S=defaultState(); if(r){try{const o=JSON.parse(r); if(o&&typeof o.marks==='number') S=Object.assign(defaultState(),o);}catch(e){}} }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function gain(){ if(S.marks>=MAX) return; S.marks++; S.history.push({t:'濒死+1，暴戾 '+S.marks}); save(); render(); }
+function give(){ if(S.marks<=0) return; S.marks--; S.history.push({t:'发出一枚，暴戾 '+S.marks}); save(); render(); }
+function resolve(){ const i=Math.floor(Math.random()*EFFECTS.length); const e=EFFECTS[i]; S.seq++; S.last={i:i,n:e.n,d:e.d}; S.history.push({t:'结算 → 【'+e.n+'】'}); save(); render(); }
+function askReset(){
+  if(!pend.reset){ pend.reset=true; render(); setTimeout(()=>{if(pend.reset){pend.reset=false;render();}},4000); return; }
+  pend.reset=false; S=defaultState(); save(); render();
+}
+function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
+function render(){
+  const dots=document.getElementById('dots'); if(dots) dots.textContent=[0,1,2].map(i=>i<S.marks?'●':'○').join(' ');
+  const cnt=document.getElementById('cnt'); if(cnt) cnt.textContent=S.marks+' / '+MAX+' 枚';
+  const gb=document.getElementById('gainBtn'); if(gb) gb.disabled=S.marks>=MAX;
+  const vb=document.getElementById('giveBtn'); if(vb) vb.disabled=S.marks<=0;
+  const eb=document.getElementById('effBox');
+  if(eb) eb.innerHTML = S.last ? '<div class="eff"><div class="en">本次结算</div><div class="ename">'+esc(S.last.n)+'</div><div class="skilltext" style="margin-top:4px">'+esc(S.last.d)+'</div></div>' : '';
+  const lb=document.getElementById('logBox');
+  if(lb) lb.innerHTML = S.history.length? S.history.slice().reverse().slice(0,30).map(h=>'<div class="log-item">'+esc(h.t)+'</div>').join('') : '暂无记录';
+  const rb=document.getElementById('resetBtn'); if(rb){ rb.textContent=pend.reset?'再点一次确认重开':'重开一局'; if(rb.classList) rb.classList.toggle('btn-confirm',!!pend.reset); }
+}
+load(); render();
+</script>
+</body>
+</html>

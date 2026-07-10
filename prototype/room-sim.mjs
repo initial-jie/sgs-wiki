@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -605,6 +605,46 @@ check("下一轮:清抽牌、保留武器、轮次+1", DT().rolled === null && D
 check("卸下已不在抽牌里的持留武器仍可(马超)", dwAct(1, { type: "equipToggle", name: "马超" }).ok === true && DT().weapons.length === 1);
 check("重开清空", dwAct(1, { type: "resetGame" }).reset === true && DT().round === 1 && DT().weapons.length === 0 && DT().rolled === null);
 check("重开后座位武将仍是神典韦", roomD.seats[1].general === "dianwei");
+
+// ============ 场景 15:李傕 狼袭(0~2 掷伤害)============
+console.log("\n=== 场景 15:李傕 狼袭 ===");
+let ljRng = 0;
+const roomL = new RoomCore("3690", 3, () => ljRng);
+const ld = {}; for (let i = 1; i <= 3; i++) { ld[i] = `ld${i}`; roomL.claimSeat(ld[i], i); }
+roomL.setGeneral(ld[1], 1, "lijue");
+const ljAct = (by, o) => roomL.action(ld[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const LJT = () => roomL.seats[1].toolState;
+check("init:round1/lastRoll null", LJT().round === 1 && LJT().lastRoll === null);
+check("非李傕不能掷", ljAct(2, { type: "langxi" }).error === "NOT_LIJUE_ACTION");
+ljRng = 0;    check("rng=0 → 0 伤害", ljAct(1, { type: "langxi" }).dmg === 0 && LJT().lastRoll === 0);
+ljRng = 0.5;  check("rng=.5 → 1 伤害", ljAct(1, { type: "langxi" }).dmg === 1);
+ljRng = 0.99; check("rng=.99 → 2 伤害(封顶2)", ljAct(1, { type: "langxi" }).dmg === 2);
+roomL.action(ld[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "newTurn" } });
+check("下一轮:round2、lastRoll 清空", LJT().round === 2 && LJT().lastRoll === null);
+check("重开", ljAct(1, { type: "resetGame" }).reset === true && LJT().round === 1);
+
+// ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
+console.log("\n=== 场景 16:徐荣 暴戾 ===");
+const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)
+const xrd = {}; for (let i = 1; i <= 4; i++) { xrd[i] = `xrd${i}`; roomX.claimSeat(xrd[i], i); }
+roomX.setGeneral(xrd[1], 1, "xurong");
+const xrAct = (by, o) => roomX.action(xrd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const XRT = () => roomX.seats[1].toolState;
+check("XURONG_EFFECTS 三项", XURONG_EFFECTS.length === 3 && XURONG_EFFECTS[0].n === "灼伤");
+check("init:marks3/pending空", XRT().marks === 3 && Object.keys(XRT().pending).length === 0);
+check("满3枚时濒死+1被拒", xrAct(1, { type: "gainMark" }).error === "MARK_FULL");
+check("给自己被拒", xrAct(1, { type: "giveMark", toSeat: 1 }).error === "BAD_TARGET");
+xrAct(1, { type: "giveMark", toSeat: 2 });
+check("给座位2一枚:marks2、pending[2]=1", XRT().marks === 2 && XRT().pending[2] === 1);
+check("非徐荣不能发", xrAct(3, { type: "giveMark", toSeat: 2 }).error === "NOT_XURONG_ACTION");
+xrAct(1, { type: "gainMark" });
+check("濒死+1回到3", XRT().marks === 3);
+check("无 pending 座位不能结算", xrAct(1, { type: "resolveMark", seat: 3 }).error === "NO_PENDING");
+check("旁人(非徐荣非本座)不能结算座2", xrAct(3, { type: "resolveMark", seat: 2 }).error === "NOT_ALLOWED");
+const xrRv = roomX.action(xrd[2], { targetSeat: 1, bySeat: 2, toolAction: { type: "resolveMark", seat: 2 } }); // 收暴戾者本人结算
+check("座位2本人结算成功(rng0→灼伤)", xrRv.ok === true && xrRv.effect.n === "灼伤" && XRT().pending[2] === undefined);
+check("lastResolve 公开可见", roomX.viewFor(xd[4]).seats[1].toolState.lastResolve.n === "灼伤");
+check("重开:marks归3、pending/lastResolve清", xrAct(1, { type: "resetGame" }).reset === true && XRT().marks === 3 && XRT().lastResolve === null);
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

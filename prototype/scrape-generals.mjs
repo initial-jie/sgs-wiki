@@ -111,7 +111,7 @@ const TOOL_NAMES = {
   "魔吕布": "lvbu", "南华老仙": "nanhua", "族荀攸": "xunyou", "谋黄月英": "huangyueying",
   "魔曹操": "caocao", "袁姬": "yuanji", "钟琰": "zhongyan", "魔司马懿": "simayi",
   "谋董昭": "dongzhao", "神孙权": "shensunquan", "魔貂蝉": "diaochan", "魔孙权": "sunquan",
-  "神典韦": "dianwei",
+  "神典韦": "dianwei", "李傕": "lijue", "徐荣": "xurong",
 };
 
 (async () => {

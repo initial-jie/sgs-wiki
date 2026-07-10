@@ -77,6 +77,13 @@ export function rollQiexie(rng = Math.random, n = 5) {
   return out;
 }
 
+// 徐荣【凶镬】暴戾三选一效果(收到暴戾的角色其出牌阶段开始随机执行一项;全公开)
+export const XURONG_EFFECTS = [
+  { n: "灼伤", d: "受到1点火焰伤害，且本回合不能使用【杀】指定徐荣为目标。" },
+  { n: "损元", d: "失去1点体力，且本回合手牌上限-1。" },
+  { n: "劫掠", d: "徐荣随机获得其一张手牌和一张装备区里的牌。" },
+];
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -278,6 +285,10 @@ export function initToolState(generalId) {
       weapons: [],   // 已装备的武器(从 rolled 里选,≤slots;公开)
       log: [],
     };
+  if (generalId === "lijue")
+    return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
+  if (generalId === "xurong")
+    return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
   return {};
 }
 
@@ -361,6 +372,56 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "resetGame") { if (!isDw) return { error: "NOT_DW_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 李傕:狼袭(全公开生成器)。掷 0~2 随机伤害,在 DO 跑(可 seed 复现) ─────────
+    if (target.general === "lijue") {
+      const lSeat = targetSeat;
+      const isLi = bySeat === lSeat && iHold(lSeat); // 李傕本人(或代持)
+      if (t === "langxi") {
+        if (!isLi) return { error: "NOT_LIJUE_ACTION" };
+        const dmg = Math.floor(this.rng() * 3); // 0/1/2 等概率
+        ts.lastRoll = dmg;
+        this._log(ts, `狼袭掷出 ${dmg} 点伤害`);
+        return { ok: true, dmg };
+      }
+      if (t === "newTurn") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; ts.round++; ts.lastRoll = null; this._log(ts, `进入第${ts.round}轮`); return { ok: true }; }
+      if (t === "resetGame") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 徐荣:凶镬/杀绝(全公开计数器+生成器)。发暴戾/濒死+1/结算三选一,随机在 DO 跑 ─────────
+    if (target.general === "xurong") {
+      const xSeat = targetSeat;
+      const isXu = bySeat === xSeat && iHold(xSeat); // 徐荣本人(或代持)
+      if (t === "gainMark") { // 杀绝:他人濒死,徐荣 +1(上限3)
+        if (!isXu) return { error: "NOT_XURONG_ACTION" };
+        if (ts.marks >= 3) return { error: "MARK_FULL" };
+        ts.marks++; this._log(ts, `杀绝:有角色濒死,徐荣获得1枚暴戾(共${ts.marks})`);
+        return { ok: true };
+      }
+      if (t === "giveMark") { // 凶镬:给一名其他座位 1 枚暴戾
+        if (!isXu) return { error: "NOT_XURONG_ACTION" };
+        const to = Number(toolAction.toSeat);
+        if (to === xSeat || !this.seats[to]) return { error: "BAD_TARGET" };
+        if (ts.marks <= 0) return { error: "NO_MARK" };
+        ts.marks--; ts.pending[to] = (ts.pending[to] || 0) + 1;
+        this._log(ts, `凶镬:给座位${to}一枚暴戾(徐荣对其伤害+1;剩${ts.marks})`);
+        return { ok: true };
+      }
+      if (t === "resolveMark") { // 收到暴戾者其出牌阶段开始:结算三选一(徐荣本人或该座位本人可点)
+        const seat = Number(toolAction.seat);
+        if (!(ts.pending[seat] > 0)) return { error: "NO_PENDING" };
+        if (!isXu && !iHold(seat)) return { error: "NOT_ALLOWED" };
+        const ei = Math.floor(this.rng() * XURONG_EFFECTS.length);
+        ts.pending[seat]--; if (ts.pending[seat] <= 0) delete ts.pending[seat];
+        const eff = XURONG_EFFECTS[ei];
+        ts.lastResolve = { seat, i: ei, n: eff.n, d: eff.d }; // 公开:全场显示最近一次结算
+        this._log(ts, `座位${seat}结算暴戾 → 【${eff.n}】${eff.d}`);
+        return { ok: true, effect: ts.lastResolve };
+      }
+      if (t === "resetGame") { if (!isXu) return { error: "NOT_XURONG_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

@@ -153,8 +153,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -168,7 +168,9 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              shensunquan:{view:s=>viewSsTool(s),bind:(s,q)=>bindSs(s,q)},
              diaochan:{view:s=>viewDcTool(s),bind:(s,q)=>bindDc(s,q)},
              sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)},
-             dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)} };
+             dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)},
+             lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
+             xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -1847,6 +1849,62 @@ function bindDw(dw,q){
   q("[data-dwclear]").forEach(b=>b.onclick=()=>{if(confirm("清空当前武器?"))act({type:"clearWeapons"});});
   q("[data-dwnewturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
   q("[data-dwreset]").forEach(b=>b.onclick=()=>{if(confirm("重开神典韦工具?清空武器与抽牌、轮次归1。"))act({type:"resetGame"});});
+}
+
+/* ---------- 李傕工具(狼袭 0~2 掷伤害;全公开)---------- */
+function viewLjTool(lj){
+  const ts=lj.toolState||{}, iAm=state.youHold.includes(lj.seatNo);
+  let h=`<div class="card"><h2>李傕 · 狼袭<span class="tag">第 ${ts.round||1} 轮</span></h2>`;
+  h+=`<div class="hint">狼袭:准备阶段,对一名体力值不大于你的其他角色造成 0~2 点随机伤害(等概率)。</div>`;
+  h+=`<div style="text-align:center;margin:14px 0"><div style="font-size:13px;color:var(--ink-soft)">本次伤害</div>`
+    +`<div style="font-size:48px;font-weight:900;color:var(--seal);line-height:1.1">${ts.lastRoll==null?"—":ts.lastRoll}</div></div>`;
+  if(iAm) h+=`<div class="row"><button class="primary" data-ljroll="1">狼袭 · 掷伤害</button><button class="ghost" data-ljturn="1">下一轮</button><button class="ghost" data-ljreset="1" style="font-size:12px">重开</button></div>`;
+  else h+=`<div class="hint">李傕本人操作,你只读。</div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindLj(lj,q){
+  const L=lj.seatNo, act=(o)=>send({type:"action",targetSeat:L,bySeat:L,toolAction:o});
+  q("[data-ljroll]").forEach(b=>b.onclick=()=>act({type:"langxi"}));
+  q("[data-ljturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
+  q("[data-ljreset]").forEach(b=>b.onclick=()=>{if(confirm("重开狼袭工具?"))act({type:"resetGame"});});
+}
+
+/* ---------- 徐荣工具(暴戾计数 + 凶镬发放/三选一结算 + 杀绝濒死+1;全公开)---------- */
+function viewXrTool(xr){
+  const ts=xr.toolState||{}, iAm=state.youHold.includes(xr.seatNo);
+  const marks=ts.marks??0, pending=ts.pending||{};
+  let h=`<div class="card"><h2>徐荣 · 暴戾<span class="tag">${marks} / 3 枚</span></h2>`;
+  h+=`<div class="hint">凶镬:给他人1枚暴戾(你对其伤害+1),其出牌阶段开始随机结算三选一。杀绝:他人濒死你+1(上限3)。</div>`;
+  h+=`<div style="margin:8px 0 4px;font-size:22px;letter-spacing:4px;color:var(--seal)">`+[0,1,2].map(i=>i<marks?"●":"○").join("")+`</div>`;
+  if(iAm){
+    h+=`<div class="row" style="margin-top:6px"><button class="primary" data-xrgain="1"${marks>=3?" disabled":""}>有人濒死 +1</button><button class="ghost" data-xrreset="1" style="font-size:12px">重开</button></div>`;
+    h+=`<div class="row" style="margin-top:8px"><label style="font-size:12px;color:var(--ink-soft)">发暴戾给</label>`;
+    for(const s of Object.values(state.seats)){ if(s.seatNo===xr.seatNo) continue;
+      h+=`<button class="pick" data-xrgive="${s.seatNo}"${marks<=0?" disabled":""} style="min-width:38px;padding:5px 0">座${s.seatNo}</button>`; }
+    h+=`</div>`+(marks<=0?`<div class="hint">暂无暴戾可发。</div>`:"");
+  } else h+=`<div class="hint">徐荣本人操作;收到暴戾的座位可自行结算。</div>`;
+  h+=`</div>`;
+  const pk=Object.keys(pending).filter(k=>pending[k]>0);
+  if(pk.length){
+    h+=`<div class="card"><h2>待结算暴戾</h2>`;
+    for(const seat of pk){ const canR=iAm||state.youHold.includes(+seat);
+      h+=`<div class="row" style="margin-top:4px"><span class="grow">座位 ${seat} · ${pending[seat]} 枚</span>`
+        +(canR?`<button class="gold" data-xrresolve="${seat}">出牌阶段·结算</button>`:`<span class="hint">等座位${seat}或徐荣结算</span>`)+`</div>`; }
+    h+=`</div>`;
+  }
+  if(ts.lastResolve){ const r=ts.lastResolve;
+    h+=`<div class="card"><h2>最近结算<span class="tag">座位 ${r.seat}</span></h2><div class="slot"><b style="color:var(--seal)">${esc(r.n)}</b> ${esc(r.d)}</div></div>`; }
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindXr(xr,q){
+  const X=xr.seatNo, act=(o)=>send({type:"action",targetSeat:X,bySeat:X,toolAction:o});
+  q("[data-xrgain]").forEach(b=>b.onclick=()=>act({type:"gainMark"}));
+  q("[data-xrgive]").forEach(b=>b.onclick=()=>act({type:"giveMark",toSeat:+b.dataset.xrgive}));
+  q("[data-xrresolve]").forEach(b=>b.onclick=()=>act({type:"resolveMark",seat:+b.dataset.xrresolve}));
+  q("[data-xrreset]").forEach(b=>b.onclick=()=>{if(confirm("重开徐荣工具?暴戾归3、清空发放。"))act({type:"resetGame"});});
 }
 
 loadHeroes(); // 拉 OL 武将库(点座位看技能)
