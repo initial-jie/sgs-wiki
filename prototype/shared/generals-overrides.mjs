@@ -7,9 +7,8 @@
 // 维护:每条注明来源/原因;OFFLINE_HEROES 用 9000+ id 段,与 OL(≤7020)隔离。
 
 export const SKILL_OVERRIDES = {
-  // 曹纯(标·魏) 缮甲 —— 线下版全文
-  // ⚠ 用户 OCR 原文有两处疑似糊字,已按语义清理,待确认:开头"主"(疑锁定技/多余字,已删)、"弃置过版啤"→"弃置过牌"
-  426: { note: "曹纯 缮甲 线下版(OCR 清理:去'主'、'版啤'→'牌')", skills: {
+  // 曹纯(标·魏) 缮甲 —— 线下版全文。OCR 清理已经用户确认:开头"主"是多打字(已删)、"弃置过版啤"→"弃置过牌"
+  426: { note: "曹纯 缮甲 线下版(OCR 清理已确认:去'主'、'版啤'→'牌')", skills: {
     "缮甲": "游戏开始时，你获得3个“损”。你失去一张装备牌后，你移去1个“损”。出牌阶段限一次，你可以摸三张牌，并可以使用一张【杀】。然后你此阶段使用的下X张手牌时，你弃置一张牌（X为“损”数）。若如此做，此阶段结束时，若你此阶段未因“缮甲”弃置过牌或仅弃置过装备牌，你可视为使用一张无距离限制的【杀】。",
   } },
   // 鲍三娘(标·蜀) 许身 —— 官方wiki过时,线下版无"回复体力至1点"结尾
@@ -25,7 +24,8 @@ export const SKILL_OVERRIDES = {
 };
 
 export const OFFLINE_HEROES = [
-  // 孙寒华 —— 三国杀移动版武将线下化,OL 无。⚠ faction/hp 待用户确认(暂按移动版:吴/3血);原画待用户给文件后接 avatar/cover
+  // 孙寒华 —— 三国杀移动版武将线下化,OL 无。faction/hp 已确认(吴/3血)。
+  // TODO(原画):用户后补图片文件(建议 prototype/client/assets/sunhanhua.jpg)或 URL 后,把下面 avatar/cover 接上;线下武将无 OL 图床,可能要给 worker 加静态图路由。
   {
     id: 9001, name: "孙寒华", genre: "线下", series: "线下", faction: "吴",
     factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
