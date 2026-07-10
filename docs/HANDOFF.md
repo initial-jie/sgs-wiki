@@ -10,7 +10,7 @@
 - ✅ **神典韦工具 cut 3 已做完 —— 13 个工具**:`dianwei` 工具(全公开生成器)。`room-logic.mjs` 加 `DIANWEI_POOL`(28 张:16 特殊带杀+12 白板,数据从 generals.json 派生)+ `rollQiexie(rng,5)`(无放回、关羽/张飞互斥、rng 可 seed) + `initToolState("dianwei")` + action 块(`qiexie` 抽5 在 DO 跑、`equipToggle` 装/卸≤slots、`clearWeapons`、`newTurn` 清抽保武器、`resetGame`);worker 无需改(走通用 action);room.html 注册工具 + `viewDwTool/bindDw`(当前武器/摧决可及范围/抽5候选点选装备/白板标注/记录);generals.json 神典韦(229).tool=dianwei。**捐甲=武器栏2(slots)、摧决=展示最大范围**。
 - **基线更新:room-sim 279 passed**(+7 神势力 +14 神典韦)、UI vm+DOM 冒烟全绿、Preview 真渲染确认全部三块。**cut1+头像修+cut2 已 push 到 main(1faed7c);cut3 待 commit+push+deploy**。
 - ✅ **人工修正层已建**(`generals-overrides.mjs`,commit `7eb809f`):OL 过时技能/线下武将写这里,re-scrape 不丢。已修 曹纯缮甲/鲍三娘许身/神张角三技(线下版)+ 新增线下武将孙寒华(id9001,吴/3血)→ 库 682 将。顺带修了 scraper 写盘路径(→shared/)。后续过时武将同法进覆盖层。
-- ✅ **线下将原画已接**(commit `abceaf7`):孙寒华/谋贾诩/裴秀 原画存 `assets/heros/*.jpg`,GitHub Pages 托管,overrides 里 `avatar`/`cover` 指 Pages 直链(`https://initial-jie.github.io/sgs-wiki/assets/heros/`)。⚠ 若 Pages 实际 base 不是这个域(自定义域名等),URL 要改。以后线下将原画同法:图片放 `assets/heros/` → 引 Pages 直链。
+- ✅ **线下将原画已接**(commit `abceaf7`):孙寒华/谋贾诩/裴秀 原画存 `assets/heroes/*.jpg`,GitHub Pages 托管,overrides 里 `avatar`/`cover` 指 Pages 直链(`https://initial-jie.github.io/sgs-wiki/assets/heroes/`)。⚠ 若 Pages 实际 base 不是这个域(自定义域名等),URL 要改。以后线下将原画同法:图片放 `assets/heroes/` → 引 Pages 直链。
 - 🔜 **TODO(裴秀工具)**:裴秀(9002... 实为9003,魏/4/限定,地图机制)已入 room 库供查技能,但**地图机制复杂需完整了解后再开工具**,暂缓。
 - 🔜 **TODO(新将 graduate)**:谋贾诩(9002)/裴秀(9003)是 OL 新将官网未收录时的临时录入,**官网上线后重爬要从 OFFLINE_HEROES 删掉**(重名告警会提醒)。更新武将 json 的完整决策树见 `generals-overrides.mjs` 头部注释。
 - 🔜 **下一步**:①可选 wiki 单人版复用 generals.json + RoomCore「本地模式」(refactor 调研结论=逻辑只写一份,详见 memory `room-project`);②神典韦 roll 池后续可扩(用户说不止标将,已给 28 张;概率权重 标风>界>璀璨>族>谋 暂未实现,当前等概率无放回);③继续真机测其余工具问题清单。
