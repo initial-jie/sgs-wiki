@@ -1,8 +1,18 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 298 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 309 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## 零、当前状态(2026-07-09 会话收尾)
+
+### ⭐ 最新一句话状态(截至 `ebd4eeb`)—— 优先读这段,下面是历史增量
+- **库 687 将 / 16 工具 / 6 线下将;`room-sim 309 passed`;`tools/*.html` 16 个;全部已 push 到 main,与 origin 同步。**
+- **16 工具**:lvbu/nanhua/xunyou/huangyueying/caocao/yuanji/zhongyan/simayi/dongzhao/shensunquan/diaochan/sunquan + `dianwei`(神典韦挈挟)+ `lijue`(李傕狼袭0~2)+ `xurong`(徐荣暴戾)+ `xushi`(SP徐氏龙鳞贝)。后四个 = **全公开生成器范式**(随机下沉 DO、rng 可 seed、无 VISIBILITY、worker 走通用 action 无需改)。每个工具 = room-logic(initToolState+action块)+ room.html(view/bind)+ `tools/{id}.html` 单人版 + index.html 卡。
+- **本轮新增武将**(覆盖层 `OFFLINE_HEROES`,9000+ id):孙寒华9001 / 谋贾诩9002 / 裴秀9003 / SP徐氏9004(带工具xushi) / 留赞9005 / 移动版谋韩当9006。**技能勘误**(`SKILL_OVERRIDES`):曹纯缮甲 / 鲍三娘许身 / 神张角×3 / 界郭皇后矫诏(726)。
+- **新交互**:选将列表每行「查看技能」= `previewHero` 叠加层,选定前预览/比较多版本技能(纯客户端,零协议改动)。神势力自选(chosenFaction)、点座位查技能也都在。
+- **部署两处**:room=`cd prototype/worker && npx wrangler deploy`(room.html+room-logic+generals.json 打进 worker);wiki=`git push` 即 GitHub Pages 自动(index.html+tools/*.html+assets/)。用户已多次 deploy;**最后几个提交(留赞/谋韩当/查看技能/矫诏)可能需再 deploy 一次**。
+- **待办**:①SP徐氏/留赞/移动版谋韩当 **原画待补**(图丢 `assets/heroes/` 引 Pages 直链;孙寒华/谋贾诩/裴秀 已有);②**裴秀工具**(地图机制复杂,暂缓);③谋贾诩/裴秀 **graduate**(官网上线重爬后从 OFFLINE_HEROES 删,重名告警会提醒);④神典韦 roll **概率权重**未实现(当前等概率无放回)。
+- **关键机制/方法**:更新武将 json 决策树(A官网有对→重爬 / B官网有错→SKILL_OVERRIDES / C官网无→OFFLINE_HEROES)+ 命名(OL 有同名的加前缀如 SP徐氏/移动版谋韩当)见 `generals-overrides.mjs` 头部注释;数据源 curl 方法(OL sanguosha.com + 移动版 sanguosha.cn)见 memory `ol-hero-scrape`;git/部署见 memory `room-git-setup`。
+
 
 - ✅ **SP徐氏(线下带工具将)+ 龙鳞贝工具 → 现 16 个工具**:线下/同人卡「徐氏」(江魂龙谶),OL 已有同名「徐氏」(id390,问卦/伏诛)故命名 **SP徐氏**(id9004,tool=`xushi`,重名告警据此才没报)。工具 `xushi`:投龙鳞贝=2枚阴/阳→圣贝(1阴1阳,执行两次)/阳贝(双阳,+1龙怒)/阴贝(双阴,+2龙怒),自动累计`longnu`、手动±(守心移1)、`天泣`觉醒开关(龙怒达3高亮可发动),`lastRoll`公开。DO 端 rng 可 seed。room.html 注册 + `viewXsTool/bindXs`;`tools/xushi.html` 单人版(吴绿主题);index.html 吴区 2→3;原画 `assets/heroes/xianxia-xushi.jpg`(Pages 直链,一图两用)。**room-sim 309 passed**、Preview 房间+单人版渲染确认。
 
