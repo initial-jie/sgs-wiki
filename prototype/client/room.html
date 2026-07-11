@@ -94,6 +94,8 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .grow-item .ava{width:34px;height:34px;border-radius:6px;object-fit:cover;background:var(--paper3);flex:none;border:1px solid var(--line)}
 .grow-item .gn{font-family:var(--display);font-weight:700;font-size:15px}
 .grow-item .gmeta{font-size:11px;color:var(--ink-soft)}
+.grow-item .gv{flex:none;font-size:12px;padding:5px 10px;border:1px solid var(--seal);color:var(--seal);background:transparent;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.grow-item .gv:active{background:rgba(163,46,34,.1)}
 .fc{display:inline-block;font-size:11px;border-radius:4px;padding:0 5px;border:1px solid var(--line);color:var(--ink-soft);margin-left:5px}
 .fc.wei{color:#2b5fa5;border-color:#2b5fa5}.fc.shu{color:#a33322;border-color:#a33322}
 .fc.wu{color:#2f7d4f;border-color:#2f7d4f}.fc.qun{color:#7a6320;border-color:#7a6320}
@@ -240,11 +242,13 @@ function renderPickerList(qstr){
     return `<div class="grow-item" data-pickid="${hero.id}">
       <img class="ava" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
       <div class="grow"><div class="gn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
-      <div class="gmeta">${esc(hero.genre||"")} · ${hero.hp??"?"}血${hero.tool?" · 有工具":""} · ${(hero.skills||[]).map(s=>esc(s.name)).join("/")}</div></div></div>`;
+      <div class="gmeta">${esc(hero.genre||"")} · ${hero.hp??"?"}血${hero.tool?" · 有工具":""} · ${(hero.skills||[]).map(s=>esc(s.name)).join("/")}</div></div>
+      <button class="gv" data-viewid="${hero.id}">查看技能</button></div>`;
   }).join("");
   if(!shown.length)h=`<div class="hint" style="padding:12px">没找到「${esc(qstr)}」。可点上方「手动输入」。</div>`;
   else if(list.length>60)h+=`<div class="hint" style="padding:8px">共 ${list.length} 个,仅显示前 60,继续输入缩小…</div>`;
   box.innerHTML=h;
+  box.querySelectorAll("[data-viewid]").forEach(el=>el.onclick=(e)=>{e.stopPropagation();previewHero(+el.dataset.viewid);}); // 查看技能:预览不选定
   box.querySelectorAll("[data-pickid]").forEach(el=>el.onclick=()=>choosePick(+el.dataset.pickid));
 }
 function choosePick(id){
@@ -276,6 +280,31 @@ function openSkillView(general,seatNo){
     ${skills}
     ${hero.tool?'<div class="hint">此武将有专属线下工具,在大厅「登场工具」处进入。</div>':""}</div></div>`;
   maskClose();
+}
+// 选将弹层里「查看技能」:叠加在列表之上预览某版本技能(不选定),看完可「返回列表」比较别的版本,或「选定此武将」提交
+function previewHero(id){
+  const hero=HERO_BY_ID.get(id); if(!hero){toast("该武将暂无技能资料");return;}
+  const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
+  const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
+  const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
+  let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
+  const skills=(hero.skills||[]).map(s=>`<div class="skl"><div class="sn">${esc(s.name)}</div><div class="se">${esc(s.effect||"(官网暂无描述)")}</div></div>`).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+  const ov=document.createElement("div"); ov.className="mask"; ov.style.zIndex="90";
+  ov.innerHTML=`<div class="sheet">
+    <h2>查看技能<span class="x" data-pvclose="1">×</span></h2>
+    <div class="herohead"><img src="${esc(hero.cover||hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
+      <div><div class="hn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
+        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""}${hero.tool?" · 有工具":""}</div>
+        <div class="hmeta" style="margin-top:3px">${dots} ${cap}体力上限${start!==cap?"(起始 "+start+")":""}</div>
+        <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
+    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
+    ${skills}
+    ${hero.tool?'<div class="hint">此武将有专属线下工具,选定后在大厅「登场工具」处进入。</div>':""}
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">返回列表</button><button class="primary" data-pvpick="1">选定此武将</button></div>
+  </div>`;
+  $("#modal").appendChild(ov);
+  ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest("[data-pvclose]")) ov.remove(); }); // 背景/×/返回:只关预览,列表还在
+  ov.querySelector("[data-pvpick]").onclick=()=>choosePick(id); // 选定→ choosePick(内部 setGeneral + closeModal 关掉整个弹层)
 }
 
 const $=(s,el=document)=>el.querySelector(s);
