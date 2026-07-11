@@ -1,0 +1,26 @@
+{
+  "name": "三国杀线下 Wiki",
+  "short_name": "杀·Wiki",
+  "description": "三国杀线下速查手册：衍生技 / 衍生牌 / 武将修订 + 线下多人房间工具。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ede4d0",
+  "theme_color": "#a32e22",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

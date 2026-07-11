@@ -2,8 +2,17 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>三国杀线下 Wiki · 衍生技 / 衍生牌 / 武将修订</title>
+<!-- PWA:可“添加到主屏幕”当 app 用 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#a32e22">
+<link rel="icon" href="assets/icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="杀·Wiki">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800;900&display=swap" rel="stylesheet">
 <style>
@@ -1018,6 +1027,15 @@ footer .hist{margin-top:8px}
     }
   });
 })();
+</script>
+<script>
+/* 注册 Service Worker:让本站可离线查表、可“添加到主屏幕”当 app。
+   仅在 https(GitHub Pages)或 localhost 生效;失败静默降级,不影响网页。 */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
