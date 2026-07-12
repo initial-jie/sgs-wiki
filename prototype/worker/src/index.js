@@ -7,11 +7,19 @@ import { RoomCore } from "../../shared/room-logic.mjs";
 import ROOM_HTML from "../../client/room.html"; // 文本模块(见 wrangler.toml [[rules]] Text)
 import GENERALS_DATA from "../../shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
 import DERIVED_DATA from "../../shared/derived-skills.json"; // 常见武将牌衍生技(查将时带出;从 index.html 衍生技区抽取)
+import DERIVED_ROOM from "../../shared/derived-skills-room.json"; // 房间专属补充(如魔张飞入魔修改版,不进 wiki)
 import DCARDS_DATA from "../../shared/derived-cards.json"; // 常见武将牌衍生牌(查将时带出;从 index.html 衍生牌区抽取,按来源武将存)
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 const GENERALS_JSON = JSON.stringify(GENERALS_DATA); // 一次序列化,静态资源直接吐
-const DERIVED_JSON = JSON.stringify(DERIVED_DATA);   // 衍生技(小),同上
+// 合并 wiki 抽取的衍生技 + 房间专属补充(同名武将则数组拼接;房间补充仅房间可见)
+const DERIVED_MERGED = (() => {
+  const out = {};
+  for (const k of Object.keys(DERIVED_DATA)) out[k] = DERIVED_DATA[k].slice();
+  for (const k of Object.keys(DERIVED_ROOM)) out[k] = (out[k] || []).concat(DERIVED_ROOM[k]);
+  return out;
+})();
+const DERIVED_JSON = JSON.stringify(DERIVED_MERGED); // 衍生技(小),同上
 const DCARDS_JSON = JSON.stringify(DCARDS_DATA);     // 衍生牌(小),同上
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 房间闲置存活:每次操作把 TTL 推后到"此刻+2h";到点自动清盘=房间消失
 
