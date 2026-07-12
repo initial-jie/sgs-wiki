@@ -211,7 +211,7 @@ function derivedSkillsHtml(hero){
   const list=card.filter(d=>!own.has(d.name));
   if(!list.length)return"";
   return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生技(该武将技能中提及)</div>`
-    +list.map(d=>`<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${d.tag?` <span class="chip">${esc(d.tag)}</span>`:""}</div><div class="se">${esc(d.text)}</div></div>`).join("");
+    +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${tags.map(t=>` <span class="chip">${esc(t)}</span>`).join("")}</div><div class="se">${esc(d.text)}</div></div>`;}).join("");
 }
 function heroForSeat(general){
   if(!general||general==="none")return null;
