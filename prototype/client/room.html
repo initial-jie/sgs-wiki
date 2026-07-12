@@ -181,6 +181,7 @@ let HEROES=[];                 // 全量 681 将
 const HERO_BY_ID=new Map();    // id(数字) -> hero
 const HERO_BY_TOOL=new Map();  // toolId -> hero
 let DERIVED={};                // 常见武将牌衍生技,按来源武将存:{武将名(去·空格)→[{name,tag,text}]};从 /derived-skills.json 拉
+let DCARDS={};                  // 常见武将牌衍生牌,按来源武将存:{武将名(去·空格)→[{name,src,text}]};从 /derived-cards.json 拉
 const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
 function loadHeroes(){
   fetch("/generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(list=>{
@@ -190,6 +191,15 @@ function loadHeroes(){
     if(state)render();
   }).catch(e=>console.warn("武将库加载失败(worker 可能未更新):",e));
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
+  fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
+}
+// 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
+function derivedCardsHtml(hero){
+  if(!hero||!hero.name)return"";
+  const list=DCARDS[hero.name.replace(/[·\s]/g,"")];
+  if(!list||!list.length)return"";
+  return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生牌(该武将可产生)</div>`
+    +list.map(c=>`<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(c.name)}${c.src?` <span class="hint" style="margin:0;font-weight:400">（${esc(c.src)}）</span>`:""}</div><div class="se">${esc(c.text)}</div></div>`).join("");
 }
 // 查某武将技能时,带出【该武将自己那张 index 衍生技卡】里的衍生技(按武将存,避免火计等同名跨语境串版)。
 // 排除其自身顶层技能名(已在主技能区显示);去·空格后按武将名精确匹配。
@@ -293,6 +303,7 @@ function openSkillView(general,seatNo){
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
     ${skills}
     ${derivedSkillsHtml(hero)}
+    ${derivedCardsHtml(hero)}
     ${hero.tool?'<div class="hint">此武将有专属线下工具,在大厅「登场工具」处进入。</div>':""}</div></div>`;
   maskClose();
 }
@@ -315,6 +326,7 @@ function previewHero(id){
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
     ${skills}
     ${derivedSkillsHtml(hero)}
+    ${derivedCardsHtml(hero)}
     ${hero.tool?'<div class="hint">此武将有专属线下工具,选定后在大厅「登场工具」处进入。</div>':""}
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">返回列表</button><button class="primary" data-pvpick="1">选定此武将</button></div>
   </div>`;
