@@ -41,6 +41,14 @@ button:disabled{opacity:.4;cursor:default}
 .row.end{justify-content:flex-end}
 .grow{flex:1;min-width:0}
 .chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:2px 10px;margin:2px 3px 2px 0;color:var(--ink-soft)}
+/* 技能标签(锁定技/转换技…):从技能文本开头自动识别,配色同 wiki */
+.stag{display:inline-block;font-size:11px;border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle;font-weight:600;font-family:var(--body)}
+.stag-lock{background:#d8d2c2;color:#4a4232;border:1px solid #b3ab97}
+.stag-limit{background:#f0d9d5;color:#8f2a1e;border:1px solid #d3a49c}
+.stag-awake{background:#ded5ea;color:#4d3a72;border:1px solid #b7a9cf}
+.stag-lord{background:#f0e6c8;color:#8a6a14;border:1px solid #d2ba7e}
+.stag-conv{background:#d5e2e8;color:#2f5a6e;border:1px solid #a3bfcb}
+.stag-trans{background:#d3e6d5;color:#2f6e42;border:1px solid #a3cbb0}
 .chip.on{border-color:var(--seal);color:var(--seal)}
 .chip.gold{border-color:var(--qi);color:#856a1f}
 .hint{font-size:12px;color:var(--ink-soft);margin-top:6px}
@@ -201,6 +209,23 @@ function derivedCardsHtml(hero){
   return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生牌(该武将可产生)</div>`
     +list.map(c=>`<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(c.name)}${c.src?` <span class="hint" style="margin:0;font-weight:400">（${esc(c.src)}）</span>`:""}</div><div class="se">${esc(c.text)}</div></div>`).join("");
 }
+// ---- 技能标签:三国杀标签固定写在技能文本最开头("锁定技，…"/"转换技，锁定技，…"),从开头剥离 ----
+const KNOWN_TAGS=new Set(["锁定技","限定技","觉醒技","转换技","主公技","使命技","阵法技","宗族技","隐匿技","持恒技","主将技","副将技","军令技","国战技"]);
+const STAG_MAP={锁定技:"lock",限定技:"limit",觉醒技:"awake",转换技:"trans",主公技:"lord"};
+function isTagWord(w){ return KNOWN_TAGS.has(w) || /势力技$/.test(w); }
+function tagClass(n){ return STAG_MAP[n] || "conv"; } // 势力技/宗族技/阵法技等归蓝
+function skillTags(effect){ // 返回 {tags:[标签名], text:去掉开头标签后的正文}
+  let t=(effect||"").trim(); const tags=[]; let m,guard=0;
+  while(guard++<4 && (m=t.match(/^([一-龥]{2,6}技)[，,、]\s*/)) && isTagWord(m[1])){ tags.push(m[1]); t=t.slice(m[0].length); }
+  return {tags,text:t};
+}
+function stagHtml(names){ return (names||[]).map(n=>`<span class="stag stag-${tagClass(n)}">${esc(n)}</span>`).join(""); }
+// 渲染一组武将技能(本体):自动抽标签成彩色标记 + 去标签正文
+function skillsHtml(skills){
+  return (skills||[]).map(s=>{const {tags,text}=skillTags(s.effect);
+    return `<div class="skl"><div class="sn">${esc(s.name)}${stagHtml(tags)}</div><div class="se">${esc(text||"(官网暂无描述)")}</div></div>`;
+  }).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+}
 // 查某武将技能时,带出【该武将自己那张 index 衍生技卡】里的衍生技(按武将存,避免火计等同名跨语境串版)。
 // 排除其自身顶层技能名(已在主技能区显示);去·空格后按武将名精确匹配。
 function derivedSkillsHtml(hero){
@@ -211,7 +236,7 @@ function derivedSkillsHtml(hero){
   const list=card.filter(d=>!own.has(d.name));
   if(!list.length)return"";
   return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生技(该武将技能中提及)</div>`
-    +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${tags.map(t=>` <span class="chip">${esc(t)}</span>`).join("")}</div><div class="se">${esc(d.text)}</div></div>`;}).join("");
+    +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${stagHtml(tags)}</div><div class="se">${esc(d.text)}</div></div>`;}).join("");
 }
 function heroForSeat(general){
   if(!general||general==="none")return null;
@@ -292,7 +317,7 @@ function openSkillView(general,seatNo){
   const fname=hero.factionSelectable?(chosen?("神 → "+chosen):"神 · 势力自选"):(hero.faction||"?");
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
-  const skills=(hero.skills||[]).map(s=>`<div class="skl"><div class="sn">${esc(s.name)}</div><div class="se">${esc(s.effect||"(官网暂无描述)")}</div></div>`).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+  const skills=skillsHtml(hero.skills);
   $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
     <h2>武将技能<span class="x" data-mclose="1">×</span></h2>
     <div class="herohead"><img src="${esc(hero.cover||hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
@@ -314,7 +339,7 @@ function previewHero(id){
   const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
-  const skills=(hero.skills||[]).map(s=>`<div class="skl"><div class="sn">${esc(s.name)}</div><div class="se">${esc(s.effect||"(官网暂无描述)")}</div></div>`).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+  const skills=skillsHtml(hero.skills);
   const ov=document.createElement("div"); ov.className="mask"; ov.style.zIndex="90";
   ov.innerHTML=`<div class="sheet">
     <h2>查看技能<span class="x" data-pvclose="1">×</span></h2>
