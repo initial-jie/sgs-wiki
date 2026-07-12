@@ -11,7 +11,7 @@
 - **② 入口页显眼自定义 ID**:`viewConnect` 改成醒目「你的名字/ID」输入 + 🎲随机 +「别和同房玩家重复」红字提示;服务端地址收进 `<details>`。留空则随机。
 - **③ 座位独占 + 解锁替换**:`claimSeat` 座位被他人持有→ `SEAT_TAKEN`;新增 **`takeoverSeat`**(撤原持有者 holds、强制转移)。client 座位卡:他人持有显「替换」(确认「XX 持有,确定接管?」)、未占显「认领」、自己显「释放」;显示当前持有者 + "断线可替换不锁死"。仍保留一设备多座位。
 - **④ 魔孙权两修**:(4a)**天恩·不同项拆两步** —— `teDiffInit{target}`(孙权只发起)→ `teDiffChoose{effect}`(**目标本人**在其 UI 选剑,校验 `bySeat===tePending.target`);新增全局横幅 `sqPendingForMe/viewTeBanner`「⚔孙权对你发动了天恩」弹在目标任意界面顶部。(4b)**吴六剑处处带注释** —— 天恩选项/权御历史图例/表头 title 全用 `SQ_EFFECTS.d`(白虹=伤害+1…)。`tePending` 入 initToolState + teReset/endRound/teCancel 清。
-- **⑤ 衍生技只出清单(未动代码)**:[docs/衍生技扫描清单.md](衍生技扫描清单.md) —— 扫 generals.json 得 **77 将含衍生技**(弯引号`""`引用,如谋庞统鸿图→"飞军""潜袭";105 衍生技名:47 库内可复用 / 58 需补录)+ **68 将含入魔/觉醒/卖血/改写升级信号**。口径与生成脚本见文档头。后续要"房内查将带出衍生技/升级文本"是下一步大工程,数据补录进 `generals-overrides.mjs`。
+- **⑤ 衍生技**:先出清单 [docs/衍生技扫描清单.md](衍生技扫描清单.md)(77 将含衍生技/68 将含升级信号,口径见文档头)。**第一步已落地(2026-07-12)——index.html 现成衍生技搬进房间**:从 `index.html #derived-skills` 区抽 25 条 → `prototype/shared/derived-skills.json`(名→{name,tag,text,from};火计蜀界庞统/群司马徽两版 first-wins 取界庞统"被授予"版);worker 加 `/derived-skills.json` 路由;room.html `loadHeroes` 顺带 fetch 进 `DERIVED`,查将弹层(openSkillView+previewHero)末尾 `derivedSkillsHtml(hero)` 扫该将技能文本引用到、非自身技能的衍生技名→带出定义(红边卡)。谋庞统查将见飞军/潜袭全文,界庞统见火计/看破/八阵,鲍三娘见征南。browser 真渲染+零 console 错;sim 不受影响仍 321。**index.html 是人工源,derived-skills.json 从它抽取(改了 index 衍生技区需重抽:解析 article/h4/skill-name/skill-text,脚本见对话)**。**用户接下来:review 升级将 + 圈定还要补哪些不在 index 的衍生技**(跟不上节奏的老将如界徐庶、国战将 不补);剩余真·衍生子技+升级将文本补录进 `generals-overrides.mjs` 是后续。
 
 ### ⭐ PWA(app 化)状态 —— 见下方历史;⭐ 最新一句话状态(截至 `ebd4eeb`)—— 下面是历史增量
 - **库 687 将 / 16 工具 / 6 线下将;`room-sim 309 passed`;`tools/*.html` 16 个;全部已 push 到 main,与 origin 同步。**

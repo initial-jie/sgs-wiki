@@ -6,9 +6,11 @@
 import { RoomCore } from "../../shared/room-logic.mjs";
 import ROOM_HTML from "../../client/room.html"; // 文本模块(见 wrangler.toml [[rules]] Text)
 import GENERALS_DATA from "../../shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
+import DERIVED_DATA from "../../shared/derived-skills.json"; // 常见武将牌衍生技(查将时带出;从 index.html 衍生技区抽取)
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 const GENERALS_JSON = JSON.stringify(GENERALS_DATA); // 一次序列化,静态资源直接吐
+const DERIVED_JSON = JSON.stringify(DERIVED_DATA);   // 衍生技(小),同上
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 房间闲置存活:每次操作把 TTL 推后到"此刻+2h";到点自动清盘=房间消失
 
 export default {
@@ -35,6 +37,16 @@ export default {
         headers: {
           "content-type": "application/json; charset=utf-8",
           // 数据只在 deploy 时变;缓存 1h + 后台再验,改完最多 1h 生效(不再卡一整天)
+          "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
+        },
+      });
+    }
+
+    // 衍生技(只读参考数据):查将时带出。同源、可缓存。
+    if (url.pathname === "/derived-skills.json" && request.method === "GET") {
+      return new Response(DERIVED_JSON, {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
           "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
         },
       });
