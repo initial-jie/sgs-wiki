@@ -4,7 +4,16 @@
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
-### ⭐ 最新一句话状态(截至 `ebd4eeb`)—— 优先读这段,下面是历史增量
+### ⭐⭐ 线下实战修 4 项 + 衍生技扫描(2026-07-11 会话)—— 最优先读
+
+- **实战反馈修了 4 处(①②③④),⑤ 只出扫描清单。`room-sim 321 passed`、client UI 冒烟 16/16、真机浏览器 4 张截图确认。全部 push 到 main。⚠️ room 侧改了(worker+room.html)→ 用户必须 `cd prototype/worker && npx wrangler deploy` 才生效。**
+- **① 房间不再"人走即灭"**:RoomDO 加 **DO storage 持久化**(`core.serialize()/RoomCore.hydrate()`,devices.holds Set↔数组)+ **闲置 TTL 闹钟**(`ROOM_TTL_MS=2h`,每次操作 `setAlarm(now+2h)`;`alarm()` 到点清盘=房间消失,无人连接也会被平台唤醒执行)。新增 **`disbandRoom`** 动作(任意玩家解散,清盘+撤闹钟+广播 `roomClosed`)。client:底部「房间设置」卡有🗑解散(二次确认)+ TTL 说明;onmessage 处理 `roomClosed` 回大厅。
+- **② 入口页显眼自定义 ID**:`viewConnect` 改成醒目「你的名字/ID」输入 + 🎲随机 +「别和同房玩家重复」红字提示;服务端地址收进 `<details>`。留空则随机。
+- **③ 座位独占 + 解锁替换**:`claimSeat` 座位被他人持有→ `SEAT_TAKEN`;新增 **`takeoverSeat`**(撤原持有者 holds、强制转移)。client 座位卡:他人持有显「替换」(确认「XX 持有,确定接管?」)、未占显「认领」、自己显「释放」;显示当前持有者 + "断线可替换不锁死"。仍保留一设备多座位。
+- **④ 魔孙权两修**:(4a)**天恩·不同项拆两步** —— `teDiffInit{target}`(孙权只发起)→ `teDiffChoose{effect}`(**目标本人**在其 UI 选剑,校验 `bySeat===tePending.target`);新增全局横幅 `sqPendingForMe/viewTeBanner`「⚔孙权对你发动了天恩」弹在目标任意界面顶部。(4b)**吴六剑处处带注释** —— 天恩选项/权御历史图例/表头 title 全用 `SQ_EFFECTS.d`(白虹=伤害+1…)。`tePending` 入 initToolState + teReset/endRound/teCancel 清。
+- **⑤ 衍生技只出清单(未动代码)**:[docs/衍生技扫描清单.md](衍生技扫描清单.md) —— 扫 generals.json 得 **77 将含衍生技**(弯引号`""`引用,如谋庞统鸿图→"飞军""潜袭";105 衍生技名:47 库内可复用 / 58 需补录)+ **68 将含入魔/觉醒/卖血/改写升级信号**。口径与生成脚本见文档头。后续要"房内查将带出衍生技/升级文本"是下一步大工程,数据补录进 `generals-overrides.mjs`。
+
+### ⭐ PWA(app 化)状态 —— 见下方历史;⭐ 最新一句话状态(截至 `ebd4eeb`)—— 下面是历史增量
 - **库 687 将 / 16 工具 / 6 线下将;`room-sim 309 passed`;`tools/*.html` 16 个;全部已 push 到 main,与 origin 同步。**
 - **16 工具**:lvbu/nanhua/xunyou/huangyueying/caocao/yuanji/zhongyan/simayi/dongzhao/shensunquan/diaochan/sunquan + `dianwei`(神典韦挈挟)+ `lijue`(李傕狼袭0~2)+ `xurong`(徐荣暴戾)+ `xushi`(SP徐氏龙鳞贝)。后四个 = **全公开生成器范式**(随机下沉 DO、rng 可 seed、无 VISIBILITY、worker 走通用 action 无需改)。每个工具 = room-logic(initToolState+action块)+ room.html(view/bind)+ `tools/{id}.html` 单人版 + index.html 卡。
 - **本轮新增武将**(覆盖层 `OFFLINE_HEROES`,9000+ id):孙寒华9001 / 谋贾诩9002 / 裴秀9003 / SP徐氏9004(带工具xushi) / 留赞9005 / 移动版谋韩当9006。**技能勘误**(`SKILL_OVERRIDES`):曹纯缮甲 / 鲍三娘许身 / 神张角×3 / 界郭皇后矫诏(726)。

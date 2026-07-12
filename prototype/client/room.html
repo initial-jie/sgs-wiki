@@ -375,6 +375,7 @@ function connect(base,code){
     const m=JSON.parse(e.data);
     if(m.type==="roomState"){state=m;render();}
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
+    else if(m.type==="roomClosed"){toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
     else if(m.type==="error"){toast("操作被拒:"+m.code);}
   };
 }
@@ -385,6 +386,8 @@ function render(){
   let h='<h1>三国杀线下房间</h1><div class="sub">座位即身份 · 工具随武将登场</div>';
   if(!state){app.innerHTML=h+viewConnect();bindConnect();return;}
   const fseat=(focus!=null)?state.seats[focus]:null;
+  const teCall=sqPendingForMe();
+  if(teCall&&focus!==teCall.sqSeat) h+=viewTeBanner(teCall); // 天恩待选:全局横幅弹在目标(2号位)UI 顶部
   if(fseat&&hasTool(fseat.general)){
     // 聚焦某座位的武将工具:整屏只渲染该工具(操作/查看视身份而定)
     h+=viewFocusHeader(fseat);
@@ -394,6 +397,7 @@ function render(){
     h+=viewHeader();
     h+=viewSeats();
     h+=viewToolsIndex();
+    h+=viewRoomAdmin();
   }
   h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
   app.innerHTML=h;
@@ -421,22 +425,51 @@ function viewToolsIndex(){
   return h;
 }
 
+function viewRoomAdmin(){
+  return `<div class="card"><h2>房间设置</h2>
+    <div class="hint">房间在最后一次操作 <b>2 小时</b>后自动解散 —— 所有人锁屏 / 离开页面也不会立刻消失,回来还在。</div>
+    <div class="row" style="margin-top:8px"><button class="ghost grow" data-disband="1" style="color:var(--seal);border-color:var(--seal)">🗑 解散房间(所有人退出,不可恢复)</button></div></div>`;
+}
+// 天恩待选:若有孙权对我持有的座位发动了天恩·不同项,返回 {sqSeat,target} 供全局横幅提示
+function sqPendingForMe(){
+  if(!state) return null;
+  for(const s of Object.values(state.seats)){
+    if(s.general==="sunquan"&&s.toolState&&s.toolState.tePending){
+      const t=s.toolState.tePending.target;
+      if(state.youHold.includes(t)) return {sqSeat:s.seatNo,target:t};
+    }
+  }
+  return null;
+}
+function viewTeBanner(call){
+  return `<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.06)"><div class="row">
+    <span class="grow"><b style="color:var(--seal)">⚔ 孙权对你发动了天恩</b> · 请选择追加的一项权御</span>
+    <button class="primary" data-tejump="${call.sqSeat}">去选择 →</button></div></div>`;
+}
 function viewConnect(){
   const base=localStorage.getItem("sgs_base")||defaultBase();
   return `<div class="card"><h2>加入房间</h2>
-    <div class="row"><label class="grow">服务端<input id="i-base" value="${esc(base)}"></label></div>
-    <div class="row" style="margin-top:8px"><label>房间码<input id="i-code" value="1234" maxlength="4" style="width:90px"></label>
+    <div class="row" style="margin-top:2px"><label class="grow">你的名字 / ID
+      <input id="i-name" value="${esc(deviceId)}" maxlength="12" placeholder="如:小明。留空则随机"></label>
+      <button class="ghost" id="b-nrand" title="随机一个 ID" style="align-self:flex-end">🎲</button></div>
+    <div class="hint">用来区分不同手机 —— <b style="color:var(--seal)">别和同房玩家重复</b>。可自定义,也可留空/点🎲随机。</div>
+    <div class="row" style="margin-top:12px"><label>房间码<input id="i-code" value="1234" maxlength="4" style="width:90px"></label>
       <button class="ghost" id="b-rand">随机</button><button class="primary grow" id="b-conn">连接</button></div>
-    <div class="hint">本设备 ID:<b id="did">${esc(deviceId)}</b>(点可改,模拟不同手机)。同一房间码即进同一桌。</div></div>`;
+    <div class="hint">同一房间码即进同一桌(网页版 / app 版进同一个房间)。</div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:var(--ink-soft)">高级:服务端地址</summary>
+      <div class="row" style="margin-top:6px"><label class="grow" style="font-size:12px">服务端<input id="i-base" value="${esc(base)}"></label></div></details></div>`;
 }
 function bindConnect(){
+  $("#b-nrand")&&($("#b-nrand").onclick=()=>{$("#i-name").value="dev-"+Math.random().toString(36).slice(2,7);});
   $("#b-rand")&&($("#b-rand").onclick=()=>$("#i-code").value=String(Math.floor(1000+Math.random()*9000)));
   $("#b-conn")&&($("#b-conn").onclick=()=>{
-    const base=$("#i-base").value,code=$("#i-code").value.trim();
+    const base=($("#i-base")&&$("#i-base").value)||defaultBase(),code=$("#i-code").value.trim();
     if(!/^\d{4}$/.test(code))return toast("房间码要 4 位数字");
+    let nm=(($("#i-name")&&$("#i-name").value)||"").trim();
+    if(!nm) nm="dev-"+Math.random().toString(36).slice(2,7);
+    deviceId=nm; localStorage.setItem("sgs_device",nm);
     localStorage.setItem("sgs_base",base);connect(base,code);
   });
-  $("#did")&&($("#did").onclick=()=>{const v=prompt("设置本设备 ID(模拟不同手机)",deviceId);if(v){deviceId=v;localStorage.setItem("sgs_device",v);render();}});
 }
 
 function viewHeader(){
@@ -463,7 +496,10 @@ function viewSeats(){
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
       +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
     if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
-    h+=mine?`<button class="ghost" data-rel="${s.seatNo}">释放</button>`:`<button data-claim="${s.seatNo}">认领</button>`;
+    const heldByOther=s.holderDevices.length&&!mine;
+    if(mine) h+=`<button class="ghost" data-rel="${s.seatNo}">释放</button>`;
+    else if(heldByOther) h+=`<button data-takeover="${s.seatNo}" style="border-color:var(--seal);color:var(--seal)">替换</button>`;
+    else h+=`<button data-claim="${s.seatNo}">认领</button>`;
     h+=`</div>`;
     if(mine){
       const has=s.general&&s.general!=="none";
@@ -476,7 +512,7 @@ function viewSeats(){
           +(chosen?`<button class="ghost" data-fac="${s.seatNo}:" style="font-size:12px">清</button>`:"")+`</div>`;
       }
     }
-    if(s.holderDevices.length>1) h+=`<div class="hint">${s.holderDevices.length} 台设备持有此座位</div>`;
+    if(heldByOther) h+=`<div class="hint">当前由 <b>${esc(s.holderDevices[0])}</b> 持有 · 若其断线,点「替换」即可接管(不会锁死)</div>`;
     h+=`</div>`;
   }
   h+='</div>';
@@ -748,6 +784,9 @@ function bindAll(){
   // 大厅:座位认领 / 释放 / 选武将
   q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
+  q("[data-takeover]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.takeover;const s=state.seats[sn];const who=(s&&s.holderDevices[0])||"?";if(confirm("座位 "+sn+" 当前由「"+who+"」持有。\n确定解锁并替换,由你接管该座位?"))send({type:"takeoverSeat",seatNo:sn});});
+  q("[data-disband]").forEach(b=>b.onclick=()=>{if(confirm("确定解散整个房间?\n所有座位、工具进度将清空,全体退出,且不可恢复。\n(仅想自己换桌请用「新开房间」)"))send({type:"disbandRoom"});});
+  q("[data-tejump]").forEach(b=>b.onclick=()=>{focus=+b.dataset.tejump;render();});
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});
@@ -1769,30 +1808,39 @@ function viewSqTool(sq){
     h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);color:var(--seal)">已入魔(乾纲):天恩已永久失去。使用【杀】指定唯一目标时,执行下表中该目标勾选过的所有效果。</div>`;
     if(iAm) h+=`<div class="row end"><button class="ghost" data-sqgg="0">撤销入魔(误触回滚)</button></div>`;
   }else{
+    h+=`<div class="hint">六剑效果:${SQ_EFF.map(e=>'<b>'+e.n+'</b>='+e.d).join(' · ')}</div>`;
     h+=`<div class="row"><span class="chip" style="${ts.te&&ts.te.diff?'border-color:var(--ok,var(--seal));color:var(--seal)':''}">不同项${ts.te&&ts.te.diff?'·已用':''}</span><span class="chip" style="${ts.te&&ts.te.same?'border-color:var(--seal);color:var(--seal)':''}">相同项${ts.te&&ts.te.same?'·已用':''}</span></div>`;
     if(ts.teNote) h+=`<div class="hint">${esc(ts.teNote)}</div>`;
-    if(iAm){
-      if(!(ts.te&&ts.te.diff)){
-        const cands=aliveInPlay.filter(sn=>sn!==seat);
-        h+=`<div class="hint" style="margin-top:6px">天恩·不同项(弃目标一张牌,令其追加一项权御):</div><div class="row"><select data-sqtetarget>`;
-        h+=`<option value="">选目标角色</option>`;
-        for(const sn of cands) h+=`<option value="${sn}" ${sqTeTarget===sn?'selected':''}>${dcName(sn)}</option>`;
-        h+=`</select></div>`;
-        if(sqTeTarget!=null&&cands.includes(sqTeTarget)){
-          const u=used[sqTeTarget]||[];
-          h+=`<div class="hint" style="margin-top:6px">${dcName(sqTeTarget)} 追加一项(灰=已用):</div><div class="row">`;
-          SQ_EFF.forEach((e,ei)=>h+=`<button class="pick" ${u.includes(ei)?'disabled':''} data-sqte="${ei}" style="min-width:60px"><b>${e.n}</b></button>`);
-          h+=`<button class="ghost" data-sqte="null">六项已满·仅记录</button></div>`;
-        }
+    const pend=ts.tePending;
+    if(pend){
+      const tgt=pend.target, iAmTarget=state.youHold.includes(tgt), u=used[tgt]||[];
+      if(iAmTarget){
+        // 选剑弹在【目标本人】UI:六剑带效果注释,灰=已拥有
+        h+=`<div class="slot" style="border-style:solid;border-color:var(--seal);margin-top:6px"><b style="color:var(--seal)">孙权对你发动天恩·不同项</b><div class="hint">弃一张牌,选择追加一项权御:</div><div class="row">`;
+        SQ_EFF.forEach((e,ei)=>h+=`<button class="pick" ${u.includes(ei)?'disabled':''} data-sqtechoose="${ei}" style="min-width:66px"><b>${e.n}</b><br><span class="hint" style="margin:0">${e.d}</span></button>`);
+        if(u.length>=SQ_EFF.length) h+=`<button class="ghost" data-sqtechoose="null">六项已满·确认</button>`;
+        h+=`</div></div>`;
+      }else{
+        h+=`<div class="slot" style="margin-top:6px">孙权对 <b>${dcName(tgt)}</b> 发动了天恩·不同项,等待其在自己手机上选择追加的权御…</div>`;
+        if(iAm) h+=`<div class="row end"><button class="ghost" data-sqtecancel="1">撤销(误触)</button></div>`;
       }
+    }else if(iAm&&!(ts.te&&ts.te.diff)){
+      // 孙权只选目标;选剑由目标本人做
+      const cands=aliveInPlay.filter(sn=>sn!==seat);
+      h+=`<div class="hint" style="margin-top:6px">天恩·不同项(弃目标一张牌,令其追加一项权御 —— <b>由目标本人选剑</b>):</div><div class="row"><select data-sqtetarget><option value="">选目标角色</option>`;
+      for(const sn of cands) h+=`<option value="${sn}" ${sqTeTarget===sn?'selected':''}>${dcName(sn)}</option>`;
+      h+=`</select><button class="primary" data-sqteinit="1" ${sqTeTarget==null?'disabled':''}>对其发动</button></div>`;
+    }
+    if(iAm){
       h+=`<div class="row" style="margin-top:8px"><button class="${ts.te&&ts.te.same?'primary':''}" data-sqtesame="${ts.te&&ts.te.same?0:1}">相同项(从牌堆得一张杀)${ts.te&&ts.te.same?'·撤销':''}</button><button class="ghost" data-sqtereset="1">下一回合·重置天恩</button></div>`;
       h+=`<div class="row" style="margin-top:8px"><button class="gold" data-sqgg="1">发动乾纲:失去天恩并入魔</button></div>`;
     }
   }
   h+=`</div>`;
   // 权御历史(公开表)
-  h+=`<div class="card"><h2>权御历史<span class="tag">每人每项限一次</span></h2><div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;min-width:420px"><tr><th style="text-align:left;padding:3px 6px">角色</th>`;
-  SQ_EFF.forEach(e=>h+=`<th style="padding:3px 4px">${e.n}</th>`); h+=`</tr>`;
+  h+=`<div class="card"><h2>权御历史<span class="tag">每人每项限一次</span></h2>`;
+  h+=`<div class="hint">六剑:${SQ_EFF.map(e=>e.n+'='+e.d).join(' · ')}</div><div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;min-width:420px"><tr><th style="text-align:left;padding:3px 6px">角色</th>`;
+  SQ_EFF.forEach(e=>h+=`<th style="padding:3px 4px" title="${e.d}">${e.n}</th>`); h+=`</tr>`;
   for(const sn of inPlay){ const u=used[sn]||[]; h+=`<tr style="${alive(sn)?'':'opacity:.4'}"><td style="padding:3px 6px;border-top:1px solid var(--line)">${dcName(sn)}${sn===seat?' ✿':''}</td>`;
     SQ_EFF.forEach((e,ei)=>h+=`<td style="text-align:center;padding:3px 4px;border-top:1px solid var(--line);color:var(--seal)">${u.includes(ei)?'✓':''}</td>`);
     h+=`</tr>`; }
@@ -1831,7 +1879,9 @@ function bindSq(sq,q){
   q("[data-sqpick]").forEach(b=>b.onclick=()=>{const[sn,ei]=b.dataset.sqpick.split(":");sqAct(+sn,{type:"pick",effect:+ei});}); // bySeat=选牌者本人
   q("[data-sqreveal]").forEach(b=>b.onclick=()=>{const need=dcInPlay().filter(s=>!(ts.dead||[]).includes(s)).length,got=Object.keys(ts.picks||{}).length;if(got<need&&!confirm("还有 "+(need-got)+" 名存活角色未暗选,仍要翻开?未选者按无处理。"))return;act({type:"reveal"});});
   q("[data-sqtetarget]").forEach(s=>s.onchange=()=>{sqTeTarget=s.value===""?null:+s.value;render();});
-  q("[data-sqte]").forEach(b=>b.onclick=()=>{if(sqTeTarget==null)return;const v=b.dataset.sqte;act({type:"teDiff",target:sqTeTarget,effect:v==="null"?null:+v});sqTeTarget=null;});
+  q("[data-sqteinit]").forEach(b=>b.onclick=()=>{if(sqTeTarget==null)return;act({type:"teDiffInit",target:sqTeTarget});sqTeTarget=null;}); // 孙权发起,选剑权交目标
+  q("[data-sqtechoose]").forEach(b=>b.onclick=()=>{const tgt=ts.tePending&&ts.tePending.target;if(tgt==null)return;const v=b.dataset.sqtechoose;sqAct(tgt,{type:"teDiffChoose",effect:v==="null"?null:+v});}); // 目标本人选
+  q("[data-sqtecancel]").forEach(b=>b.onclick=()=>act({type:"teCancel"}));
   q("[data-sqtesame]").forEach(b=>b.onclick=()=>act({type:"teSame",on:b.dataset.sqtesame==="1"}));
   q("[data-sqtereset]").forEach(b=>b.onclick=()=>act({type:"teReset"}));
   q("[data-sqgg]").forEach(b=>b.onclick=()=>{const on=b.dataset.sqgg==="1";if(on){if(confirm("确定发动乾纲?永久失去天恩并入魔。"))act({type:"gg",on:true});}else{if(confirm("撤销乾纲入魔(仅纠错)?"))act({type:"gg",on:false});}});

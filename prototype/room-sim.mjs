@@ -541,14 +541,17 @@ sqAct(1, 1, { type: "startPick" });
 check("座位3重复选白虹被拒(EFFECT_USED)", sqAct(3, 3, { type: "pick", effect: 0 }).error === "EFFECT_USED");
 check("座位3改选青冥(1)成功", sqAct(3, 3, { type: "pick", effect: 1 }).ok && SQT(sd[3]).picks[3].effect === 1);
 
-console.log("\n=== 孙权4:天恩(不同项/相同项)+ 乾纲入魔失天恩 ===");
-const td = sqAct(1, 1, { type: "teDiff", target: 4, effect: 2 });
-check("天恩不同项:目标座位4追加辟邪(2)、记入 used、公开", td.ok && SQT(sd[2]).used["4"].includes(2) && SQT(sd[1]).te.diff === true);
-check("天恩目标不能是孙权自己(BAD_TARGET)", sqAct(1, 1, { type: "teDiff", target: 1, effect: 3 }).error === "BAD_TARGET");
+console.log("\n=== 孙权4:天恩(不同项=目标本人选剑 / 相同项)+ 乾纲入魔失天恩 ===");
+const tdi = sqAct(1, 1, { type: "teDiffInit", target: 4 });
+check("孙权发起天恩·不同项→tePending 待座位4选、te.diff 尚未置真", tdi.ok && SQT(sd[2]).tePending.target === 4 && SQT(sd[1]).te.diff === false);
+check("非目标座位2不能替选(NOT_TE_TARGET)", sqAct(2, 2, { type: "teDiffChoose", effect: 2 }).error === "NOT_TE_TARGET");
+const tdc = sqAct(4, 4, { type: "teDiffChoose", effect: 2 });
+check("★目标座位4本人选辟邪(2)→记入 used、te.diff 置真、tePending 清空、公开", tdc.ok && SQT(sd[2]).used["4"].includes(2) && SQT(sd[1]).te.diff === true && SQT(sd[1]).tePending === null);
+check("发起天恩目标不能是孙权自己(BAD_TARGET)", sqAct(1, 1, { type: "teReset" }).ok && sqAct(1, 1, { type: "teDiffInit", target: 1 }).error === "BAD_TARGET");
 check("天恩相同项开关、公开", sqAct(1, 1, { type: "teSame", on: true }).same === true && SQT(sd[3]).te.same === true);
-check("天恩重置", sqAct(1, 1, { type: "teReset" }).ok && SQT(sd[1]).te.diff === false && SQT(sd[1]).te.same === false);
+check("天恩重置(含清 tePending)", sqAct(1, 1, { type: "teReset" }).ok && SQT(sd[1]).te.diff === false && SQT(sd[1]).te.same === false && SQT(sd[1]).tePending === null);
 check("发动乾纲入魔、公开", sqAct(1, 1, { type: "gg", on: true }).gg === true && SQT(sd[4]).gg === true);
-check("★入魔后天恩永久失效(GG_NO_TE)", sqAct(1, 1, { type: "teDiff", target: 4, effect: 3 }).error === "GG_NO_TE");
+check("★入魔后天恩永久失效(GG_NO_TE)", sqAct(1, 1, { type: "teDiffInit", target: 4 }).error === "GG_NO_TE");
 check("撤销入魔(误触回滚)", sqAct(1, 1, { type: "gg", on: false }).gg === false);
 
 console.log("\n=== 孙权5:阵亡追踪 + 入魔反噬 + 权限 + 重置 ===");
@@ -669,6 +672,30 @@ check("觉醒开关 on", xsAct(1, { type: "toggleAwaken" }).awakened === true &&
 check("再点撤销觉醒", xsAct(1, { type: "toggleAwaken" }).awakened === false);
 xsAct(1, { type: "adjustNu", delta: 2 }); xsAct(1, { type: "toggleAwaken" });
 check("重开:龙怒0/未觉醒", xsAct(1, { type: "resetGame" }).reset === true && XST().longnu === 0 && XST().awakened === false);
+
+// ═══════════════ 座位独占 + 解锁替换(③)═══════════════
+console.log("\n=== 座位独占 + 解锁替换 ===");
+const rmSeat = new RoomCore("2468", 4, () => 0);
+check("设备A认领座位1成功", rmSeat.claimSeat("A", 1).ok && rmSeat.seats[1].holderDevices.length === 1);
+check("★设备B再认领座位1被拒(SEAT_TAKEN)、指出持有者", (() => { const r = rmSeat.claimSeat("B", 1); return r.error === "SEAT_TAKEN" && r.by === "A"; })());
+check("同一设备A重复认领幂等(仍单一持有)", rmSeat.claimSeat("A", 1).ok && rmSeat.seats[1].holderDevices.length === 1 && rmSeat.seats[1].holderDevices[0] === "A");
+const tk = rmSeat.takeoverSeat("B", 1);
+check("★设备B解锁替换座位1→独占、原持有者A被撤下", tk.ok && tk.took === "A" && rmSeat.seats[1].holderDevices[0] === "B" && !rmSeat.devices["A"].holds.has(1));
+check("A 不再持有座位1(viewFor 不含)", !rmSeat.viewFor("A").youHold.includes(1) && rmSeat.viewFor("B").youHold.includes(1));
+check("一个设备仍可持有多个座位", rmSeat.claimSeat("B", 2).ok && rmSeat.viewFor("B").youHold.includes(1) && rmSeat.viewFor("B").youHold.includes(2));
+
+// ═══════════════ 持久化 serialize/hydrate(①)═══════════════
+console.log("\n=== 房间持久化(serialize/hydrate)===");
+const rmP = new RoomCore("9753", 5, () => 0);
+rmP.claimSeat("dv1", 1); rmP.setGeneral("dv1", 1, "sunquan");
+rmP.claimSeat("dv2", 2); rmP.claimSeat("dv2", 3);
+rmP.action("dv1", { targetSeat: 1, bySeat: 1, toolAction: { type: "startPick" } });
+const snap = JSON.parse(JSON.stringify(rmP.serialize())); // 模拟经 DO storage JSON 往返
+const rmH = RoomCore.hydrate(snap);
+check("hydrate 恢复座位武将", rmH.seats[1].general === "sunquan");
+check("hydrate 恢复工具状态(phase=picking)", rmH.seats[1].toolState.phase === "picking");
+check("★hydrate 恢复设备 holds(Set)", rmH.devices["dv2"].holds.has(2) && rmH.devices["dv2"].holds.has(3) && rmH.viewFor("dv1").youHold.includes(1));
+check("恢复后可继续操作(座位独占仍生效)", rmH.claimSeat("dvX", 1).error === "SEAT_TAKEN");
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

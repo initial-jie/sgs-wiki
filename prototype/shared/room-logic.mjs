@@ -273,6 +273,7 @@ export function initToolState(generalId) {
       lastReveal: null,    // {round,entries:[[座位,ei]],sqPick,match,draw}(reveal 后填,公开)
       te: { diff: false, same: false }, // 天恩本回合两项(公开)
       teNote: "",          // 天恩·不同项备注(公开)
+      tePending: null,     // 天恩·不同项待选:{target}(孙权发起后,由目标本人在其UI选剑;公开)
       gg: false,           // 乾纲入魔(公开)
       dmgThisRound: false, // 入魔本轮是否已造成伤害(公开)
       log: [],
@@ -308,9 +309,23 @@ export class RoomCore {
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
   claimSeat(id, n) {
     n = Number(n); // 座位号统一转数字,holds 与 setGeneral 比对不会因字符串/数字不一致而 NOT_HOLDER
+    const s = this.seats[n];
+    // 座位独占:已被别的设备持有则拒绝(需显式 takeoverSeat 替换),避免两台设备同坐一座位
+    if (s && s.holderDevices.length && !s.holderDevices.includes(id))
+      return { error: "SEAT_TAKEN", by: s.holderDevices[0] };
     this.connect(id); this.devices[id].holds.add(n);
-    const s = this.seats[n]; if (s && !s.holderDevices.includes(id)) s.holderDevices.push(id);
+    if (s) s.holderDevices = [id]; // 单一持有者
     return { ok: true };
+  }
+  // 解锁替换:强制把座位从原持有设备转到 id(前端二次确认)。断线设备不会锁死座位——任何人可替换。
+  takeoverSeat(id, n) {
+    n = Number(n);
+    const s = this.seats[n]; if (!s) return { error: "BAD_SEAT" };
+    for (const prev of s.holderDevices) if (prev !== id) this.devices[prev]?.holds.delete(n); // 撤下原持有者
+    this.connect(id); this.devices[id].holds.add(n);
+    const took = s.holderDevices.find((d) => d !== id) || null;
+    s.holderDevices = [id];
+    return { ok: true, took };
   }
   releaseSeat(id, n) {
     n = Number(n);
@@ -1166,20 +1181,36 @@ export class RoomCore {
         this._log(ts, `第${ts.round}轮翻开:与孙权相同${match}人${sqPick != null ? `,孙权【杀】执行${en(sqPick)},摸${draw}张` : "(孙权未选/已阵亡)"}`);
         return { ok: true, match, draw };
       }
-      // 天恩·不同项(孙权:弃目标一张牌 → 令其追加一项权御,记入 used 历史;公开)
-      if (t === "teDiff") {
+      // 天恩·不同项:孙权只发起(选目标)→ 选剑权归【目标本人】,在其自己 UI 里选(弹窗在目标那)。
+      if (t === "teDiffInit") {
         if (!isSun) return { error: "NOT_SUN_ACTION" };
         if (ts.gg) return { error: "GG_NO_TE" };       // 乾纲入魔后永久失去天恩
+        if (ts.te.diff) return { error: "TE_DIFF_USED" };
+        if (ts.tePending) return { error: "TE_PENDING" };
         const tgt = Number(toolAction.target);
         if (tgt === sq || !this.seats[tgt] || !aliveOf(tgt)) return { error: "BAD_TARGET" };
+        ts.tePending = { target: tgt };
+        this._log(ts, `孙权对座位${tgt}发动天恩·不同项,待其选择追加的权御`);
+        return { ok: true };
+      }
+      // 目标本人选剑(bySeat 必须是待选目标本人;或六项已满 effect=null 仅记录)
+      if (t === "teDiffChoose") {
+        if (!ts.tePending) return { error: "NO_TE_PENDING" };
+        const tgt = ts.tePending.target;
+        if (bySeat !== tgt || !iHold(bySeat)) return { error: "NOT_TE_TARGET" };
         const ei = toolAction.effect;
         if (ei !== null && ei !== undefined) {
           if (!(ei >= 0 && ei < EFFN)) return { error: "BAD_EFFECT" };
-          if (!usedOf(tgt).includes(ei)) usedOf(tgt).push(ei);
-          ts.teNote = `目标座位${tgt}:随机弃一张牌,追加权御【${en(ei)}】`;
-        } else ts.teNote = `目标座位${tgt}:随机弃一张牌,六项已满无可追加`;
-        ts.te.diff = true; this._log(ts, ts.teNote);
+          if (usedOf(tgt).includes(ei)) return { error: "EFFECT_USED" };
+          usedOf(tgt).push(ei);
+          ts.teNote = `座位${tgt}:随机弃一张牌,追加权御【${en(ei)}】`;
+        } else ts.teNote = `座位${tgt}:随机弃一张牌,六项已满无可追加`;
+        ts.te.diff = true; ts.tePending = null; this._log(ts, ts.teNote);
         return { ok: true };
+      }
+      if (t === "teCancel") {                           // 孙权撤销待选(误触/改主意)
+        if (!isSun) return { error: "NOT_SUN_ACTION" };
+        ts.tePending = null; return { ok: true };
       }
       if (t === "teSame") {
         if (!isSun) return { error: "NOT_SUN_ACTION" };
@@ -1188,7 +1219,7 @@ export class RoomCore {
       }
       if (t === "teReset") {
         if (!isSun) return { error: "NOT_SUN_ACTION" };
-        ts.te = { diff: false, same: false }; ts.teNote = ""; return { ok: true };
+        ts.te = { diff: false, same: false }; ts.teNote = ""; ts.tePending = null; return { ok: true };
       }
       if (t === "gg") {
         if (!isSun) return { error: "NOT_SUN_ACTION" };
@@ -1212,7 +1243,7 @@ export class RoomCore {
         if (!isSun) return { error: "NOT_SUN_ACTION" };
         const lost = ts.gg && aliveOf(sq) && !ts.dmgThisRound;
         this._log(ts, `第${ts.round}轮结束` + (lost ? ":入魔本轮未造成伤害,孙权失去1点体力" : ""));
-        ts.round++; ts.dmgThisRound = false; ts.te = { diff: false, same: false }; ts.teNote = ""; ts.phase = "idle"; ts.picks = {};
+        ts.round++; ts.dmgThisRound = false; ts.te = { diff: false, same: false }; ts.teNote = ""; ts.tePending = null; ts.phase = "idle"; ts.picks = {};
         return { ok: true, lostHp: lost };
       }
       if (t === "resetGame") {
@@ -1337,5 +1368,19 @@ export class RoomCore {
     for (const [n, s] of Object.entries(this.seats))
       seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds) };
     return { roomCode: this.roomCode, youHold: [...holds], seats };
+  }
+
+  // ---- 持久化(worker 落 DO storage 用;devices.holds 是 Set,序列化成数组)----
+  serialize() {
+    const devices = {};
+    for (const id of Object.keys(this.devices)) devices[id] = { holds: [...this.devices[id].holds] };
+    return { roomCode: this.roomCode, seatCount: Object.keys(this.seats).length, seats: this.seats, devices };
+  }
+  static hydrate(data, rng = Math.random) {
+    const core = new RoomCore(data?.roomCode ?? "room", data?.seatCount ?? 8, rng);
+    if (data?.seats) core.seats = data.seats;
+    core.devices = {};
+    for (const id of Object.keys(data?.devices || {})) core.devices[id] = { holds: new Set(data.devices[id].holds || []) };
+    return core;
   }
 }
