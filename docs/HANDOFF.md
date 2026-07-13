@@ -1,10 +1,18 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 309 passed)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **321 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
-### ⭐⭐ 线下实战修 4 项 + 衍生技扫描(2026-07-11 会话)—— 最优先读
+### ⭐⭐⭐ 本轮收尾一句话(HEAD `8e21cd0`,全部 push 到 main)—— 最先读这段
+
+- **本会话(2026-07-11~12)做完:PWA app 化 + 房间实战修 4 项 + 衍生技/衍生牌接入房间查将 + 8 衍生将&魔张飞补录 + 杜预破竹 + 转换技标签 + 本体技能彩色标签。`room-sim 321 passed`,16 工具/687 将不变。**
+- **⚠️ room 侧一堆改动待部署:用户下次务必 `cd prototype/worker && npx wrangler deploy` 一次性生效**(新增 `/derived-skills.json`+`/derived-cards.json` 路由、DO 持久化/TTL/disband、座位独占、魔孙权天恩、本体标签等全在 worker+room.html)。wiki 侧 `git push` 已自动上 Pages。
+- **查将弹层现在带 3 类附加信息**:①**衍生技**(该武将 index 卡里引用的衍生技,`derived-skills.json` 按武将存)②**衍生牌**(`derived-cards.json`,如杜预出其不意)③**本体+衍生技都显示彩色标签**(`skillTags()` 从技能文本开头剥离锁定技/限定技/觉醒技/转换技/主公技/势力技等 → `.stag-*` 彩色标记,纯客户端零数据改动,单向安全只漏不错)。
+- **补文本工作流(固化)**:衍生技→改 `index.html #derived-skills`(人工源,新增势力组要同步子导航 line~902 + fh-count)→重抽 `derived-skills.json`(脚本:解析 article/h4/skill-name/多个 tag-XXX/skill-text,按 norm(h4=去·空格)存,tags 是数组);衍生牌→改 `#derived-cards`→重抽 `derived-cards.json`(dsrc 候选=[全名归一,去首个 X· 前缀]匹配库名);**房间专属/修改**(如魔张飞入魔)→ `derived-skills-room.json`,worker merge。**同名不同版必须按武将存不能全局拍平(火计教训)**。
+- **待办(下一轮)**:①**用户 review 升级将**(68 将含入魔/觉醒/卖血,见扫描清单 C 段)决定要不要在房内展示升级后版本;②仍缺文本的真·衍生子技用户按需继续截图给(库+wiki 都无的不可瞎编);③`skillTags` 已知标签集列了十几个,遇到冷门标签(使命技/碎梦技等)没显示→加词即可。跟不上节奏老将(界徐庶等)、国战将 不补。
+
+### ⭐⭐ 线下实战修 4 项 + 衍生技扫描(2026-07-11 会话)
 
 - **实战反馈修了 4 处(①②③④),⑤ 只出扫描清单。`room-sim 321 passed`、client UI 冒烟 16/16、真机浏览器 4 张截图确认。全部 push 到 main。⚠️ room 侧改了(worker+room.html)→ 用户必须 `cd prototype/worker && npx wrangler deploy` 才生效。**
 - **① 房间不再"人走即灭"**:RoomDO 加 **DO storage 持久化**(`core.serialize()/RoomCore.hydrate()`,devices.holds Set↔数组)+ **闲置 TTL 闹钟**(`ROOM_TTL_MS=2h`,每次操作 `setAlarm(now+2h)`;`alarm()` 到点清盘=房间消失,无人连接也会被平台唤醒执行)。新增 **`disbandRoom`** 动作(任意玩家解散,清盘+撤闹钟+广播 `roomClosed`)。client:底部「房间设置」卡有🗑解散(二次确认)+ TTL 说明;onmessage 处理 `roomClosed` 回大厅。
