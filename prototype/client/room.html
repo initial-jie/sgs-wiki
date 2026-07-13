@@ -35,6 +35,12 @@ button{font-family:inherit;font-size:14px;border-radius:7px;border:1px solid var
 button:active{transform:scale(.97)}
 button.primary{background:var(--seal);border-color:var(--seal);color:#f6ecd8;font-weight:600}
 button.ghost{background:transparent;color:var(--ink-soft)}
+/* 断线横幅 + 写阻断:body.disconnected 时置灰冻结 #app(台账可读不可操作),横幅在 #app 之外始终可点 */
+#connbar{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;align-items:center;justify-content:center;gap:12px;
+  padding:9px 14px;background:var(--seal);color:#f6ecd8;font-size:13px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+#connbar button{background:#f6ecd8;color:var(--seal);border:none;border-radius:6px;padding:5px 14px;font-weight:700;cursor:pointer;flex:0 0 auto}
+body.disconnected #connbar{display:flex}
+body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 button.gold{background:transparent;border-color:var(--qi);color:#856a1f}
 button:disabled{opacity:.4;cursor:default}
 .row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
@@ -122,6 +128,7 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 </style>
 </head>
 <body>
+<div id="connbar"><span class="cb-msg">⚠ 连接已断开,正在重连…操作已暂停(台账仍可查看)</span><button id="rcNow" type="button">立即重连</button></div>
 <div id="app"></div>
 <div id="modal"></div>
 <div class="toast" id="toast"></div>
@@ -362,7 +369,12 @@ function previewHero(id){
 
 const $=(s,el=document)=>el.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400);}
-function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
+// 写操作:仅在 socket OPEN 时下发;否则阻断(不再静默丢弃),给反馈并催重连。
+// hello 由 openSocket 的 onopen 直发(那时 readyState 已 1),不会走进阻断分支。
+function send(o){
+  if(ws&&ws.readyState===1){ws.send(JSON.stringify(o));return true;}
+  toast("未连接,正在重连…操作已暂停,请稍候");reconnectNow();return false;
+}
 function esc(t){return (t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function suitGlyph(k){const s=SUITS.find(x=>x.k===k);return s?`<span class="${s.red?'suitred':''}">${s.t}</span>`:"";}
 // 服务端默认地址:页面若从 worker(http/https)载入,直接指向同源(https→wss),真机零配置;file:// 本地调试才回退 localhost。
@@ -416,22 +428,50 @@ function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80
   if(out.length<3){const all=EFFECTS.filter(x=>!used[x.id]&&effCompat(x,t)&&EFFECT_LEVEL_DIST[t.level].some(d=>d.lv===x.level));while(out.length<3&&all.length)out.push(all.splice(Math.floor(Math.random()*all.length),1)[0]);}
   return out;}
 
-function connect(base,code){
-  if(ws)try{ws.close();}catch(e){}
-  // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
-  state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k];
-  ws=new WebSocket(base.replace(/\/+$/,"")+"/api/room/"+code+"/ws");
-  ws.onopen=()=>{send({type:"hello",deviceId});toast("已连接房间 "+code);};
-  ws.onclose=()=>toast("连接已断开");
-  ws.onerror=()=>toast("连接失败,服务端起了吗");
+// 连接生命周期(融合版断线重连):
+//  connect() = 初次加入/换房(清客户端态,干净重来);openSocket() = 建/重建 socket(不清态,供重连复用)。
+//  掉线→自动指数退避重连;重连成功服务端 hello 后广播 roomState → stale 态自愈(修南华换天书 bug)。
+//  未连接时 send() 阻断写操作并催重连;body.disconnected 令 #app 置灰冻结(读台账仍可见)、露出顶部横幅。
+//  手机切回前台(visibilitychange)/ 恢复网络(online)即刻重连 —— 手机切窗口掉线的主因,靠这个自愈。
+let curBase=null,curCode=null,connected=false,intentionalClose=false;
+let reconnectTimer=null,reconnectDelay=0;
+const RC_MIN=800,RC_MAX=5000;
+function updateConnBar(){document.body.classList.toggle("disconnected",!connected&&!!curCode&&!intentionalClose);}
+function scheduleReconnect(){
+  if(intentionalClose||connected||reconnectTimer)return;
+  reconnectDelay=Math.min(reconnectDelay?Math.round(reconnectDelay*1.7):RC_MIN,RC_MAX);
+  reconnectTimer=setTimeout(()=>{reconnectTimer=null;if(!intentionalClose&&!connected)openSocket();},reconnectDelay);
+}
+function reconnectNow(){
+  if(ws&&ws.readyState===0)return;                 // 正在连,别打断(避免 socket 抖动)
+  clearTimeout(reconnectTimer);reconnectTimer=null;reconnectDelay=0;
+  if(!intentionalClose&&!connected)openSocket();
+}
+function openSocket(){
+  if(!curBase||!curCode)return;
+  if(ws){try{ws.onopen=ws.onclose=ws.onerror=ws.onmessage=null;ws.close();}catch(e){}} // 拆旧 handler:旧 socket 的 close 不再触发重连
+  ws=new WebSocket(curBase.replace(/\/+$/,"")+"/api/room/"+curCode+"/ws");
+  ws.onopen=()=>{connected=true;reconnectDelay=0;clearTimeout(reconnectTimer);reconnectTimer=null;send({type:"hello",deviceId});updateConnBar();toast("已连接房间 "+curCode);};
+  ws.onclose=()=>{connected=false;updateConnBar();if(!intentionalClose){toast("连接已断开,正在重连…");scheduleReconnect();}};
+  ws.onerror=()=>{};                               // close 会随后触发,重连统一由 onclose 调度,避免重复
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
     if(m.type==="roomState"){state=m;render();}
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
-    else if(m.type==="roomClosed"){toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
+    else if(m.type==="roomClosed"){intentionalClose=true;connected=false;updateConnBar();toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
     else if(m.type==="error"){toast("操作被拒:"+m.code);}
   };
 }
+function connect(base,code){
+  intentionalClose=false;curBase=base;curCode=code;
+  clearTimeout(reconnectTimer);reconnectTimer=null;reconnectDelay=0;connected=false;
+  // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
+  state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k];
+  updateConnBar();openSocket();
+}
+// 手机切回前台 / 网络恢复 → 立刻重连(掉线主因是切窗口,onclose 有时要切回前台才触发)
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")reconnectNow();});
+window.addEventListener("online",reconnectNow);
 
 /* ============ 渲染 ============ */
 function render(){
@@ -2066,6 +2106,7 @@ function bindXs(xs,q){
   q("[data-xsreset]").forEach(b=>b.onclick=()=>{if(confirm("重开徐氏工具?龙怒归0、清觉醒。"))act({type:"resetGame"});});
 }
 
+document.getElementById("rcNow").onclick=reconnectNow; // 断线横幅「立即重连」兜底按钮
 loadHeroes(); // 拉 OL 武将库(点座位看技能)
 render();
 </script>

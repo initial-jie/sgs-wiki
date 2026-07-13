@@ -20795,5 +20795,75 @@
     "avatar": null,
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9007,
+    "name": "司马炎",
+    "genre": "其他",
+    "series": "标",
+    "faction": "晋",
+    "factionSelectable": false,
+    "quality": null,
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "过牌",
+      "爆发",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "举棋",
+        "effect": "转换技，阳：准备阶段，你摸三张牌/其他角色的准备阶段，其可以展示并交给你一张黑色手牌；阴：准备阶段，你本回合使用牌无次数限制且伤害+1/其他角色的准备阶段，其可以展示并交给你一张红色手牌。"
+      },
+      {
+        "name": "封土",
+        "effect": "当一名其他角色死亡后，你可以令一名未以此法减少过体力上限的角色减1点体力上限，然后其获得死亡角色位置每轮的额定回合。"
+      },
+      {
+        "name": "泰始",
+        "effect": "主公技，限定技，一名角色的回合开始前，你可以令所有隐匿角色依次登场。"
+      }
+    ],
+    "characteristic": "转换技举棋阴阳收牌/强化，封土削体力上限抢额定回合，泰始令隐匿角色登场。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/simayan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/simayan.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9008,
+    "name": "神黄月英",
+    "genre": "神将",
+    "series": "神",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": null,
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "过牌",
+      "装备",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "藏巧",
+        "effect": "每轮开始时，你可以获得游戏外或弃牌堆中的【折戟】、【女装】、【驽马】各至多一张；当你使用上述牌时，你可以将手牌摸至体力上限。"
+      },
+      {
+        "name": "神机",
+        "effect": "每回合限一次，以你为唯一目标的黑色牌结算结束后，你可以将场上一张装备牌当未以此法使用过的延时锦囊牌使用（均使用过后重置）；此类锦囊牌在判定区内同时拥有被转化的装备牌的效果。"
+      },
+      {
+        "name": "化朽",
+        "effect": "出牌阶段限一次，你可以将一种“藏巧”装备牌效果修改为下述对应顺序的牌直到你的下回合开始：【魂·诸葛连弩】；【魂·八卦阵】；【軨軨】。"
+      }
+    ],
+    "characteristic": "藏巧取折戟/女装/驽马三神装并摸至上限，神机把装备当延时锦囊，化朽升级为魂装。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shenhuangyueying.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shenhuangyueying.jpg",
+    "tool": null,
+    "offline": true
   }
 ]

@@ -4,13 +4,23 @@
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
+### ⭐⭐⭐⭐ 最新会话(2026-07-13):断线重连 + 3 线下将/衍生牌 —— 最先读这段
+
+- **本会话做完:①融合版断线重连(room.html 客户端)②入池 司马炎(9007)/神黄月英(9008)+ 蒲元(510)神工锻造库衍生牌 ③新建 `derived-cards-room.json`(房间版衍生牌合并通道)。`room-sim 321 passed`、内联 JS 语法过、浏览器验断线横幅四态全绿。库 687→689 将。**
+- **⚠️ room 侧一堆改动待部署:用户务必 `cd prototype/worker && npx wrangler deploy`**(改了 worker/src/index.js 的 DCARDS merge、room.html、generals.json、新增 derived-cards-room.json)。wiki 侧本轮没动 index.html(衍生牌走房间版,不进 wiki),但 generals-overrides.mjs/generals.json 改了——这些只经 worker 生效。
+- **①断线重连(修周末实测 bug)**:根因=`send()` 掉线静默丢弃 + 无自动重连 + UI 跑 stale state(手机切窗口掉线回来点啥都像成功其实丢了;南华换天书失败=替换要校验服务端当前态而本地是旧的)。**融合版**:`connect()`(初次/换房清态)拆出 `openSocket()`(重连复用不清态);指数退避自动重连(0.8→5s);`send()` 未连接时阻断+提示+催重连(不再静默);`body.disconnected` 令 `#app` 置灰冻结(读台账仍可见)、露顶部 seal 红横幅 + 「立即重连」兜底按钮(`#connbar` 在 #app 之外始终可点);**`visibilitychange` 切回前台 + `online` 恢复网络即刻重连(手机掉线主因)**;`roomClosed` 置 `intentionalClose` 防重连死循环。**服务端零改动**——worker `hello` 落到 `broadcast()` 推 fresh roomState → stale 自愈。**真机断/重连仍需用户 deploy 后验**。
+- **②三个线下将/衍生牌**:司马炎(9007,晋/4血,举棋转换技/封土/泰始主公技,插画 simayan.jpg)+ 神黄月英(9008,蜀/3血,藏巧/神机/化朽,繁→简已转,插画 shenhuangyueying.jpg)进 `OFFLINE_HEROES`,`applyOverrides` 就地 re-bake generals.json(无网络)。蒲元**本就在库(id510)**,只补衍生牌。族陆绩浑天仪也补。
+- **③衍生牌房间版通道**:以前只有衍生技有 `-room.json` 合并,衍生牌没有。新建 `prototype/shared/derived-cards-room.json`(神黄月英三神装+赠予概念/族陆绩浑天仪/蒲元神工库18装备),worker `DCARDS_MERGED` 照 `DERIVED_MERGED` 模式合并进 `/derived-cards.json`。查将按 hero.name 精确匹配带出(红边卡)。
+- **⚠️ 状态更新(2026-07-13 用户核对后)**:(a)司马炎 hp=**3 已确认**;神黄月英 hp=3 仍待确认。(b)**蒲元神工库 18 装备文本用户已逐字核对**——改了 9 处(赤血青锋/镔铁双戟/护心镜/黑光铠/束发紫金冠/三略/天机图/太公阴符全文订正)+ **红锦→红棉百花袍**改名;花色点数仍抓自 biligame 供参考;banner 已改「效果文本已核对」。(c)**神黄月英=纯线下,OL 无此将(已确认),永久保留不 graduate**。(d)**⚠ 原画不显示的根因**:`simayan.jpg`/`shenhuangyueying.jpg` 实为 **WebP 存成 .jpg**(`<img>` 能识别不致命,同 sunhanhua.jpg 是 PNG-as-.jpg 照样显示),真正原因=**这俩图还是 git 未跟踪(??),没 push 到 GitHub Pages** → Pages 直链 404 → onerror 隐藏。**修法=commit+push 这两张图**(同其他线下将原画)。
+- **上一轮待办①已闭环**:68 升级将先不动(见下方历史段)。
+
 ### ⭐⭐⭐ 本轮收尾一句话(HEAD `8e21cd0`,全部 push 到 main)—— 最先读这段
 
 - **本会话(2026-07-11~12)做完:PWA app 化 + 房间实战修 4 项 + 衍生技/衍生牌接入房间查将 + 8 衍生将&魔张飞补录 + 杜预破竹 + 转换技标签 + 本体技能彩色标签。`room-sim 321 passed`,16 工具/687 将不变。**
 - **⚠️ room 侧一堆改动待部署:用户下次务必 `cd prototype/worker && npx wrangler deploy` 一次性生效**(新增 `/derived-skills.json`+`/derived-cards.json` 路由、DO 持久化/TTL/disband、座位独占、魔孙权天恩、本体标签等全在 worker+room.html)。wiki 侧 `git push` 已自动上 Pages。
 - **查将弹层现在带 3 类附加信息**:①**衍生技**(该武将 index 卡里引用的衍生技,`derived-skills.json` 按武将存)②**衍生牌**(`derived-cards.json`,如杜预出其不意)③**本体+衍生技都显示彩色标签**(`skillTags()` 从技能文本开头剥离锁定技/限定技/觉醒技/转换技/主公技/势力技等 → `.stag-*` 彩色标记,纯客户端零数据改动,单向安全只漏不错)。
 - **补文本工作流(固化)**:衍生技→改 `index.html #derived-skills`(人工源,新增势力组要同步子导航 line~902 + fh-count)→重抽 `derived-skills.json`(脚本:解析 article/h4/skill-name/多个 tag-XXX/skill-text,按 norm(h4=去·空格)存,tags 是数组);衍生牌→改 `#derived-cards`→重抽 `derived-cards.json`(dsrc 候选=[全名归一,去首个 X· 前缀]匹配库名);**房间专属/修改**(如魔张飞入魔)→ `derived-skills-room.json`,worker merge。**同名不同版必须按武将存不能全局拍平(火计教训)**。
-- **待办(下一轮)**:①**用户 review 升级将**(68 将含入魔/觉醒/卖血,见扫描清单 C 段)决定要不要在房内展示升级后版本;②仍缺文本的真·衍生子技用户按需继续截图给(库+wiki 都无的不可瞎编);③`skillTags` 已知标签集列了十几个,遇到冷门标签(使命技/碎梦技等)没显示→加词即可。跟不上节奏老将(界徐庶等)、国战将 不补。
+- **待办(下一轮)**:①~~用户 review 升级将~~ **已决:68 升级将先不动(2026-07-13)** —— 分析结论:现有查将已覆盖绝大多数,**无需新增"升级后版本"面板**:觉醒技文本自洽(触发+被授予技能名),被授予技能(急袭/破竹/背水…)靠**衍生技拉取**(即②);入魔将=库内独立卡(魔张飞改写已进 room 覆盖);卖血将无离散版本。唯一真缺口=~10 改写技能将(文鸯仇决改膂力/SP姜维逢亮改困奋/孙休/薛综/郭皇后/司马伷/孙寒华…)的"改写后基础技全文"未展示,用户暂不补。②仍缺文本的真·衍生子技用户按需继续截图给(库+wiki 都无的不可瞎编);③`skillTags` 已知标签集列了十几个,遇到冷门标签(使命技/碎梦技等)没显示→加词即可。跟不上节奏老将(界徐庶等)、国战将 不补。
 
 ### ⭐⭐ 线下实战修 4 项 + 衍生技扫描(2026-07-11 会话)
 
