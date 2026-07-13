@@ -170,8 +170,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -188,7 +188,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)},
              lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
-             xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)} };
+             xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
+             guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -1229,6 +1230,97 @@ function bindYj(yj,q){
     act({type:"jieyanResult",same:r==="same"});yjPrompt=null;});
   q("[data-yjresetjy]").forEach(b=>b.onclick=()=>act({type:"resetJieyan"}));
   q("[data-yjreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空镜花/水月标记牌与记录,座位武将保留。"))act({type:"resetGame"});});
+}
+
+/* ---------- 标郭照工具:椒遇声明色(公开)+ 内训牌标记(袁姬式:牌名仅郭照可见,张数公开)---------- */
+let gzEdit=null;                 // 正在填哪张内训牌(id)或 null
+const gzManual=new Set();        // 哪些内训牌切到"手填牌名"模式(扩展/EX 牌逃生口)
+function gzCardLabel(c){
+  if(!c.s||!c.r) return '<span class="hint" style="margin:0">未填(点「填牌」)</span>';
+  const su=SUITS.find(x=>x.k===c.s);
+  return `<b class="${su&&su.red?'suitred':''}">${su?su.t:''}${c.r}</b>${c.n?" "+esc(c.n):' <span class="hint" style="margin:0">(未选牌名)</span>'}`;
+}
+function gzCardEditor(c){ // 花色+点数→点选牌名,与吕布/袁姬同一套(cardsAt)
+  let h=`<div class="slot" style="margin-top:6px"><div class="pickgrid">`;
+  for(const s of SUITS) h+=`<button class="pick ${c.s===s.k?'sel':''}" data-gzcs="${c.id}:${s.k}"><span class="${s.red?'suitred':''}">${s.t}</span></button>`;
+  h+=`</div><div class="pickgrid">`;
+  for(const r of RANKS) h+=`<button class="pick ${c.r===r?'sel':''}" data-gzcr="${c.id}:${r}">${r}</button>`;
+  h+=`</div>`;
+  if(c.s&&c.r){
+    const names=cardsAt(c.s,c.r), manual=gzManual.has(c.id)||(c.n&&!names.includes(c.n));
+    h+=`<div class="pickgrid" style="margin-top:6px">`;
+    for(const nm of names) h+=`<button class="pick ${c.n===nm?'sel':''}" data-gzcn="${c.id}:${esc(nm)}">${esc(nm)}</button>`;
+    h+=`<button class="pick ${manual?'sel':''}" data-gzcother="${c.id}">其他…</button></div>`;
+    if(manual) h+=`<input data-gzcinput="${c.id}" placeholder="手填牌名(扩展/EX 牌)" value="${esc(c.n)}">`;
+  }else h+=`<div class="hint">先选花色 + 点数,再点牌名</div>`;
+  h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-gzcdone="1">完成</button></div></div>`;
+  return h;
+}
+function viewGzTool(gz){
+  const seat=gz.seatNo, ts=gz.toolState||{};
+  const iAm=state.youHold.includes(seat);
+  const col=ts.color; // 'black'|'red'|null
+  let h="";
+  // ① 椒遇声明色(公开)+ 效果提示
+  h+=`<div class="card"><h2>椒遇 · 本轮声明色<span class="tag">全场可见</span></h2>`;
+  const colName=col==="black"?"黑色":col==="red"?"红色":"未声明";
+  const colStyle=col==="red"?"color:var(--seal)":col==="black"?"color:var(--ink)":"color:var(--ink-soft)";
+  h+=`<div class="row"><span class="chip" style="font-size:15px;font-weight:700;${colStyle};border-color:${col?'var(--seal)':'var(--line)'}">本轮声明:${colName}</span>`;
+  if(iAm) h+=`<button ${col==="black"?'class="primary"':''} data-gzcol="black">声明黑</button><button ${col==="red"?'class="primary"':''} data-gzcol="red">声明红</button><button class="ghost" data-gzcol="none">清除</button>`;
+  h+=`</div>`;
+  if(col){
+    const same=col==="black"?"黑":"红", diff=col==="black"?"红":"黑";
+    h+=`<div class="slot" style="margin-top:8px;border-style:solid">`
+      +`<div class="hint" style="margin:0 0 4px"><b style="color:var(--seal)">内训</b> · 每名其他角色出牌阶段【第一张非装备牌】结算后:</div>`
+      +`<div>· 出<b>${same}</b>(同色) → 郭照<b>交给</b>其一张牌,然后郭照<b>摸一张</b>(此摸牌也是内训牌)。</div>`
+      +`<div>· 出<b>${diff}</b>(异色) → 郭照<b>获得</b>其一张牌(内训牌),然后其<b>摸一张</b>。</div>`
+      +`<div class="hint" style="margin:4px 0 0">内训牌不计入郭照手牌上限,直到郭照回合结束。</div></div>`;
+  }else h+=`<div class="hint">${iAm?"每轮开始时先声明本轮颜色,全场即可据此判断出牌效果。":"郭照尚未声明本轮颜色。"}</div>`;
+  h+=`<div class="hint" style="margin-top:6px">椒遇额外出牌阶段(下回合结束时):郭照只能使用与声明色相同的牌;此阶段其他角色不能使用与郭照装备区牌颜色相同的牌,直到有角色受到伤害。</div>`;
+  h+=`</div>`;
+  // ② 内训牌标记(牌名仅郭照可见,张数公开)
+  const val=ts.neixun, isArr=Array.isArray(val), cnt=isArr?val.length:(val&&val.count)||0;
+  h+=`<div class="card"><h2>内训牌标记<span class="tag">${iAm?"仅你可见牌名":"仅张数公开"}</span></h2>`;
+  h+=`<div class="row"><b class="grow" style="color:var(--seal)">当前内训牌</b><span class="chip">${cnt} 张</span>`;
+  if(iAm) h+=`<button data-gznxadd="1">＋1(内训获得)</button>`;
+  h+=`</div>`;
+  if(iAm&&isArr){
+    if(!val.length) h+=`<div class="hint">当前无内训牌标记。内训获得(同色摸牌/异色拿牌)后点「＋1」并填牌。</div>`;
+    else val.forEach(c=>{
+      h+=`<div class="row" style="padding:4px 0"><span class="chip" style="border-color:var(--seal);color:var(--seal)">训</span>`
+        +`<span class="grow" style="margin-left:6px">${gzCardLabel(c)}</span>`
+        +`<button class="ghost" data-gzedit="${c.id}">${gzEdit===c.id?"收起":"填牌"}</button>`
+        +`<button class="ghost" data-gzdis="${c.id}">消散</button></div>`;
+      if(gzEdit===c.id) h+=gzCardEditor(c);
+    });
+    h+=`<div class="hint" style="margin-top:6px">牌因使用/弃置/被拿走离开手牌时点「消散」。</div>`;
+    h+=`<div class="row end" style="margin-top:6px"><button class="ghost" data-gzendturn="1">回合结束 · 清空内训标记</button></div>`;
+  }else if(!iAm){
+    h+=`<div class="hint">内训牌的花色点数为郭照手牌,仅其本人可见;此处只显示张数。</div>`;
+  }
+  h+=`</div>`;
+  // ③ 公开记录
+  h+=`<div class="card"><h2>公开记录</h2><div class="loglist">${(ts.log||[]).length?(ts.log.map(l=>`<div>${esc(l)}</div>`).join("")):'<div class="hint">暂无</div>'}</div></div>`;
+  if(iAm) h+=`<div class="card"><div class="row end"><button class="ghost" data-gzreset="1">⟳ 重开一局(清空声明色/内训标记)</button></div></div>`;
+  return h;
+}
+function bindGz(gz,q){
+  const G=gz.seatNo;
+  const act=(o)=>send({type:"action",targetSeat:G,bySeat:G,toolAction:o});
+  q("[data-gzcol]").forEach(b=>b.onclick=()=>{const c=b.dataset.gzcol;act({type:"setColor",color:c==="none"?null:c});});
+  q("[data-gznxadd]").forEach(b=>b.onclick=()=>act({type:"addNeixun"}));
+  q("[data-gzedit]").forEach(b=>b.onclick=()=>{gzEdit=(gzEdit===b.dataset.gzedit)?null:b.dataset.gzedit;render();});
+  q("[data-gzcdone]").forEach(b=>b.onclick=()=>{gzEdit=null;render();});
+  q("[data-gzcs]").forEach(b=>b.onclick=()=>{const[id,s]=b.dataset.gzcs.split(":");const c=(gz.toolState.neixun||[]).find(x=>x.id===id);
+    const patch={type:"editNeixun",id,s};if(c&&c.n&&c.r&&!cardsAt(s,c.r).includes(c.n)&&!gzManual.has(id))patch.n="";act(patch);});
+  q("[data-gzcr]").forEach(b=>b.onclick=()=>{const[id,r]=b.dataset.gzcr.split(":");const c=(gz.toolState.neixun||[]).find(x=>x.id===id);
+    const patch={type:"editNeixun",id,r};if(c&&c.n&&c.s&&!cardsAt(c.s,r).includes(c.n)&&!gzManual.has(id))patch.n="";act(patch);});
+  q("[data-gzcn]").forEach(b=>b.onclick=()=>{const p=b.dataset.gzcn.split(":");const id=p[0],nm=p.slice(1).join(":");gzManual.delete(id);act({type:"editNeixun",id,n:nm});});
+  q("[data-gzcother]").forEach(b=>b.onclick=()=>{const id=b.dataset.gzcother;if(gzManual.has(id)){gzManual.delete(id);}else{gzManual.add(id);act({type:"editNeixun",id,n:""});}render();});
+  q("[data-gzcinput]").forEach(inp=>inp.onchange=()=>act({type:"editNeixun",id:inp.dataset.gzcinput,n:inp.value}));
+  q("[data-gzdis]").forEach(b=>b.onclick=()=>{if(confirm("该内训牌消散(离开手牌)?"))act({type:"dissipateNeixun",id:b.dataset.gzdis});});
+  q("[data-gzendturn]").forEach(b=>b.onclick=()=>{if(confirm("郭照回合结束?清空所有内训标记。"))act({type:"endTurn"});});
+  q("[data-gzreset]").forEach(b=>b.onclick=()=>{if(confirm("重开一局?清空声明色与内训标记,座位武将保留。"))act({type:"resetGame"});});
 }
 
 /* ---------- 标钟琰工具:博览生成技能(公开;随机在本机跑,选定结果进 DO)---------- */

@@ -697,5 +697,38 @@ check("hydrate 恢复工具状态(phase=picking)", rmH.seats[1].toolState.phase 
 check("★hydrate 恢复设备 holds(Set)", rmH.devices["dv2"].holds.has(2) && rmH.devices["dv2"].holds.has(3) && rmH.viewFor("dv1").youHold.includes(1));
 check("恢复后可继续操作(座位独占仍生效)", rmH.claimSeat("dvX", 1).error === "SEAT_TAKEN");
 
+// ═══════════════ 标郭照:椒遇声明色(公开)+ 内训牌标记(牌名 ownerSeatOnly,张数公开)═══════════════
+const roomGz = new RoomCore("6262", 5, () => 0);
+const gzd = {}; for (let i = 1; i <= 5; i++) { gzd[i] = `gzd${i}`; roomGz.claimSeat(gzd[i], i); }
+roomGz.setGeneral(gzd[1], 1, "guozhao");          // 座位1 = 标郭照
+const GZT = (d) => roomGz.viewFor(d).seats[1].toolState;
+const gzAct = (d, by, o) => roomGz.action(gzd[d], { targetSeat: 1, bySeat: by, toolAction: o });
+
+console.log("\n=== 郭照1:椒遇声明色(全场公开)===");
+check("声明黑成功", gzAct(1, 1, { type: "setColor", color: "black" }).ok && GZT(gzd[1]).color === "black");
+check("★声明色对旁人公开", GZT(gzd[3]).color === "black");
+check("改声明红", gzAct(1, 1, { type: "setColor", color: "red" }).ok && GZT(gzd[2]).color === "red");
+check("清除声明色(null)", gzAct(1, 1, { type: "setColor", color: null }).ok && GZT(gzd[1]).color === null);
+check("非法颜色被拒(BAD_COLOR)", gzAct(1, 1, { type: "setColor", color: "green" }).error === "BAD_COLOR");
+check("非郭照不能声明色(NOT_GZ_ACTION)", gzAct(2, 2, { type: "setColor", color: "black" }).error === "NOT_GZ_ACTION");
+
+console.log("\n=== 郭照2:内训牌标记 —— 张数公开、牌名仅本人可见 ===");
+check("加1张内训牌成功", gzAct(1, 1, { type: "addNeixun" }).ok && GZT(gzd[1]).neixun.length === 1);
+check("★旁人只见张数(count),看不到明细", !Array.isArray(GZT(gzd[2]).neixun) && GZT(gzd[2]).neixun.count === 1);
+const nxId = GZT(gzd[1]).neixun[0].id;
+check("填花色+点数+牌名成功、仅本人可见", gzAct(1, 1, { type: "editNeixun", id: nxId, s: "H", r: "K", n: "桃" }).ok && GZT(gzd[1]).neixun[0].s === "H" && GZT(gzd[1]).neixun[0].n === "桃");
+check("★旁人仍只见张数,拿不到花色/牌名", !Array.isArray(GZT(gzd[3]).neixun) && GZT(gzd[3]).neixun.count === 1);
+check("非郭照不能加内训牌", gzAct(2, 2, { type: "addNeixun" }).error === "NOT_GZ_ACTION");
+
+console.log("\n=== 郭照3:消散 + 回合结束清空 + 重置 ===");
+gzAct(1, 1, { type: "addNeixun" }); // 现2张
+check("现有2张内训牌", GZT(gzd[1]).neixun.length === 2);
+check("消散一张(离手)成功、张数减1", gzAct(1, 1, { type: "dissipateNeixun", id: nxId }).ok && GZT(gzd[1]).neixun.length === 1);
+check("消散不存在的牌被拒(NO_CARD)", gzAct(1, 1, { type: "dissipateNeixun", id: "zzz" }).error === "NO_CARD");
+check("★回合结束→所有内训标记消散", gzAct(1, 1, { type: "endTurn" }).ok && GZT(gzd[1]).neixun.length === 0);
+gzAct(1, 1, { type: "setColor", color: "black" }); gzAct(1, 1, { type: "addNeixun" });
+const grst = gzAct(1, 1, { type: "resetGame" });
+check("郭照重置成功、声明色清空、内训清空", grst.reset === true && GZT(gzd[1]).color === null && GZT(gzd[1]).neixun.length === 0);
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

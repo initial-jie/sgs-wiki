@@ -135,7 +135,7 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/simayan.jpg",
     tool: null, offline: true,
   },
-  // 神黄月英 —— 纯线下武将,OL 无此将(用户 2026-07-13 确认),永久保留(不 graduate)。繁体文本→已转简体+插画 assets/heroes/shenhuangyueying.jpg。衍生牌见 derived-cards-room.json。⚠ hp 按 3 血录入(待确认)
+  // 神黄月英 —— 纯线下武将,OL 无此将(用户 2026-07-13 确认),永久保留(不 graduate)。繁体文本→已转简体+插画 assets/heroes/shenhuangyueying.jpg。衍生牌见 derived-cards-room.json。hp 3血(用户 2026-07-13 确认)。
   {
     id: 9008, name: "神黄月英", genre: "神将", series: "神", faction: "蜀",
     factionSelectable: false, quality: null, hp: 3, initialHp: null,

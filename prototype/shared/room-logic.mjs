@@ -108,6 +108,11 @@ export const VISIBILITY = {
     rec: { kind: "ownerSeatOnly" },
     // turnUsed / zw / round / shunji / names / yishi / log 默认 public(顺机账本、造王、移势皆公开信息)
   },
+  guozhao: {
+    // 内训牌 = 郭照手牌里的标记牌:花色/点数/牌名仅郭照本人/代持可见,他人只见张数(桌上可数)
+    neixun: { kind: "ownerSeatOnly" },
+    // color / seq / log 默认 public(椒遇声明色是全场信息;log 只记张数不记牌名)
+  },
   sunquan: {
     // 权御暗选:每份 pick 自带 revealed;翻开前仅本人可见内容,他人只见"该座位已选"占位(含孙权的也藏)
     picks: { kind: "secretPick" },
@@ -210,6 +215,13 @@ export function initToolState(generalId) {
       jieyan: "ok",        // 节言状态:'ok' 有效 / 'off' 本回合失效(公开)
       seq: { jh: 0, sy: 0 },// 标记牌 id 自增计数(不依赖时间戳,worker/sim 一致)
       log: [],             // 公开事件(只记张数,不记牌名)
+    };
+  if (generalId === "guozhao")
+    return {
+      color: null,     // 椒遇本轮声明色 'black'|'red'|null(公开)
+      neixun: [],      // 内训标记牌 [{id,s,r,n}]花色/点数/牌名(ownerSeatOnly:他人只见张数;离手/回合末消散)
+      seq: 0,          // 内训牌 id 自增(不依赖时间戳,worker/sim 一致)
+      log: [],         // 公开事件(只记张数,不记牌名)
     };
   if (generalId === "zhongyan")
     return {
@@ -714,6 +726,55 @@ export class RoomCore {
       }
       if (t === "resetGame") {
         if (!isYuanji) return { error: "NOT_YUANJI_ACTION" };
+        target.toolState = initToolState(target.general);
+        return { ok: true, reset: true };
+      }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 标郭照:椒遇声明色(公开)+ 内训牌标记(牌名 ownerSeatOnly,张数公开;离手/回合末消散)─────────
+    if (target.general === "guozhao") {
+      const gSeat = targetSeat;
+      const isGz = bySeat === gSeat && iHold(gSeat); // 郭照本人(或代持其座位)
+      if (t === "setColor") {
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
+        const c = toolAction.color;
+        if (c !== "black" && c !== "red" && c !== null) return { error: "BAD_COLOR" };
+        ts.color = c;
+        this._log(ts, c ? `椒遇声明本轮颜色:${c === "black" ? "黑" : "红"}` : "清除本轮声明颜色");
+        return { ok: true };
+      }
+      if (t === "addNeixun") { // 内训获得一张牌 → 加一个待填标记
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
+        ts.seq++; ts.neixun.push({ id: "nx" + ts.seq, s: null, r: null, n: "" });
+        this._log(ts, `内训牌 +1(现持有${ts.neixun.length})`);
+        return { ok: true };
+      }
+      if (t === "editNeixun") { // 记录牌身份(花色/点数/牌名),均仅郭照可见;像吕布/袁姬一样选花色+点数再点牌名
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
+        const c = ts.neixun.find((x) => x.id === toolAction.id);
+        if (!c) return { error: "NO_CARD" };
+        if ("s" in toolAction) c.s = toolAction.s || null;
+        if ("r" in toolAction) c.r = toolAction.r || null;
+        if ("n" in toolAction) c.n = String(toolAction.n || "").slice(0, 20);
+        return { ok: true };
+      }
+      if (t === "dissipateNeixun") { // 该内训牌离开手牌(使用/弃置/被拿走)→ 标记消散
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
+        const before = ts.neixun.length;
+        ts.neixun = ts.neixun.filter((x) => x.id !== toolAction.id);
+        if (ts.neixun.length === before) return { error: "NO_CARD" };
+        this._log(ts, `内训牌消散(现持有${ts.neixun.length})`);
+        return { ok: true };
+      }
+      if (t === "endTurn") { // 郭照回合结束 → 所有内训标记消散(内训牌不计手牌上限"直到你回合结束")
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
+        const n = ts.neixun.length; ts.neixun = [];
+        this._log(ts, n ? `回合结束:${n} 张内训标记消散` : "回合结束:当前无内训标记");
+        return { ok: true };
+      }
+      if (t === "resetGame") {
+        if (!isGz) return { error: "NOT_GZ_ACTION" };
         target.toolState = initToolState(target.general);
         return { ok: true, reset: true };
       }

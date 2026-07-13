@@ -15154,7 +15154,7 @@
     "characteristic": "根据判定牌的颜色换取收益，可以限制他人用牌，需要更多的装备牌",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/66200.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/66200.png",
-    "tool": null,
+    "tool": "guozhao",
     "offline": false
   },
   {
