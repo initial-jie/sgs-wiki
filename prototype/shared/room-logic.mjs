@@ -84,6 +84,63 @@ export const XURONG_EFFECTS = [
   { n: "劫掠", d: "徐荣随机获得其一张手牌和一张装备区里的牌。" },
 ];
 
+// ---------- 裴秀【十六州地图】(全公开生成器)----------
+// ⚠ 数据源 = prototype/shared/peixiu-maps.json(canonical);此处内联供 sim+worker 用(无法跨包 import)。
+//   同一份数据另内联于 tools/peixiu.html(单人版)与 client/room.html(画棋盘)。三处若改务必同步 peixiu-maps.json。
+// 坐标 [x,y],[0,0]=左下角,x→右 / y→上。图标:draw:N 摸牌 · heal:N 回体力 · move:<dir>:N 到达即自动移N格停留(dir=down/left)。
+export const PEIXIU_MAPS = {
+  "并州":{pinyin:"Bing",grid:{w:5,h:5},start:[3,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[0,2],[4,2],[0,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"雁门",pos:[3,4],icon:"move:down:2",skill:"你从牌堆中获得一张武器牌和一张进攻坐骑牌。"},{no:2,name:"九原",pos:[2,2],icon:"draw:1",skill:"你使用【杀】可以额外指定任意名目标。"},{no:3,name:"祁县",pos:[1,1],icon:"draw:1",skill:"你可以重铸一张装备牌，视为使用一张【杀】或【过河拆桥】（每回合限一次）。"},{no:4,name:"武乡",pos:[4,1],icon:"draw:1",skill:"你从牌堆中获得一张【火攻】。"}],stateSkill:"你可以视为使用一张【决斗】。"},
+  "冀州":{pinyin:"Ji",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[4,3],[4,2],[0,1],[0,0],[1,0],[3,0],[4,0]],cities:[{no:1,name:"常山",pos:[0,2],icon:"draw:1",skill:"你从牌堆中获得两张【闪】。"},{no:2,name:"渤海",pos:[3,3],icon:"draw:2",skill:"你可以弃置一张武器牌，然后摸两张牌。"},{no:3,name:"平原",pos:[3,1],icon:"heal:1",skill:"你失去最后的手牌后，你摸一张牌（每回合限一次）。"},{no:4,name:"巨鹿",pos:[1,1],icon:"draw:1",skill:"你失去黑桃2~9的牌后，你摸一张牌（每回合限一次）。"}],stateSkill:"你从牌堆获得一张【万箭齐发】。"},
+  "荆州":{pinyin:"Jing",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[4,2],[0,1],[0,0],[1,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"江夏",pos:[4,1],icon:"draw:1",skill:"你可以令一名其他角色摸两张牌，然后交给你一张牌。"},{no:2,name:"襄阳",pos:[1,1],icon:"draw:1",skill:"你可以移动场上一张牌。"},{no:3,name:"上庸",pos:[0,2],icon:"draw:2",skill:"你可以与一名其他角色各摸一张牌。"},{no:4,name:"南阳",pos:[3,3],icon:"heal:1",skill:"你可以重铸一张锦囊牌，与一名角色各回复1点体力。"}],stateSkill:"你可以交给一名角色任意张手牌。"},
+  "凉州":{pinyin:"Liang",grid:{w:5,h:5},start:[4,0],walls:[[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[4,2],[0,1],[2,1],[0,0],[2,0],[3,0]],cities:[{no:1,name:"武威",pos:[3,2],icon:"draw:2",skill:"你使用伤害牌可以额外指定一个目标（每回合限一次）。"},{no:2,name:"玉门",pos:[1,2],icon:"draw:2",skill:"已连环的角色不能响应你的牌。"},{no:3,name:"居延",pos:[2,4],icon:"move:left:1",skill:"你从牌堆中获得三张攻击范围各不相同的武器牌。"},{no:4,name:"敦煌",pos:[0,3],icon:"draw:3",skill:"你的【杀】被抵消后，你摸一张牌。"}],stateSkill:"你可以将一张黑色牌当【杀】使用。"},
+  "梁州":{pinyin:"Liang",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[4,4],[0,3],[4,3],[0,2],[4,2],[0,1],[1,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"绵竹",pos:[1,2],icon:"heal:1",skill:"结束阶段，你观看牌堆顶三张牌，然后可以获得其中类型不同的牌各一张。"},{no:2,name:"巴西",pos:[2,3],icon:"draw:1",skill:"你可以指定一名其他角色，其当前手牌无次数限制。"},{no:3,name:"汉中",pos:[3,4],icon:"move:down:3",skill:"你可以与一名其他角色交换手牌。"},{no:4,name:"涪陵",pos:[4,1],icon:"draw:2",skill:"你的装备牌不能被其他角色弃置。"}],stateSkill:"你成为【杀】的目标后，使用者弃置一张牌。"},
+  "宁州":{pinyin:"Ning",grid:{w:5,h:5},start:[0,3],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[1,3],[2,3],[3,3],[4,3],[3,2],[4,2],[0,0],[4,0]],cities:[{no:1,name:"哀牢",pos:[0,1],icon:"draw:3",skill:"你可以令一名角色选择：其弃置两张牌，或其失去1点体力。"},{no:2,name:"句町",pos:[3,1],icon:"move:left:2",skill:"你可以失去1点体力，然后摸三张牌。"},{no:3,name:"滇池",pos:[2,2],icon:"heal:1",skill:"一名角色受到火焰伤害后，你可以令其失去1点体力（每回合限一次）。"},{no:4,name:"南涪",pos:[1,0],icon:"heal:1",skill:"你可以失去1点体力，视为使用一张【杀】。"}],stateSkill:"你使用的【杀】不能被抵消，且造成的伤害均视为体力流失。"},
+  "秦州":{pinyin:"Qin",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[2,4],[3,4],[4,4],[0,3],[3,3],[4,3],[0,2],[0,1],[1,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"陇西",pos:[1,2],icon:"draw:1",skill:"你从牌堆中获得一张防御坐骑牌。"},{no:2,name:"天水",pos:[3,2],icon:"draw:1",skill:"你可以弃置一名角色一张手牌，若不为【杀】，你摸两张牌。"},{no:3,name:"武都",pos:[4,1],icon:"heal:1",skill:"你使用牌无次数限制。"},{no:4,name:"阴平",pos:[1,0],icon:"draw:2",skill:"其他角色计算与你的距离+1。"}],stateSkill:"你可选择一名其他角色，其使用的下一张牌对你无效。"},
+  "青州":{pinyin:"Qing",grid:{w:5,h:5},start:[1,1],walls:[[0,4],[1,4],[2,4],[4,4],[2,3],[4,2],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"北海",pos:[2,1],icon:"draw:1",skill:"你将手牌摸至体力上限。"},{no:2,name:"临淄",pos:[1,2],icon:"draw:1",skill:"你获得弃牌堆中三张随机的梅花牌。"},{no:3,name:"乐安",pos:[0,3],icon:"draw:2",skill:"你从牌堆获得一张属性【杀】和一张【铁索连环】。"},{no:4,name:"东莱",pos:[3,3],icon:"draw:2",skill:"你可令一名角色使用的下一张牌无次数和距离限制。"}],stateSkill:"你可以弃置所有手牌，然后摸等量的牌。"},
+  "司州":{pinyin:"Si",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[2,3],[0,2],[4,2],[3,1],[4,1],[3,0],[4,0]],cities:[{no:1,name:"温县",pos:[2,0],icon:"move:left:1",skill:"你加1点体力上限并回复1点体力，然后获得一张【虚妄之冕】。"},{no:2,name:"弘农",pos:[1,1],icon:"draw:1",skill:"你可以重铸任意张装备牌并回复1点体力。"},{no:3,name:"闻喜",pos:[1,3],icon:"move:down:1",skill:"你每回合首次使用一个花色的牌后，你摸一张牌。"},{no:4,name:"邯郸",pos:[4,3],icon:"draw:2",skill:"你使用一张非伤害普通锦囊牌后，你令一名角色获得此牌（每回合限一次）。"}],stateSkill:"你可以获得一名角色一张手牌。"},
+  "徐州":{pinyin:"Xu",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[3,2],[4,2],[0,1],[4,1],[0,0]],cities:[{no:1,name:"彭城",pos:[0,2],icon:"draw:2",skill:"你可以令一名其他角色交给你一张牌，然后其回复1点体力。"},{no:2,name:"琅琊",pos:[2,3],icon:"draw:1",skill:"你观看牌堆顶的五张牌，然后以任意顺序置于牌堆顶或牌堆底。"},{no:3,name:"广陵",pos:[2,0],icon:"draw:1",skill:"你可以将两张牌当一张【五谷丰登】使用。"},{no:4,name:"东海",pos:[3,1],icon:"heal:1",skill:"你令一名角色下个摸牌阶段多摸一张牌。"}],stateSkill:"你可以指定一名其他角色，其于其的回合外使用牌后摸一张牌。"},
+  "兖州":{pinyin:"Yan",grid:{w:5,h:5},start:[2,1],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[4,1],[4,0]],cities:[{no:1,name:"泰山",pos:[3,3],icon:"move:down:3",skill:"将一张【螭纹玉佩】置入手牌。"},{no:2,name:"任城",pos:[2,0],icon:"heal:1",skill:"你每有一张【杀】，手牌上限便+1。"},{no:3,name:"陈留",pos:[0,0],icon:"draw:1",skill:"你跳过弃牌阶段。"},{no:4,name:"鄄城",pos:[1,2],icon:"draw:2",skill:"你判定，若为黑色，你获得判定牌并重复此流程。"}],stateSkill:"你回复体力后，你摸一张牌（每回合限一次）。"},
+  "扬州":{pinyin:"Yang",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[4,3],[0,2],[0,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"庐江",pos:[1,0],icon:"draw:1",skill:"你可以拼点，赢的角色摸两张牌。"},{no:2,name:"合肥",pos:[2,1],icon:"draw:4",skill:"你可以弃置至多两张牌，然后摸等量的牌。"},{no:3,name:"居巢",pos:[4,1],icon:"move:left:1",skill:"你可以弃置你与一名角色各一张牌。"},{no:4,name:"寿春",pos:[2,3],icon:"heal:1",skill:"你可令一名角色加1点体力上限。"}],stateSkill:"你可以令一名其他角色回复1点体力。"},
+  "益州":{pinyin:"Yi",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[0,2],[4,2],[0,1],[0,0],[1,0]],cities:[{no:1,name:"临邛",pos:[1,1],icon:"heal:2",skill:"你可以令任意名角色同时弃置一张牌。"},{no:2,name:"牂牁",pos:[4,1],icon:"draw:1",skill:"你受到伤害后，你可以弃置你与伤害来源各一张牌。"},{no:3,name:"朱提",pos:[2,0],icon:"draw:1",skill:"你受到属性伤害改为回复等量体力（每回合限一次）。"},{no:4,name:"成都",pos:[2,3],icon:"move:down:2",skill:"你对自己使用牌后，你摸一张牌（每回合限一次）。"}],stateSkill:"你不能成为延时锦囊牌的目标。"},
+  "雍州":{pinyin:"Yong",grid:{w:5,h:5},start:[2,1],walls:[[1,4],[2,4],[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[2,2],[0,1],[4,1],[0,0],[4,0]],cities:[{no:1,name:"冯翊",pos:[4,2],icon:"draw:2",skill:"你可以回复1点体力。"},{no:2,name:"京兆",pos:[3,0],icon:"move:left:2",skill:"若有角色本回合对你使用过：【杀】/伤害锦囊牌，伤害锦囊牌/【杀】对你无效。"},{no:3,name:"扶风",pos:[1,1],icon:"draw:1",skill:"你从牌堆获得一张你手牌中未拥有类型的牌。"},{no:4,name:"安定",pos:[1,3],icon:"heal:1",skill:"防止你因传导受到的属性伤害。"}],stateSkill:"你可以摸两张牌，然后将手牌弃至手牌上限。"},
+  "幽州":{pinyin:"You",grid:{w:5,h:5},start:[0,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[2,1],[2,0],[3,0]],cities:[{no:1,name:"范阳",pos:[1,0],icon:"draw:1",skill:"你可以对攻击范围内的一名角色造成1点伤害。"},{no:2,name:"北平",pos:[1,2],icon:"draw:1",skill:"你从牌堆中获得两张【杀】。"},{no:3,name:"玄菟",pos:[3,4],icon:"draw:1",skill:"有角色进入濒死状态时，你获得使其进入此濒死状态的牌（每回合限一次）。"},{no:4,name:"带方",pos:[4,0],icon:"draw:2",skill:"你的属性【杀】不能被响应。"}],stateSkill:"你加1点体力上限。"},
+  "豫州":{pinyin:"Yu",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"汝南",pos:[1,1],icon:"draw:3",skill:"你可以令一名角色摸等同于你手牌上限的牌。"},{no:2,name:"许昌",pos:[0,3],icon:"draw:1",skill:"你可令一名其他角色攻击范围增加至与你相同。"},{no:3,name:"沛县",pos:[2,3],icon:"draw:1",skill:"你的普通锦囊牌不能被响应。"},{no:4,name:"谯县",pos:[3,2],icon:"draw:2",skill:"你受到伤害后，可以摸一张牌。"}],stateSkill:"你可以进入连环状态，令一名体力值小于你的角色回复1点体力。"}
+};
+export const PEIXIU_NAMES = Object.keys(PEIXIU_MAPS);
+const PX_DIRV = { N:[0,1], S:[0,-1], E:[1,0], W:[-1,0] };       // 花色方向:♦北 ♣南 ♠东 ♥西
+const PX_MVDIR = { up:[0,1], down:[0,-1], left:[-1,0], right:[1,0] };
+export const PX_DIRNAME = { N:"♦北", S:"♣南", E:"♠东", W:"♥西" };
+function pxEq(a,b){ return !!a&&!!b&&a[0]===b[0]&&a[1]===b[1]; }
+function pxInB(m,p){ return p[0]>=0&&p[0]<m.grid.w&&p[1]>=0&&p[1]<m.grid.h; }
+function pxIsWall(m,p){ return m.walls.some(w=>w[0]===p[0]&&w[1]===p[1]); }
+function pxCityAt(m,p){ return m.cities.find(c=>c.pos[0]===p[0]&&c.pos[1]===p[1]); }
+export function pxParseIcon(icon){ const a=String(icon).split(":"); if(a[0]==="move") return {t:"move",dir:a[1],n:+a[2]}; return {t:a[0],n:+a[1]}; }
+// 尽览推箱子:从 start 沿 dir 滑到墙/边界,经城即触发;move 图标到达即自动移N格停留(撞新城触发一次,无链式)。
+// 返回 { path:[[x,y]...], events:[{pos,city}], moved }。纯函数,sim+worker+client 三处等价。
+export function pxComputeSlide(m, start, dir){
+  const dv=PX_DIRV[dir]; if(!dv) return { path:[start.slice()], events:[], moved:false };
+  const path=[start.slice()], events=[]; let pos=start.slice();
+  while(true){
+    const nx=[pos[0]+dv[0], pos[1]+dv[1]];
+    if(!pxInB(m,nx) || pxIsWall(m,nx)) break;
+    pos=nx; path.push(pos.slice());
+    const c=pxCityAt(m,pos);
+    if(c){
+      events.push({pos:pos.slice(), city:c});
+      const ic=pxParseIcon(c.icon);
+      if(ic.t==="move"){
+        const mv=PX_MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
+        for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!pxInB(m,np)||pxIsWall(m,np)) break; jp=np; path.push(jp.slice()); }
+        pos=jp;
+        const lc=pxCityAt(m,jp);
+        if(lc && lc.no!==c.no) events.push({pos:jp.slice(), city:lc}); // 撞新城触发一次
+        break; // move 后停留,尽览结束
+      }
+    }
+  }
+  return { path, events, moved: path.length>1 };
+}
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -304,6 +361,18 @@ export function initToolState(generalId) {
     return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
   if (generalId === "xushi")
     return { longnu: 0, awakened: false, lastRoll: null, log: [] }; // longnu=龙怒(达3可觉醒);awakened=天泣已觉醒;lastRoll=最近龙鳞贝
+  if (generalId === "peixiu")
+    return {
+      cycle: PEIXIU_NAMES.slice(), // 本轮尚未展开的州(无重复循环,16张跑完才 refill)
+      active: null,     // 当前棋盘上的州名(null=未展开,点展开开始)
+      token: null,      // 裴秀 token 当前格 [x,y]
+      visited: {},      // 当前 active 州已走城市 {no:true}
+      turnStates: [],   // 本回合展开过的州(池·州技来源)
+      turnCities: [],   // 本回合走过的城市(池·城技来源)[{map,no,name,skill}]
+      retained: null,   // 上回合结束保留的技能 {pt,skill}(持续到本回合结束)
+      endChoices: null, // 结束阶段随机三选一候选 [{pt,skill}]
+      log: [],          // 公开事件
+    };
   return {};
 }
 
@@ -486,6 +555,83 @@ export class RoomCore {
         return { ok: true, awakened: ts.awakened };
       }
       if (t === "resetGame") { if (!isXs) return { error: "NOT_XUSHI_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 裴秀:十六州地图(全公开生成器)。展开=随机在 DO 跑(可 seed);尽览走位=纯逻辑;结束阶段三选一随机在 DO ─────────
+    if (target.general === "peixiu") {
+      const pSeat = targetSeat;
+      const isPx = bySeat === pSeat && iHold(pSeat); // 裴秀本人(或代持)
+      const expand = (name) => { // 展开一幅地图:入池州技 + 重置走位 + 从无重复循环移除
+        const m = PEIXIU_MAPS[name];
+        ts.active = name; ts.token = m.start.slice(); ts.visited = {};
+        if (!ts.turnStates.includes(name)) ts.turnStates.push(name);
+        ts.cycle = ts.cycle.filter((x) => x !== name); if (!ts.cycle.length) ts.cycle = PEIXIU_NAMES.slice();
+        this._log(ts, `展开【${name}】(州技入池)`);
+      };
+      if (t === "pxExpand") { // 展开地图:指定 map=手动,否则随机(DO 从 cycle 抽,可 seed 复现)
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        let name = toolAction.map;
+        if (!name || !PEIXIU_MAPS[name]) { const pool = ts.cycle.length ? ts.cycle : PEIXIU_NAMES; name = pool[Math.floor(this.rng() * pool.length)]; }
+        expand(name);
+        return { ok: true, map: name };
+      }
+      if (t === "pxGo") { // 尽览:沿花色方向推箱子走位,经城即结算(摸/回/移)
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        if (!ts.active) return { error: "NO_MAP" };
+        const m = PEIXIU_MAPS[ts.active];
+        const res = pxComputeSlide(m, ts.token, toolAction.dir);
+        if (!res.moved) return { error: "BLOCKED" }; // 贴墙/边界
+        const effs = [];
+        for (const ev of res.events) {
+          const c = ev.city, ic = pxParseIcon(c.icon);
+          if (!ts.visited[c.no]) {
+            ts.visited[c.no] = true;
+            if (!ts.turnCities.some((x) => x.map === ts.active && x.no === c.no))
+              ts.turnCities.push({ map: ts.active, no: c.no, name: c.name, skill: c.skill });
+          }
+          effs.push(c.name + "(" + (ic.t === "draw" ? "摸" + ic.n : ic.t === "heal" ? "回" + ic.n : "移动" + ic.n) + ")");
+        }
+        ts.token = res.path[res.path.length - 1].slice();
+        this._log(ts, `${PX_DIRNAME[toolAction.dir]}尽览:${effs.length ? effs.join(" / ") : "空过"},停 [${ts.token}]`);
+        return { ok: true, token: ts.token, effs };
+      }
+      if (t === "pxResetToken") { // 回起点(不清已走/池)
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        if (!ts.active) return { error: "NO_MAP" };
+        ts.token = PEIXIU_MAPS[ts.active].start.slice();
+        return { ok: true };
+      }
+      if (t === "pxEndPhase") { // 结束阶段:从池随机 min(3,池) 个候选(DO rng)
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        const pool = [];
+        ts.turnStates.forEach((n) => pool.push({ pt: "州技·" + n, skill: PEIXIU_MAPS[n].stateSkill }));
+        ts.turnCities.forEach((c) => pool.push({ pt: "城技·" + c.map + c.name, skill: c.skill }));
+        if (!pool.length) return { error: "EMPTY_POOL" };
+        const idx = pool.map((_, i) => i);
+        for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1));[idx[i], idx[j]] = [idx[j], idx[i]]; }
+        ts.endChoices = idx.slice(0, Math.min(3, pool.length)).map((i) => pool[i]);
+        this._log(ts, `结束阶段:随机 ${ts.endChoices.length} 选 1`);
+        return { ok: true, choices: ts.endChoices };
+      }
+      if (t === "pxChoose") { // 三选一:选定第 k 个 → 记为保留技能
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        const k = Number(toolAction.k);
+        if (!ts.endChoices || !ts.endChoices[k]) return { error: "BAD_CHOICE" };
+        ts.retained = { pt: ts.endChoices[k].pt, skill: ts.endChoices[k].skill };
+        ts.endChoices = null;
+        this._log(ts, `茂著选定:${ts.retained.pt}`);
+        return { ok: true, retained: ts.retained };
+      }
+      if (t === "pxNewTurn") { // 新回合:清池,茂著随机展开一幅新地图
+        if (!isPx) return { error: "NOT_PX_ACTION" };
+        ts.turnStates = []; ts.turnCities = []; ts.endChoices = null; ts.visited = {};
+        this._log(ts, "—— 新回合 ——");
+        const pool = ts.cycle.length ? ts.cycle : PEIXIU_NAMES;
+        expand(pool[Math.floor(this.rng() * pool.length)]);
+        return { ok: true };
+      }
+      if (t === "resetGame") { if (!isPx) return { error: "NOT_PX_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

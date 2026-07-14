@@ -673,6 +673,47 @@ check("再点撤销觉醒", xsAct(1, { type: "toggleAwaken" }).awakened === fals
 xsAct(1, { type: "adjustNu", delta: 2 }); xsAct(1, { type: "toggleAwaken" });
 check("重开:龙怒0/未觉醒", xsAct(1, { type: "resetGame" }).reset === true && XST().longnu === 0 && XST().awakened === false);
 
+// ============ 场景 18:裴秀 十六州地图(展开/尽览推箱子走位/池/三选一/新回合)============
+console.log("\n=== 场景 18:裴秀 十六州地图 ===");
+let pxSeq = [];
+const roomPx = new RoomCore("1616", 3, () => (pxSeq.length ? pxSeq.shift() : 0));
+const pxd = {}; for (let i = 1; i <= 3; i++) { pxd[i] = `pxd${i}`; roomPx.claimSeat(pxd[i], i); }
+roomPx.setGeneral(pxd[1], 1, "peixiu");
+const pxAct = (by, o) => roomPx.action(pxd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const PXT = () => roomPx.seats[1].toolState;
+check("init:未展开/无token/池空", PXT().active === null && PXT().token === null && PXT().turnStates.length === 0 && PXT().cycle.length === 16);
+check("非裴秀不能展开", pxAct(2, { type: "pxExpand", map: "并州" }).error === "NOT_PX_ACTION");
+check("未展开时尽览NO_MAP", pxAct(1, { type: "pxGo", dir: "N" }).error === "NO_MAP");
+check("空池结束阶段EMPTY_POOL", pxAct(1, { type: "pxEndPhase" }).error === "EMPTY_POOL");
+const pe = pxAct(1, { type: "pxExpand", map: "并州" });
+check("展开并州:active/token=start[3,0]/州技入池", pe.ok && PXT().active === "并州" && PXT().token.join() === "3,0" && PXT().turnStates[0] === "并州");
+check("并州从无重复循环移除(剩15)", PXT().cycle.length === 15 && !PXT().cycle.includes("并州"));
+// 尽览:北 从 [3,0] 爬到 雁门[3,4] 触发 move:down:2 → 停 [3,2](不继续滑)
+const pg = pxAct(1, { type: "pxGo", dir: "N" });
+check("★北尽览:雁门move:down:2触发→停[3,2]", pg.ok && PXT().token.join() === "3,2" && PXT().visited[1] === true);
+check("雁门城技入池", PXT().turnCities.some((c) => c.name === "雁门" && c.map === "并州"));
+check("东贴墙BLOCKED不移动", pxAct(1, { type: "pxGo", dir: "E" }).error === "BLOCKED" && PXT().token.join() === "3,2");
+pxAct(1, { type: "pxGo", dir: "W" }); // [3,2]→九原[2,2]摸→停[1,2]
+check("西:经九原停[1,2]", PXT().token.join() === "1,2" && PXT().visited[2] === true);
+pxAct(1, { type: "pxGo", dir: "S" }); // [1,2]→祁县[1,1]摸→停[1,1]
+pxAct(1, { type: "pxGo", dir: "E" }); // [1,1]→武乡[4,1]摸→停[4,1]
+check("四城走完 visited=4", Object.keys(PXT().visited).length === 4 && PXT().token.join() === "4,1");
+check("池=州技1 + 城技4", PXT().turnStates.length === 1 && PXT().turnCities.length === 4);
+check("走位/池全场公开可见", roomPx.viewFor(pxd[2]).seats[1].toolState.token.join() === "4,1");
+pxAct(1, { type: "pxResetToken" }); check("回起点[3,0](不清池)", PXT().token.join() === "3,0" && PXT().turnCities.length === 4);
+pxSeq = [0, 0, 0, 0]; const ph = pxAct(1, { type: "pxEndPhase" });
+check("结束阶段:池5→随机3候选", ph.ok && PXT().endChoices.length === 3);
+const pc = pxAct(1, { type: "pxChoose", k: 0 });
+check("三选一:选定→retained,清候选", pc.ok && PXT().retained && PXT().retained.pt && PXT().endChoices === null);
+check("retained 全场公开可见", roomPx.viewFor(pxd[3]).seats[1].toolState.retained !== null);
+check("坏候选 pxChoose 报错", pxAct(1, { type: "pxChoose", k: 9 }).error === "BAD_CHOICE");
+pxSeq = [0]; const pn = pxAct(1, { type: "pxNewTurn" });
+check("新回合:清池 + 茂著随机展开新图", pn.ok && PXT().turnCities.length === 0 && PXT().turnStates.length === 1 && PXT().active !== null && PXT().visited && Object.keys(PXT().visited).length === 0);
+check("裴秀 retained 跨回合保留(持续到本回合结束)", PXT().retained !== null);
+const prr = pxAct(1, { type: "resetGame" });
+check("重置:active/池全清", prr.reset === true && PXT().active === null && PXT().turnStates.length === 0 && PXT().retained === null && PXT().cycle.length === 16);
+check("非裴秀不能重置", pxAct(2, { type: "resetGame" }).error === "NOT_PX_ACTION");
+
 // ═══════════════ 座位独占 + 解锁替换(③)═══════════════
 console.log("\n=== 座位独占 + 解锁替换 ===");
 const rmSeat = new RoomCore("2468", 4, () => 0);

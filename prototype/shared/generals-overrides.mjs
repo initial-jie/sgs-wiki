@@ -113,7 +113,7 @@ export const OFFLINE_HEROES = [
     // 已上 OL(olwiki id 606)→ 官方图床 code=60600(xingxiang=全身/cover、dianjiang=头部特写/avatar)
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/60600.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/60600.png",
-    tool: null, offline: true,
+    tool: "peixiu", offline: true,
   },
   // SP徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
   // ⚠ 命名:OL 已有「徐氏」(id390,问卦/伏诛),故线下版叫「SP徐氏」区分(SP前缀,搜"徐氏"仍命中),否则重名告警+选将歧义。

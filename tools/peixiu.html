@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>裴秀 · 十六州地图</title>
+<style>
+:root{
+  --bg:#161210; --bg2:#1e1815; --panel:#241d17; --panel2:#2b221a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --verm:#b6452f; --verm2:#8f3423;
+  --wei:#5b7fa6; --wei-deep:#2f4a6a;
+  --ok:#5f9e6e; --warn:#c8873a;
+  --cell:#3a2f22; --cell2:#463829; --wall:#120e0a; --wall2:#1c1611;
+  --draw:#5b7fa6; --heal:#5f9e6e; --move:#c8873a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f1e9d8; --bg2:#ece2cd; --panel:#faf4e6; --panel2:#f2e9d5;
+    --ink:#3a2f22; --ink-dim:#7c6c54; --gold:#9c7a35; --gold-dim:rgba(156,122,53,.4);
+    --verm:#a63c26; --verm2:#8f3423;
+    --wei:#3d5f85; --wei-deep:#2f4a6a;
+    --ok:#3f7d4e; --warn:#a06a24;
+    --cell:#e7dcc2; --cell2:#dccbaa; --wall:#8a7654; --wall2:#7a6746;
+    --draw:#3d5f85; --heal:#3f7d4e; --move:#a06a24;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"秀";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--wei);opacity:.12;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--wei-deep);color:#f4ecd8;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-h.open .arrow{transform:rotate(90deg)}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(160deg,var(--wei-deep),var(--wei));border-color:transparent;color:#f7ead9}
+.btn-gold{background:linear-gradient(160deg,#8a6d2c,var(--gold));border-color:transparent;color:#231a0d}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+select{background:var(--bg2);border:1px solid var(--gold-dim);color:var(--ink);border-radius:8px;padding:8px 10px;font-size:15px;font-family:inherit}
+
+/* ── 棋盘 ── */
+.mapbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--gold-dim);flex-wrap:wrap}
+.board-wrap{padding:14px;display:flex;justify-content:center}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:100%;max-width:400px;aspect-ratio:1}
+.cell{position:relative;border-radius:7px;background:var(--cell);border:1px solid var(--gold-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;overflow:hidden;transition:box-shadow .12s,background .12s}
+.cell.wall{background:repeating-linear-gradient(45deg,var(--wall),var(--wall) 5px,var(--wall2) 5px,var(--wall2) 10px);border-color:transparent}
+.cell.city{background:var(--cell2);border-color:var(--gold)}
+.cell.start::after{content:"起";position:absolute;left:3px;top:2px;font-size:9px;color:var(--ink-dim);font-family:"Kaiti SC",serif}
+.cell.visited{opacity:.55}
+.cell.visited .vmark{display:block}
+.cell .vmark{display:none;position:absolute;right:3px;top:2px;font-size:10px;color:var(--ok);font-weight:bold}
+.cell .cno{position:absolute;left:3px;bottom:2px;font-size:9px;color:var(--gold);font-weight:bold;font-family:serif}
+.cell .cname{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:12px;color:var(--ink);line-height:1.05;margin-top:1px}
+.cell .icon{font-size:12px;font-weight:bold;line-height:1;padding:1px 4px;border-radius:5px;color:#fff;margin-bottom:1px}
+.icon.i-draw{background:var(--draw)} .icon.i-heal{background:var(--heal)} .icon.i-move{background:var(--move)}
+.cell.flash{box-shadow:0 0 0 3px var(--verm),0 0 14px 2px var(--verm);z-index:3}
+.token{position:absolute;inset:0;margin:auto;width:62%;height:62%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#7fa8cf,var(--wei-deep));color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:15px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:4;border:2px solid #f4ecd8}
+.cell.tokencell{box-shadow:0 0 0 2px var(--wei)}
+
+/* 方向盘 */
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:4px auto 0}
+.dpad .sp{visibility:hidden}
+.dbtn{padding:12px 6px;border-radius:10px;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);font-family:inherit;cursor:pointer;text-align:center;line-height:1.15}
+.dbtn:active{transform:scale(.96)}
+.dbtn:disabled{opacity:.4}
+.dbtn .suit{font-size:20px;display:block}
+.dbtn .lab{font-size:11px;color:var(--ink-dim)}
+.dbtn .red{color:var(--verm)}
+
+.chip{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--gold-dim);color:var(--ink-dim);margin:2px 2px 0 0}
+.chip.on{background:var(--ok);color:#fff;border-color:transparent}
+.pool-item{border:1px solid var(--gold-dim);border-radius:8px;padding:8px 10px;margin-top:6px;background:var(--panel2);font-size:13px}
+.pool-item .pt{font-size:11px;color:var(--gold);font-family:"Kaiti SC",serif}
+.pool-item.state{border-left:3px solid var(--wei)}
+.choice{border:1px solid var(--gold-dim);border-radius:8px;padding:10px 12px;margin-top:8px;background:var(--panel2);cursor:pointer}
+.choice:active{transform:scale(.99)}
+.choice .pt{font-size:11px;color:var(--gold)}
+.retain{border:1px solid var(--ok);border-radius:8px;padding:10px 12px;background:rgba(95,158,110,.12);font-size:13px}
+.retain .pt{font-size:11px;color:var(--ok);font-weight:bold}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:13px;color:var(--ink)}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">魏</span>裴秀 · 十六州地图</h1>
+  <div class="sub">茂著 / 尽览 / 采风 · 推箱子走位模拟 · v1.0</div>
+</header>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><b style="color:var(--gold)">〖茂著〗</b>锁定技，回合开始时、或你画完一幅地图的所有城市时，你将手牌补至四种花色齐全，然后展开一幅新地图。回合结束时，从本回合已展开地图产生的技能池中随机3个，你三选一，获得的技能持续到你下回合结束。</p>
+    <p class="skilltext" style="margin-top:8px"><b style="color:var(--gold)">〖尽览〗</b>回合内你使用一张♠/♥/♣/♦牌后，沿对应方向把地图"走到底"（推箱子式滑到边），每经过一座城市立即执行其图标效果。<span style="color:var(--ink-dim)">（♠东 · ♥西 · ♣南 · ♦北）</span></p>
+    <p class="skilltext" style="margin-top:8px"><b style="color:var(--gold)">〖采风〗</b>出牌阶段每幅地图限一次，弃任意张牌，从牌堆/弃牌堆随机换回等量的其余花色牌。</p>
+    <p class="note">图标：<span class="icon i-draw" style="color:#fff">摸N</span> 经过摸N牌 · <span class="icon i-heal" style="color:#fff">回N</span> 回N体力 · <span class="icon i-move" style="color:#fff">↓N</span> 到达即向该方向自动移N格（停留，撞新城则触发一次，无链式）。</p>
+  </div>
+</section>
+
+<!-- ── 棋盘 ── -->
+<section>
+  <div class="mapbar">
+    <select id="mapSel" onchange="pickMap(this.value)"></select>
+    <button class="btn btn-sm" onclick="randomExpand()">🎲 随机展开</button>
+    <span class="note grow" style="text-align:right" id="mapMeta"></span>
+  </div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="sec-b" style="padding-top:0">
+    <div class="dpad">
+      <span class="sp"></span>
+      <button class="dbtn" id="dN" onclick="go('N')"><span class="suit red">♦</span><span class="lab">北 · 上</span></button>
+      <span class="sp"></span>
+      <button class="dbtn" id="dW" onclick="go('W')"><span class="suit red">♥</span><span class="lab">西 · 左</span></button>
+      <button class="btn btn-sm" style="align-self:center" onclick="resetToken()">回起点</button>
+      <button class="dbtn" id="dE" onclick="go('E')"><span class="suit">♠</span><span class="lab">东 · 右</span></button>
+      <span class="sp"></span>
+      <button class="dbtn" id="dS" onclick="go('S')"><span class="suit">♣</span><span class="lab">南 · 下</span></button>
+      <span class="sp"></span>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <span id="cityChips"></span>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:8px">
+      <button class="btn btn-gold hidden" id="nextBtn" onclick="randomExpand()">✓ 四城已画完 · 展开下一张地图</button>
+    </div>
+    <div class="note" id="pathNote" style="text-align:center;min-height:18px"></div>
+  </div>
+</section>
+
+<!-- ── 茂著·技能池 ── -->
+<section>
+  <div class="sec-h open" onclick="toggleSec('secPool')">茂著 · 本回合技能池 <span class="chip" id="poolCount">0</span><span class="arrow" style="transform:rotate(90deg)">▶</span></div>
+  <div class="sec-b" id="secPool">
+    <div id="retainBox"></div>
+    <div class="row" style="margin:2px 0 8px"><button class="btn btn-sm grow" onclick="newTurn()">↺ 新回合（清池 · 重新展开）</button></div>
+    <div id="poolList" class="note">尚无。展开地图（州技入池）、走过城市（城技入池）后在此累积。</div>
+    <div id="endBox" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<footer>裴秀 · 十六州地图 v1.0<br>不含最优解 solver · 完全离线 · 数据仅存本机 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+/* ============ 十六州数据（坐标 [x,y]，[0,0]=左下角，x→右 / y→上）============ */
+const MAPS = {
+"并州":{pinyin:"Bing",grid:{w:5,h:5},start:[3,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[0,2],[4,2],[0,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"雁门",pos:[3,4],icon:"move:down:2",skill:"你从牌堆中获得一张武器牌和一张进攻坐骑牌。"},{no:2,name:"九原",pos:[2,2],icon:"draw:1",skill:"你使用【杀】可以额外指定任意名目标。"},{no:3,name:"祁县",pos:[1,1],icon:"draw:1",skill:"你可以重铸一张装备牌，视为使用一张【杀】或【过河拆桥】（每回合限一次）。"},{no:4,name:"武乡",pos:[4,1],icon:"draw:1",skill:"你从牌堆中获得一张【火攻】。"}],stateSkill:"你可以视为使用一张【决斗】。"},
+"冀州":{pinyin:"Ji",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[4,3],[4,2],[0,1],[0,0],[1,0],[3,0],[4,0]],cities:[{no:1,name:"常山",pos:[0,2],icon:"draw:1",skill:"你从牌堆中获得两张【闪】。"},{no:2,name:"渤海",pos:[3,3],icon:"draw:2",skill:"你可以弃置一张武器牌，然后摸两张牌。"},{no:3,name:"平原",pos:[3,1],icon:"heal:1",skill:"你失去最后的手牌后，你摸一张牌（每回合限一次）。"},{no:4,name:"巨鹿",pos:[1,1],icon:"draw:1",skill:"你失去黑桃2~9的牌后，你摸一张牌（每回合限一次）。"}],stateSkill:"你从牌堆获得一张【万箭齐发】。"},
+"荆州":{pinyin:"Jing",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[4,2],[0,1],[0,0],[1,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"江夏",pos:[4,1],icon:"draw:1",skill:"你可以令一名其他角色摸两张牌，然后交给你一张牌。"},{no:2,name:"襄阳",pos:[1,1],icon:"draw:1",skill:"你可以移动场上一张牌。"},{no:3,name:"上庸",pos:[0,2],icon:"draw:2",skill:"你可以与一名其他角色各摸一张牌。"},{no:4,name:"南阳",pos:[3,3],icon:"heal:1",skill:"你可以重铸一张锦囊牌，与一名角色各回复1点体力。"}],stateSkill:"你可以交给一名角色任意张手牌。"},
+"凉州":{pinyin:"Liang",grid:{w:5,h:5},start:[4,0],walls:[[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[4,2],[0,1],[2,1],[0,0],[2,0],[3,0]],cities:[{no:1,name:"武威",pos:[3,2],icon:"draw:2",skill:"你使用伤害牌可以额外指定一个目标（每回合限一次）。"},{no:2,name:"玉门",pos:[1,2],icon:"draw:2",skill:"已连环的角色不能响应你的牌。"},{no:3,name:"居延",pos:[2,4],icon:"move:left:1",skill:"你从牌堆中获得三张攻击范围各不相同的武器牌。"},{no:4,name:"敦煌",pos:[0,3],icon:"draw:3",skill:"你的【杀】被抵消后，你摸一张牌。"}],stateSkill:"你可以将一张黑色牌当【杀】使用。"},
+"梁州":{pinyin:"Liang",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[4,4],[0,3],[4,3],[0,2],[4,2],[0,1],[1,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"绵竹",pos:[1,2],icon:"heal:1",skill:"结束阶段，你观看牌堆顶三张牌，然后可以获得其中类型不同的牌各一张。"},{no:2,name:"巴西",pos:[2,3],icon:"draw:1",skill:"你可以指定一名其他角色，其当前手牌无次数限制。"},{no:3,name:"汉中",pos:[3,4],icon:"move:down:3",skill:"你可以与一名其他角色交换手牌。"},{no:4,name:"涪陵",pos:[4,1],icon:"draw:2",skill:"你的装备牌不能被其他角色弃置。"}],stateSkill:"你成为【杀】的目标后，使用者弃置一张牌。"},
+"宁州":{pinyin:"Ning",grid:{w:5,h:5},start:[0,3],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[1,3],[2,3],[3,3],[4,3],[3,2],[4,2],[0,0],[4,0]],cities:[{no:1,name:"哀牢",pos:[0,1],icon:"draw:3",skill:"你可以令一名角色选择：其弃置两张牌，或其失去1点体力。"},{no:2,name:"句町",pos:[3,1],icon:"move:left:2",skill:"你可以失去1点体力，然后摸三张牌。"},{no:3,name:"滇池",pos:[2,2],icon:"heal:1",skill:"一名角色受到火焰伤害后，你可以令其失去1点体力（每回合限一次）。"},{no:4,name:"南涪",pos:[1,0],icon:"heal:1",skill:"你可以失去1点体力，视为使用一张【杀】。"}],stateSkill:"你使用的【杀】不能被抵消，且造成的伤害均视为体力流失。"},
+"秦州":{pinyin:"Qin",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[2,4],[3,4],[4,4],[0,3],[3,3],[4,3],[0,2],[0,1],[1,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"陇西",pos:[1,2],icon:"draw:1",skill:"你从牌堆中获得一张防御坐骑牌。"},{no:2,name:"天水",pos:[3,2],icon:"draw:1",skill:"你可以弃置一名角色一张手牌，若不为【杀】，你摸两张牌。"},{no:3,name:"武都",pos:[4,1],icon:"heal:1",skill:"你使用牌无次数限制。"},{no:4,name:"阴平",pos:[1,0],icon:"draw:2",skill:"其他角色计算与你的距离+1。"}],stateSkill:"你可选择一名其他角色，其使用的下一张牌对你无效。"},
+"青州":{pinyin:"Qing",grid:{w:5,h:5},start:[1,1],walls:[[0,4],[1,4],[2,4],[4,4],[2,3],[4,2],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"北海",pos:[2,1],icon:"draw:1",skill:"你将手牌摸至体力上限。"},{no:2,name:"临淄",pos:[1,2],icon:"draw:1",skill:"你获得弃牌堆中三张随机的梅花牌。"},{no:3,name:"乐安",pos:[0,3],icon:"draw:2",skill:"你从牌堆获得一张属性【杀】和一张【铁索连环】。"},{no:4,name:"东莱",pos:[3,3],icon:"draw:2",skill:"你可令一名角色使用的下一张牌无次数和距离限制。"}],stateSkill:"你可以弃置所有手牌，然后摸等量的牌。"},
+"司州":{pinyin:"Si",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[2,3],[0,2],[4,2],[3,1],[4,1],[3,0],[4,0]],cities:[{no:1,name:"温县",pos:[2,0],icon:"move:left:1",skill:"你加1点体力上限并回复1点体力，然后获得一张【虚妄之冕】。"},{no:2,name:"弘农",pos:[1,1],icon:"draw:1",skill:"你可以重铸任意张装备牌并回复1点体力。"},{no:3,name:"闻喜",pos:[1,3],icon:"move:down:1",skill:"你每回合首次使用一个花色的牌后，你摸一张牌。"},{no:4,name:"邯郸",pos:[4,3],icon:"draw:2",skill:"你使用一张非伤害普通锦囊牌后，你令一名角色获得此牌（每回合限一次）。"}],stateSkill:"你可以获得一名角色一张手牌。"},
+"徐州":{pinyin:"Xu",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[3,2],[4,2],[0,1],[4,1],[0,0]],cities:[{no:1,name:"彭城",pos:[0,2],icon:"draw:2",skill:"你可以令一名其他角色交给你一张牌，然后其回复1点体力。"},{no:2,name:"琅琊",pos:[2,3],icon:"draw:1",skill:"你观看牌堆顶的五张牌，然后以任意顺序置于牌堆顶或牌堆底。"},{no:3,name:"广陵",pos:[2,0],icon:"draw:1",skill:"你可以将两张牌当一张【五谷丰登】使用。"},{no:4,name:"东海",pos:[3,1],icon:"heal:1",skill:"你令一名角色下个摸牌阶段多摸一张牌。"}],stateSkill:"你可以指定一名其他角色，其于其的回合外使用牌后摸一张牌。"},
+"兖州":{pinyin:"Yan",grid:{w:5,h:5},start:[2,1],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[4,1],[4,0]],cities:[{no:1,name:"泰山",pos:[3,3],icon:"move:down:3",skill:"将一张【螭纹玉佩】置入手牌。"},{no:2,name:"任城",pos:[2,0],icon:"heal:1",skill:"你每有一张【杀】，手牌上限便+1。"},{no:3,name:"陈留",pos:[0,0],icon:"draw:1",skill:"你跳过弃牌阶段。"},{no:4,name:"鄄城",pos:[1,2],icon:"draw:2",skill:"你判定，若为黑色，你获得判定牌并重复此流程。"}],stateSkill:"你回复体力后，你摸一张牌（每回合限一次）。"},
+"扬州":{pinyin:"Yang",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[4,3],[0,2],[0,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"庐江",pos:[1,0],icon:"draw:1",skill:"你可以拼点，赢的角色摸两张牌。"},{no:2,name:"合肥",pos:[2,1],icon:"draw:4",skill:"你可以弃置至多两张牌，然后摸等量的牌。"},{no:3,name:"居巢",pos:[4,1],icon:"move:left:1",skill:"你可以弃置你与一名角色各一张牌。"},{no:4,name:"寿春",pos:[2,3],icon:"heal:1",skill:"你可令一名角色加1点体力上限。"}],stateSkill:"你可以令一名其他角色回复1点体力。"},
+"益州":{pinyin:"Yi",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[0,2],[4,2],[0,1],[0,0],[1,0]],cities:[{no:1,name:"临邛",pos:[1,1],icon:"heal:2",skill:"你可以令任意名角色同时弃置一张牌。"},{no:2,name:"牂牁",pos:[4,1],icon:"draw:1",skill:"你受到伤害后，你可以弃置你与伤害来源各一张牌。"},{no:3,name:"朱提",pos:[2,0],icon:"draw:1",skill:"你受到属性伤害改为回复等量体力（每回合限一次）。"},{no:4,name:"成都",pos:[2,3],icon:"move:down:2",skill:"你对自己使用牌后，你摸一张牌（每回合限一次）。"}],stateSkill:"你不能成为延时锦囊牌的目标。"},
+"雍州":{pinyin:"Yong",grid:{w:5,h:5},start:[2,1],walls:[[1,4],[2,4],[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[2,2],[0,1],[4,1],[0,0],[4,0]],cities:[{no:1,name:"冯翊",pos:[4,2],icon:"draw:2",skill:"你可以回复1点体力。"},{no:2,name:"京兆",pos:[3,0],icon:"move:left:2",skill:"若有角色本回合对你使用过：【杀】/伤害锦囊牌，伤害锦囊牌/【杀】对你无效。"},{no:3,name:"扶风",pos:[1,1],icon:"draw:1",skill:"你从牌堆获得一张你手牌中未拥有类型的牌。"},{no:4,name:"安定",pos:[1,3],icon:"heal:1",skill:"防止你因传导受到的属性伤害。"}],stateSkill:"你可以摸两张牌，然后将手牌弃至手牌上限。"},
+"幽州":{pinyin:"You",grid:{w:5,h:5},start:[0,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[2,1],[2,0],[3,0]],cities:[{no:1,name:"范阳",pos:[1,0],icon:"draw:1",skill:"你可以对攻击范围内的一名角色造成1点伤害。"},{no:2,name:"北平",pos:[1,2],icon:"draw:1",skill:"你从牌堆中获得两张【杀】。"},{no:3,name:"玄菟",pos:[3,4],icon:"draw:1",skill:"有角色进入濒死状态时，你获得使其进入此濒死状态的牌（每回合限一次）。"},{no:4,name:"带方",pos:[4,0],icon:"draw:2",skill:"你的属性【杀】不能被响应。"}],stateSkill:"你加1点体力上限。"},
+"豫州":{pinyin:"Yu",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"汝南",pos:[1,1],icon:"draw:3",skill:"你可以令一名角色摸等同于你手牌上限的牌。"},{no:2,name:"许昌",pos:[0,3],icon:"draw:1",skill:"你可令一名其他角色攻击范围增加至与你相同。"},{no:3,name:"沛县",pos:[2,3],icon:"draw:1",skill:"你的普通锦囊牌不能被响应。"},{no:4,name:"谯县",pos:[3,2],icon:"draw:2",skill:"你受到伤害后，可以摸一张牌。"}],stateSkill:"你可以进入连环状态，令一名体力值小于你的角色回复1点体力。"}
+};
+const MAP_NAMES = Object.keys(MAPS);
+const DIRV = { N:[0,1], S:[0,-1], E:[1,0], W:[-1,0] };      // 花色方向
+const DIRNAME = { N:"♦北", S:"♣南", E:"♠东", W:"♥西" };
+const MVDIR = { up:[0,1], down:[0,-1], left:[-1,0], right:[1,0] };
+const MVGLYPH = { up:"↑", down:"↓", left:"←", right:"→" };
+
+/* ============ 状态 ============ */
+const LS_KEY='sgs_peixiu_v1';
+let S=null, memFallback=null, busy=false, animPos=null;
+function defaultState(){ return {
+  cycle: MAP_NAMES.slice(),        // 本轮尚未展开(无重复循环)
+  active: null,                    // 当前棋盘上的州
+  token: null,                     // 当前 token 位置 [x,y]
+  visited: {},                     // 当前 active 州已走城市 {no:true}
+  turnStates: [],                  // 本回合展开过的州(池·州技)
+  turnCities: [],                  // 本回合走过的城市(池·城技) {map,no,name,skill}
+  retained: null,                  // 上回合结束保留的技能 {pt,skill}
+  endChoices: null,                // 三选一候选
+  seq:0, history:[]
+}; }
+function save(){ const r=JSON.stringify(S); try{localStorage.setItem(LS_KEY,r);}catch(e){memFallback=r;} }
+function load(){ let r=null; try{r=localStorage.getItem(LS_KEY);}catch(e){r=memFallback;}
+  S=defaultState(); if(r){try{const o=JSON.parse(r); if(o&&typeof o==='object') S=Object.assign(defaultState(),o);}catch(e){}}
+  if(!S.active) pickMap(MAP_NAMES[0], true); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function logPush(m){ S.seq++; S.history.push({n:S.seq,m}); if(S.history.length>80) S.history.shift(); }
+
+/* ============ 几何工具 ============ */
+function eq(a,b){ return a&&b&&a[0]===b[0]&&a[1]===b[1]; }
+function inB(m,p){ return p[0]>=0&&p[0]<m.grid.w&&p[1]>=0&&p[1]<m.grid.h; }
+function isWall(m,p){ return m.walls.some(w=>w[0]===p[0]&&w[1]===p[1]); }
+function cityAt(m,p){ return m.cities.find(c=>c.pos[0]===p[0]&&c.pos[1]===p[1]); }
+function parseIcon(icon){ const a=icon.split(':'); if(a[0]==='move') return {t:'move',dir:a[1],n:+a[2]}; return {t:a[0],n:+a[1]}; }
+
+/* 推箱子滑动：返回 {path:[[x,y]...], events:[{pos,city}], moved} */
+function computeSlide(m, start, dir){
+  const dv=DIRV[dir]; const path=[start.slice()]; const events=[];
+  let pos=start.slice();
+  while(true){
+    const nx=[pos[0]+dv[0], pos[1]+dv[1]];
+    if(!inB(m,nx) || isWall(m,nx)) break;
+    pos=nx; path.push(pos.slice());
+    const c=cityAt(m,pos);
+    if(c){
+      events.push({pos:pos.slice(), city:c});
+      const ic=parseIcon(c.icon);
+      if(ic.t==='move'){
+        // 到达即自动移动 N 格 → 停留（不再沿花色方向滑）
+        const mv=MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
+        for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!inB(m,np)||isWall(m,np)) break; jp=np; path.push(jp.slice()); }
+        pos=jp;
+        const lc=cityAt(m,jp);
+        if(lc && lc.no!==c.no) events.push({pos:jp.slice(), city:lc}); // 撞新城触发一次，无链式
+        break;
+      }
+    }
+  }
+  return { path, events, moved: path.length>1 };
+}
+
+/* ============ 展开地图 ============ */
+function expandMap(name){
+  S.active=name; const m=MAPS[name]; S.token=m.start.slice(); S.visited={};
+  // 入池：州技
+  if(!S.turnStates.includes(name)) S.turnStates.push(name);
+  // 从无重复循环中移除
+  S.cycle=S.cycle.filter(x=>x!==name); if(!S.cycle.length) S.cycle=MAP_NAMES.slice();
+  logPush('展开【'+name+'】（州技入池）');
+}
+function pickMap(name, silent){ if(busy)return; if(!MAPS[name])return; expandMap(name); if(!silent){save();renderAll();} }
+function randomExpand(){ if(busy)return; const pool=S.cycle.length?S.cycle:MAP_NAMES; const name=pool[Math.floor(Math.random()*pool.length)]; expandMap(name); save(); renderAll(); }
+function resetToken(){ if(busy)return; const m=MAPS[S.active]; S.token=m.start.slice(); animPos=null; renderBoard(); setPathNote(''); }
+
+/* ============ 走位 ============ */
+function go(dir){
+  if(busy||!S.active) return;
+  const m=MAPS[S.active];
+  const res=computeSlide(m, S.token, dir);
+  if(!res.moved){ setPathNote(DIRNAME[dir]+'：贴墙/边界，无法移动'); shakeDpad(); return; }
+  busy=true; setButtons();
+  const path=res.path, events=res.events; let i=0;
+  const effLog=[];
+  function step(){
+    animPos=path[i].slice();
+    const ev=events.find(e=>eq(e.pos,animPos));
+    renderBoard(ev?ev.city:null);
+    if(ev){ const eff=applyCity(m, ev.city); effLog.push(ev.city.name+'('+eff+')'); }
+    i++;
+    if(i<path.length) setTimeout(step, 150);
+    else finish();
+  }
+  function finish(){
+    S.token=path[path.length-1].slice(); animPos=null; busy=false;
+    setPathNote(DIRNAME[dir]+'：'+(effLog.length?('经 '+effLog.join(' → ')):'一路无城')+' → 停 ['+S.token+']');
+    logPush(DIRNAME[dir]+' 尽览：'+(effLog.length?effLog.join(' / '):'空过')+'，停 ['+S.token+']');
+    save(); renderAll();
+  }
+  step();
+}
+/* 经过城市：记录已走 + 城技入池；返回图标效果文字 */
+function applyCity(m, c){
+  const ic=parseIcon(c.icon);
+  if(!S.visited[c.no]){
+    S.visited[c.no]=true;
+    if(!S.turnCities.some(x=>x.map===S.active && x.no===c.no))
+      S.turnCities.push({map:S.active, no:c.no, name:c.name, skill:c.skill});
+  }
+  if(ic.t==='draw') return '摸'+ic.n;
+  if(ic.t==='heal') return '回'+ic.n;
+  if(ic.t==='move') return (MVGLYPH[ic.dir]||'')+ic.n+'移动';
+  return c.icon;
+}
+
+/* ============ 茂著 结束阶段 ============ */
+function poolList(){
+  const arr=[];
+  S.turnStates.forEach(n=>arr.push({pt:'州技·'+n, skill:MAPS[n].stateSkill}));
+  S.turnCities.forEach(c=>arr.push({pt:'城技·'+c.map+c.name, skill:c.skill}));
+  return arr;
+}
+function endPhase(){
+  const pool=poolList();
+  if(!pool.length){ setPathNote('技能池为空，先展开地图/走城市'); return; }
+  // 随机取 min(3,池) 个候选
+  const idx=pool.map((_,i)=>i); for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  S.endChoices=idx.slice(0,Math.min(3,pool.length)).map(i=>pool[i]);
+  logPush('结束阶段：随机 '+S.endChoices.length+' 选 1');
+  save(); renderAll();
+}
+function chooseEnd(k){
+  const c=S.endChoices[k]; S.retained={pt:c.pt, skill:c.skill}; S.endChoices=null;
+  logPush('茂著选定：'+c.pt);
+  save(); renderAll();
+}
+function newTurn(){
+  if(busy)return;
+  S.turnStates=[]; S.turnCities=[]; S.endChoices=null; S.visited={};
+  // 茂著·回合开始展开一幅新地图（随机无重复）
+  const pool=S.cycle.length?S.cycle:MAP_NAMES; const name=pool[Math.floor(Math.random()*pool.length)];
+  logPush('—— 新回合 ——');
+  expandMap(name);
+  save(); renderAll();
+}
+
+/* ============ 渲染 ============ */
+function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
+function setPathNote(t){ document.getElementById('pathNote').textContent=t; }
+function setButtons(){ ['dN','dS','dE','dW'].forEach(id=>document.getElementById(id).disabled=busy); }
+function shakeDpad(){ const d=document.querySelector('.dpad'); d.animate([{transform:'translateX(0)'},{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:180}); }
+
+function iconHtml(icon){
+  const ic=parseIcon(icon);
+  if(ic.t==='draw') return '<span class="icon i-draw">摸'+ic.n+'</span>';
+  if(ic.t==='heal') return '<span class="icon i-heal">回'+ic.n+'</span>';
+  if(ic.t==='move') return '<span class="icon i-move">'+(MVGLYPH[ic.dir]||'')+ic.n+'</span>';
+  return '';
+}
+function renderBoard(flashCity){
+  const m=MAPS[S.active]; const b=document.getElementById('board'); if(!m||!b)return;
+  const tok = animPos || S.token;
+  let html='';
+  for(let y=m.grid.h-1; y>=0; y--){        // y 从上往下渲染（[0,0]在左下）
+    for(let x=0; x<m.grid.w; x++){
+      const p=[x,y]; const wall=isWall(m,p); const c=cityAt(m,p);
+      const cls=['cell'];
+      if(wall) cls.push('wall');
+      if(c) cls.push('city');
+      if(eq(p,m.start)) cls.push('start');
+      if(c&&S.visited[c.no]) cls.push('visited');
+      if(eq(p,tok)) cls.push('tokencell');
+      if(flashCity&&c&&c.no===flashCity.no) cls.push('flash');
+      let inner='';
+      if(c){ inner='<span class="vmark">✓</span><span class="cno">'+c.no+'</span>'+iconHtml(c.icon)+'<span class="cname">'+c.name+'</span>'; }
+      if(eq(p,tok)) inner+='<span class="token">秀</span>';
+      html+='<div class="'+cls.join(' ')+'">'+inner+'</div>';
+    }
+  }
+  b.innerHTML=html;
+}
+function renderAll(){
+  const m=MAPS[S.active];
+  // 地图选择器
+  const sel=document.getElementById('mapSel');
+  sel.innerHTML=MAP_NAMES.map(n=>'<option value="'+n+'"'+(n===S.active?' selected':'')+'>'+n+'（'+MAPS[n].pinyin+'）</option>').join('');
+  document.getElementById('mapMeta').textContent='起点 ['+m.start+'] · 州技入池';
+  renderBoard(null);
+  setButtons();
+  // 四城 chips
+  const chips=m.cities.map(c=>'<span class="chip'+(S.visited[c.no]?' on':'')+'">'+c.no+' '+c.name+'</span>').join('');
+  document.getElementById('cityChips').innerHTML=chips;
+  const done=m.cities.every(c=>S.visited[c.no]);
+  document.getElementById('nextBtn').classList.toggle('hidden', !done);
+  // 技能池
+  const pool=poolList();
+  document.getElementById('poolCount').textContent=pool.length;
+  const pl=document.getElementById('poolList');
+  pl.innerHTML = pool.length ? pool.map(p=>'<div class="pool-item'+(p.pt[0]==='州'?' state':'')+'"><div class="pt">'+esc(p.pt)+'</div><div class="skilltext">'+esc(p.skill)+'</div></div>').join('')
+    : '<div class="note">尚无。展开地图（州技入池）、走过城市（城技入池）后在此累积。</div>';
+  // 保留技能
+  const rb=document.getElementById('retainBox');
+  rb.innerHTML = S.retained ? '<div class="retain"><div class="pt">✦ 当前生效技能（持续到本回合结束）</div><div style="font-size:11px;color:var(--gold);margin-top:2px">'+esc(S.retained.pt)+'</div><div class="skilltext">'+esc(S.retained.skill)+'</div></div>' : '';
+  // 结束阶段
+  const eb=document.getElementById('endBox');
+  if(S.endChoices){
+    eb.innerHTML='<div class="note" style="color:var(--gold)">随机 '+S.endChoices.length+' 选 1：</div>'+
+      S.endChoices.map((c,k)=>'<div class="choice" onclick="chooseEnd('+k+')"><div class="pt">'+esc(c.pt)+'</div><div class="skilltext">'+esc(c.skill)+'</div></div>').join('');
+  } else {
+    eb.innerHTML='<button class="btn btn-primary grow" style="width:100%" onclick="endPhase()">结束阶段 · 随机三选一</button>';
+  }
+  // 记录
+  const lb=document.getElementById('logBox');
+  lb.innerHTML = S.history.length ? S.history.slice().reverse().slice(0,40).map(h=>'<div class="log-item">'+h.n+' · <b>'+esc(h.m)+'</b></div>').join('') : '暂无记录';
+}
+load(); renderAll();
+</script>
+</body>
+</html>

@@ -173,8 +173,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -192,7 +192,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
              xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
-             guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)} };
+             guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)},
+             peixiu:{view:s=>viewPxTool(s),bind:(s,q)=>bindPx(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -2204,6 +2205,111 @@ function bindXs(xs,q){
   q("[data-xsnu]").forEach(b=>b.onclick=()=>act({type:"adjustNu",delta:+b.dataset.xsnu}));
   q("[data-xsawaken]").forEach(b=>b.onclick=()=>act({type:"toggleAwaken"}));
   q("[data-xsreset]").forEach(b=>b.onclick=()=>{if(confirm("重开徐氏工具?龙怒归0、清觉醒。"))act({type:"resetGame"});});
+}
+
+/* ---------- 裴秀工具(十六州地图:茂著展开 + 尽览推箱子走位 + 结束阶段三选一;全公开)---------- */
+/* ⚠ 地图数据源 = prototype/shared/peixiu-maps.json;此处内联仅供画棋盘几何(走位由 DO 权威计算,客户端不重算)。 */
+const PEIXIU_MAPS={
+"并州":{grid:{w:5,h:5},start:[3,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[0,2],[4,2],[0,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"雁门",pos:[3,4],icon:"move:down:2"},{no:2,name:"九原",pos:[2,2],icon:"draw:1"},{no:3,name:"祁县",pos:[1,1],icon:"draw:1"},{no:4,name:"武乡",pos:[4,1],icon:"draw:1"}]},
+"冀州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[4,3],[4,2],[0,1],[0,0],[1,0],[3,0],[4,0]],cities:[{no:1,name:"常山",pos:[0,2],icon:"draw:1"},{no:2,name:"渤海",pos:[3,3],icon:"draw:2"},{no:3,name:"平原",pos:[3,1],icon:"heal:1"},{no:4,name:"巨鹿",pos:[1,1],icon:"draw:1"}]},
+"荆州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[4,2],[0,1],[0,0],[1,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"江夏",pos:[4,1],icon:"draw:1"},{no:2,name:"襄阳",pos:[1,1],icon:"draw:1"},{no:3,name:"上庸",pos:[0,2],icon:"draw:2"},{no:4,name:"南阳",pos:[3,3],icon:"heal:1"}]},
+"凉州":{grid:{w:5,h:5},start:[4,0],walls:[[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[4,2],[0,1],[2,1],[0,0],[2,0],[3,0]],cities:[{no:1,name:"武威",pos:[3,2],icon:"draw:2"},{no:2,name:"玉门",pos:[1,2],icon:"draw:2"},{no:3,name:"居延",pos:[2,4],icon:"move:left:1"},{no:4,name:"敦煌",pos:[0,3],icon:"draw:3"}]},
+"梁州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[4,4],[0,3],[4,3],[0,2],[4,2],[0,1],[1,1],[0,0],[1,0],[2,0],[4,0]],cities:[{no:1,name:"绵竹",pos:[1,2],icon:"heal:1"},{no:2,name:"巴西",pos:[2,3],icon:"draw:1"},{no:3,name:"汉中",pos:[3,4],icon:"move:down:3"},{no:4,name:"涪陵",pos:[4,1],icon:"draw:2"}]},
+"宁州":{grid:{w:5,h:5},start:[0,3],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[1,3],[2,3],[3,3],[4,3],[3,2],[4,2],[0,0],[4,0]],cities:[{no:1,name:"哀牢",pos:[0,1],icon:"draw:3"},{no:2,name:"句町",pos:[3,1],icon:"move:left:2"},{no:3,name:"滇池",pos:[2,2],icon:"heal:1"},{no:4,name:"南涪",pos:[1,0],icon:"heal:1"}]},
+"秦州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[2,4],[3,4],[4,4],[0,3],[3,3],[4,3],[0,2],[0,1],[1,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"陇西",pos:[1,2],icon:"draw:1"},{no:2,name:"天水",pos:[3,2],icon:"draw:1"},{no:3,name:"武都",pos:[4,1],icon:"heal:1"},{no:4,name:"阴平",pos:[1,0],icon:"draw:2"}]},
+"青州":{grid:{w:5,h:5},start:[1,1],walls:[[0,4],[1,4],[2,4],[4,4],[2,3],[4,2],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"北海",pos:[2,1],icon:"draw:1"},{no:2,name:"临淄",pos:[1,2],icon:"draw:1"},{no:3,name:"乐安",pos:[0,3],icon:"draw:2"},{no:4,name:"东莱",pos:[3,3],icon:"draw:2"}]},
+"司州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[2,3],[0,2],[4,2],[3,1],[4,1],[3,0],[4,0]],cities:[{no:1,name:"温县",pos:[2,0],icon:"move:left:1"},{no:2,name:"弘农",pos:[1,1],icon:"draw:1"},{no:3,name:"闻喜",pos:[1,3],icon:"move:down:1"},{no:4,name:"邯郸",pos:[4,3],icon:"draw:2"}]},
+"徐州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[3,2],[4,2],[0,1],[4,1],[0,0]],cities:[{no:1,name:"彭城",pos:[0,2],icon:"draw:2"},{no:2,name:"琅琊",pos:[2,3],icon:"draw:1"},{no:3,name:"广陵",pos:[2,0],icon:"draw:1"},{no:4,name:"东海",pos:[3,1],icon:"heal:1"}]},
+"兖州":{grid:{w:5,h:5},start:[2,1],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[4,1],[4,0]],cities:[{no:1,name:"泰山",pos:[3,3],icon:"move:down:3"},{no:2,name:"任城",pos:[2,0],icon:"heal:1"},{no:3,name:"陈留",pos:[0,0],icon:"draw:1"},{no:4,name:"鄄城",pos:[1,2],icon:"draw:2"}]},
+"扬州":{grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[4,3],[0,2],[0,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"庐江",pos:[1,0],icon:"draw:1"},{no:2,name:"合肥",pos:[2,1],icon:"draw:4"},{no:3,name:"居巢",pos:[4,1],icon:"move:left:1"},{no:4,name:"寿春",pos:[2,3],icon:"heal:1"}]},
+"益州":{grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[0,2],[4,2],[0,1],[0,0],[1,0]],cities:[{no:1,name:"临邛",pos:[1,1],icon:"heal:2"},{no:2,name:"牂牁",pos:[4,1],icon:"draw:1"},{no:3,name:"朱提",pos:[2,0],icon:"draw:1"},{no:4,name:"成都",pos:[2,3],icon:"move:down:2"}]},
+"雍州":{grid:{w:5,h:5},start:[2,1],walls:[[1,4],[2,4],[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[2,2],[0,1],[4,1],[0,0],[4,0]],cities:[{no:1,name:"冯翊",pos:[4,2],icon:"draw:2"},{no:2,name:"京兆",pos:[3,0],icon:"move:left:2"},{no:3,name:"扶风",pos:[1,1],icon:"draw:1"},{no:4,name:"安定",pos:[1,3],icon:"heal:1"}]},
+"幽州":{grid:{w:5,h:5},start:[0,0],walls:[[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[2,1],[2,0],[3,0]],cities:[{no:1,name:"范阳",pos:[1,0],icon:"draw:1"},{no:2,name:"北平",pos:[1,2],icon:"draw:1"},{no:3,name:"玄菟",pos:[3,4],icon:"draw:1"},{no:4,name:"带方",pos:[4,0],icon:"draw:2"}]},
+"豫州":{grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"汝南",pos:[1,1],icon:"draw:3"},{no:2,name:"许昌",pos:[0,3],icon:"draw:1"},{no:3,name:"沛县",pos:[2,3],icon:"draw:1"},{no:4,name:"谯县",pos:[3,2],icon:"draw:2"}]}
+};
+const PX_NAMES=Object.keys(PEIXIU_MAPS);
+const pxEq=(a,b)=>!!a&&!!b&&a[0]===b[0]&&a[1]===b[1];
+const pxWall=(m,x,y)=>m.walls.some(w=>w[0]===x&&w[1]===y);
+const pxCity=(m,x,y)=>m.cities.find(c=>c.pos[0]===x&&c.pos[1]===y);
+function pxIconHtml(icon){const a=String(icon).split(":");const s="display:inline-block;font-size:11px;font-weight:700;color:#fff;padding:1px 4px;border-radius:4px;line-height:1.2;";
+  if(a[0]==="draw")return `<span style="${s}background:#3d5f85">摸${a[1]}</span>`;
+  if(a[0]==="heal")return `<span style="${s}background:#3d7a52">回${a[1]}</span>`;
+  if(a[0]==="move"){const g={up:"↑",down:"↓",left:"←",right:"→"}[a[1]]||"";return `<span style="${s}background:#b7791f">${g}${a[2]}</span>`;}
+  return "";}
+function pxBoardHtml(m,token,visited){
+  visited=visited||{};
+  let h=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:330px;margin:10px auto;aspect-ratio:1">`;
+  for(let y=m.grid.h-1;y>=0;y--)for(let x=0;x<m.grid.w;x++){
+    const wall=pxWall(m,x,y),c=pxCity(m,x,y),isTok=pxEq(token,[x,y]),isStart=pxEq(m.start,[x,y]),vis=c&&visited[c.no];
+    let st="position:relative;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;";
+    if(wall) st+="background:repeating-linear-gradient(45deg,#cdbb96,#cdbb96 4px,#c2af88 4px,#c2af88 8px);";
+    else st+="background:rgba(255,252,244,.92);border:1px solid var(--line);";
+    if(c) st+="border:1px solid var(--qi);";
+    if(isTok) st+="box-shadow:0 0 0 2px var(--seal);";
+    if(vis) st+="opacity:.5;";
+    let inner="";
+    if(isStart&&!isTok) inner+=`<span style="position:absolute;left:2px;top:1px;font-size:8px;color:var(--ink-soft)">起</span>`;
+    if(vis) inner+=`<span style="position:absolute;right:2px;top:1px;font-size:9px;color:var(--ok);font-weight:700">✓</span>`;
+    if(c) inner+=`<span style="position:absolute;left:2px;bottom:1px;font-size:8px;color:var(--qi);font-weight:700">${c.no}</span>`+pxIconHtml(c.icon)+`<span style="font-size:11px;color:var(--ink);line-height:1.05;margin-top:1px">${esc(c.name)}</span>`;
+    if(isTok) inner+=`<span style="position:absolute;inset:0;margin:auto;width:58%;height:58%;border-radius:50%;background:var(--seal);color:#f6ecd8;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:2px solid #f6ecd8">秀</span>`;
+    h+=`<div style="${st}">${inner}</div>`;
+  }
+  return h+`</div>`;
+}
+function pxPoolHtml(ts){
+  const pool=[];
+  (ts.turnStates||[]).forEach(n=>pool.push({pt:"州技·"+n,state:true}));
+  (ts.turnCities||[]).forEach(c=>pool.push({pt:"城技·"+c.map+c.name,skill:c.skill}));
+  if(!pool.length) return `<div class="hint">技能池空。展开地图(州技入池)、走过城市(城技入池)后累积。</div>`;
+  return pool.map(p=>`<div style="border:1px solid var(--line);border-left:3px solid ${p.state?'var(--qi)':'var(--seal-soft)'};border-radius:6px;padding:6px 9px;margin-top:5px"><div style="font-size:11px;color:var(--qi)">${esc(p.pt)}</div>${p.skill?`<div style="font-size:12px;color:var(--ink)">${esc(p.skill)}</div>`:""}</div>`).join("");
+}
+function viewPxTool(px){
+  const ts=px.toolState||{}, iAm=state.youHold.includes(px.seatNo);
+  const active=ts.active, m=active?PEIXIU_MAPS[active]:null;
+  const done=m&&m.cities.every(c=>(ts.visited||{})[c.no]);
+  const nv=Object.keys(ts.visited||{}).length;
+  let h=`<div class="card"><h2>裴秀 · 十六州地图<span class="tag">${active?esc(active)+" · 城 "+nv+"/4":"未展开"}</span></h2>`;
+  if(ts.retained) h+=`<div style="border:1px solid var(--ok);border-radius:6px;padding:8px 10px;background:rgba(61,122,82,.08);margin-bottom:8px"><div style="font-size:11px;color:var(--ok);font-weight:700">✦ 当前生效技能(持续到本回合结束)</div><div style="font-size:11px;color:var(--qi)">${esc(ts.retained.pt)}</div><div style="font-size:12px">${esc(ts.retained.skill)}</div></div>`;
+  if(!active){
+    h+=`<div class="hint">尚未展开地图。茂著:回合开始/画完一图时展开一幅新地图(展开即州技入池)。</div>`;
+    if(iAm){
+      h+=`<div class="row" style="margin-top:8px"><select data-pxsel style="flex:1">`+PX_NAMES.map(n=>`<option value="${n}">${n}</option>`).join("")+`</select><button data-pxexpand-man>展开该州</button><button class="primary" data-pxexpand-rand>🎲 随机</button></div>`;
+    } else h+=`<div class="hint">等裴秀本人展开地图。</div>`;
+    h+=`</div>`;
+    if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+    return h;
+  }
+  h+=pxBoardHtml(m,ts.token,ts.visited);
+  h+=`<div style="text-align:center;margin:6px 0">`+m.cities.map(c=>`<span class="chip"${(ts.visited||{})[c.no]?' style="background:var(--ok);color:#f6ecd8;border-color:transparent"':''}>${c.no} ${esc(c.name)}</span>`).join("")+`</div>`;
+  if(iAm){
+    h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:280px;margin:4px auto"><span></span><button data-pxgo="N"><span style="color:var(--seal)">♦</span> 北</button><span></span>`
+      +`<button data-pxgo="W"><span style="color:var(--seal)">♥</span> 西</button><button class="ghost" data-pxreset style="font-size:12px">回起点</button><button data-pxgo="E">♠ 东</button>`
+      +`<span></span><button data-pxgo="S">♣ 南</button><span></span></div>`;
+    if(done) h+=`<div class="row" style="justify-content:center;margin-top:8px"><button class="gold" data-pxexpand-rand>✓ 四城已画完 · 展开下一张(随机)</button></div>`;
+    h+=`<div class="row" style="margin-top:8px"><select data-pxsel style="flex:1">`+PX_NAMES.map(n=>`<option value="${n}"${n===active?' selected':''}>${n}</option>`).join("")+`</select><button data-pxexpand-man>展开该州</button></div>`;
+    if(ts.endChoices&&ts.endChoices.length){
+      h+=`<div class="hint" style="margin-top:8px;color:var(--seal)">结束阶段 · 随机 ${ts.endChoices.length} 选 1(点选):</div>`
+        +ts.endChoices.map((c,k)=>`<div data-pxchoose="${k}" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:5px;cursor:pointer"><div style="font-size:11px;color:var(--qi)">${esc(c.pt)}</div><div style="font-size:12px">${esc(c.skill)}</div></div>`).join("");
+    } else {
+      h+=`<div class="row" style="margin-top:8px"><button class="primary" data-pxend style="flex:1">结束阶段 · 三选一</button><button class="ghost" data-pxnewturn>↺ 新回合</button><button class="ghost" data-pxresetgame style="font-size:12px">重开</button></div>`;
+    }
+  } else h+=`<div class="hint">裴秀本人操作,你只读。</div>`;
+  h+=`<div style="margin-top:10px"><div style="font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);padding-bottom:4px">茂著 · 本回合技能池</div>`+pxPoolHtml(ts)+`</div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindPx(px,q){
+  const P=px.seatNo, act=(o)=>send({type:"action",targetSeat:P,bySeat:P,toolAction:o});
+  const sel=()=>{const s=document.querySelector("[data-pxsel]");return s?s.value:null;};
+  q("[data-pxgo]").forEach(b=>b.onclick=()=>act({type:"pxGo",dir:b.dataset.pxgo}));
+  q("[data-pxreset]").forEach(b=>b.onclick=()=>act({type:"pxResetToken"}));
+  q("[data-pxexpand-rand]").forEach(b=>b.onclick=()=>act({type:"pxExpand"}));
+  q("[data-pxexpand-man]").forEach(b=>b.onclick=()=>{const m=sel();if(m)act({type:"pxExpand",map:m});});
+  q("[data-pxend]").forEach(b=>b.onclick=()=>act({type:"pxEndPhase"}));
+  q("[data-pxchoose]").forEach(b=>b.onclick=()=>act({type:"pxChoose",k:+b.dataset.pxchoose}));
+  q("[data-pxnewturn]").forEach(b=>b.onclick=()=>{if(confirm("新回合?清空本回合技能池并随机展开一幅新地图。"))act({type:"pxNewTurn"});});
+  q("[data-pxresetgame]").forEach(b=>b.onclick=()=>{if(confirm("重开裴秀工具?清空地图/池/保留技能。"))act({type:"resetGame"});});
 }
 
 document.getElementById("rcNow").onclick=reconnectNow; // 断线横幅「立即重连」兜底按钮
