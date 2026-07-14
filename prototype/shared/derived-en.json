@@ -1,0 +1,9 @@
+{
+  "张芝": {
+    "飞白": "Transform Skill, Compulsory Skill. Yang: when a non-black card of yours deals damage, that damage is increased by 1. Yin: when a non-red card of yours restores HP, that recovery is increased by 1."
+  },
+  "谋庞统": {
+    "飞军": "Once per Play phase, you may discard a card, then choose one: 1. a character with more hand cards than you gives you a card; 2. a character with more cards in their equipment zone than you discards one card from their equipment zone.",
+    "潜袭": "During your Preparation phase, you may draw a card and discard a card, then a character at distance 1 cannot use or play hand cards of the same color as your discarded card this turn."
+  }
+}
