@@ -33,6 +33,38 @@ export const SKILL_OVERRIDES = {
   } },
 };
 
+// 技能顺序修正:OL 爬到的顺序若与线下改版不一致,在此强制。顺序对"前X个技能"类技能(如张华穿屋)有机制意义。
+// 键=id,值=技能名数组(全序);applyOverrides 按此重排 h.skills,不在数组里的技能保持相对靠后。
+export const SKILL_ORDER = {
+  // 张华(改版·晋) —— 官方改版把技能顺序调为 弼昏/剑合/穿屋(削弱手段=调换技能顺序:穿屋"失去武将牌上前X个技能"因此覆盖到剑合而非初版顺序)。
+  544: ["弼昏", "剑合", "穿屋"],
+};
+
+// 技能英文层(英文版房间用):键=id,值={技能名:英文全文};applyOverrides 写入 s.effect_en。
+// 缺失即回退中文(room.html 按 LANG 取 effect_en||effect)。存覆盖层→重爬不丢,单一真相。
+// 语言绑定技(如张芝洗墨"改自己描述文字")用功能/复刻式英文,须懂机制的人核对。术语见对话术语表。
+export const SKILL_EN = {
+  516: { // 张芝
+    "笔心": `During each character's own Preparation phase and End phase, you may declare a card type and draw 3 cards (each type only once). Then use all hand cards of that type as one kind of basic card that you have not used this round.`,
+    "洗墨": `Compulsory Skill. After you use 【笔心】, remove the first three words after "During" in its description. (On the third use, remove the entire phrase "During End phase," instead — so 【笔心】 becomes usable at any time.) On the third use, also swap the two numbers in its description; then lose this skill and gain 【飞白】.`,
+  },
+  524: { // 族荀采
+    "蹈节": `Clan Skill, Compulsory Skill. The first time each turn you use a non-damage trick card, lose 1 HP or one of your Compulsory Skills; then a same-clan character gains that card.`,
+    "烈誓": `During your Play phase, you may choose one: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then choose a character who must carry out one of the other two options.`,
+    "点盏": `Compulsory Skill. The first time each round you use a card of a given suit, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If you do both, draw a card.`,
+    "还阴": `Compulsory Skill. When you enter the dying state, draw cards until you have 4 hand cards.`,
+  },
+  544: { // 张华
+    "弼昏": `Compulsory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card.`,
+    "剑合": `During your Play phase, once per character: you may recast at least two cards of the same name, or equipment cards; then choose a character who must pick one: 1. recast an equal number of cards of the same type; 2. take 1 thunder damage from you.`,
+    "穿屋": `Compulsory Skill. After you deal or take damage, you lose the first X skills on your character card until the end of the turn (X = your attack range), then draw cards equal to the number of skills lost.`,
+  },
+  635: { // 谋庞统
+    "鸿图": `At the end of each phase, if you gained at least two cards during that phase, you may draw 3 cards, then reveal 3 hand cards: one other character chooses one of them to use, and one of the remaining two is discarded at random. By the used card's rank among the three — highest: they gain 【飞军】 until the end of their next turn; neither highest nor lowest: they gain 【潜袭】 until the end of their next turn; lowest: their hand limit +2 until the end of their next turn. If they do not use a card this way, you deal 1 fire damage to both them and yourself.`,
+    "栖梧": `The first time each turn you take damage, if the damage source is within your attack range, you may discard a red card to prevent that damage.`,
+  },
+};
+
 export const OFFLINE_HEROES = [
   // 孙寒华 —— 三国杀移动版武将线下化,OL 无。faction/hp 已确认(吴/3血)。
   // TODO(原画):用户后补图片文件(建议 prototype/client/assets/sunhanhua.jpg)或 URL 后,把下面 avatar/cover 接上;线下武将无 OL 图床,可能要给 worker 加静态图路由。
@@ -154,7 +186,7 @@ export const OFFLINE_HEROES = [
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
 export function applyOverrides(list, warn = (m) => console.warn(m)) {
-  let skillHits = 0, added = 0;
+  let skillHits = 0, added = 0, reordered = 0, enHits = 0;
   for (const h of list) {
     const ov = SKILL_OVERRIDES[h.id];
     if (!ov) continue;
@@ -163,6 +195,28 @@ export function applyOverrides(list, warn = (m) => console.warn(m)) {
       if (s) { s.effect = eff; skillHits++; }
       else warn(`[overrides] id${h.id}「${h.name}」无技能「${sn}」,跳过(名字变了?)`);
     }
+  }
+  // 技能英文层:写入 s.effect_en(缺失回退中文,由前端按语言取)
+  for (const h of list) {
+    const en = SKILL_EN[h.id];
+    if (!en) continue;
+    for (const [sn, eff] of Object.entries(en)) {
+      const s = (h.skills || []).find((x) => x.name === sn);
+      if (s) { s.effect_en = eff; enHits++; }
+      else warn(`[overrides] id${h.id}「${h.name}」EN 无技能「${sn}」,跳过(名字变了?)`);
+    }
+  }
+  // 技能顺序修正(如张华改版):按 SKILL_ORDER 排序;数组里没列到的技能保持相对靠后
+  for (const h of list) {
+    const ord = SKILL_ORDER[h.id];
+    if (!ord || !Array.isArray(h.skills)) continue;
+    const missing = ord.filter((n) => !h.skills.some((s) => s.name === n));
+    if (missing.length) warn(`[overrides] id${h.id}「${h.name}」SKILL_ORDER 含不存在的技能「${missing.join("/")}」(名字变了?)`);
+    h.skills.sort((a, b) => {
+      const ia = ord.indexOf(a.name), ib = ord.indexOf(b.name);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+    });
+    reordered++;
   }
   for (const oh of OFFLINE_HEROES) {
     const i = list.findIndex((h) => h.id === oh.id);
@@ -174,5 +228,5 @@ export function applyOverrides(list, warn = (m) => console.warn(m)) {
   for (const h of list) seen[h.name] = (seen[h.name] || 0) + 1;
   for (const [nm, c] of Object.entries(seen))
     if (c > 1) warn(`[overrides] ⚠ 重名 ${c}×「${nm}」—— 可能官网已收录该将,应从 OFFLINE_HEROES 删除临时条目`);
-  return { list, skillHits, added };
+  return { list, skillHits, added, reordered, enHits };
 }

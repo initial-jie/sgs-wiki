@@ -160,6 +160,9 @@ const cardsAt=(s,r)=>(CARD_INDEX[s]&&CARD_INDEX[s][r])?CARD_INDEX[s][r]:[];
 const SUITS=[{k:"S",t:"♠"},{k:"H",t:"♥",red:1},{k:"C",t:"♣"},{k:"D",t:"♦",red:1}];
 const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 let ws=null,state=null,lastReveal=null;
+let LANG=localStorage.getItem("sgs_lang")||"zh"; // 查将技能显示语言:zh|en(en 缺失字段回退中文;仅影响查将读技能面,不动其余 UI)
+const T=(zh,en)=>LANG==="en"?en:zh;              // 查将弹层固定文案本地化
+function setLang(l){LANG=l;try{localStorage.setItem("sgs_lang",l);}catch(e){}}
 let focus=null;   // 当前聚焦的座位号(null=大厅)—— 多工具聚焦框架
 let nhFlow=null;  // 南华书写流程本地态 {stage,timings,chosenTiming,effects,pending?}
 let nhGive=null;  // 南华授术面板:正在授出的天书全局下标,或 null
@@ -214,8 +217,9 @@ function derivedCardsHtml(hero){
   if(!hero||!hero.name)return"";
   const list=DCARDS[hero.name.replace(/[·\s]/g,"")];
   if(!list||!list.length)return"";
-  return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生牌(该武将可产生)</div>`
-    +list.map(c=>`<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(c.name)}${c.src?` <span class="hint" style="margin:0;font-weight:400">（${esc(c.src)}）</span>`:""}</div><div class="se">${esc(c.text)}</div></div>`).join("");
+  return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">${T("衍生牌(该武将可产生)","Derived cards (this hero can produce)")}</div>`
+    +list.map(c=>{const body=(LANG==="en"&&c.text_en)?c.text_en:c.text;const src=(LANG==="en"&&c.src_en)?c.src_en:c.src; // 英文缺失回退中文
+      return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(c.name)}${src?` <span class="hint" style="margin:0;font-weight:400">（${esc(src)}）</span>`:""}</div><div class="se">${esc(body)}</div></div>`;}).join("");
 }
 // ---- 技能标签:三国杀标签固定写在技能文本最开头("锁定技，…"/"转换技，锁定技，…"),从开头剥离 ----
 const KNOWN_TAGS=new Set(["锁定技","限定技","觉醒技","转换技","主公技","使命技","阵法技","宗族技","隐匿技","持恒技","主将技","副将技","军令技","国战技"]);
@@ -230,9 +234,10 @@ function skillTags(effect){ // 返回 {tags:[标签名], text:去掉开头标签
 function stagHtml(names){ return (names||[]).map(n=>`<span class="stag stag-${tagClass(n)}">${esc(n)}</span>`).join(""); }
 // 渲染一组武将技能(本体):自动抽标签成彩色标记 + 去标签正文
 function skillsHtml(skills){
-  return (skills||[]).map(s=>{const {tags,text}=skillTags(s.effect);
-    return `<div class="skl"><div class="sn">${esc(s.name)}${stagHtml(tags)}</div><div class="se">${esc(text||"(官网暂无描述)")}</div></div>`;
-  }).join("")||'<div class="hint">(官网暂无技能描述)</div>';
+  return (skills||[]).map(s=>{const {tags,text}=skillTags(s.effect); // 彩色标签始终从中文文本剥离
+    const body=(LANG==="en"&&s.effect_en)?s.effect_en:(text||T("(官网暂无描述)","(no description)")); // 英文缺失回退中文
+    return `<div class="skl"><div class="sn">${esc(s.name)}${stagHtml(tags)}</div><div class="se">${esc(body)}</div></div>`;
+  }).join("")||`<div class="hint">${T("(官网暂无技能描述)","(no skill description)")}</div>`;
 }
 // 查某武将技能时,带出【该武将自己那张 index 衍生技卡】里的衍生技(按武将存,避免火计等同名跨语境串版)。
 // 排除其自身顶层技能名(已在主技能区显示);去·空格后按武将名精确匹配。
@@ -243,8 +248,9 @@ function derivedSkillsHtml(hero){
   const own=new Set((hero.skills||[]).map(s=>s.name));
   const list=card.filter(d=>!own.has(d.name));
   if(!list.length)return"";
-  return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">衍生技(该武将技能中提及)</div>`
-    +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${stagHtml(tags)}</div><div class="se">${esc(d.text)}</div></div>`;}).join("");
+  return `<div class="hint" style="margin:10px 0 4px;color:var(--seal);font-weight:700">${T("衍生技(该武将技能中提及)","Derived skills (referenced above)")}</div>`
+    +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);const body=(LANG==="en"&&d.text_en)?d.text_en:d.text; // 英文缺失回退中文
+      return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${stagHtml(tags)}</div><div class="se">${esc(body)}</div></div>`;}).join("");
 }
 function heroForSeat(general){
   if(!general||general==="none")return null;
@@ -327,18 +333,19 @@ function openSkillView(general,seatNo){
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
   const skills=skillsHtml(hero.skills);
   $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
-    <h2>武将技能<span class="x" data-mclose="1">×</span></h2>
+    <h2>${T("武将技能","Hero Skills")}<button class="ghost" data-langtoggle="1" style="float:right;margin:-2px 30px 0 0;padding:2px 10px;font-size:12px">${LANG==="en"?"中文":"EN"}</button><span class="x" data-mclose="1">×</span></h2>
     <div class="herohead"><img src="${esc(hero.cover||hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
       <div><div class="hn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
-        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""} · 座位 ${seatNo}${mine?"(你)":""}</div>
-        <div class="hmeta" style="margin-top:3px">${dots} ${cap}体力上限${start!==cap?"(起始 "+start+")":""}</div>
+        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""} · ${T("座位","Seat")} ${seatNo}${mine?T("(你)"," (you)"):""}</div>
+        <div class="hmeta" style="margin-top:3px">${dots} ${cap} ${T("体力上限","max HP")}${start!==cap?(T("(起始 ","(start ")+start+")"):""}</div>
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
-    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
+    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
-    ${hero.tool?'<div class="hint">此武将有专属线下工具,在大厅「登场工具」处进入。</div>':""}</div></div>`;
+    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,在大厅「登场工具」处进入。","This hero has a dedicated offline tool — open it from the lobby's tool list.")}</div>`:""}</div></div>`;
   maskClose();
+  const lt=$("#modal [data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");openSkillView(general,seatNo);};
 }
 // 选将弹层里「查看技能」:叠加在列表之上预览某版本技能(不选定),看完可「返回列表」比较别的版本,或「选定此武将」提交
 function previewHero(id){
@@ -350,21 +357,22 @@ function previewHero(id){
   const skills=skillsHtml(hero.skills);
   const ov=document.createElement("div"); ov.className="mask"; ov.style.zIndex="90";
   ov.innerHTML=`<div class="sheet">
-    <h2>查看技能<span class="x" data-pvclose="1">×</span></h2>
+    <h2>${T("查看技能","View Skills")}<button class="ghost" data-langtoggle="1" style="float:right;margin:-2px 30px 0 0;padding:2px 10px;font-size:12px">${LANG==="en"?"中文":"EN"}</button><span class="x" data-pvclose="1">×</span></h2>
     <div class="herohead"><img src="${esc(hero.cover||hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
       <div><div class="hn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
-        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""}${hero.tool?" · 有工具":""}</div>
-        <div class="hmeta" style="margin-top:3px">${dots} ${cap}体力上限${start!==cap?"(起始 "+start+")":""}</div>
+        <div class="hmeta">${esc(hero.genre||"")}${hero.quality?" · "+esc(hero.quality):""}${hero.tool?" · "+T("有工具","has tool"):""}</div>
+        <div class="hmeta" style="margin-top:3px">${dots} ${cap} ${T("体力上限","max HP")}${start!==cap?(T("(起始 ","(start ")+start+")"):""}</div>
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
-    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">特点:${esc(hero.characteristic)}</div>`:""}
+    ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
-    ${hero.tool?'<div class="hint">此武将有专属线下工具,选定后在大厅「登场工具」处进入。</div>':""}
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">返回列表</button><button class="primary" data-pvpick="1">选定此武将</button></div>
+    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,选定后在大厅「登场工具」处进入。","This hero has a dedicated offline tool — open it from the lobby's tool list after selecting.")}</div>`:""}
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${T("返回列表","Back")}</button><button class="primary" data-pvpick="1">${T("选定此武将","Select")}</button></div>
   </div>`;
   $("#modal").appendChild(ov);
   ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest("[data-pvclose]")) ov.remove(); }); // 背景/×/返回:只关预览,列表还在
+  const lt=ov.querySelector("[data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");ov.remove();previewHero(id);}; // 语言切换:重渲染本预览
   ov.querySelector("[data-pvpick]").onclick=()=>choosePick(id); // 选定→ choosePick(内部 setGeneral + closeModal 关掉整个弹层)
 }
 
