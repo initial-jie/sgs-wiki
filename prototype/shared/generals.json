@@ -20677,8 +20677,8 @@
       }
     ],
     "characteristic": "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/moujiaxu.jpg",
-    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/moujiaxu.jpg",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/66300.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/66300.png",
     "tool": null,
     "offline": true
   },
@@ -20712,8 +20712,8 @@
       }
     ],
     "characteristic": "可以在牌局中绘制地图赚取收益。",
-    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
-    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/60600.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/60600.png",
     "tool": null,
     "offline": true
   },
@@ -20874,6 +20874,36 @@
     "characteristic": "藏巧取折戟/女装/驽马三神装并摸至上限，神机把装备当延时锦囊，化朽升级为魂装。",
     "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shenhuangyueying.jpg",
     "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shenhuangyueying.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9009,
+    "name": "界关平",
+    "genre": "界一将",
+    "series": "界",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": null,
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "进攻"
+    ],
+    "skills": [
+      {
+        "name": "龙吟",
+        "effect": "当一名角色于其出牌阶段内使用【杀】时，你可以弃置一张牌，令此【杀】不计入此阶段使用次数，若此【杀】为红色，你摸一张牌。"
+      },
+      {
+        "name": "竭勇",
+        "effect": "你可将手牌中最后一张红色牌当【杀】使用或打出。"
+      }
+    ],
+    "characteristic": "龙吟帮全场刷【杀】次数并借红杀过牌，竭勇把最后一张红牌转【杀】。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/76600.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
     "tool": null,
     "offline": true
   }

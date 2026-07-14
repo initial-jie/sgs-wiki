@@ -94,8 +94,9 @@ export const OFFLINE_HEROES = [
       { name: "沉智", effect: "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。" },
     ],
     characteristic: "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/moujiaxu.jpg",
-    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/moujiaxu.jpg",
+    // 已上 OL(olwiki id 663)→ 直接用官方图床:xingxiang=全身像(cover)、dianjiang=头部特写(avatar),同 681 官方将。code=官方id×100=66300
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/66300.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/66300.png",
     tool: null, offline: true,
   },
   // 裴秀 —— OL 新将(官网未收录,先手录)。地图机制,后续要开工具(暂缓,需完整机制)。⚠ 同样:官网上线后从这里删,让 scrape 接管
@@ -109,8 +110,9 @@ export const OFFLINE_HEROES = [
       { name: "采风", effect: "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。" },
     ],
     characteristic: "可以在牌局中绘制地图赚取收益。",
-    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
-    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/peixiu.jpg",
+    // 已上 OL(olwiki id 606)→ 官方图床 code=60600(xingxiang=全身/cover、dianjiang=头部特写/avatar)
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/60600.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/60600.png",
     tool: null, offline: true,
   },
   // SP徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
@@ -151,6 +153,20 @@ export const OFFLINE_HEROES = [
     ],
     characteristic: "可弃牌来让牌指定颜色方可响应，可以背水爆发摸牌并令其他人弃牌。",
     cover: null, avatar: null, tool: null, offline: true,
+  },
+  // 界关平 —— 已上 OL(olwiki id 766,界一将)但官方 scrape 名册暂未含,先手录。技能取自 olwiki;图用官方图床 code=76600。蜀/4血(同基础关平 177)。⚠ 官网重爬收录后 graduate 删此条。
+  {
+    id: 9009, name: "界关平", genre: "界一将", series: "界", faction: "蜀",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["辅助", "进攻"],
+    skills: [
+      { name: "龙吟", effect: "当一名角色于其出牌阶段内使用【杀】时，你可以弃置一张牌，令此【杀】不计入此阶段使用次数，若此【杀】为红色，你摸一张牌。" },
+      { name: "竭勇", effect: "你可将手牌中最后一张红色牌当【杀】使用或打出。" },
+    ],
+    characteristic: "龙吟帮全场刷【杀】次数并借红杀过牌，竭勇把最后一张红牌转【杀】。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/76600.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
+    tool: null, offline: true,
   },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
