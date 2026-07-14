@@ -4,7 +4,14 @@
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
-### ⭐⭐⭐⭐ 最新会话(2026-07-13):断线重连 + 3 线下将/衍生牌 + 英文版机制 —— 最先读这段
+### ⭐⭐⭐⭐⭐ 最新会话(2026-07-14):裴秀十六州地图数据全就绪 + olwiki 源 + 立绘/界关平 —— 最先读这段
+
+- **🗺️ 裴秀「十六州地图」16 州数据全部数字化完毕** → `prototype/shared/peixiu-maps.json`。**从 peixiu.hmty.top 前端 DOM 几何自动读取**(`.cell/.isActive` 格子、sprite 背景偏移=图标类型、`.order/.num` 城市徽标、`.cityCallout` 技能文案),非肉眼抄。含 16 州 ×(5×5 网格+墙+固定起点+四城坐标+图标+城市技能+州技),64 城:draw43/heal11/move:down5/move:left5,几何全自洽。**机制已吃透**(见 `docs/peixiu-tool-design.md`):茂著=发图+结束阶段三选一(池=本回合各州 stateSkill+已经过城市 skill,随机3选1留到下回合);尽览=用花色沿方向推箱子滑到底、经城市即执行图标(draw/heal/move);采风=凑花色。坐标 [x,y] 左下原点。move 走位:移N格后停留、撞新城触发、无链式。**下一步=建"带网格棋盘"工具(独立大件,换新对话做,不含最优解 solver)——续接指引见 peixiu-tool-design.md 第六节。**
+- **📚 olwiki.hmty.top 定为查将优先参考源**(浏览器可访问,curl/WebFetch 被 403;URL `/{id}/wiki.html`)。批量更新库仍用官网 sanguosha.com scrape。见 memory [[olwiki-source]]。
+- **🖼️ 立绘修复 + 界关平入池(已 push 65de0c8)**:裴秀(9003)/谋贾诩(9002) avatar 重指官方图床头部特写(dianjiang/{id×100}),cover 指全身像(xingxiang);界关平(9009,蜀/4血,龙吟/竭勇)手录入池。库 690 将。
+- **⚠️ 部署**:本会话 room 侧改了 generals.json(立绘/界关平)→ 需 `wrangler deploy`。peixiu-maps.json 是纯数据、暂未被任何代码引用(等建工具),push 即可。
+
+### ⭐⭐⭐⭐ 会话(2026-07-13):断线重连 + 3 线下将/衍生牌 + 英文版机制
 
 - **🌐 英文版机制已搭好(增量翻译,查将读技能面)**:目标=美国长大的新玩家读技能。**核心=`effect_en` 英文层 + 缺失回退中文**,任意覆盖度可用、不维护两套逻辑。实现:①`generals-overrides.mjs` 加 `SKILL_EN[id]={技能名:英文}`(同 SKILL_ORDER 套路,重爬不丢),`applyOverrides` 写 `s.effect_en`,bake 进 generals.json;②room.html 加全局 `LANG`(localStorage 持久)+ `T(zh,en)` 文案本地化 + 查将弹层(openSkillView/previewHero)右上「中/EN」切换钮 + `skillsHtml`/`derivedSkillsHtml`/`derivedCardsHtml` 按 LANG 取 `effect_en||effect`(彩色标签仍从中文剥离)。**首批翻了 4 将=张芝/族荀采/张华/谋庞统(11 技)**,含语言绑定技张芝洗墨(复刻式英文+朋友核对)。浏览器双验:中↔英切换、Seat/max HP/Traits/衍生技 header 全本地化、飞白等衍生技暂无 EN→回退中文正常。**衍生技/牌 EN 通道也建好了**:新增 `derived-en.json`={武将→{名称→英文}},worker 合并 DERIVED_MERGED/DCARDS_MERGED 后按名贴 `text_en`(独立文件,重抽 derived-* 不丢 EN;前端渲染已支持)。首批填了张芝飞白 + 谋庞统飞军/潜袭(张芝/谋庞统现整将全英)。**下一步=翻优先集(17 工具将+常用池);hero skills 走 `SKILL_EN`、衍生技/牌走 `derived-en.json`。术语表见对话(Slash/Dodge/Compulsory Skill/recast/chained…)。**
 - **📌 张华技能顺序修正(改版削弱)**:新增 `SKILL_ORDER[id]=[技能名全序]` 覆盖机制,张华(544)强制 弼昏→剑合→穿屋(穿屋"失去前X技能"吃顺序)。
