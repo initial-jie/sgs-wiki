@@ -53,8 +53,8 @@ select{background:var(--bg2);border:1px solid var(--gold-dim);color:var(--ink);b
 /* ── 棋盘 ── */
 .mapbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--gold-dim);flex-wrap:wrap}
 .board-wrap{padding:14px;display:flex;justify-content:center}
-.board{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:100%;max-width:400px;aspect-ratio:1}
-.cell{position:relative;border-radius:7px;background:var(--cell);border:1px solid var(--gold-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;overflow:hidden;transition:box-shadow .12s,background .12s}
+.board{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:5px;width:100%;max-width:400px;aspect-ratio:1}
+.cell{position:relative;min-width:0;min-height:0;border-radius:7px;background:var(--cell);border:1px solid var(--gold-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;overflow:hidden;transition:box-shadow .12s,background .12s}
 .cell.wall{background:repeating-linear-gradient(45deg,var(--wall),var(--wall) 5px,var(--wall2) 5px,var(--wall2) 10px);border-color:transparent}
 .cell.city{background:var(--cell2);border-color:var(--gold)}
 .cell.start::after{content:"起";position:absolute;left:3px;top:2px;font-size:9px;color:var(--ink-dim);font-family:"Kaiti SC",serif}

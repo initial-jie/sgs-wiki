@@ -2238,10 +2238,10 @@ function pxIconHtml(icon){const a=String(icon).split(":");const s="display:inlin
   return "";}
 function pxBoardHtml(m,token,visited){
   visited=visited||{};
-  let h=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:330px;margin:10px auto;aspect-ratio:1">`;
+  let h=`<div style="display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:4px;max-width:330px;margin:10px auto;aspect-ratio:1">`;
   for(let y=m.grid.h-1;y>=0;y--)for(let x=0;x<m.grid.w;x++){
     const wall=pxWall(m,x,y),c=pxCity(m,x,y),isTok=pxEq(token,[x,y]),isStart=pxEq(m.start,[x,y]),vis=c&&visited[c.no];
-    let st="position:relative;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;";
+    let st="position:relative;min-width:0;min-height:0;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;";
     if(wall) st+="background:repeating-linear-gradient(45deg,#cdbb96,#cdbb96 4px,#c2af88 4px,#c2af88 8px);";
     else st+="background:rgba(255,252,244,.92);border:1px solid var(--line);";
     if(c) st+="border:1px solid var(--qi);";
