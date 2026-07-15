@@ -126,7 +126,7 @@ footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;lin
       <button class="dbtn" id="dN" onclick="go('N')"><span class="suit red">♦</span><span class="lab">北 · 上</span></button>
       <span class="sp"></span>
       <button class="dbtn" id="dW" onclick="go('W')"><span class="suit red">♥</span><span class="lab">西 · 左</span></button>
-      <button class="btn btn-sm" style="align-self:center" onclick="resetToken()">回起点</button>
+      <button class="btn btn-sm" id="btnReset" style="align-self:center" onclick="resetToken()">回起点</button>
       <button class="dbtn" id="dE" onclick="go('E')"><span class="suit">♠</span><span class="lab">东 · 右</span></button>
       <span class="sp"></span>
       <button class="dbtn" id="dS" onclick="go('S')"><span class="suit">♣</span><span class="lab">南 · 下</span></button>
@@ -254,7 +254,7 @@ function expandMap(name){
 }
 function pickMap(name, silent){ if(busy)return; if(!MAPS[name])return; expandMap(name); if(!silent){save();renderAll();} }
 function randomExpand(){ if(busy)return; const pool=S.cycle.length?S.cycle:MAP_NAMES; const name=pool[Math.floor(Math.random()*pool.length)]; expandMap(name); save(); renderAll(); }
-function resetToken(){ if(busy)return; const m=MAPS[S.active]; S.token=m.start.slice(); animPos=null; renderBoard(); setPathNote(''); }
+function resetToken(){ if(busy||!S.active)return; const m=MAPS[S.active]; if(eq(S.token,m.start))return; S.token=m.start.slice(); animPos=null; renderBoard(); setButtons(); setPathNote(''); }
 
 /* ============ 走位 ============ */
 function go(dir){
@@ -330,7 +330,11 @@ function newTurn(){
 /* ============ 渲染 ============ */
 function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
 function setPathNote(t){ document.getElementById('pathNote').textContent=t; }
-function setButtons(){ ['dN','dS','dE','dW'].forEach(id=>document.getElementById(id).disabled=busy); }
+function setButtons(){
+  ['dN','dS','dE','dW'].forEach(id=>document.getElementById(id).disabled=busy);
+  const rb=document.getElementById('btnReset');
+  if(rb){ const atStart=S.active&&eq(S.token,MAPS[S.active].start); rb.disabled=busy||!atStart; } // 出发后禁用,避免半路跳回起点
+}
 function shakeDpad(){ const d=document.querySelector('.dpad'); d.animate([{transform:'translateX(0)'},{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:180}); }
 
 function iconHtml(icon){

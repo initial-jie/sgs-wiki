@@ -2282,8 +2282,9 @@ function viewPxTool(px){
   h+=pxBoardHtml(m,ts.token,ts.visited);
   h+=`<div style="text-align:center;margin:6px 0">`+m.cities.map(c=>`<span class="chip"${(ts.visited||{})[c.no]?' style="background:var(--ok);color:#f6ecd8;border-color:transparent"':''}>${c.no} ${esc(c.name)}</span>`).join("")+`</div>`;
   if(iAm){
+    const atStart=pxEq(ts.token,m.start); // 出发后禁用回起点,避免半路跳回起点
     h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:280px;margin:4px auto"><span></span><button data-pxgo="N"><span style="color:var(--seal)">♦</span> 北</button><span></span>`
-      +`<button data-pxgo="W"><span style="color:var(--seal)">♥</span> 西</button><button class="ghost" data-pxreset style="font-size:12px">回起点</button><button data-pxgo="E">♠ 东</button>`
+      +`<button data-pxgo="W"><span style="color:var(--seal)">♥</span> 西</button><button class="ghost" data-pxreset style="font-size:12px" ${atStart?'':'disabled'}>回起点</button><button data-pxgo="E">♠ 东</button>`
       +`<span></span><button data-pxgo="S">♣ 南</button><span></span></div>`;
     if(done) h+=`<div class="row" style="justify-content:center;margin-top:8px"><button class="gold" data-pxexpand-rand>✓ 四城已画完 · 展开下一张(随机)</button></div>`;
     h+=`<div class="row" style="margin-top:8px"><select data-pxsel style="flex:1">`+PX_NAMES.map(n=>`<option value="${n}"${n===active?' selected':''}>${n}</option>`).join("")+`</select><button data-pxexpand-man>展开该州</button></div>`;
