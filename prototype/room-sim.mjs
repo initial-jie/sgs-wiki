@@ -724,6 +724,9 @@ const yan = PEIXIU_MAPS["兖州"];
 check("陈留 icon = move:right:1", yan.cities.find((c) => c.name === "陈留").icon === "move:right:1");
 const slChenliu = pxComputeSlide(yan, [1, 0], "W", {}); // 西入陈留[0,0]→move:right:1→[1,0]
 check("★陈留 move:right:1:西入触发→右移1停[1,0]", slChenliu.events.length === 1 && slChenliu.events[0].city.name === "陈留" && slChenliu.path[slChenliu.path.length - 1].join() === "1,0");
+// move 撞墙夹停:豫州汝南 up:3 但顶行 y=4 全墙 → 只上移2格停[1,3](⚠ 若日后确认顶墙有误需同步改数据+此断言)
+const slRunan = pxComputeSlide(PEIXIU_MAPS["豫州"], [1, 0], "N", {});
+check("汝南 up:3 撞豫州顶墙夹停[1,3](只移2格)", slRunan.events[0].city.name === "汝南" && slRunan.path[slRunan.path.length - 1].join() === "1,3");
 
 // ═══════════════ 座位独占 + 解锁替换(③)═══════════════
 console.log("\n=== 座位独占 + 解锁替换 ===");
