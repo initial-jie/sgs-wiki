@@ -1,9 +1,10 @@
 {
   "_legend": {
     "desc": "裴秀十六州地图数据。坐标 [x,y],[0,0]=左下角,x横(→右)/y纵(→上)。从 peixiu.hmty.top DOM 几何自动读取(2026-07-14),用户核对中。",
-    "icon": "城市经过即执行的图标: draw:N=摸N牌 · heal:N=回N体力 · move:<dir>:N=向该方向自动移N格(dir=down 蓝「下」sprite -489 / left 蓝「左」sprite -681;16州仅出现 down 与 left)",
+    "icon": "城市经过即执行的图标: draw:N=摸N牌 · heal:N=回N体力 · move:<dir>:N=向该方向自动移N格(dir=down/left/right;右=兖州陈留,用户2026-07-14勘误)",
     "endPhasePool": "结束阶段三选一池=本回合展开过的每个州的 stateSkill + 本回合实际经过的每座 city 的 skill,随机3选1,持续到下回合",
-    "todo": "全部16州已核;move 仅出现 down/left 两向(用户2026-07-14确认句町=左);若实战遇到 up/right 再补 sprite 映射"
+    "rule_visited": "⚠ 已画过(已触发)的城市在完成该图(四城全画)前变为惰性地形:再经过不触发图标、move 城也不再停留(用户2026-07-14勘误)",
+    "todo": "全部16州已核;move 出现 down/left/right;若实战遇到 up 再补"
   },
   "并州": { "pinyin": "Bing", "grid": { "w": 5, "h": 5 }, "start": [3,0],
     "walls": [[0,4],[1,4],[2,4],[4,4],[0,3],[1,3],[0,2],[4,2],[0,1],[0,0],[1,0],[2,0],[4,0]],
@@ -90,7 +91,7 @@
     "cities": [
       { "no":1, "name":"泰山", "pos":[3,3], "icon":"move:down:3", "skill":"将一张【螭纹玉佩】置入手牌。" },
       { "no":2, "name":"任城", "pos":[2,0], "icon":"heal:1", "skill":"你每有一张【杀】，手牌上限便+1。" },
-      { "no":3, "name":"陈留", "pos":[0,0], "icon":"draw:1", "skill":"你跳过弃牌阶段。" },
+      { "no":3, "name":"陈留", "pos":[0,0], "icon":"move:right:1", "skill":"你跳过弃牌阶段。" },
       { "no":4, "name":"鄄城", "pos":[1,2], "icon":"draw:2", "skill":"你判定，若为黑色，你获得判定牌并重复此流程。" }
     ], "stateSkill":"你回复体力后，你摸一张牌（每回合限一次）。" },
   "扬州": { "pinyin": "Yang", "grid": { "w": 5, "h": 5 }, "start": [3,2],

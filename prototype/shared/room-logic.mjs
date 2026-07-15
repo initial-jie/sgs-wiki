@@ -99,7 +99,7 @@ export const PEIXIU_MAPS = {
   "青州":{pinyin:"Qing",grid:{w:5,h:5},start:[1,1],walls:[[0,4],[1,4],[2,4],[4,4],[2,3],[4,2],[0,1],[3,1],[4,1],[0,0],[2,0],[3,0],[4,0]],cities:[{no:1,name:"北海",pos:[2,1],icon:"draw:1",skill:"你将手牌摸至体力上限。"},{no:2,name:"临淄",pos:[1,2],icon:"draw:1",skill:"你获得弃牌堆中三张随机的梅花牌。"},{no:3,name:"乐安",pos:[0,3],icon:"draw:2",skill:"你从牌堆获得一张属性【杀】和一张【铁索连环】。"},{no:4,name:"东莱",pos:[3,3],icon:"draw:2",skill:"你可令一名角色使用的下一张牌无次数和距离限制。"}],stateSkill:"你可以弃置所有手牌，然后摸等量的牌。"},
   "司州":{pinyin:"Si",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[2,3],[0,2],[4,2],[3,1],[4,1],[3,0],[4,0]],cities:[{no:1,name:"温县",pos:[2,0],icon:"move:left:1",skill:"你加1点体力上限并回复1点体力，然后获得一张【虚妄之冕】。"},{no:2,name:"弘农",pos:[1,1],icon:"draw:1",skill:"你可以重铸任意张装备牌并回复1点体力。"},{no:3,name:"闻喜",pos:[1,3],icon:"move:down:1",skill:"你每回合首次使用一个花色的牌后，你摸一张牌。"},{no:4,name:"邯郸",pos:[4,3],icon:"draw:2",skill:"你使用一张非伤害普通锦囊牌后，你令一名角色获得此牌（每回合限一次）。"}],stateSkill:"你可以获得一名角色一张手牌。"},
   "徐州":{pinyin:"Xu",grid:{w:5,h:5},start:[2,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[3,2],[4,2],[0,1],[4,1],[0,0]],cities:[{no:1,name:"彭城",pos:[0,2],icon:"draw:2",skill:"你可以令一名其他角色交给你一张牌，然后其回复1点体力。"},{no:2,name:"琅琊",pos:[2,3],icon:"draw:1",skill:"你观看牌堆顶的五张牌，然后以任意顺序置于牌堆顶或牌堆底。"},{no:3,name:"广陵",pos:[2,0],icon:"draw:1",skill:"你可以将两张牌当一张【五谷丰登】使用。"},{no:4,name:"东海",pos:[3,1],icon:"heal:1",skill:"你令一名角色下个摸牌阶段多摸一张牌。"}],stateSkill:"你可以指定一名其他角色，其于其的回合外使用牌后摸一张牌。"},
-  "兖州":{pinyin:"Yan",grid:{w:5,h:5},start:[2,1],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[4,1],[4,0]],cities:[{no:1,name:"泰山",pos:[3,3],icon:"move:down:3",skill:"将一张【螭纹玉佩】置入手牌。"},{no:2,name:"任城",pos:[2,0],icon:"heal:1",skill:"你每有一张【杀】，手牌上限便+1。"},{no:3,name:"陈留",pos:[0,0],icon:"draw:1",skill:"你跳过弃牌阶段。"},{no:4,name:"鄄城",pos:[1,2],icon:"draw:2",skill:"你判定，若为黑色，你获得判定牌并重复此流程。"}],stateSkill:"你回复体力后，你摸一张牌（每回合限一次）。"},
+  "兖州":{pinyin:"Yan",grid:{w:5,h:5},start:[2,1],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[2,3],[4,3],[0,2],[4,2],[4,1],[4,0]],cities:[{no:1,name:"泰山",pos:[3,3],icon:"move:down:3",skill:"将一张【螭纹玉佩】置入手牌。"},{no:2,name:"任城",pos:[2,0],icon:"heal:1",skill:"你每有一张【杀】，手牌上限便+1。"},{no:3,name:"陈留",pos:[0,0],icon:"move:right:1",skill:"你跳过弃牌阶段。"},{no:4,name:"鄄城",pos:[1,2],icon:"draw:2",skill:"你判定，若为黑色，你获得判定牌并重复此流程。"}],stateSkill:"你回复体力后，你摸一张牌（每回合限一次）。"},
   "扬州":{pinyin:"Yang",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[0,3],[1,3],[4,3],[0,2],[0,1],[0,0],[3,0],[4,0]],cities:[{no:1,name:"庐江",pos:[1,0],icon:"draw:1",skill:"你可以拼点，赢的角色摸两张牌。"},{no:2,name:"合肥",pos:[2,1],icon:"draw:4",skill:"你可以弃置至多两张牌，然后摸等量的牌。"},{no:3,name:"居巢",pos:[4,1],icon:"move:left:1",skill:"你可以弃置你与一名角色各一张牌。"},{no:4,name:"寿春",pos:[2,3],icon:"heal:1",skill:"你可令一名角色加1点体力上限。"}],stateSkill:"你可以令一名其他角色回复1点体力。"},
   "益州":{pinyin:"Yi",grid:{w:5,h:5},start:[3,2],walls:[[0,4],[1,4],[3,4],[4,4],[0,3],[1,3],[3,3],[4,3],[0,2],[4,2],[0,1],[0,0],[1,0]],cities:[{no:1,name:"临邛",pos:[1,1],icon:"heal:2",skill:"你可以令任意名角色同时弃置一张牌。"},{no:2,name:"牂牁",pos:[4,1],icon:"draw:1",skill:"你受到伤害后，你可以弃置你与伤害来源各一张牌。"},{no:3,name:"朱提",pos:[2,0],icon:"draw:1",skill:"你受到属性伤害改为回复等量体力（每回合限一次）。"},{no:4,name:"成都",pos:[2,3],icon:"move:down:2",skill:"你对自己使用牌后，你摸一张牌（每回合限一次）。"}],stateSkill:"你不能成为延时锦囊牌的目标。"},
   "雍州":{pinyin:"Yong",grid:{w:5,h:5},start:[2,1],walls:[[1,4],[2,4],[3,4],[4,4],[2,3],[3,3],[4,3],[0,2],[2,2],[0,1],[4,1],[0,0],[4,0]],cities:[{no:1,name:"冯翊",pos:[4,2],icon:"draw:2",skill:"你可以回复1点体力。"},{no:2,name:"京兆",pos:[3,0],icon:"move:left:2",skill:"若有角色本回合对你使用过：【杀】/伤害锦囊牌，伤害锦囊牌/【杀】对你无效。"},{no:3,name:"扶风",pos:[1,1],icon:"draw:1",skill:"你从牌堆获得一张你手牌中未拥有类型的牌。"},{no:4,name:"安定",pos:[1,3],icon:"heal:1",skill:"防止你因传导受到的属性伤害。"}],stateSkill:"你可以摸两张牌，然后将手牌弃至手牌上限。"},
@@ -115,9 +115,11 @@ function pxInB(m,p){ return p[0]>=0&&p[0]<m.grid.w&&p[1]>=0&&p[1]<m.grid.h; }
 function pxIsWall(m,p){ return m.walls.some(w=>w[0]===p[0]&&w[1]===p[1]); }
 function pxCityAt(m,p){ return m.cities.find(c=>c.pos[0]===p[0]&&c.pos[1]===p[1]); }
 export function pxParseIcon(icon){ const a=String(icon).split(":"); if(a[0]==="move") return {t:"move",dir:a[1],n:+a[2]}; return {t:a[0],n:+a[1]}; }
-// 尽览推箱子:从 start 沿 dir 滑到墙/边界,经城即触发;move 图标到达即自动移N格停留(撞新城触发一次,无链式)。
+// 尽览推箱子:从 start 沿 dir 滑到墙/边界,经"未画过"的城即触发;move 图标到达即自动移N格停留(撞新城触发一次,无链式)。
+// ⚠ 已画过(visited[no])的城市变为惰性地形:再经过不触发、move 城也不停留(直接滑过)——完成该图前不重复触发。
 // 返回 { path:[[x,y]...], events:[{pos,city}], moved }。纯函数,sim+worker+client 三处等价。
-export function pxComputeSlide(m, start, dir){
+export function pxComputeSlide(m, start, dir, visited){
+  visited = visited || {};
   const dv=PX_DIRV[dir]; if(!dv) return { path:[start.slice()], events:[], moved:false };
   const path=[start.slice()], events=[]; let pos=start.slice();
   while(true){
@@ -125,7 +127,7 @@ export function pxComputeSlide(m, start, dir){
     if(!pxInB(m,nx) || pxIsWall(m,nx)) break;
     pos=nx; path.push(pos.slice());
     const c=pxCityAt(m,pos);
-    if(c){
+    if(c && !visited[c.no]){ // 只有未画过的城市才触发/停留;已画过的当普通格滑过
       events.push({pos:pos.slice(), city:c});
       const ic=pxParseIcon(c.icon);
       if(ic.t==="move"){
@@ -133,7 +135,7 @@ export function pxComputeSlide(m, start, dir){
         for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!pxInB(m,np)||pxIsWall(m,np)) break; jp=np; path.push(jp.slice()); }
         pos=jp;
         const lc=pxCityAt(m,jp);
-        if(lc && lc.no!==c.no) events.push({pos:jp.slice(), city:lc}); // 撞新城触发一次
+        if(lc && lc.no!==c.no && !visited[lc.no]) events.push({pos:jp.slice(), city:lc}); // 撞新城(且未画过)触发一次
         break; // move 后停留,尽览结束
       }
     }
@@ -580,7 +582,7 @@ export class RoomCore {
         if (!isPx) return { error: "NOT_PX_ACTION" };
         if (!ts.active) return { error: "NO_MAP" };
         const m = PEIXIU_MAPS[ts.active];
-        const res = pxComputeSlide(m, ts.token, toolAction.dir);
+        const res = pxComputeSlide(m, ts.token, toolAction.dir, ts.visited); // 已画过的城市滑过不触发
         if (!res.moved) return { error: "BLOCKED" }; // 贴墙/边界
         const effs = [];
         for (const ev of res.events) {

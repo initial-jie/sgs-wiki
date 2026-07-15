@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -713,6 +713,17 @@ check("裴秀 retained 跨回合保留(持续到本回合结束)", PXT().retaine
 const prr = pxAct(1, { type: "resetGame" });
 check("重置:active/池全清", prr.reset === true && PXT().active === null && PXT().turnStates.length === 0 && PXT().retained === null && PXT().cycle.length === 16);
 check("非裴秀不能重置", pxAct(2, { type: "resetGame" }).error === "NOT_PX_ACTION");
+// bug 修复 1:已画过的城市在完成该图前变惰性,再经过不触发/move 不停留(pxComputeSlide 纯函数单测)
+const bing = PEIXIU_MAPS["并州"];
+const slUnvisited = pxComputeSlide(bing, [3, 2], "N", {}); // 雁门未画:move:down:2 触发→停[3,2]
+check("未画雁门:北滑触发 move→停[3,2]", slUnvisited.events.length === 1 && slUnvisited.path[slUnvisited.path.length - 1].join() === "3,2");
+const slVisited = pxComputeSlide(bing, [3, 2], "N", { 1: true }); // 雁门已画:惰性,滑过到边界[3,4]不触发
+check("★已画雁门:北滑过惰性城→停边界[3,4]不触发", slVisited.events.length === 0 && slVisited.path[slVisited.path.length - 1].join() === "3,4");
+// bug 修复 2:陈留 move:right:1(兖州),新方向 right
+const yan = PEIXIU_MAPS["兖州"];
+check("陈留 icon = move:right:1", yan.cities.find((c) => c.name === "陈留").icon === "move:right:1");
+const slChenliu = pxComputeSlide(yan, [1, 0], "W", {}); // 西入陈留[0,0]→move:right:1→[1,0]
+check("★陈留 move:right:1:西入触发→右移1停[1,0]", slChenliu.events.length === 1 && slChenliu.events[0].city.name === "陈留" && slChenliu.path[slChenliu.path.length - 1].join() === "1,0");
 
 // ═══════════════ 座位独占 + 解锁替换(③)═══════════════
 console.log("\n=== 座位独占 + 解锁替换 ===");
