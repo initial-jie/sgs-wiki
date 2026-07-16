@@ -415,6 +415,7 @@ export function initToolState(generalId) {
       picked: null,    // 本次 roll 已选定的下标
       active: [],       // 锻造中(未销毁)的装备 [{id,cat,result,card,roll}],占用库存,roll 时排除
       fid: 0,          // active id 自增
+      vote: null,      // 助力/妨害征集(房间投票):{cat,entries:{座位:{choice,point}},settled,helpSum,hinderSum};null=手动模式
       log: [],
     };
   return {};
@@ -683,15 +684,60 @@ export class RoomCore {
     if (target.general === "puyuan") {
       const puSeat = targetSeat;
       const isPy = bySeat === puSeat && iHold(puSeat); // 蒲元本人(或代持)
-      if (t === "pySelCat") { // 选副类别
+      if (t === "pySelCat") { // 选副类别(=一次新的发动神工:清投票、回手动模式)
         if (!isPy) return { error: "NOT_PY_ACTION" };
         if (!PUYUAN_FORGE[toolAction.cat]) return { error: "BAD_CAT" };
-        ts.cat = toolAction.cat; ts.rolled = []; ts.result = null; ts.picked = null;
+        ts.cat = toolAction.cat; ts.rolled = []; ts.result = null; ts.picked = null; ts.vote = null;
         return { ok: true };
       }
-      if (t === "pyForge") { // 锻造:抽 n 张(排除锻造中的同名装备),DO rng 可 seed
+      if (t === "pyStartVote") { // 发起助力/妨害征集(进入投票模式,手动禁用直到重新选类别)
         if (!isPy) return { error: "NOT_PY_ACTION" };
         if (!ts.cat) return { error: "NO_CAT" };
+        ts.vote = { cat: ts.cat, entries: {}, settled: false };
+        ts.rolled = []; ts.result = null; ts.picked = null;
+        this._log(ts, `发起【${ts.cat}】锻造·征集助力/妨害`);
+        return { ok: true };
+      }
+      if (t === "pyVote") { // 其他玩家点助力/妨害(实时公开):首投 roll 1~13 点;再点同侧=撤回;换边保留点数
+        if (!ts.vote || ts.vote.settled) return { error: "NO_VOTE" };
+        const seat = Number(bySeat);
+        if (seat === puSeat) return { error: "PY_NO_VOTE" };       // 蒲元本人不投
+        if (!iHold(seat)) return { error: "NOT_YOUR_SEAT" };
+        if (!this.seats[seat]?.general) return { error: "EMPTY_SEAT" };
+        const choice = toolAction.choice;
+        if (choice !== "help" && choice !== "hinder") return { error: "BAD_CHOICE" };
+        const cur = ts.vote.entries[seat];
+        if (cur && cur.choice === choice) { delete ts.vote.entries[seat]; this._log(ts, `座位${seat} 撤回(弃权)`); }
+        else if (cur) { cur.choice = choice; this._log(ts, `座位${seat} 改投${choice === "help" ? "助力" : "妨害"}(点数${cur.point})`); }
+        else { const point = 1 + Math.floor(this.rng() * 13); ts.vote.entries[seat] = { choice, point }; this._log(ts, `座位${seat} ${choice === "help" ? "助力" : "妨害"} 点数${point}`); }
+        return { ok: true };
+      }
+      if (t === "pySettle") { // 蒲元手动揭示结算:比点数和定结果,按去重原则 roll 装备
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        if (!ts.vote || ts.vote.settled) return { error: "NO_VOTE" };
+        const es = Object.values(ts.vote.entries);
+        const hinder = es.filter((e) => e.choice === "hinder");
+        const helpSum = es.filter((e) => e.choice === "help").reduce((s, e) => s + e.point, 0);
+        const hinderSum = hinder.reduce((s, e) => s + e.point, 0);
+        let label, n;
+        if (hinder.length === 0) { label = "完美锻造"; n = 3; }      // 无人妨害
+        else if (helpSum >= hinderSum) { label = "成功"; n = 2; }
+        else { label = "失败"; n = 1; }
+        const activeNames = new Set(ts.active.map((a) => a.card.name));
+        const pool = PUYUAN_FORGE[ts.cat].filter((c) => !activeNames.has(c.name));
+        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]]; }
+        const take = Math.min(n, pool.length);
+        ts.rolled = pool.slice(0, take);
+        ts.result = { label, n, short: take < n, viaVote: true, helpSum, hinderSum };
+        ts.rollId = (ts.rollId || 0) + 1; ts.picked = null;
+        ts.vote.settled = true; ts.vote.helpSum = helpSum; ts.vote.hinderSum = hinderSum;
+        this._log(ts, `结算:助力${helpSum} vs 妨害${hinderSum} → ${label}(${n}张${take < n ? `，仅剩${take}张` : ""})：${ts.rolled.map((c) => c.name).join("、") || "无可锻造"}`);
+        return { ok: true };
+      }
+      if (t === "pyForge") { // 手动锻造:抽 n 张(排除锻造中的同名装备),DO rng 可 seed
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        if (!ts.cat) return { error: "NO_CAT" };
+        if (ts.vote) return { error: "VOTE_MODE" }; // 已进投票模式,手动禁用,直到重新选类别
         const n = Number(toolAction.n), label = String(toolAction.label || "");
         const activeNames = new Set(ts.active.map((a) => a.card.name));
         const pool = PUYUAN_FORGE[ts.cat].filter((c) => !activeNames.has(c.name));
@@ -723,7 +769,7 @@ export class RoomCore {
         this._log(ts, `销毁锻造装备：【${a.card.name}】→ 重回可锻造池`);
         return { ok: true };
       }
-      if (t === "pyResetForge") { if (!isPy) return { error: "NOT_PY_ACTION" }; ts.cat = null; ts.rolled = []; ts.result = null; ts.picked = null; return { ok: true }; }
+      if (t === "pyResetForge") { if (!isPy) return { error: "NOT_PY_ACTION" }; ts.cat = null; ts.rolled = []; ts.result = null; ts.picked = null; ts.vote = null; return { ok: true }; }
       if (t === "resetGame") { if (!isPy) return { error: "NOT_PY_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }

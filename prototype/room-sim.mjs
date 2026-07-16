@@ -769,6 +769,47 @@ check("销毁不存在的 id 被拒(NO_ACTIVE)", puAct(1, { type: "pyDestroy", i
 check("非蒲元不能重开", puAct(2, { type: "resetGame" }).error === "NOT_PY_ACTION");
 check("重开→清空类别/锻造中", puAct(1, { type: "resetGame" }).reset === true && PUT().active.length === 0 && PUT().cat === null);
 
+// 蒲元·助力/妨害征集(房间投票结算):实时公开、可弃权、蒲元手动结算、按点数和定结果
+console.log("\n--- 蒲元 助力/妨害投票结算 ---");
+let puvSeq = [];
+const roomPv = new RoomCore("5200", 4, () => (puvSeq.length ? puvSeq.shift() : 0));
+const pvd = {}; for (let i = 1; i <= 4; i++) { pvd[i] = `pvd${i}`; roomPv.claimSeat(pvd[i], i); }
+roomPv.setGeneral(pvd[1], 1, "puyuan");
+roomPv.setGeneral(pvd[2], 2, "caocao"); roomPv.setGeneral(pvd[3], 3, "nanhua"); roomPv.setGeneral(pvd[4], 4, "lvbu");
+const pv = (by, o) => roomPv.action(pvd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const PVT = () => roomPv.seats[1].toolState;
+pv(1, { type: "pySelCat", cat: "武器" });
+pv(1, { type: "pyStartVote" });
+check("发起征集→进投票模式", !!PVT().vote && PVT().vote.settled === false);
+check("投票模式手动锻造被禁(VOTE_MODE)", pv(1, { type: "pyForge", label: "完美锻造", n: 3 }).error === "VOTE_MODE");
+check("蒲元本人不能投(PY_NO_VOTE)", pv(1, { type: "pyVote", choice: "help" }).error === "PY_NO_VOTE");
+puvSeq = [0.35]; pv(2, { type: "pyVote", choice: "help" }); // 1+floor(0.35*13)=5
+check("座位2 助力·点数5(实时公开)", PVT().vote.entries[2].choice === "help" && PVT().vote.entries[2].point === 5);
+check("投票池全场公开", roomPv.viewFor(pvd[3]).seats[1].toolState.vote.entries[2].point === 5);
+puvSeq = [0.58]; pv(3, { type: "pyVote", choice: "hinder" }); // 1+floor(0.58*13)=8
+check("座位3 妨害·点数8", PVT().vote.entries[3].point === 8);
+pv(2, { type: "pyVote", choice: "hinder" });
+check("座位2 换边保留点数5", PVT().vote.entries[2].choice === "hinder" && PVT().vote.entries[2].point === 5);
+pv(2, { type: "pyVote", choice: "hinder" });
+check("座位2 再点同侧=撤回弃权", !PVT().vote.entries[2]);
+puvSeq = [0]; pv(2, { type: "pyVote", choice: "help" }); // 撤回后重投重新roll→点数1
+check("撤回后重投重新roll(点数1)", PVT().vote.entries[2].point === 1);
+puvSeq = [0, 0, 0, 0, 0]; const stl = pv(1, { type: "pySettle" }); // 助力1 < 妨害8 → 失败(1)
+check("★结算:助力1<妨害8→失败(1张)", stl.ok && PVT().result.label === "失败" && PVT().result.n === 1 && PVT().result.viaVote && PVT().vote.settled);
+check("失败 roll 1 张", PVT().rolled.length === 1);
+pv(1, { type: "pyPick", i: 0 });
+check("投票结算后蒲元可选定入库存", PVT().active.length === 1);
+// 无人妨害 = 完美锻造(3)
+pv(1, { type: "pySelCat", cat: "防具" });
+check("重选类别→清投票+回手动模式", PVT().vote === null && PVT().cat === "防具");
+pv(1, { type: "pyStartVote" });
+puvSeq = [0.35]; pv(2, { type: "pyVote", choice: "help" }); // 只有助力,无妨害
+puvSeq = [0, 0, 0, 0, 0]; pv(1, { type: "pySettle" });
+check("★无人妨害=完美锻造(3张)", PVT().result.label === "完美锻造" && PVT().result.n === 3);
+pv(1, { type: "pySelCat", cat: "宝物" }); pv(1, { type: "pyStartVote" });
+check("非蒲元不能揭示结算", pv(2, { type: "pySettle" }).error === "NOT_PY_ACTION");
+check("助力=妨害→成功(2张)", (() => { puvSeq = [0.35]; pv(2, { type: "pyVote", choice: "help" }); puvSeq = [0.35]; pv(3, { type: "pyVote", choice: "hinder" }); puvSeq = [0, 0, 0, 0, 0]; pv(1, { type: "pySettle" }); return PVT().result.label === "成功" && PVT().result.n === 2; })());
+
 // ═══════════════ 座位独占 + 解锁替换(③)═══════════════
 console.log("\n=== 座位独占 + 解锁替换 ===");
 const rmSeat = new RoomCore("2468", 4, () => 0);

@@ -2355,32 +2355,63 @@ function puCardHtml(c,i,picked,clickable){
     +`<div style="font-size:12px;color:var(--ink);margin-top:2px">${esc(c.text)}</div>`
     +(picked?`<div style="font-size:11px;color:var(--ok);font-weight:bold;text-align:right">✓ 锻造置入装备区</div>`:"")+`</div>`;
 }
+function puVotePool(vote){
+  const es=Object.entries(vote.entries||{});
+  const help=es.filter(([s,e])=>e.choice==="help"), hinder=es.filter(([s,e])=>e.choice==="hinder");
+  const hs=help.reduce((a,[s,e])=>a+e.point,0), xs=hinder.reduce((a,[s,e])=>a+e.point,0);
+  const line=arr=>arr.length?arr.map(([s,e])=>`${dcName(+s)} <b>${e.point}</b>`).join("、"):`<span style="color:var(--ink-soft)">无</span>`;
+  return `<div style="display:flex;gap:8px;margin-top:6px">`
+    +`<div style="flex:1;border:1px solid var(--ok);border-radius:7px;padding:6px 8px"><div style="font-size:12px;color:var(--ok);font-weight:700">助力 · 点数和 ${hs}</div><div style="font-size:12px">${line(help)}</div></div>`
+    +`<div style="flex:1;border:1px solid var(--seal);border-radius:7px;padding:6px 8px"><div style="font-size:12px;color:var(--seal);font-weight:700">妨害 · 点数和 ${xs}</div><div style="font-size:12px">${line(hinder)}</div></div></div>`;
+}
 function viewPyTool(py){
-  const ts=py.toolState||{}, iAm=state.youHold.includes(py.seatNo);
-  const cat=ts.cat, active=ts.active||[];
+  const ts=py.toolState||{}, iAm=state.youHold.includes(py.seatNo), puSeat=py.seatNo;
+  const cat=ts.cat, active=ts.active||[], vote=ts.vote;
   let h=`<div class="card"><h2>蒲元 · 神工锻造库<span class="tag">锻造中 ${active.length} 件</span></h2>`;
-  h+=`<div class="hint">选副类别 + 锻造结果 → 从神工库对应类别抽对应张数（完美锻造3/成功2/失败1）。锻造判定（助力/妨害比点数）桌面全场判，你把结果告诉工具。锻造中的装备占库存不重复出现，销毁后回池。</div>`;
+  h+=`<div class="hint">选副类别 → 手动定结果，或发起助力/妨害征集（线下不翻牌）：其他玩家点助力/妨害，系统各 roll 1~13 点，蒲元揭示结算按点数和定完美(3)/成功(2)/失败(1)。锻造中的装备占库存不重复，销毁回池。</div>`;
+  // ① 副类别
   if(iAm){
-    // 副类别
-    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">① 选副类别</div><div class="row">`
+    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">① 选副类别（重选=一次新发动，清投票）</div><div class="row">`
       +PU_CATS.map(c=>`<button class="${cat===c?'primary':''}" data-pycat="${c}" style="flex:1">${c}</button>`).join("")+`</div>`;
-    // 锻造结果
-    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">② 锻造结果 → 抽对应张数</div><div class="row">`
-      +PU_RESULTS.map(r=>`<button ${cat?'':'disabled'} class="${ts.result&&ts.result.label===r.label?'primary':''}" data-pyforge="${r.label}" data-pyn="${r.n}" style="flex:1;line-height:1.2">${r.label}<br><span style="font-size:10px;color:var(--ink-soft)">${r.sub}</span></button>`).join("")+`</div>`;
-    // roll 结果
-    if(cat && ts.result && !ts.rolled.length){
-      h+=`<div class="hint" style="margin-top:8px"><b style="color:var(--seal)">${cat}</b> 6 张已全部锻造中，无可锻造——先在下方销毁一件。</div>`;
-    } else if(ts.rolled&&ts.rolled.length){
-      h+=`<div class="hint" style="margin-top:8px"><b>${cat}</b> · ${ts.result.label}（${ts.result.n}张${ts.result.short?('，库内仅剩'+ts.rolled.length+'张'):''}）`
-        +(ts.picked!=null?` → 已选定 <b>${esc(ts.rolled[ts.picked].name)}</b>`:' → 点一张锻造置入装备区')+`</div>`;
-      h+=ts.rolled.map((c,i)=>puCardHtml({...c,cat},i,ts.picked===i,true)).join("");
+  } else h+=`<div class="hint" style="margin-top:6px">${cat?`蒲元发动神工 · <b style="color:var(--seal)">${cat}</b>`:'蒲元本人操作，你只读。等蒲元发动神工。'}</div>`;
+  // ② 手动模式(无投票)才显示手动按钮 + 发起征集
+  if(iAm && !vote){
+    const dis=cat?'':'disabled';
+    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">② 锻造结果</div><div class="row">`
+      +PU_RESULTS.map(r=>`<button ${dis} class="${ts.result&&!ts.result.viaVote&&ts.result.label===r.label?'primary':''}" data-pyforge="${r.label}" data-pyn="${r.n}" style="flex:1;line-height:1.2">${r.label}<br><span style="font-size:10px;color:var(--ink-soft)">${r.sub}</span></button>`).join("")+`</div>`;
+    h+=`<div class="row" style="margin-top:6px"><button ${dis} class="gold" data-pystartvote style="flex:1">或：发起助力/妨害征集（线下不翻牌）</button></div>`;
+  }
+  // 投票面板(蒲元+旁人都可见,实时公开)
+  if(vote){
+    h+=`<div style="border:1px solid var(--qi);border-radius:8px;padding:8px 10px;margin-top:10px"><div style="font-size:13px;color:var(--qi);font-weight:700">助力/妨害征集 · ${vote.cat}${vote.settled?' · 已结算':' · 进行中'}</div>`;
+    h+=puVotePool(vote);
+    if(!vote.settled){
+      const voted=new Set(Object.keys(vote.entries||{}).map(Number));
+      const pending=dcInPlay().filter(s=>s!==puSeat && !voted.has(s));
+      if(pending.length) h+=`<div class="hint" style="margin-top:4px">待表态：${pending.map(s=>dcName(s)).join("、")}（可弃权）</div>`;
+      const myVoteSeats=state.youHold.filter(s=>s!==puSeat && state.seats[s] && state.seats[s].general && state.seats[s].general!=="none");
+      myVoteSeats.forEach(s=>{ const e=(vote.entries||{})[s];
+        h+=`<div class="row" style="margin-top:6px"><span class="hint grow" style="margin:0">${dcName(s)}${e?`：已${e.choice==="help"?"助力":"妨害"} <b>${e.point}</b>`:""}</span>`
+          +`<button class="${e&&e.choice==="help"?'primary':''}" data-pyvote="help" data-pyseat="${s}">助力</button>`
+          +`<button class="${e&&e.choice==="hinder"?'primary':''}" data-pyvote="hinder" data-pyseat="${s}">妨害</button></div>`
+          +(e?`<div class="hint" style="text-align:right;margin:0">再点同侧=撤回弃权</div>`:"");
+      });
+      if(iAm) h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-pysettle>揭示结算 → 生成装备</button></div>`;
+    } else {
+      h+=`<div class="hint" style="margin-top:6px">结算：助力 <b style="color:var(--ok)">${vote.helpSum}</b> vs 妨害 <b style="color:var(--seal)">${vote.hinderSum}</b> → <b>${ts.result.label}</b>（${ts.result.n}张${ts.result.short?('，仅剩'+ts.rolled.length):''}）</div>`;
+      if(!ts.rolled.length) h+=`<div class="hint" style="margin-top:2px;color:var(--seal)">该类已全部锻造中，无可锻造——先销毁一件。</div>`;
     }
-  } else {
-    h+=`<div class="hint" style="margin-top:6px">蒲元本人操作，你只读。</div>`;
-    if(cat&&ts.rolled&&ts.rolled.length){
-      h+=`<div class="hint" style="margin-top:6px"><b>${cat}</b> · ${ts.result.label}（本次候选）</div>`
-        +ts.rolled.map((c,i)=>puCardHtml({...c,cat},i,ts.picked===i,false)).join("");
-    }
+    h+=`</div>`;
+  }
+  // 手动模式库存全占提示
+  if(iAm && !vote && cat && ts.result && !ts.rolled.length){
+    h+=`<div class="hint" style="margin-top:8px"><b style="color:var(--seal)">${cat}</b> 已全部锻造中，无可锻造——先在下方销毁一件。</div>`;
+  }
+  // roll 出的候选(手动 or 投票结算后)——蒲元点选,旁人只读
+  if(ts.rolled && ts.rolled.length){
+    h+=`<div class="hint" style="margin-top:8px"><b>${cat}</b> · ${ts.result.label}（${ts.result.n}张${ts.result.short?('，库内仅剩'+ts.rolled.length+'张'):''}）`
+      +(iAm?(ts.picked!=null?` → 已选定 <b>${esc(ts.rolled[ts.picked].name)}</b>`:' → 点一张锻造置入装备区'):'（候选）')+`</div>`;
+    h+=ts.rolled.map((c,i)=>puCardHtml({...c,cat},i,ts.picked===i,iAm)).join("");
   }
   h+=`</div>`;
   // 锻造中的装备
@@ -2399,8 +2430,12 @@ function viewPyTool(py){
 }
 function bindPy(py,q){
   const P=py.seatNo, act=(o)=>send({type:"action",targetSeat:P,bySeat:P,toolAction:o});
+  const voteAct=(seat,choice)=>send({type:"action",targetSeat:P,bySeat:Number(seat),toolAction:{type:"pyVote",choice}}); // 投票以投票者本座位为 bySeat
   q("[data-pycat]").forEach(b=>b.onclick=()=>act({type:"pySelCat",cat:b.dataset.pycat}));
   q("[data-pyforge]").forEach(b=>b.onclick=()=>act({type:"pyForge",label:b.dataset.pyforge,n:+b.dataset.pyn}));
+  q("[data-pystartvote]").forEach(b=>b.onclick=()=>act({type:"pyStartVote"}));
+  q("[data-pyvote]").forEach(b=>b.onclick=()=>voteAct(b.dataset.pyseat, b.dataset.pyvote));
+  q("[data-pysettle]").forEach(b=>b.onclick=()=>act({type:"pySettle"}));
   q("[data-pypick]").forEach(b=>b.onclick=()=>act({type:"pyPick",i:+b.dataset.pypick}));
   q("[data-pydestroy]").forEach(b=>b.onclick=()=>act({type:"pyDestroy",id:b.dataset.pydestroy}));
   q("[data-pyresetgame]").forEach(b=>b.onclick=()=>{if(confirm("重开蒲元工具?清空锻造中的装备与记录（新局用）。"))act({type:"resetGame"});});
