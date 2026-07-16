@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -727,6 +727,47 @@ check("★陈留 move:right:1:西入触发→右移1停[1,0]", slChenliu.events.
 // move 撞墙夹停:豫州汝南 up:3 但顶行 y=4 全墙 → 只上移2格停[1,3](⚠ 若日后确认顶墙有误需同步改数据+此断言)
 const slRunan = pxComputeSlide(PEIXIU_MAPS["豫州"], [1, 0], "N", {});
 check("汝南 up:3 撞豫州顶墙夹停[1,3](只移2格)", slRunan.events[0].city.name === "汝南" && slRunan.path[slRunan.path.length - 1].join() === "1,3");
+
+// ============ 场景 19:蒲元 神工锻造库(选类/锻造roll/去重占库存/销毁回池) ============
+console.log("\n=== 场景 19:蒲元 神工锻造库 ===");
+check("神工库 18 装备(武器6/防具6/宝物6)", PUYUAN_FORGE["武器"].length === 6 && PUYUAN_FORGE["防具"].length === 6 && PUYUAN_FORGE["宝物"].length === 6);
+const roomPu = new RoomCore("5100", 3, () => 0); // rng=0 → shuffle 确定
+const pud = {}; for (let i = 1; i <= 3; i++) { pud[i] = `pud${i}`; roomPu.claimSeat(pud[i], i); }
+roomPu.setGeneral(pud[1], 1, "puyuan");
+const puAct = (by, o) => roomPu.action(pud[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const PUT = () => roomPu.seats[1].toolState;
+check("init:无类别/无锻造中", PUT().cat === null && PUT().active.length === 0 && PUT().rollId === 0);
+check("非蒲元不能选类别", puAct(2, { type: "pySelCat", cat: "武器" }).error === "NOT_PY_ACTION");
+check("未选类别不能锻造(NO_CAT)", puAct(1, { type: "pyForge", label: "完美锻造", n: 3 }).error === "NO_CAT");
+check("坏副类别被拒(BAD_CAT)", puAct(1, { type: "pySelCat", cat: "坐骑" }).error === "BAD_CAT");
+puAct(1, { type: "pySelCat", cat: "武器" });
+const pf = puAct(1, { type: "pyForge", label: "完美锻造", n: 3 });
+check("完美锻造抽3张", pf.ok && PUT().rolled.length === 3 && PUT().result.short === false);
+puAct(1, { type: "pyPick", i: 0 });
+check("选定→进锻造中(active=1)", PUT().active.length === 1 && PUT().active[0].card.name);
+check("锻造中全场公开", roomPu.viewFor(pud[2]).seats[1].toolState.active.length === 1);
+// 同一 roll 换选:pick 另一张仍只 1 件(不叠加)
+puAct(1, { type: "pyForge", label: "成功", n: 2 });
+puAct(1, { type: "pyPick", i: 0 }); puAct(1, { type: "pyPick", i: 1 });
+check("同一roll换选不叠加(active=2:上次1+本次1)", PUT().active.length === 2);
+// 连锻至库存不足
+while (PUT().active.filter(a => a.cat === "武器").length < 5) { puAct(1, { type: "pyForge", label: "完美锻造", n: 3 }); puAct(1, { type: "pyPick", i: 0 }); }
+const wCount = PUT().active.filter(a => a.cat === "武器").length;
+check("武器已占5件且互不相同", wCount === 5 && new Set(PUT().active.filter(a => a.cat === "武器").map(a => a.card.name)).size === 5);
+puAct(1, { type: "pyForge", label: "完美锻造", n: 3 });
+check("★库存不足:完美3张缩到1张 + short", PUT().rolled.length === 1 && PUT().result.short === true);
+const activeSet = new Set(PUT().active.map(a => a.card.name));
+check("★候选排除锻造中的装备", PUT().rolled.every(c => !activeSet.has(c.name)));
+// 销毁 → 回池可再抽
+const destroyName = PUT().active.find(a => a.cat === "武器").card.name;
+const did = PUT().active.find(a => a.cat === "武器").id;
+puAct(1, { type: "pyDestroy", id: did });
+check("销毁→active 减1", !PUT().active.some(a => a.id === did));
+let reappeared = false; for (let k = 0; k < 12; k++) { puAct(1, { type: "pyForge", label: "完美锻造", n: 3 }); if (PUT().rolled.some(c => c.name === destroyName)) { reappeared = true; break; } }
+check("★销毁的装备回池可再抽到", reappeared);
+check("销毁不存在的 id 被拒(NO_ACTIVE)", puAct(1, { type: "pyDestroy", id: "nope" }).error === "NO_ACTIVE");
+check("非蒲元不能重开", puAct(2, { type: "resetGame" }).error === "NOT_PY_ACTION");
+check("重开→清空类别/锻造中", puAct(1, { type: "resetGame" }).reset === true && PUT().active.length === 0 && PUT().cat === null);
 
 // ═══════════════ 座位独占 + 解锁替换(③)═══════════════
 console.log("\n=== 座位独占 + 解锁替换 ===");

@@ -143,6 +143,37 @@ export function pxComputeSlide(m, start, dir, visited){
   return { path, events, moved: path.length>1 };
 }
 
+// ---------- 蒲元【神工锻造库】(全公开生成器)----------
+// ⚠ 数据源 = prototype/shared/derived-cards-room.json 蒲元条目(18装备,武器6/防具6/宝物6);此处内联供 sim+worker,
+//   同一份另内联于 tools/puyuan.html(单人版)。改动务必同步两处。
+export const PUYUAN_FORGE = {
+"武器":[
+  {name:"无双方天戟",suit:"方块",point:"Q",range:4,text:"当你使用【杀】造成伤害后，你可以摸一张牌或弃置目标一张牌。"},
+  {name:"鬼龙斩月刀",suit:"黑桃",point:"5",range:3,text:"锁定技，你使用红色【杀】不能被【闪】响应。"},
+  {name:"赤血青锋",suit:"黑桃",point:"6",range:2,text:"锁定技，当你使用【杀】指定一名角色为目标后，令其不能使用或打出手牌且防具无效直到此【杀】结算结束。"},
+  {name:"镔铁双戟",suit:"方块",point:"K",range:3,text:"当你使用的【杀】被目标角色使用的【闪】抵消后，你可以失去1点体力，获得此【杀】并摸一张牌，然后你本回合使用【杀】的次数上限+1。"},
+  {name:"乌铁锁链",suit:"黑桃",point:"K",range:3,text:"你使用【杀】指定目标后，若目标未横置，你可以令其横置。"},
+  {name:"五行鹤翎扇",suit:"方块",point:"A",range:4,text:"你可以将一张属性【杀】当其他属性【杀】使用。"}
+],
+"防具":[
+  {name:"玲珑狮蛮带",suit:"黑桃",point:"2",text:"当你成为单一目标牌的目标后，你可以判定，若结果为红桃，取消之。"},
+  {name:"红棉百花袍",suit:"梅花",point:"A",text:"锁定技，防止你受到的属性伤害。"},
+  {name:"国风玉袍",suit:"黑桃",point:"9",text:"锁定技，你不能成为普通锦囊牌的目标。"},
+  {name:"奇门八卦",suit:"黑桃",point:"2",text:"锁定技，【杀】对你无效。"},
+  {name:"护心镜",suit:"梅花",point:"A",text:"当你受到伤害时，若此伤害会令你进入濒死状态，或伤害值大于1，你可以将此牌置入弃牌堆并防止此伤害。"},
+  {name:"黑光铠",suit:"梅花",point:"2",text:"锁定技，当你成为【杀】或普通锦囊牌的目标后，若你不是此牌的唯一目标，此牌对你无效。"}
+],
+"宝物":[
+  {name:"束发紫金冠",suit:"方块",point:"A",text:"准备阶段，你可以对一名其他角色造成1点伤害。"},
+  {name:"虚妄之冕",suit:"梅花",point:"4",text:"锁定技，摸牌阶段你多摸两张牌，你的手牌上限-1。"},
+  {name:"三略",suit:"黑桃",point:"5",text:"锁定技，①你的攻击范围+1；②你的手牌上限+1；③你于出牌阶段使用【杀】的次数上限+1。"},
+  {name:"照骨镜",suit:"方块",point:"A",text:"出牌阶段结束时，你可以展示一张基本牌或普通锦囊牌并视为使用之。"},
+  {name:"天机图",suit:"梅花",point:"Q",text:"锁定技，①当此牌进入你的装备区时，你弃置一张不为【天机图】的牌；②当你失去装备区里的【天机图】时，你将手牌摸至五张。"},
+  {name:"太公阴符",suit:"黑桃",point:"2",text:"①出牌阶段开始时，你可以选择一项：1.横置一名角色；2.重置一名角色；②出牌阶段结束时，你可以重铸一张手牌。"}
+]
+};
+export const PUYUAN_CATS = ["武器", "防具", "宝物"];
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -374,6 +405,17 @@ export function initToolState(generalId) {
       retained: null,   // 上回合结束保留的技能 {pt,skill}(持续到本回合结束)
       endChoices: null, // 结束阶段随机三选一候选 [{pt,skill}]
       log: [],          // 公开事件
+    };
+  if (generalId === "puyuan")
+    return {
+      cat: null,       // 当前选的副类别 武器/防具/宝物
+      result: null,    // {label,n,short} 本次锻造结果
+      rolled: [],      // 本次 roll 出的候选装备
+      rollId: 0,       // roll 计数(换选/销毁定位)
+      picked: null,    // 本次 roll 已选定的下标
+      active: [],       // 锻造中(未销毁)的装备 [{id,cat,result,card,roll}],占用库存,roll 时排除
+      fid: 0,          // active id 自增
+      log: [],
     };
   return {};
 }
@@ -634,6 +676,55 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "resetGame") { if (!isPx) return { error: "NOT_PX_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 蒲元:神工锻造库(全公开生成器)。roll 在 DO 跑(可 seed);锻造中的装备占库存,销毁回池 ─────────
+    if (target.general === "puyuan") {
+      const puSeat = targetSeat;
+      const isPy = bySeat === puSeat && iHold(puSeat); // 蒲元本人(或代持)
+      if (t === "pySelCat") { // 选副类别
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        if (!PUYUAN_FORGE[toolAction.cat]) return { error: "BAD_CAT" };
+        ts.cat = toolAction.cat; ts.rolled = []; ts.result = null; ts.picked = null;
+        return { ok: true };
+      }
+      if (t === "pyForge") { // 锻造:抽 n 张(排除锻造中的同名装备),DO rng 可 seed
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        if (!ts.cat) return { error: "NO_CAT" };
+        const n = Number(toolAction.n), label = String(toolAction.label || "");
+        const activeNames = new Set(ts.active.map((a) => a.card.name));
+        const pool = PUYUAN_FORGE[ts.cat].filter((c) => !activeNames.has(c.name));
+        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]]; }
+        const take = Math.min(n, pool.length);
+        ts.rolled = pool.slice(0, take);
+        ts.result = { label, n, short: take < n };
+        ts.rollId = (ts.rollId || 0) + 1; ts.picked = null;
+        this._log(ts, `锻造·${ts.cat}·${label}(${n}张${take < n ? `，库内仅剩${take}张` : ""})：${ts.rolled.map((c) => c.name).join("、") || "无可锻造"}`);
+        return { ok: true, rolled: ts.rolled };
+      }
+      if (t === "pyPick") { // 选定一张 → 锻造中(占库存)
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        const i = Number(toolAction.i);
+        if (!ts.rolled[i]) return { error: "BAD_PICK" };
+        if (ts.picked != null) ts.active = ts.active.filter((a) => a.roll !== ts.rollId); // 同 roll 换选
+        ts.picked = i; const c = ts.rolled[i];
+        ts.fid = (ts.fid || 0) + 1;
+        ts.active.unshift({ id: "f" + ts.fid, cat: ts.cat, result: ts.result ? ts.result.label : "", card: c, roll: ts.rollId });
+        this._log(ts, `锻造置入装备区：【${c.name}】`);
+        return { ok: true };
+      }
+      if (t === "pyDestroy") { // 销毁一件锻造中的装备 → 回可锻造池
+        if (!isPy) return { error: "NOT_PY_ACTION" };
+        const a = ts.active.find((x) => x.id === toolAction.id);
+        if (!a) return { error: "NO_ACTIVE" };
+        ts.active = ts.active.filter((x) => x.id !== toolAction.id);
+        if (a.roll === ts.rollId) ts.picked = null;
+        this._log(ts, `销毁锻造装备：【${a.card.name}】→ 重回可锻造池`);
+        return { ok: true };
+      }
+      if (t === "pyResetForge") { if (!isPy) return { error: "NOT_PY_ACTION" }; ts.cat = null; ts.rolled = []; ts.result = null; ts.picked = null; return { ok: true }; }
+      if (t === "resetGame") { if (!isPy) return { error: "NOT_PY_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

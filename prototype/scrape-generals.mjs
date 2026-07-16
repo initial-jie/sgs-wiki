@@ -113,6 +113,7 @@ const TOOL_NAMES = {
   "谋董昭": "dongzhao", "神孙权": "shensunquan", "魔貂蝉": "diaochan", "魔孙权": "sunquan",
   "神典韦": "dianwei", "李傕": "lijue", "徐荣": "xurong", "郭照": "guozhao",
   "裴秀": "peixiu", // graduate 后官网重爬按名回填(现为 offline,tool 由 overrides 设)
+  "蒲元": "puyuan", // OL 已收录(id510);tool 直接写进 generals.json,此处防全量重爬丢失
 };
 
 (async () => {

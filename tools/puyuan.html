@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蒲元 · 神工锻造库</title>
+<style>
+:root{
+  --bg:#141210; --bg2:#1c1815; --panel:#221d17; --panel2:#2a231a;
+  --ink:#e8dcc8; --ink-dim:#a89880; --gold:#c6a15b; --gold-dim:rgba(198,161,91,.35);
+  --shu:#4f9268; --shu-deep:#2c5a3f; --verm:#b6452f;
+  --red:#c85a44; --black:#cbb99a;
+  --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#eef0e6; --bg2:#e6e9db; --panel:#f7f6ea; --panel2:#eef0e0;
+    --ink:#2f3327; --ink-dim:#6c7358; --gold:#8f7330; --gold-dim:rgba(143,115,48,.4);
+    --shu:#3d7a52; --shu-deep:#2c5a3f; --verm:#a63c26;
+    --red:#b0442f; --black:#4a4230;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;padding:12px 12px 60px;max-width:560px;margin:0 auto}
+header{border:1px solid var(--gold-dim);border-radius:var(--radius);padding:14px 16px;background:linear-gradient(160deg,var(--panel2),var(--panel));margin-bottom:14px;position:relative;overflow:hidden}
+header::before{content:"锻";position:absolute;right:-6px;top:-18px;font-size:96px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;color:var(--shu);opacity:.14;pointer-events:none}
+h1{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:22px;color:var(--gold);letter-spacing:2px}
+.sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;background:var(--shu-deep);color:#eaf5ee;margin-right:6px;vertical-align:2px;letter-spacing:2px}
+section{border:1px solid var(--gold-dim);border-radius:var(--radius);background:var(--panel);margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:16px;color:var(--gold);border-bottom:1px solid var(--gold-dim);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-h .arrow{font-size:12px;color:var(--ink-dim);transition:transform .2s}
+.sec-b{padding:12px 14px}
+.hidden{display:none!important}
+.skilltext{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:14px;color:var(--ink)}
+.skname{color:var(--gold);font-weight:bold}
+.note{font-size:12px;color:var(--ink-dim);margin:6px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.step{font-size:12px;color:var(--gold);font-family:"Kaiti SC",serif;margin:2px 0 6px}
+.btn{display:inline-block;border:1px solid var(--gold-dim);background:var(--panel2);color:var(--ink);padding:9px 14px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.on{background:linear-gradient(160deg,var(--shu-deep),var(--shu));border-color:transparent;color:#eaf5ee;font-weight:bold}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+.cat-btn{flex:1;text-align:center}
+.res-btn{flex:1;text-align:center;line-height:1.2}
+.res-btn .n{display:block;font-size:11px;color:var(--ink-dim);margin-top:1px}
+.res-btn.on .n{color:#dff0e6}
+/* 锻造出的装备卡 */
+.fcards{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.fcard{border:1px solid var(--gold-dim);border-radius:9px;padding:10px 12px;background:var(--panel2);cursor:pointer;position:relative;transition:box-shadow .15s,border-color .15s}
+.fcard:active{transform:scale(.995)}
+.fcard.picked{border-color:var(--shu);box-shadow:0 0 0 2px var(--shu)}
+.fcard .fc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fc-name{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:17px;color:var(--gold);font-weight:bold}
+.fc-suit{font-size:15px;font-weight:bold;letter-spacing:1px}
+.fc-suit.red{color:var(--red)} .fc-suit.black{color:var(--black)}
+.fc-meta{font-size:11px;color:var(--ink-dim);margin:1px 0 4px}
+.fc-text{font-family:"Kaiti SC","STKaiti",KaiTi,serif;font-size:13px;color:var(--ink)}
+.fc-pick{display:none;position:absolute;right:10px;bottom:8px;font-size:11px;color:var(--shu);font-weight:bold}
+.fcard.picked .fc-pick{display:block}
+.rollhead{font-size:13px;color:var(--ink);margin-top:4px}
+.rollhead b{color:var(--gold)}
+.forged-item{display:flex;gap:8px;align-items:baseline;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--gold-dim)}
+.forged-item:last-child{border-bottom:none}
+.forged-item .fi-cat{font-size:11px;color:var(--shu);flex:0 0 auto}
+.forged-item b{color:var(--gold)}
+.log-item{font-size:13px;color:var(--ink-dim);padding:4px 0;border-bottom:1px dashed var(--gold-dim)}
+.log-item:last-child{border-bottom:none}
+.log-item b{color:var(--ink)}
+footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;line-height:1.8}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="badge">蜀</span>蒲元 · 神工锻造库</h1>
+  <div class="sub">神工锻造 · 选副类别 + 锻造结果 → roll 对应装备 · v1.0</div>
+</header>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secSkill')">技能原文<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secSkill">
+    <p class="skilltext"><span class="skname">〖神工〗</span>出牌阶段各限一次，你可以弃置一张武器/防具/坐骑或宝物牌，进行一次"锻造"：选择一张武器/防具/宝物牌置于一名角色的装备区（替换原装备）。当以此法获得的装备牌进入弃牌堆时，销毁之，然后此回合结束阶段，你摸一张牌。</p>
+    <p class="skilltext" style="margin-top:8px"><span class="skname">〖奇思〗</span>游戏开始时，你获得两张不同副类型的装备牌并置入你的装备区。摸牌阶段，你可以少摸一张牌，声明武器、防具、坐骑或宝物牌中的一种并从牌堆或弃牌堆中获得之。</p>
+    <p class="note">锻造判定（全场"助力/妨害"亮牌比点数和，桌面判）：<b style="color:var(--shu)">无人妨害＝完美锻造（观看游戏外3张）</b> · 助力≥妨害＝成功（2张） · 助力＜妨害＝失败（1张）。本工具从对应副类别里 roll 出对应数量，供你选一张锻造置入装备区。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-b">
+    <div class="step">① 选副类别</div>
+    <div class="row">
+      <button class="btn cat-btn" data-cat="武器" onclick="selCat('武器')">武器</button>
+      <button class="btn cat-btn" data-cat="防具" onclick="selCat('防具')">防具</button>
+      <button class="btn cat-btn" data-cat="宝物" onclick="selCat('宝物')">宝物</button>
+    </div>
+    <div class="step" style="margin-top:12px">② 锻造结果 → 抽对应张数</div>
+    <div class="row">
+      <button class="btn res-btn" id="rPerfect" onclick="forge('完美锻造',3)">完美锻造<span class="n">无人妨害 · 3张</span></button>
+      <button class="btn res-btn" id="rOk" onclick="forge('成功',2)">成功<span class="n">助力≥妨害 · 2张</span></button>
+      <button class="btn res-btn" id="rFail" onclick="forge('失败',1)">失败<span class="n">助力＜妨害 · 1张</span></button>
+    </div>
+    <div id="rollBox"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h open" onclick="toggleSec('secForged')">锻造中的装备（未销毁）<span class="note" id="forgedCount" style="margin:0">0 件</span><span class="arrow" style="transform:rotate(90deg)">▶</span></div>
+  <div class="sec-b" id="secForged"><div id="forgedList" class="note">尚无。锻造置入装备区后在此，点「销毁」使其重回可锻造池。</div></div>
+</section>
+
+<section>
+  <div class="sec-h" onclick="toggleSec('secLog')">本局记录<span class="arrow">▶</span></div>
+  <div class="sec-b hidden" id="secLog"><div id="logBox" class="note">暂无记录</div></div>
+</section>
+
+<footer>蒲元 · 神工锻造库 v1.0<br>完全离线 · 数据仅存本机 · 三国杀线下化工具</footer>
+
+<script>
+'use strict';
+/* ===== 神工库 18 装备（武器6/防具6/宝物6）。数据源=prototype/shared/derived-cards-room.json 蒲元条目 ===== */
+const FORGE = {
+"武器":[
+  {name:"无双方天戟",suit:"方块",point:"Q",range:4,text:"当你使用【杀】造成伤害后，你可以摸一张牌或弃置目标一张牌。"},
+  {name:"鬼龙斩月刀",suit:"黑桃",point:"5",range:3,text:"锁定技，你使用红色【杀】不能被【闪】响应。"},
+  {name:"赤血青锋",suit:"黑桃",point:"6",range:2,text:"锁定技，当你使用【杀】指定一名角色为目标后，令其不能使用或打出手牌且防具无效直到此【杀】结算结束。"},
+  {name:"镔铁双戟",suit:"方块",point:"K",range:3,text:"当你使用的【杀】被目标角色使用的【闪】抵消后，你可以失去1点体力，获得此【杀】并摸一张牌，然后你本回合使用【杀】的次数上限+1。"},
+  {name:"乌铁锁链",suit:"黑桃",point:"K",range:3,text:"你使用【杀】指定目标后，若目标未横置，你可以令其横置。"},
+  {name:"五行鹤翎扇",suit:"方块",point:"A",range:4,text:"你可以将一张属性【杀】当其他属性【杀】使用。"}
+],
+"防具":[
+  {name:"玲珑狮蛮带",suit:"黑桃",point:"2",text:"当你成为单一目标牌的目标后，你可以判定，若结果为红桃，取消之。"},
+  {name:"红棉百花袍",suit:"梅花",point:"A",text:"锁定技，防止你受到的属性伤害。"},
+  {name:"国风玉袍",suit:"黑桃",point:"9",text:"锁定技，你不能成为普通锦囊牌的目标。"},
+  {name:"奇门八卦",suit:"黑桃",point:"2",text:"锁定技，【杀】对你无效。"},
+  {name:"护心镜",suit:"梅花",point:"A",text:"当你受到伤害时，若此伤害会令你进入濒死状态，或伤害值大于1，你可以将此牌置入弃牌堆并防止此伤害。"},
+  {name:"黑光铠",suit:"梅花",point:"2",text:"锁定技，当你成为【杀】或普通锦囊牌的目标后，若你不是此牌的唯一目标，此牌对你无效。"}
+],
+"宝物":[
+  {name:"束发紫金冠",suit:"方块",point:"A",text:"准备阶段，你可以对一名其他角色造成1点伤害。"},
+  {name:"虚妄之冕",suit:"梅花",point:"4",text:"锁定技，摸牌阶段你多摸两张牌，你的手牌上限-1。"},
+  {name:"三略",suit:"黑桃",point:"5",text:"锁定技，①你的攻击范围+1；②你的手牌上限+1；③你于出牌阶段使用【杀】的次数上限+1。"},
+  {name:"照骨镜",suit:"方块",point:"A",text:"出牌阶段结束时，你可以展示一张基本牌或普通锦囊牌并视为使用之。"},
+  {name:"天机图",suit:"梅花",point:"Q",text:"锁定技，①当此牌进入你的装备区时，你弃置一张不为【天机图】的牌；②当你失去装备区里的【天机图】时，你将手牌摸至五张。"},
+  {name:"太公阴符",suit:"黑桃",point:"2",text:"①出牌阶段开始时，你可以选择一项：1.横置一名角色；2.重置一名角色；②出牌阶段结束时，你可以重铸一张手牌。"}
+]
+};
+const SUIT_GLYPH={方块:"♦",红桃:"♥",黑桃:"♠",梅花:"♣"};
+const isRed=s=>s==="方块"||s==="红桃";
+
+const LS_KEY='sgs_puyuan_v1';
+let S=null, memFallback=null;
+function defaultState(){ return { cat:null, result:null, rolled:[], rollId:0, picked:null, active:[], fid:0, seq:0, history:[] }; }
+// active=锻造中(未销毁)的装备,占用库存;roll 时排除,销毁后回池
+function save(){ const r=JSON.stringify(S); try{localStorage.setItem(LS_KEY,r);}catch(e){memFallback=r;} }
+function load(){ let r=null; try{r=localStorage.getItem(LS_KEY);}catch(e){r=memFallback;} S=defaultState(); if(r){try{const o=JSON.parse(r); if(o&&typeof o==='object') S=Object.assign(defaultState(),o);}catch(e){}} }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function logPush(m){ S.seq++; S.history.push({n:S.seq,m}); if(S.history.length>60) S.history.shift(); }
+
+function selCat(c){ S.cat=c; S.rolled=[]; S.result=null; S.picked=null; save(); render(); }
+function forge(label, n){
+  if(!S.cat){ return; }
+  const activeNames=new Set(S.active.map(a=>a.card.name)); // 排除锻造中(未销毁)的同名装备
+  const pool=FORGE[S.cat].filter(c=>!activeNames.has(c.name));
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const take=Math.min(n, pool.length);
+  S.rolled = pool.slice(0, take);
+  S.result = { label, n, short: take<n };
+  S.rollId++; S.picked = null; // 点一张卡片才记入「锻造中」
+  logPush('锻造·'+S.cat+'·'+label+'('+n+'张'+(take<n?('，库内仅剩'+take+'张'):'')+')：'+(S.rolled.length?S.rolled.map(c=>c.name).join('、'):'无可锻造'));
+  save(); render();
+}
+function pickCard(i){
+  if(!S.rolled[i]) return;
+  if(S.picked!=null){ S.active=S.active.filter(a=>a.roll!==S.rollId); } // 同一次 roll 换选:撤掉本次已选的
+  S.picked = i; const c=S.rolled[i];
+  S.active.unshift({ id:'f'+(++S.fid), cat:S.cat, result:S.result?S.result.label:'', card:c, roll:S.rollId });
+  logPush('锻造置入装备区：【'+c.name+'】'+SUIT_GLYPH[c.suit]+c.point+(c.range?(' 范围'+c.range):''));
+  save(); render();
+}
+function destroyActive(id){
+  const a=S.active.find(x=>x.id===id); if(!a) return;
+  S.active=S.active.filter(x=>x.id!==id);
+  if(a.roll===S.rollId) S.picked=null; // 销毁的正是当前 roll 选定的→清高亮
+  logPush('销毁锻造装备：【'+a.card.name+'】→ 重回可锻造池');
+  save(); render();
+}
+function resetForge(){ S.cat=null; S.rolled=[]; S.result=null; S.picked=null; save(); render(); }
+function clearAll(){ if(!confirm('清空本局全部（锻造中的装备 + 记录）?')) return; S=defaultState(); save(); render(); }
+
+function toggleSec(id){ const b=document.getElementById(id); if(!b)return; b.classList.toggle('hidden'); const h=b.previousElementSibling; if(h&&h.classList) h.classList.toggle('open',!b.classList.contains('hidden')); }
+function cardHtml(c, i, picked){
+  const glyph=SUIT_GLYPH[c.suit]||'', red=isRed(c.suit);
+  return '<div class="fcard'+(picked?' picked':'')+'" onclick="pickCard('+i+')">'
+    +'<div class="fc-top"><span class="fc-name">'+esc(c.name)+'</span>'
+    +'<span class="fc-suit '+(red?'red':'black')+'">'+glyph+c.point+'</span></div>'
+    +'<div class="fc-meta">'+S.cat+(c.range?(' · 范围'+c.range):'')+'</div>'
+    +'<div class="fc-text">'+esc(c.text)+'</div>'
+    +'<span class="fc-pick">✓ 锻造置入装备区</span></div>';
+}
+function render(){
+  // 副类别高亮
+  document.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('on', b.dataset.cat===S.cat));
+  // 结果按钮:未选类别则禁用
+  const ready=!!S.cat;
+  [['rPerfect','完美锻造'],['rOk','成功'],['rFail','失败']].forEach(([id,lab])=>{
+    const b=document.getElementById(id); b.disabled=!ready; b.classList.toggle('on', S.result&&S.result.label===lab);
+  });
+  // roll 结果
+  const rb=document.getElementById('rollBox');
+  if(!S.cat){ rb.innerHTML='<div class="note" style="margin-top:12px">先选一个副类别。</div>'; }
+  else if(S.result && !S.rolled.length){ rb.innerHTML='<div class="note" style="margin-top:12px"><b style="color:var(--shu)">'+S.cat+'</b> 6 张已全部锻造中，无可锻造——先在下方销毁一件。</div>'; }
+  else if(!S.rolled.length){ rb.innerHTML='<div class="note" style="margin-top:12px">已选 <b style="color:var(--shu)">'+S.cat+'</b>，点上面锻造结果抽牌。</div>'; }
+  else {
+    let h='<div class="rollhead" style="margin-top:12px"><b>'+S.cat+'</b> · '+S.result.label+'（'+S.result.n+'张'+(S.result.short?('，库内仅剩'+S.rolled.length+'张'):'')+'）'
+      +(S.picked!=null?' → 已选定 <b>'+esc(S.rolled[S.picked].name)+'</b>':' → 点一张锻造置入装备区')+'</div>';
+    if(S.result.short) h+='<div class="note" style="margin-top:2px">已排除锻造中的装备，该类可锻造不足 '+S.result.n+' 张。</div>';
+    h+='<div class="fcards">'+S.rolled.map((c,i)=>cardHtml(c,i,S.picked===i)).join('')+'</div>';
+    h+='<div class="row" style="margin-top:10px"><button class="btn btn-sm" onclick="resetForge()">↺ 重新锻造（换类别/结果）</button></div>';
+    rb.innerHTML=h;
+  }
+  // 锻造中的装备(未销毁)
+  document.getElementById('forgedCount').textContent=S.active.length+' 件';
+  const fl=document.getElementById('forgedList');
+  if(!S.active.length){ fl.className='note'; fl.textContent='尚无。锻造置入装备区后在此，点「销毁」使其重回可锻造池。'; }
+  else { fl.className='';
+    fl.innerHTML=S.active.map(f=>{const c=f.card,g=SUIT_GLYPH[c.suit];
+      return '<div class="forged-item"><span class="fi-cat">'+f.cat+'</span><b>'+esc(c.name)+'</b>'
+        +'<span style="color:'+(isRed(c.suit)?'var(--red)':'var(--black)')+'">'+g+c.point+'</span>'
+        +'<span class="note grow" style="margin:0">'+esc(f.result)+(c.range?(' · 范围'+c.range):'')+'</span>'
+        +'<button class="btn btn-sm" onclick="destroyActive(\''+f.id+'\')">销毁</button></div>';
+    }).join('')+'<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn btn-sm" onclick="clearAll()">清空本局</button></div>';
+  }
+  // 记录
+  const lb=document.getElementById('logBox');
+  lb.innerHTML = S.history.length? S.history.slice().reverse().slice(0,30).map(h=>'<div class="log-item">'+h.n+' · <b>'+esc(h.m)+'</b></div>').join('') : '暂无记录';
+}
+load(); render();
+</script>
+</body>
+</html>

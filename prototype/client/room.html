@@ -173,8 +173,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -193,7 +193,8 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
              xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
              guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)},
-             peixiu:{view:s=>viewPxTool(s),bind:(s,q)=>bindPx(s,q)} };
+             peixiu:{view:s=>viewPxTool(s),bind:(s,q)=>bindPx(s,q)},
+             puyuan:{view:s=>viewPyTool(s),bind:(s,q)=>bindPy(s,q)} };
 
 /* ============ OL 武将库(点座位看技能;数据从 worker 的 /generals.json 拉)============
    座位 general 字段:有工具的武将→工具id(工具系统不变);无工具→OL数字id字符串;线下/手输→原文本。*/
@@ -2311,6 +2312,98 @@ function bindPx(px,q){
   q("[data-pxchoose]").forEach(b=>b.onclick=()=>act({type:"pxChoose",k:+b.dataset.pxchoose}));
   q("[data-pxnewturn]").forEach(b=>b.onclick=()=>{if(confirm("新回合?清空本回合技能池并随机展开一幅新地图。"))act({type:"pxNewTurn"});});
   q("[data-pxresetgame]").forEach(b=>b.onclick=()=>{if(confirm("重开裴秀工具?清空地图/池/保留技能。"))act({type:"resetGame"});});
+}
+
+/* ---------- 蒲元工具(神工锻造库:选副类别+锻造结果→roll对应装备,锻造中占库存/销毁回池;全公开)---------- */
+/* ⚠ 数据源 = prototype/shared/derived-cards-room.json 蒲元条目;此处内联仅供画卡(roll 由 DO 权威)。 */
+const PUYUAN_FORGE={
+"武器":[
+  {name:"无双方天戟",suit:"方块",point:"Q",range:4,text:"当你使用【杀】造成伤害后，你可以摸一张牌或弃置目标一张牌。"},
+  {name:"鬼龙斩月刀",suit:"黑桃",point:"5",range:3,text:"锁定技，你使用红色【杀】不能被【闪】响应。"},
+  {name:"赤血青锋",suit:"黑桃",point:"6",range:2,text:"锁定技，当你使用【杀】指定一名角色为目标后，令其不能使用或打出手牌且防具无效直到此【杀】结算结束。"},
+  {name:"镔铁双戟",suit:"方块",point:"K",range:3,text:"当你使用的【杀】被目标角色使用的【闪】抵消后，你可以失去1点体力，获得此【杀】并摸一张牌，然后你本回合使用【杀】的次数上限+1。"},
+  {name:"乌铁锁链",suit:"黑桃",point:"K",range:3,text:"你使用【杀】指定目标后，若目标未横置，你可以令其横置。"},
+  {name:"五行鹤翎扇",suit:"方块",point:"A",range:4,text:"你可以将一张属性【杀】当其他属性【杀】使用。"}
+],
+"防具":[
+  {name:"玲珑狮蛮带",suit:"黑桃",point:"2",text:"当你成为单一目标牌的目标后，你可以判定，若结果为红桃，取消之。"},
+  {name:"红棉百花袍",suit:"梅花",point:"A",text:"锁定技，防止你受到的属性伤害。"},
+  {name:"国风玉袍",suit:"黑桃",point:"9",text:"锁定技，你不能成为普通锦囊牌的目标。"},
+  {name:"奇门八卦",suit:"黑桃",point:"2",text:"锁定技，【杀】对你无效。"},
+  {name:"护心镜",suit:"梅花",point:"A",text:"当你受到伤害时，若此伤害会令你进入濒死状态，或伤害值大于1，你可以将此牌置入弃牌堆并防止此伤害。"},
+  {name:"黑光铠",suit:"梅花",point:"2",text:"锁定技，当你成为【杀】或普通锦囊牌的目标后，若你不是此牌的唯一目标，此牌对你无效。"}
+],
+"宝物":[
+  {name:"束发紫金冠",suit:"方块",point:"A",text:"准备阶段，你可以对一名其他角色造成1点伤害。"},
+  {name:"虚妄之冕",suit:"梅花",point:"4",text:"锁定技，摸牌阶段你多摸两张牌，你的手牌上限-1。"},
+  {name:"三略",suit:"黑桃",point:"5",text:"锁定技，①你的攻击范围+1；②你的手牌上限+1；③你于出牌阶段使用【杀】的次数上限+1。"},
+  {name:"照骨镜",suit:"方块",point:"A",text:"出牌阶段结束时，你可以展示一张基本牌或普通锦囊牌并视为使用之。"},
+  {name:"天机图",suit:"梅花",point:"Q",text:"锁定技，①当此牌进入你的装备区时，你弃置一张不为【天机图】的牌；②当你失去装备区里的【天机图】时，你将手牌摸至五张。"},
+  {name:"太公阴符",suit:"黑桃",point:"2",text:"①出牌阶段开始时，你可以选择一项：1.横置一名角色；2.重置一名角色；②出牌阶段结束时，你可以重铸一张手牌。"}
+]
+};
+const PU_CATS=["武器","防具","宝物"];
+const PU_SUIT={方块:"♦",红桃:"♥",黑桃:"♠",梅花:"♣"};
+const puRed=s=>s==="方块"||s==="红桃";
+const PU_RESULTS=[{label:"完美锻造",n:3,sub:"无人妨害·3张"},{label:"成功",n:2,sub:"助力≥妨害·2张"},{label:"失败",n:1,sub:"助力＜妨害·1张"}];
+function puCardHtml(c,i,picked,clickable){
+  const g=PU_SUIT[c.suit]||"", red=puRed(c.suit);
+  return `<div style="border:1px solid ${picked?'var(--ok)':'var(--line)'};${picked?'box-shadow:0 0 0 2px var(--ok);':''}border-radius:8px;padding:8px 10px;margin-top:6px;background:rgba(255,252,244,.6)${clickable?';cursor:pointer':''}"${clickable?` data-pypick="${i}"`:""}>`
+    +`<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px;color:var(--seal-soft)">${esc(c.name)}</b>`
+    +`<span style="font-weight:bold;color:${red?'var(--seal)':'var(--ink)'}">${g}${c.point}</span></div>`
+    +`<div style="font-size:11px;color:var(--ink-soft)">${c.cat||''}${c.range?(' · 范围'+c.range):''}</div>`
+    +`<div style="font-size:12px;color:var(--ink);margin-top:2px">${esc(c.text)}</div>`
+    +(picked?`<div style="font-size:11px;color:var(--ok);font-weight:bold;text-align:right">✓ 锻造置入装备区</div>`:"")+`</div>`;
+}
+function viewPyTool(py){
+  const ts=py.toolState||{}, iAm=state.youHold.includes(py.seatNo);
+  const cat=ts.cat, active=ts.active||[];
+  let h=`<div class="card"><h2>蒲元 · 神工锻造库<span class="tag">锻造中 ${active.length} 件</span></h2>`;
+  h+=`<div class="hint">选副类别 + 锻造结果 → 从神工库对应类别抽对应张数（完美锻造3/成功2/失败1）。锻造判定（助力/妨害比点数）桌面全场判，你把结果告诉工具。锻造中的装备占库存不重复出现，销毁后回池。</div>`;
+  if(iAm){
+    // 副类别
+    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">① 选副类别</div><div class="row">`
+      +PU_CATS.map(c=>`<button class="${cat===c?'primary':''}" data-pycat="${c}" style="flex:1">${c}</button>`).join("")+`</div>`;
+    // 锻造结果
+    h+=`<div class="hint" style="margin-top:8px;color:var(--qi)">② 锻造结果 → 抽对应张数</div><div class="row">`
+      +PU_RESULTS.map(r=>`<button ${cat?'':'disabled'} class="${ts.result&&ts.result.label===r.label?'primary':''}" data-pyforge="${r.label}" data-pyn="${r.n}" style="flex:1;line-height:1.2">${r.label}<br><span style="font-size:10px;color:var(--ink-soft)">${r.sub}</span></button>`).join("")+`</div>`;
+    // roll 结果
+    if(cat && ts.result && !ts.rolled.length){
+      h+=`<div class="hint" style="margin-top:8px"><b style="color:var(--seal)">${cat}</b> 6 张已全部锻造中，无可锻造——先在下方销毁一件。</div>`;
+    } else if(ts.rolled&&ts.rolled.length){
+      h+=`<div class="hint" style="margin-top:8px"><b>${cat}</b> · ${ts.result.label}（${ts.result.n}张${ts.result.short?('，库内仅剩'+ts.rolled.length+'张'):''}）`
+        +(ts.picked!=null?` → 已选定 <b>${esc(ts.rolled[ts.picked].name)}</b>`:' → 点一张锻造置入装备区')+`</div>`;
+      h+=ts.rolled.map((c,i)=>puCardHtml({...c,cat},i,ts.picked===i,true)).join("");
+    }
+  } else {
+    h+=`<div class="hint" style="margin-top:6px">蒲元本人操作，你只读。</div>`;
+    if(cat&&ts.rolled&&ts.rolled.length){
+      h+=`<div class="hint" style="margin-top:6px"><b>${cat}</b> · ${ts.result.label}（本次候选）</div>`
+        +ts.rolled.map((c,i)=>puCardHtml({...c,cat},i,ts.picked===i,false)).join("");
+    }
+  }
+  h+=`</div>`;
+  // 锻造中的装备
+  h+=`<div class="card"><h2>锻造中的装备（未销毁）<span class="tag">${active.length} 件</span></h2>`;
+  if(!active.length) h+=`<div class="hint">尚无。锻造置入装备区后在此，${iAm?'点「销毁」':'蒲元可'}使其重回可锻造池。</div>`;
+  else h+=active.map(f=>{const c=f.card,g=PU_SUIT[c.suit];
+    return `<div class="row" style="border-bottom:1px dashed var(--line);padding:5px 0"><span style="font-size:11px;color:var(--ok);flex:0 0 auto">${f.cat}</span>`
+      +`<b style="color:var(--seal-soft)">${esc(c.name)}</b><span style="color:${puRed(c.suit)?'var(--seal)':'var(--ink)'}">${g}${c.point}</span>`
+      +`<span class="hint grow" style="margin:0">${esc(f.result)}${c.range?(' · 范围'+c.range):''}</span>`
+      +(iAm?`<button class="ghost" data-pydestroy="${f.id}" style="font-size:12px;flex:0 0 auto">销毁</button>`:"")+`</div>`;
+  }).join("");
+  if(iAm) h+=`<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="ghost" data-pyresetgame style="font-size:12px">重开</button></div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindPy(py,q){
+  const P=py.seatNo, act=(o)=>send({type:"action",targetSeat:P,bySeat:P,toolAction:o});
+  q("[data-pycat]").forEach(b=>b.onclick=()=>act({type:"pySelCat",cat:b.dataset.pycat}));
+  q("[data-pyforge]").forEach(b=>b.onclick=()=>act({type:"pyForge",label:b.dataset.pyforge,n:+b.dataset.pyn}));
+  q("[data-pypick]").forEach(b=>b.onclick=()=>act({type:"pyPick",i:+b.dataset.pypick}));
+  q("[data-pydestroy]").forEach(b=>b.onclick=()=>act({type:"pyDestroy",id:b.dataset.pydestroy}));
+  q("[data-pyresetgame]").forEach(b=>b.onclick=()=>{if(confirm("重开蒲元工具?清空锻造中的装备与记录（新局用）。"))act({type:"resetGame"});});
 }
 
 document.getElementById("rcNow").onclick=reconnectNow; // 断线横幅「立即重连」兜底按钮
