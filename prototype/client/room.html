@@ -2355,14 +2355,17 @@ function puCardHtml(c,i,picked,clickable){
     +`<div style="font-size:12px;color:var(--ink);margin-top:2px">${esc(c.text)}</div>`
     +(picked?`<div style="font-size:11px;color:var(--ok);font-weight:bold;text-align:right">✓ 锻造置入装备区</div>`:"")+`</div>`;
 }
+function puName(sn){ return esc(seatGeneralName(state.seats[sn]&&state.seats[sn].general)||('座位'+sn)); } // 武将名(编号→名);非工具将也解析
 function puVotePool(vote){
   const es=Object.entries(vote.entries||{});
-  const help=es.filter(([s,e])=>e.choice==="help"), hinder=es.filter(([s,e])=>e.choice==="hinder");
+  const help=es.filter(([s,e])=>e.choice==="help"), hinder=es.filter(([s,e])=>e.choice==="hinder"), ab=es.filter(([s,e])=>e.choice==="abstain");
   const hs=help.reduce((a,[s,e])=>a+e.point,0), xs=hinder.reduce((a,[s,e])=>a+e.point,0);
-  const line=arr=>arr.length?arr.map(([s,e])=>`${dcName(+s)} <b>${e.point}</b>`).join("、"):`<span style="color:var(--ink-soft)">无</span>`;
-  return `<div style="display:flex;gap:8px;margin-top:6px">`
+  const line=arr=>arr.length?arr.map(([s,e])=>`${puName(+s)} <b>${e.point}</b>`).join("、"):`<span style="color:var(--ink-soft)">无</span>`;
+  let out=`<div style="display:flex;gap:8px;margin-top:6px">`
     +`<div style="flex:1;border:1px solid var(--ok);border-radius:7px;padding:6px 8px"><div style="font-size:12px;color:var(--ok);font-weight:700">助力 · 点数和 ${hs}</div><div style="font-size:12px">${line(help)}</div></div>`
     +`<div style="flex:1;border:1px solid var(--seal);border-radius:7px;padding:6px 8px"><div style="font-size:12px;color:var(--seal);font-weight:700">妨害 · 点数和 ${xs}</div><div style="font-size:12px">${line(hinder)}</div></div></div>`;
+  if(ab.length) out+=`<div class="hint" style="margin-top:4px">弃权：${ab.map(([s])=>puName(+s)).join("、")}</div>`;
+  return out;
 }
 function viewPyTool(py){
   const ts=py.toolState||{}, iAm=state.youHold.includes(py.seatNo), puSeat=py.seatNo;
@@ -2387,14 +2390,20 @@ function viewPyTool(py){
     h+=puVotePool(vote);
     if(!vote.settled){
       const voted=new Set(Object.keys(vote.entries||{}).map(Number));
-      const pending=dcInPlay().filter(s=>s!==puSeat && !voted.has(s));
-      if(pending.length) h+=`<div class="hint" style="margin-top:4px">待表态：${pending.map(s=>dcName(s)).join("、")}（可弃权）</div>`;
-      const myVoteSeats=state.youHold.filter(s=>s!==puSeat && state.seats[s] && state.seats[s].general && state.seats[s].general!=="none");
+      const pending=dcInPlay().filter(s=>!voted.has(s)); // 含蒲元本人:全场都要表态
+      if(pending.length) h+=`<div class="hint" style="margin-top:4px">待表态：${pending.map(s=>puName(s)).join("、")}</div>`;
+      // 我持有的每个在座座位(含蒲元自己那座)都各自表态一次,选后不可改
+      const myVoteSeats=state.youHold.filter(s=>state.seats[s] && state.seats[s].general && state.seats[s].general!=="none");
       myVoteSeats.forEach(s=>{ const e=(vote.entries||{})[s];
-        h+=`<div class="row" style="margin-top:6px"><span class="hint grow" style="margin:0">${dcName(s)}${e?`：已${e.choice==="help"?"助力":"妨害"} <b>${e.point}</b>`:""}</span>`
-          +`<button class="${e&&e.choice==="help"?'primary':''}" data-pyvote="help" data-pyseat="${s}">助力</button>`
-          +`<button class="${e&&e.choice==="hinder"?'primary':''}" data-pyvote="hinder" data-pyseat="${s}">妨害</button></div>`
-          +(e?`<div class="hint" style="text-align:right;margin:0">再点同侧=撤回弃权</div>`:"");
+        if(e){
+          const lab=e.choice==="help"?`已助力 <b>${e.point}</b>`:e.choice==="hinder"?`已妨害 <b>${e.point}</b>`:`已弃权`;
+          h+=`<div class="row" style="margin-top:6px"><span class="hint grow" style="margin:0">${puName(s)}：${lab}（不可更改）</span></div>`;
+        } else {
+          h+=`<div class="row" style="margin-top:6px"><span class="hint grow" style="margin:0">${puName(s)}</span>`
+            +`<button data-pyvote="help" data-pyseat="${s}">助力</button>`
+            +`<button data-pyvote="hinder" data-pyseat="${s}">妨害</button>`
+            +`<button class="ghost" data-pyvote="abstain" data-pyseat="${s}">弃权</button></div>`;
+        }
       });
       if(iAm) h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-pysettle>揭示结算 → 生成装备</button></div>`;
     } else {

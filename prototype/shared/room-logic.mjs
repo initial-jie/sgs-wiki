@@ -698,17 +698,15 @@ export class RoomCore {
         this._log(ts, `发起【${ts.cat}】锻造·征集助力/妨害`);
         return { ok: true };
       }
-      if (t === "pyVote") { // 其他玩家点助力/妨害(实时公开):首投 roll 1~13 点;再点同侧=撤回;换边保留点数
+      if (t === "pyVote") { // 全场(含蒲元本人)各自表态助力/妨害/弃权(实时公开)。助力/妨害各 roll 1~13 点入池。
         if (!ts.vote || ts.vote.settled) return { error: "NO_VOTE" };
         const seat = Number(bySeat);
-        if (seat === puSeat) return { error: "PY_NO_VOTE" };       // 蒲元本人不投
         if (!iHold(seat)) return { error: "NOT_YOUR_SEAT" };
         if (!this.seats[seat]?.general) return { error: "EMPTY_SEAT" };
         const choice = toolAction.choice;
-        if (choice !== "help" && choice !== "hinder") return { error: "BAD_CHOICE" };
-        const cur = ts.vote.entries[seat];
-        if (cur && cur.choice === choice) { delete ts.vote.entries[seat]; this._log(ts, `座位${seat} 撤回(弃权)`); }
-        else if (cur) { cur.choice = choice; this._log(ts, `座位${seat} 改投${choice === "help" ? "助力" : "妨害"}(点数${cur.point})`); }
+        if (choice !== "help" && choice !== "hinder" && choice !== "abstain") return { error: "BAD_CHOICE" };
+        if (ts.vote.entries[seat]) return { error: "ALREADY_VOTED" }; // OL 口径:选了就定,不可更改/反悔
+        if (choice === "abstain") { ts.vote.entries[seat] = { choice: "abstain" }; this._log(ts, `座位${seat} 弃权`); }
         else { const point = 1 + Math.floor(this.rng() * 13); ts.vote.entries[seat] = { choice, point }; this._log(ts, `座位${seat} ${choice === "help" ? "助力" : "妨害"} 点数${point}`); }
         return { ok: true };
       }
