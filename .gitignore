@@ -4,6 +4,7 @@
 
 # wrangler / miniflare 本地运行时产物
 prototype/worker/.wrangler/
+.wrangler/
 
 # node
 node_modules/

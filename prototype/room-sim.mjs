@@ -871,5 +871,40 @@ gzAct(1, 1, { type: "setColor", color: "black" }); gzAct(1, 1, { type: "addNeixu
 const grst = gzAct(1, 1, { type: "resetGame" });
 check("郭照重置成功、声明色清空、内训清空", grst.reset === true && GZT(gzd[1]).color === null && GZT(gzd[1]).neixun.length === 0);
 
+// ═══════════ 全场状态面板(#1):血量/翻面/横置/连环/阵亡 —— 全公开,任意座位可改任意座位 ═══════════
+const roomPanel = new RoomCore("7070", 5, () => 0);
+const pd = {}; for (let i = 1; i <= 5; i++) { pd[i] = `pd${i}`; roomPanel.claimSeat(pd[i], i); }
+roomPanel.setGeneral(pd[1], 1, "guozhao");  // 座位1 有武将
+roomPanel.setGeneral(pd[2], 2, "lvbu");     // 座位2 有武将;座位3 故意留空(无武将)
+const PV = (d, n) => roomPanel.viewFor(d).seats[n];
+const pAct = (d, tgt, o) => roomPanel.action(pd[d], { targetSeat: tgt, bySeat: d, toolAction: o });
+
+console.log("\n=== 面板1:血量播种 + 绝对置数 + 上限夹取(全公开)===");
+check("初始未播种 hp/hpMax=null", PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null);
+check("播种体力上限4 → hp=hpMax=4", pAct(1, 1, { type: "panelSetHpMax", hp: 4 }).ok && PV(pd[1], 1).hp === 4 && PV(pd[1], 1).hpMax === 4);
+check("★面板对旁人公开(dev2 看座位1 血量=4)", PV(pd[2], 1).hp === 4);
+check("绝对置数 hp=2", pAct(1, 1, { type: "panelSetHp", hp: 2 }).ok && PV(pd[1], 1).hp === 2);
+check("置数超上限被夹到4", pAct(1, 1, { type: "panelSetHp", hp: 9 }).ok && PV(pd[1], 1).hp === 4);
+check("置数负数被夹到0(濒死)", pAct(1, 1, { type: "panelSetHp", hp: -3 }).ok && PV(pd[1], 1).hp === 0);
+check("调低上限3→当前血夹到3", (pAct(1, 1, { type: "panelSetHp", hp: 4 }), pAct(1, 1, { type: "panelSetHpMax", hp: 3 }).ok) && PV(pd[1], 1).hp === 3 && PV(pd[1], 1).hpMax === 3);
+
+console.log("\n=== 面板2:翻面/横置/连环 切换 + 阵亡 ===");
+check("翻面 toggle on", pAct(1, 1, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 1).flipped === true);
+check("翻面 toggle off", pAct(1, 1, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 1).flipped === false);
+check("横置 on", pAct(1, 1, { type: "panelToggle", flag: "tapped" }).ok && PV(pd[1], 1).tapped === true);
+check("连环 on", pAct(1, 1, { type: "panelToggle", flag: "chained" }).ok && PV(pd[1], 1).chained === true);
+check("非法 flag 被拒(BAD_FLAG)", pAct(1, 1, { type: "panelToggle", flag: "zzz" }).error === "BAD_FLAG");
+check("阵亡置 true", pAct(1, 1, { type: "panelSetDead", dead: true }).ok && PV(pd[1], 1).dead === true);
+check("复生置 false", pAct(1, 1, { type: "panelSetDead", dead: false }).ok && PV(pd[1], 1).dead === false);
+
+console.log("\n=== 面板3:任意座位可改任意座位(无 holder 守卫)+ 空座位拒绝 + 换将重置 ===");
+check("★dev2 改座位1血量(跨座位无守卫)成功", pAct(2, 1, { type: "panelSetHp", hp: 1 }).ok && PV(pd[1], 1).hp === 1);
+check("★dev1 改座位2翻面(跨座位)成功", pAct(1, 2, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 2).flipped === true);
+check("空座位(无武将)面板动作被拒(BAD_TARGET)", pAct(1, 3, { type: "panelSetHp", hp: 3 }).error === "BAD_TARGET");
+pAct(1, 1, { type: "panelToggle", flag: "chained" }); // 座位1 先挂上连环+血量
+roomPanel.setGeneral(pd[1], 1, "simayi");             // 换武将
+check("★换武将→面板全重置(hp/hpMax=null,翻面/横置/连环/阵亡=false)",
+  PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null && PV(pd[1], 1).flipped === false && PV(pd[1], 1).tapped === false && PV(pd[1], 1).chained === false && PV(pd[1], 1).dead === false);
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

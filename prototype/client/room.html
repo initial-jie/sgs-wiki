@@ -114,6 +114,30 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .fc.wei{color:#2b5fa5;border-color:#2b5fa5}.fc.shu{color:#a33322;border-color:#a33322}
 .fc.wu{color:#2f7d4f;border-color:#2f7d4f}.fc.qun{color:#7a6320;border-color:#7a6320}
 .fc.jin{color:#6b4a86;border-color:#6b4a86}.fc.shen{color:#a06a1a;border-color:#a06a1a;background:rgba(160,106,26,.08)}
+/* 全场状态面板 */
+.pnl-tab{font-size:12px;padding:4px 12px}
+.pnl-tab.on{background:var(--seal);border-color:var(--seal);color:#f6ecd8}
+.pnl-row{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:6px;background:rgba(255,252,244,.5)}
+.pnl-row.me{border-color:var(--seal)}
+.pnl-row.dead{opacity:.5}
+.pnl-row.dying{border-color:var(--seal);background:rgba(163,46,34,.14)}
+.pnl-hp{font-size:21px;font-weight:700;color:var(--seal);min-width:26px;text-align:center;line-height:1;cursor:pointer;user-select:none}
+.pnl-hp small{font-size:11px;color:var(--ink-soft);font-weight:400}
+.pnl-step{min-width:28px;padding:5px 0;font-size:16px;flex:0 0 auto}
+.pnl-flag{font-size:11px;border:1px solid var(--line);border-radius:5px;padding:4px 7px;color:var(--ink-soft);background:transparent;flex:0 0 auto}
+.pnl-flag.on{background:var(--plate);border-color:var(--plate);color:#f0e6d0}
+.pnl-nm{font-weight:600;font-size:12px}
+.ring{position:relative;width:100%;max-width:330px;margin:8px auto 34px;aspect-ratio:1/1}
+.ring-mini{position:absolute;transform:translate(-50%,-50%);width:72px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px 2px;background:rgba(255,252,244,.94);font-size:11px}
+.ring-mini.me{border-color:var(--seal);box-shadow:0 0 0 2px rgba(163,46,34,.22)}
+.ring-mini.dead{opacity:.45}
+.ring-mini.dying{border-color:var(--seal);background:rgba(163,46,34,.15)}
+.ring-mini[data-distfrom]{cursor:pointer}
+.ring-mini.vp{border-color:var(--qi);box-shadow:0 0 0 2px rgba(169,134,47,.4)}
+.ring-mini.adj{border-color:var(--ok);background:rgba(61,122,82,.12)}
+.ring-mini .rhp{font-size:18px;font-weight:700;color:var(--seal);line-height:1.15}
+.ring-mini .rhp small{font-size:10px;color:var(--ink-soft);font-weight:400}
+.ring-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--ink-soft);text-align:center;width:88px;line-height:1.35}
 /* 技能卡 */
 .herohead{display:flex;gap:12px;align-items:center;margin-bottom:10px}
 .herohead img{width:60px;height:60px;border-radius:8px;object-fit:cover;background:var(--paper3);border:1px solid var(--line);flex:none}
@@ -209,7 +233,7 @@ function loadHeroes(){
     HEROES=list;HERO_BY_ID.clear();HERO_BY_TOOL.clear();
     for(const h of list){HERO_BY_ID.set(h.id,h);if(h.tool)HERO_BY_TOOL.set(h.tool,h);}
     for(const [tool,h] of HERO_BY_TOOL) if(GENERALS[tool]) GENERALS[tool].name=h.name; // 用官方名覆盖(如 钟琰)
-    if(state)render();
+    if(state){maybeSeedPanel();render();} // 武将库到位后补播种(登记在库加载前的座位)
   }).catch(e=>console.warn("武将库加载失败(worker 可能未更新):",e));
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
@@ -467,7 +491,7 @@ function openSocket(){
   ws.onerror=()=>{};                               // close 会随后触发,重连统一由 onclose 调度,避免重复
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
-    if(m.type==="roomState"){state=m;render();}
+    if(m.type==="roomState"){state=m;maybeSeedPanel();render();}
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
     else if(m.type==="roomClosed"){intentionalClose=true;connected=false;updateConnBar();toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
     else if(m.type==="error"){toast("操作被拒:"+m.code);}
@@ -500,6 +524,7 @@ function render(){
     focus=null;
     h+=viewHeader();
     h+=viewSeats();
+    h+=viewPanel();
     h+=viewToolsIndex();
     h+=viewRoomAdmin();
   }
@@ -620,6 +645,98 @@ function viewSeats(){
     h+=`</div>`;
   }
   h+='</div>';
+  return h;
+}
+
+/* ---------- 全场状态面板(#1):血量/翻面/横置/连环/阵亡。常驻,全公开,任意座位可改任意座位 ---------- */
+let panelView=localStorage.getItem("sgs_panelView")||"list"; // 视图选择存本机(per-device)
+let distFrom=null;                                            // #2 环形距离视角座位(本机,非房间态;纯派生显示)
+const panelSeeded=new Set();                                  // 已按体力上限播种过的 seatNo:general(避免重复发)
+function maybeSeedPanel(){ // 登记武将后按武将库体力上限播种血量(客户端有 generals.json→零 worker 改)
+  if(!state||!state.seats) return;
+  for(const s of Object.values(state.seats)){
+    if(!s.general||s.general==="none"||s.hpMax!=null) continue; // 已播种或空座位跳过
+    const hero=heroForSeat(s.general), mx=hero&&Number(hero.hp);
+    if(!mx||!Number.isFinite(mx)) continue;                     // 手动/自定义将解析不到体力→用户手填
+    const key=s.seatNo+":"+s.general; if(panelSeeded.has(key)) continue;
+    panelSeeded.add(key);
+    send({type:"action",targetSeat:s.seatNo,bySeat:s.seatNo,toolAction:{type:"panelSetHpMax",hp:mx}});
+  }
+}
+function selfSeatForRing(){ // 环形"自己"=我持有的最小座位号;未入座则取第一个有将的座位钉底
+  const held=(state.youHold||[]).slice().sort((a,b)=>a-b);
+  if(held.length) return held[0];
+  const ss=Object.values(state.seats).filter(s=>s.general&&s.general!=="none");
+  return ss.length?ss[0].seatNo:1;
+}
+function panelFac(s,hero){ return s.chosenFaction||(hero&&!hero.factionSelectable?hero.faction:null); }
+function viewPanel(){
+  const seats=Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
+  const playing=seats.filter(s=>s.general&&s.general!=="none");
+  let h='<div class="card"><h2>全场状态<span class="tag">血量·翻面·横置·连环·阵亡</span></h2>';
+  h+=`<div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">视图</span>`
+    +`<button class="pnl-tab ${panelView==='list'?'on':''}" data-pv="list">列表</button>`
+    +`<button class="pnl-tab ${panelView==='ring'?'on':''}" data-pv="ring">环形</button>`
+    +`<span class="grow"></span><span class="hint" style="margin:0">任意座位都可改</span></div>`;
+  if(!playing.length){ return h+'<div class="hint">还没有座位登记武将。选好武将后,这里显示全场血量与状态。</div></div>'; }
+  h+= panelView==='ring'?viewPanelRing(seats):viewPanelList(seats);
+  return h+'</div>';
+}
+function viewPanelList(seats){
+  const hold=new Set(state.youHold||[]);
+  let h='';
+  for(const s of seats){
+    if(!s.general||s.general==="none"){ h+=`<div class="pnl-row" style="opacity:.4"><span class="grow"><span class="pnl-nm">座位 ${s.seatNo}</span> <span class="hint" style="margin:0">空</span></span></div>`; continue; }
+    const nm=seatGeneralName(s.general), hero=heroForSeat(s.general), fac=panelFac(s,hero);
+    const dying=(s.hp===0&&!s.dead);
+    h+=`<div class="pnl-row ${s.dead?'dead':(dying?'dying':'')}${hold.has(s.seatNo)?' me':''}">`
+      +`<button class="pnl-step" data-ph="${s.seatNo}:-1">−</button>`
+      +`<span class="pnl-hp" data-hpset="${s.seatNo}">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></span>`
+      +`<button class="pnl-step" data-ph="${s.seatNo}:1">+</button>`
+      +`<span class="grow" style="min-width:64px"><span class="pnl-nm">座位${s.seatNo} ${esc(nm)}</span>`
+      +(fac?`<span class="fc ${FCLS[fac]||'shen'}">${esc(fac)}</span>`:"")+`</span>`
+      +`<button class="pnl-flag ${s.flipped?'on':''}" data-pf="${s.seatNo}:flipped">翻</button>`
+      +`<button class="pnl-flag ${s.tapped?'on':''}" data-pf="${s.seatNo}:tapped">横</button>`
+      +`<button class="pnl-flag ${s.chained?'on':''}" data-pf="${s.seatNo}:chained">链</button>`
+      +`<button class="pnl-flag ${s.dead?'on':''}" data-pd="${s.seatNo}"${dying&&!s.dead?' style="border-color:var(--seal);color:var(--seal)"':''}>${s.dead?'复生':'阵亡'}</button>`
+      +`</div>`;
+  }
+  h+=`<div class="hint">点大数字可直接改血(支持「当前/上限」如 3/5);换武将自动按体力上限重置。翻=翻面 横=横置 链=连环。</div>`;
+  return h;
+}
+function aliveRingSeats(){ // #2 距离环:登记武将且未阵亡的座位(阵亡跳过、空座位不入环)
+  return Object.values(state.seats).filter(s=>s.general&&s.general!=="none"&&!s.dead).map(s=>s.seatNo).sort((a,b)=>a-b);
+}
+function ringDist(aliveNos,from,to){ // 座位环基础距离=存活环上最短弧步数(顺/逆取小)
+  const i=aliveNos.indexOf(from),j=aliveNos.indexOf(to); if(i<0||j<0) return null;
+  const n=aliveNos.length,d=Math.abs(i-j); return Math.min(d,n-d);
+}
+function viewPanelRing(seats){
+  const ordered=seats.slice().sort((a,b)=>a.seatNo-b.seatNo), N=ordered.length;
+  const self=selfSeatForRing(), selfIdx=Math.max(0,ordered.findIndex(s=>s.seatNo===self));
+  const hold=new Set(state.youHold||[]);
+  const alive=aliveRingSeats();
+  // 距离视角:默认自己(若在存活环内),否则第一个存活位;失效(阵亡/换空)则重挑
+  if(distFrom==null||!alive.includes(distFrom)) distFrom = alive.includes(self)?self:(alive.length?alive[0]:null);
+  let h='<div class="ring"><div class="ring-hub">'
+    +(distFrom!=null?`距离视角<br><b style="color:var(--seal)">座位${distFrom}</b><br>点座位切换`:'点存活座位<br>设为距离视角')
+    +'</div>';
+  ordered.forEach((s,i)=>{
+    const delta=((i-selfIdx)%N+N)%N, ang=2*Math.PI*delta/N, R=44;
+    const x=50+R*Math.sin(ang), y=50+R*Math.cos(ang); // delta=0→正下方;delta↑→逆时针(先向右)
+    const has=s.general&&s.general!=="none", dying=(s.hp===0&&!s.dead), inRing=has&&!s.dead;
+    const nm=has?seatGeneralName(s.general):"空";
+    const isVp=(s.seatNo===distFrom);
+    const d=(inRing&&!isVp&&distFrom!=null)?ringDist(alive,distFrom,s.seatNo):null;
+    const cls='ring-mini'+(hold.has(s.seatNo)?' me':'')+(s.dead?' dead':'')+(dying?' dying':'')+(isVp?' vp':'')+(d===1?' adj':'');
+    h+=`<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"${inRing?` data-distfrom="${s.seatNo}"`:''}>`
+      +`<div style="color:var(--ink-soft);font-size:10px">座位${s.seatNo}${isVp?' ·视角':(d!=null?` ·距${d}`:'')}</div>`
+      +`<div class="pnl-nm">${esc(nm.length>5?nm.slice(0,5):nm)}</div>`
+      +(has?`<div class="rhp">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></div>`:'')
+      +(has&&(s.flipped||s.tapped||s.chained)?`<div style="font-size:10px">${s.flipped?'翻':''}${s.tapped?'横':''}${s.chained?'链':''}</div>`:'')
+      +`</div>`;
+  });
+  h+='</div><div class="hint" style="text-align:center">自己钉正下方、逆时针递增。点存活座位设为<b>视角</b>,看它到各座位的<b>距离</b>(阵亡不计入环);<b style="color:var(--ok)">距1=相邻</b>绿框高亮。坐骑/武器修正见后续层;改血量/状态切「列表」。</div>';
   return h;
 }
 
@@ -894,6 +1011,18 @@ function bindAll(){
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});
+  // 全场状态面板:视图切换 / 血量±1 / 点数改血(可含上限)/ 翻横链切换 / 阵亡
+  q("[data-pv]").forEach(b=>b.onclick=()=>{panelView=b.dataset.pv;localStorage.setItem("sgs_panelView",panelView);render();});
+  const pAct=(sn,o)=>send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:o});
+  q("[data-ph]").forEach(b=>b.onclick=()=>{const[sn,d]=b.dataset.ph.split(":");const s=state.seats[+sn];const cur=(s&&s.hp!=null)?s.hp:((s&&s.hpMax!=null)?s.hpMax:0);pAct(sn,{type:"panelSetHp",hp:cur+(+d)});});
+  q("[data-hpset]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.hpset;const s=state.seats[sn];
+    const v=prompt("座位"+sn+" 体力。输入当前血,或「当前/上限」如 3/5",(s.hp==null?"":String(s.hp))+(s.hpMax!=null?"/"+s.hpMax:""));
+    if(v==null)return;const str=v.trim();if(!str)return;
+    if(str.includes("/")){const[a,mx]=str.split("/").map(x=>parseInt(x,10));if(Number.isFinite(mx))pAct(sn,{type:"panelSetHpMax",hp:mx});if(Number.isFinite(a))pAct(sn,{type:"panelSetHp",hp:a});}
+    else{const n=parseInt(str,10);if(!Number.isFinite(n))return toast("请输入数字");pAct(sn,{type:"panelSetHp",hp:n});}});
+  q("[data-pf]").forEach(b=>b.onclick=()=>{const[sn,flag]=b.dataset.pf.split(":");pAct(sn,{type:"panelToggle",flag});});
+  q("[data-distfrom]").forEach(b=>b.onclick=()=>{distFrom=+b.dataset.distfrom;render();}); // #2 环形:点座位设为距离视角(纯本机)
+  q("[data-pd]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.pd;const s=state.seats[sn];const to=!s.dead;if(to&&!confirm("将座位"+sn+" 标记为阵亡?(可再点复生)"))return;pAct(sn,{type:"panelSetDead",dead:to});});
   // 聚焦某工具时,派发给该工具的 bind
   const fseat=(focus!=null)?state.seats[focus]:null;
   if(fseat&&TOOLS[fseat.general]) TOOLS[fseat.general].bind(fseat,q);
