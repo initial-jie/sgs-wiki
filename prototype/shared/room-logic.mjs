@@ -115,30 +115,34 @@ function pxInB(m,p){ return p[0]>=0&&p[0]<m.grid.w&&p[1]>=0&&p[1]<m.grid.h; }
 function pxIsWall(m,p){ return m.walls.some(w=>w[0]===p[0]&&w[1]===p[1]); }
 function pxCityAt(m,p){ return m.cities.find(c=>c.pos[0]===p[0]&&c.pos[1]===p[1]); }
 export function pxParseIcon(icon){ const a=String(icon).split(":"); if(a[0]==="move") return {t:"move",dir:a[1],n:+a[2]}; return {t:a[0],n:+a[1]}; }
-// 尽览推箱子:从 start 沿 dir 滑到墙/边界,经"未画过"的城即触发;move 图标到达即自动移N格停留(撞新城触发一次,无链式)。
-// ⚠ 已画过(visited[no])的城市变为惰性地形:再经过不触发、move 城也不停留(直接滑过)——完成该图前不重复触发。
+// 尽览推箱子:从 start 沿 dir【先一路滑到墙/边界】,经"未画过"的城即触发(draw/heal 即时);
+// ⚠ move 图标不在城市当场触发位移——推到墙后,再从墙位置按该 move 城的箭头走 N 格停留(撞新城触发一次)。
+//   (用户2026-07-16勘误:如益州成都从[2,2]向北→先到墙[2,4]再向南2→[2,2],而非到成都立即向南。
+//    16图已校验:一次滑动至多经过1个 move 城、移动后不落墙、无链式。)
+// ⚠ 已画过(visited[no])的城市变为惰性地形:再经过不触发、也不计入 move——完成该图前不重复触发。
 // 返回 { path:[[x,y]...], events:[{pos,city}], moved }。纯函数,sim+worker+client 三处等价。
 export function pxComputeSlide(m, start, dir, visited){
   visited = visited || {};
   const dv=PX_DIRV[dir]; if(!dv) return { path:[start.slice()], events:[], moved:false };
-  const path=[start.slice()], events=[]; let pos=start.slice();
+  const path=[start.slice()], events=[]; let pos=start.slice(); let moveCity=null;
+  // 阶段一:沿花色方向推到墙/边界,经未画城即触发(draw/heal 即时);记下经过的 move 城(至多1个)
   while(true){
     const nx=[pos[0]+dv[0], pos[1]+dv[1]];
     if(!pxInB(m,nx) || pxIsWall(m,nx)) break;
     pos=nx; path.push(pos.slice());
     const c=pxCityAt(m,pos);
-    if(c && !visited[c.no]){ // 只有未画过的城市才触发/停留;已画过的当普通格滑过
+    if(c && !visited[c.no]){
       events.push({pos:pos.slice(), city:c});
-      const ic=pxParseIcon(c.icon);
-      if(ic.t==="move"){
-        const mv=PX_MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
-        for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!pxInB(m,np)||pxIsWall(m,np)) break; jp=np; path.push(jp.slice()); }
-        pos=jp;
-        const lc=pxCityAt(m,jp);
-        if(lc && lc.no!==c.no && !visited[lc.no]) events.push({pos:jp.slice(), city:lc}); // 撞新城(且未画过)触发一次
-        break; // move 后停留,尽览结束
-      }
+      if(pxParseIcon(c.icon).t==="move") moveCity=c; // 位移推迟到墙后
     }
+  }
+  // 阶段二:到墙后,从墙位置按 move 城箭头走 N 格停留
+  if(moveCity){
+    const ic=pxParseIcon(moveCity.icon), mv=PX_MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
+    for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!pxInB(m,np)||pxIsWall(m,np)) break; jp=np; path.push(jp.slice()); }
+    pos=jp;
+    const lc=pxCityAt(m,jp);
+    if(lc && lc.no!==moveCity.no && !visited[lc.no]) events.push({pos:jp.slice(), city:lc}); // 撞新城(未画过)触发一次,无链式
   }
   return { path, events, moved: path.length>1 };
 }
@@ -157,7 +161,7 @@ export const PUYUAN_FORGE = {
 ],
 "防具":[
   {name:"玲珑狮蛮带",suit:"黑桃",point:"2",text:"当你成为单一目标牌的目标后，你可以判定，若结果为红桃，取消之。"},
-  {name:"红棉百花袍",suit:"梅花",point:"A",text:"锁定技，防止你受到的属性伤害。"},
+  {name:"红锦百花袍",suit:"梅花",point:"A",text:"锁定技，防止你受到的属性伤害。"},
   {name:"国风玉袍",suit:"黑桃",point:"9",text:"锁定技，你不能成为普通锦囊牌的目标。"},
   {name:"奇门八卦",suit:"黑桃",point:"2",text:"锁定技，【杀】对你无效。"},
   {name:"护心镜",suit:"梅花",point:"A",text:"当你受到伤害时，若此伤害会令你进入濒死状态，或伤害值大于1，你可以将此牌置入弃牌堆并防止此伤害。"},

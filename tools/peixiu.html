@@ -216,29 +216,31 @@ function cityAt(m,p){ return m.cities.find(c=>c.pos[0]===p[0]&&c.pos[1]===p[1]);
 function parseIcon(icon){ const a=icon.split(':'); if(a[0]==='move') return {t:'move',dir:a[1],n:+a[2]}; return {t:a[0],n:+a[1]}; }
 
 /* 推箱子滑动：返回 {path:[[x,y]...], events:[{pos,city}], moved}
-   ⚠ 已画过(visited[no])的城市当普通格滑过：不触发图标、move 城也不停留（完成该图前不重复触发）。 */
+   ⚠ 先沿花色方向一路滑到墙/边界；move 图标不在城市当场转向——推到墙后再从墙位置按该 move 城箭头走 N 格停留。
+      (如益州成都从[2,2]向北→先到[2,4]再向南2→[2,2]。16图已校验:一次滑动至多1个move城、不落墙、无链式。)
+   ⚠ 已画过(visited[no])的城市当普通格滑过：不触发、也不计 move（完成该图前不重复触发）。 */
 function computeSlide(m, start, dir, visited){
   visited=visited||{};
   const dv=DIRV[dir]; const path=[start.slice()]; const events=[];
-  let pos=start.slice();
+  let pos=start.slice(), moveCity=null;
+  // 阶段一：推到墙，经未画城即触发（draw/heal 即时），记下经过的 move 城
   while(true){
     const nx=[pos[0]+dv[0], pos[1]+dv[1]];
     if(!inB(m,nx) || isWall(m,nx)) break;
     pos=nx; path.push(pos.slice());
     const c=cityAt(m,pos);
-    if(c && !visited[c.no]){ // 只有未画过的城市才触发/停留
+    if(c && !visited[c.no]){
       events.push({pos:pos.slice(), city:c});
-      const ic=parseIcon(c.icon);
-      if(ic.t==='move'){
-        // 到达即自动移动 N 格 → 停留（不再沿花色方向滑）
-        const mv=MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
-        for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!inB(m,np)||isWall(m,np)) break; jp=np; path.push(jp.slice()); }
-        pos=jp;
-        const lc=cityAt(m,jp);
-        if(lc && lc.no!==c.no && !visited[lc.no]) events.push({pos:jp.slice(), city:lc}); // 撞新城(且未画过)触发一次，无链式
-        break;
-      }
+      if(parseIcon(c.icon).t==='move') moveCity=c; // 位移推迟到墙后
     }
+  }
+  // 阶段二：到墙后按 move 城箭头走 N 格停留
+  if(moveCity){
+    const ic=parseIcon(moveCity.icon), mv=MVDIR[ic.dir]||[0,0]; let jp=pos.slice();
+    for(let i=0;i<ic.n;i++){ const np=[jp[0]+mv[0],jp[1]+mv[1]]; if(!inB(m,np)||isWall(m,np)) break; jp=np; path.push(jp.slice()); }
+    pos=jp;
+    const lc=cityAt(m,jp);
+    if(lc && lc.no!==moveCity.no && !visited[lc.no]) events.push({pos:jp.slice(), city:lc}); // 撞新城(未画过)触发一次，无链式
   }
   return { path, events, moved: path.length>1 };
 }

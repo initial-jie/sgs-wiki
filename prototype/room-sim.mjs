@@ -724,6 +724,11 @@ const yan = PEIXIU_MAPS["兖州"];
 check("陈留 icon = move:right:1", yan.cities.find((c) => c.name === "陈留").icon === "move:right:1");
 const slChenliu = pxComputeSlide(yan, [1, 0], "W", {}); // 西入陈留[0,0]→move:right:1→[1,0]
 check("★陈留 move:right:1:西入触发→右移1停[1,0]", slChenliu.events.length === 1 && slChenliu.events[0].city.name === "陈留" && slChenliu.path[slChenliu.path.length - 1].join() === "1,0");
+// ★move 时序勘误(2026-07-16):先推到墙,再从墙位置走箭头 N 格(非到城即转向)
+const slCd = pxComputeSlide(PEIXIU_MAPS["益州"], [2, 2], "N", {}); // 成都[2,3]move:down:2;北→先到墙[2,4]再南2→[2,2]
+check("★成都:北滑先到墙[2,4]再向南2→停[2,2](非到成都即转)", slCd.events.some(e => e.city.name === "成都") && slCd.path[slCd.path.length - 1].join() === "2,2");
+const slCdWall = pxComputeSlide(PEIXIU_MAPS["益州"], [2, 2], "N", {}).path.some(p => p.join() === "2,4");
+check("★成都:滑行路径确实经过墙位[2,4]", slCdWall === true);
 // move 撞墙夹停:豫州汝南 up:3 但顶行 y=4 全墙 → 只上移2格停[1,3](⚠ 若日后确认顶墙有误需同步改数据+此断言)
 const slRunan = pxComputeSlide(PEIXIU_MAPS["豫州"], [1, 0], "N", {});
 check("汝南 up:3 撞豫州顶墙夹停[1,3](只移2格)", slRunan.events[0].city.name === "汝南" && slRunan.path[slRunan.path.length - 1].join() === "1,3");
