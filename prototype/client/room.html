@@ -238,8 +238,7 @@ const HERO_BY_ID=new Map();    // id(数字) -> hero
 const HERO_BY_TOOL=new Map();  // toolId -> hero
 let DERIVED={};                // 常见武将牌衍生技,按来源武将存:{武将名(去·空格)→[{name,tag,text}]};从 /derived-skills.json 拉
 let DCARDS={};                  // 常见武将牌衍生牌,按来源武将存:{武将名(去·空格)→[{name,src,text}]};从 /derived-cards.json 拉
-let EQUIP=[];                    // 装备牌库(/equipment.json);#2 距离层坐骑下拉数据源
-let MOUNTS_ATK=[],MOUNTS_DEF=[]; // 进攻马(-1马/坐骑)、防御马(+1马)
+let EQUIP=[];                    // 装备牌库(/equipment.json);#2 装备区/坐骑下拉数据源(按 slot.types 过滤)
 const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
 const SUIT_CH={S:"♠",H:"♥",C:"♣",D:"♦"}; // 纯字符(用于 <option> 文本,不能用返回 HTML 的 suitGlyph)
 function loadHeroes(){
@@ -251,10 +250,7 @@ function loadHeroes(){
   }).catch(e=>console.warn("武将库加载失败(worker 可能未更新):",e));
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
-  fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ // 装备牌库→坐骑下拉
-    EQUIP=d; MOUNTS_ATK=d.filter(e=>e.type==="-1马"||e.type==="坐骑"); MOUNTS_DEF=d.filter(e=>e.type==="+1马");
-    if(state)render();
-  }).catch(()=>{});
+  fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ EQUIP=d; if(state)render(); }).catch(()=>{}); // 装备牌库→装备槽下拉
 }
 // 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
 function derivedCardsHtml(hero){
@@ -705,15 +701,6 @@ function viewPanel(){
   h+= panelView==='ring'?viewPanelRing(seats):viewPanelList(seats);
   return h+'</div>';
 }
-function mountSelect(sn,kind){ // kind: atk(-1马/进攻) / def(+1马/防御)
-  const list=kind==="atk"?MOUNTS_ATK:MOUNTS_DEF;
-  const cur=state.seats[sn][kind==="atk"?"atkHorse":"defHorse"];
-  const curKey=cur?`${cur.name}|${cur.suit}|${cur.rank}`:"";
-  let opts=`<option value="">${kind==="atk"?"进攻马 -1":"防御马 +1"}:无</option>`;
-  for(const e of list){ const key=`${e.name}|${e.suit}|${e.rank}`;
-    opts+=`<option value="${esc(key)}"${key===curKey?" selected":""}>${SUIT_CH[e.suit]||""}${e.rank} ${esc(e.name)}${e.origin==="衍生"?"·衍":""}</option>`; }
-  return `<select class="pnl-msel" data-mount="${sn}:${kind}">${opts}</select>`;
-}
 function viewPanelList(seats){
   const hold=new Set(state.youHold||[]);
   let h='';
@@ -761,11 +748,17 @@ function ringDist(aliveNos,from,to){ // 座位环基础距离=存活环上最短
 function mountMag(card){ return card ? (card.name==="軨軨"?2:1) : 0; } // 坐骑距离贡献(軨軨=-2,余=±1)
 const abol=(s,slot)=>!!(s&&s.abolished&&s.abolished[slot]);              // 该装备槽是否被废除
 function effMax(s){ return (!s||s.hpMax==null)?null:s.hpMax+(s.lordBonus?1:0); } // 有效体力上限=基础+君主加成
-function atkRange(s){ return (s&&s.weapon&&!abol(s,"weapon"))?(Number(s.weapon.range)||1):1; } // 攻击范围(无武器/废除=1)
+function dwWeapons(s){ return (s&&s.general==="dianwei"&&s.toolState&&Array.isArray(s.toolState.weapons))?s.toolState.weapons:null; } // 神典韦以武将为武器:读工具已装武器
+function atkRange(s){ // 攻击范围:神典韦=其工具已装武器最大范围;否则武器槽范围;无武器/废除=1
+  const dw=dwWeapons(s);
+  if(dw) return dw.length?Math.max(...dw.map(w=>Number(w.range)||1)):1;
+  return (s&&s.weapon&&!abol(s,"weapon"))?(Number(s.weapon.range)||1):1;
+}
 // #2 非对称距离:from 到 to = 基础弧 − from进攻马 + to防御马(废除的马不计),下限1
 function seatDist(aliveNos,from,to){
   const base=ringDist(aliveNos,from,to); if(base==null) return null;
   const f=state.seats[from],t=state.seats[to];
+  if(t&&!abol(t,"atkHorse")&&t.atkHorse&&t.atkHorse.name==="驽马") return 1; // 驽马:其他角色计算与你的距离始终为1
   const fAtk=abol(f,"atkHorse")?0:mountMag(f&&f.atkHorse), tDef=abol(t,"defHorse")?0:mountMag(t&&t.defHorse);
   return Math.max(1, base - fAtk + tDef);
 }
@@ -844,9 +837,16 @@ function sheetHtml(s){
     +`<button class="pnl-flag${s.tapped?' on':''}" data-pf="${sn}:tapped">横置</button>`
     +`<button class="pnl-flag${s.chained?' on':''}" data-pf="${sn}:chained">连环</button>`
     +`<button class="pnl-flag${s.dead?' on':''}" data-pd="${sn}">${s.dead?"复生":"阵亡"}</button></div></div>`;
-  h+=`<div class="shsec"><div class="shh">装备区 <span class="hint" style="margin:0">下拉选牌 · 废除=技能作废该区</span></div>`
-    +EQ_SLOTS.map(slot=>equipSelect(sn,slot)).join("")
-    +(isDw?`<div class="hint">⚠ 神典韦「以武将为武器」,武器请在其专属工具里设;此处武器槽仅作通用登记。</div>`:"")+`</div>`;
+  h+=`<div class="shsec"><div class="shh">装备区 <span class="hint" style="margin:0">下拉选牌 · 废除=技能作废该区</span></div>`;
+  if(isDw){ // 神典韦:武器+副武器区=以武将为武器,读其工具(单一数据源),不用通用武器/防具槽
+    const w=dwWeapons(s)||[];
+    h+=`<div class="row" style="margin-bottom:5px"><span class="shslot">武器/副武器</span>`
+      +`<span class="hint" style="margin:0;flex:1 1 0">神典韦以武将为武器:<b>${w.length?w.map(x=>esc(x.name)+"(范"+(x.range??"?")+")").join("、"):"未装备"}</b> —— 在下方登场工具「神典韦」里设</span></div>`;
+    h+=EQ_SLOTS.filter(sl=>sl.k!=="weapon"&&sl.k!=="armor").map(slot=>equipSelect(sn,slot)).join("");
+  }else{
+    h+=EQ_SLOTS.map(slot=>equipSelect(sn,slot)).join("");
+  }
+  h+=`</div>`;
   const jAbol=abol(s,"judgment"), J=[["乐不思蜀","乐"],["兵粮寸断","兵"],["闪电","闪电"]];
   h+=`<div class="shsec"><div class="shh">判定区 <span class="hint" style="margin:0">同名不叠·只记种类</span>`
     +`<button class="pnl-flag${jAbol?' on':''}" data-abolish="${sn}:judgment" style="float:right">${jAbol?"恢复":"废除"}</button></div>`
