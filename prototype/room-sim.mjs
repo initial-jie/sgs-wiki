@@ -906,5 +906,37 @@ roomPanel.setGeneral(pd[1], 1, "simayi");             // 换武将
 check("★换武将→面板全重置(hp/hpMax=null,翻面/横置/连环/阵亡=false)",
   PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null && PV(pd[1], 1).flipped === false && PV(pd[1], 1).tapped === false && PV(pd[1], 1).chained === false && PV(pd[1], 1).dead === false);
 
+// ═══════════ 动态座位数(#2):2~10,只从末位增减,删占用位撤持有 ═══════════
+const roomSeat = new RoomCore("8080", 3, () => 0); // 起始 3 座
+const stv = "seatdev";
+roomSeat.claimSeat(stv, 3); roomSeat.setGeneral(stv, 3, "guozhao"); // 座位3 占上
+
+console.log("\n=== 座位增减:边界 + 末位 + 撤持有 ===");
+check("加座位→4号出现", roomSeat.addSeat(stv).seatNo === 4 && !!roomSeat.seats[4] && Object.keys(roomSeat.seats).length === 4);
+check("新座位面板字段就位(hp=null)", roomSeat.seats[4].hp === null && roomSeat.seats[4].general === null);
+// 连加到 10
+while (Object.keys(roomSeat.seats).length < 10) roomSeat.addSeat(stv);
+check("加到 10 座", Object.keys(roomSeat.seats).length === 10);
+check("超过 10 被拒(MAX_SEATS)", roomSeat.addSeat(stv).error === "MAX_SEATS");
+// 减回去(末位空座位)
+check("减座位→删最高号 10", roomSeat.removeSeat(stv).removed === 10 && !roomSeat.seats[10] && Object.keys(roomSeat.seats).length === 9);
+while (Object.keys(roomSeat.seats).length > 4) roomSeat.removeSeat(stv);
+check("减到 4 座(座位3 武将仍在,未被误删)", Object.keys(roomSeat.seats).length === 4 && roomSeat.seats[3].general === "guozhao");
+// 删占用的末位:先让 4 号被 sd 认领,再删到 4
+roomSeat.claimSeat(stv, 4);
+check("sd 持有座位4", roomSeat.devices[stv].holds.has(4));
+check("删末位4(占用)→座位没了 + 持有被撤", roomSeat.removeSeat(stv).removed === 4 && !roomSeat.seats[4] && !roomSeat.devices[stv].holds.has(4));
+// 减到底 2 后不能再减
+while (Object.keys(roomSeat.seats).length > 2) roomSeat.removeSeat(stv);
+check("减到 2 座", Object.keys(roomSeat.seats).length === 2);
+check("低于 2 被拒(MIN_SEATS)", roomSeat.removeSeat(stv).error === "MIN_SEATS");
+// 持久化往返:动态座位数应存活(JSON 往返模拟 DO storage.put 落盘的结构化克隆)
+const seatSnap = JSON.parse(JSON.stringify(roomSeat.serialize())); // 2 座快照
+check("hydrate 还原 2 座快照", Object.keys(RoomCore.hydrate(seatSnap).seats).length === 2);
+roomSeat.addSeat(stv); // 现 3 座
+const seatSnap2 = JSON.parse(JSON.stringify(roomSeat.serialize()));
+const hy2 = RoomCore.hydrate(seatSnap2);
+check("序列化含动态座位数(2→再加→3)", !!hy2.seats[3] && Object.keys(hy2.seats).length === 3);
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

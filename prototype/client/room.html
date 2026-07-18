@@ -608,7 +608,12 @@ function viewHeader(){
 }
 
 function viewSeats(){
+  const N=Object.keys(state.seats).length;
   let h='<div class="card"><h2>座位<span class="tag">点认领入座 · 可代持没电的座位</span></h2>';
+  h+=`<div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">共 <b>${N}</b> 座</span>`
+    +`<button class="ghost" data-seatminus="1"${N<=2?' disabled':''}>− 减座位</button>`
+    +`<button class="ghost" data-seatplus="1"${N>=10?' disabled':''}>＋ 加座位</button>`
+    +`<span class="grow"></span><span class="hint" style="margin:0">2–10,从末位增减</span></div>`;
   const hold=new Set(state.youHold);
   for(const s of Object.values(state.seats)){
     const mine=hold.has(s.seatNo);
@@ -1005,6 +1010,8 @@ function bindAll(){
   // 大厅:座位认领 / 释放 / 选武将
   q("[data-claim]").forEach(b=>b.onclick=()=>send({type:"claimSeat",seatNo:+b.dataset.claim}));
   q("[data-rel]").forEach(b=>b.onclick=()=>send({type:"releaseSeat",seatNo:+b.dataset.rel}));
+  q("[data-seatplus]").forEach(b=>b.onclick=()=>send({type:"addSeat"}));
+  q("[data-seatminus]").forEach(b=>b.onclick=()=>{const nos=Object.keys(state.seats).map(Number).sort((a,b)=>a-b);const last=nos[nos.length-1];const s=state.seats[last];const occ=s&&(s.general||s.holderDevices.length);if(occ&&!confirm("将删除最末位「座位"+last+"」"+(s.general?"("+seatGeneralName(s.general)+")":"")+"。\n该座位已被占用,删除会清空其武将/状态。确定?"))return;send({type:"removeSeat"});});
   q("[data-takeover]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.takeover;const s=state.seats[sn];const who=(s&&s.holderDevices[0])||"?";if(confirm("座位 "+sn+" 当前由「"+who+"」持有。\n确定解锁并替换,由你接管该座位?"))send({type:"takeoverSeat",seatNo:sn});});
   q("[data-disband]").forEach(b=>b.onclick=()=>{if(confirm("确定解散整个房间?\n所有座位、工具进度将清空,全体退出,且不可恢复。\n(仅想自己换桌请用「新开房间」)"))send({type:"disbandRoom"});});
   q("[data-tejump]").forEach(b=>b.onclick=()=>{focus=+b.dataset.tejump;render();});

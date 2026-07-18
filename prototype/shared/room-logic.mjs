@@ -431,11 +431,14 @@ export class RoomCore {
     this.roomCode = roomCode;
     this.rng = rng; // 注入随机源:worker 用 Math.random,sim 传确定值以复现
     this.seats = {};
-    for (let i = 1; i <= seatCount; i++)
-      this.seats[i] = { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
-        // 全场状态面板(全公开,任意设备可改任意座位):血量/翻面/横置/连环/阵亡。hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)
-        hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false };
+    for (let i = 1; i <= seatCount; i++) this.seats[i] = this._newSeat(i);
     this.devices = {};
+  }
+
+  // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/横置/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)
+  _newSeat(i) {
+    return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
+      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false };
   }
 
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
@@ -483,6 +486,26 @@ export class RoomCore {
     if (!ok) return { error: "BAD_FACTION" };
     this.seats[n].chosenFaction = faction ?? null;
     return { ok: true };
+  }
+
+  // 动态座位数(2~10,只从末位增减,永远 1..N 连续,不删中间/不重编号)。任意设备可点(无 holder 守卫)
+  addSeat(id) {
+    this.connect(id);
+    const nos = Object.keys(this.seats).map(Number);
+    const n = nos.length ? Math.max(...nos) : 0;
+    if (n >= 10) return { error: "MAX_SEATS" };
+    const next = n + 1;
+    this.seats[next] = this._newSeat(next);
+    return { ok: true, seatNo: next };
+  }
+  removeSeat(id) { // 删最高号座位;撤下其在各设备的持有(前端对已占用座位二次确认)
+    this.connect(id);
+    const nos = Object.keys(this.seats).map(Number).sort((a, b) => a - b);
+    if (nos.length <= 2) return { error: "MIN_SEATS" };
+    const last = nos[nos.length - 1];
+    for (const d of Object.keys(this.devices)) this.devices[d].holds.delete(last);
+    delete this.seats[last];
+    return { ok: true, removed: last };
   }
 
   _log(ts, msg) { ts.log.unshift(msg); if (ts.log.length > 200) ts.log.pop(); }

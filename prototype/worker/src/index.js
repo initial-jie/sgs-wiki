@@ -183,6 +183,8 @@ export class RoomDO {
         break;
       }
       case "releaseSeat": core.releaseSeat(this.dev(ws), msg.seatNo); break;
+      case "addSeat": { const r = core.addSeat(this.dev(ws)); if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); break; }
+      case "removeSeat": { const r = core.removeSeat(this.dev(ws)); if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); break; }
       case "disbandRoom": // 任意玩家解散房间
         await this.disband();
         return; // 已广播关闭并断开,不再 broadcast/persist
