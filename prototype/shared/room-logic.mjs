@@ -441,7 +441,8 @@ export class RoomCore {
   _newSeat(i) {
     return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
       hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false, lordBonus: false,
-      weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {} };
+      weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {},
+      judgments: [] }; // 判定区:乐不思蜀/兵粮寸断/闪电 种类列表(同名不叠;只记种类不记花色点数)
   }
 
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
@@ -479,7 +480,7 @@ export class RoomCore {
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
     ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.tapped = false; ps.chained = false; ps.dead = false; ps.lordBonus = false;
-    ps.weapon = null; ps.armor = null; ps.atkHorse = null; ps.defHorse = null; ps.treasure = null; ps.abolished = {};
+    ps.weapon = null; ps.armor = null; ps.atkHorse = null; ps.defHorse = null; ps.treasure = null; ps.abolished = {}; ps.judgments = [];
     return { ok: true };
   }
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
@@ -525,7 +526,7 @@ export class RoomCore {
     const isLvbu = bySeat === targetSeat && iHold(bySeat); // 吕布本人(或代持吕布座位)
 
     // ───────── 全场状态面板(全公开,任意设备可改任意座位,无 holder 守卫)。与武将无关,置于工具分发之前 ─────────
-    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead" || t === "panelSetEquip" || t === "panelAbolish" || t === "panelSetLord") {
+    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead" || t === "panelSetEquip" || t === "panelAbolish" || t === "panelSetLord" || t === "panelToggleJudge") {
       const clampInt = (v, lo, hi) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; };
       const effMax = () => target.hpMax == null ? null : target.hpMax + (target.lordBonus ? 1 : 0); // 有效上限=基础+君主加成
       const EQ_SLOTS = ["weapon", "armor", "atkHorse", "defHorse", "treasure"];
@@ -559,10 +560,18 @@ export class RoomCore {
         target[slot] = toolAction.card || null;
         return { ok: true };
       }
-      if (t === "panelAbolish") { // 废除/恢复某装备槽(张绣/刘宏等)
-        const slot = toolAction.slot; if (!EQ_SLOTS.includes(slot)) return { error: "BAD_SLOT" };
+      if (t === "panelAbolish") { // 废除/恢复某装备槽或判定区(张绣/刘宏等)
+        const slot = toolAction.slot; if (!EQ_SLOTS.includes(slot) && slot !== "judgment") return { error: "BAD_SLOT" };
         if (!target.abolished) target.abolished = {};
         if (toolAction.on) target.abolished[slot] = true; else delete target.abolished[slot];
+        return { ok: true };
+      }
+      if (t === "panelToggleJudge") { // 判定区:乐/兵/闪电 加或移(同名不叠,toggle)
+        const JK = ["乐不思蜀", "兵粮寸断", "闪电"];
+        const k = toolAction.kind; if (!JK.includes(k)) return { error: "BAD_JUDGE" };
+        if (!Array.isArray(target.judgments)) target.judgments = [];
+        const i = target.judgments.indexOf(k);
+        if (i >= 0) target.judgments.splice(i, 1); else target.judgments.push(k);
         return { ok: true };
       }
     }
@@ -1792,7 +1801,8 @@ export class RoomCore {
       seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
         // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
         hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
-        weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {} };
+        weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
+        judgments: s.judgments ?? [] };
     return { roomCode: this.roomCode, youHold: [...holds], seats };
   }
 

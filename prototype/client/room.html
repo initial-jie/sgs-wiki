@@ -747,6 +747,7 @@ function equipSummary(s){ // 列表行紧凑装备摘要(废除的不计)
   if(s.atkHorse&&!abol(s,"atkHorse")) p.push('<span style="color:var(--ok)">-'+mountMag(s.atkHorse)+'</span>');
   if(s.defHorse&&!abol(s,"defHorse")) p.push('<span style="color:var(--seal)">+1</span>');
   if(s.treasure&&!abol(s,"treasure")) p.push("宝");
+  if(!abol(s,"judgment")&&(s.judgments||[]).length) p.push('<span style="color:var(--warn)">判'+s.judgments.map(k=>k==="乐不思蜀"?"乐":k==="兵粮寸断"?"兵":"闪").join("")+'</span>');
   const ab=Object.keys(s.abolished||{}).length;
   return (p.length?"装备 "+p.join(" "):"无装备")+(ab?` <span style="color:var(--warn)">废${ab}</span>`:"");
 }
@@ -846,7 +847,12 @@ function sheetHtml(s){
   h+=`<div class="shsec"><div class="shh">装备区 <span class="hint" style="margin:0">下拉选牌 · 废除=技能作废该区</span></div>`
     +EQ_SLOTS.map(slot=>equipSelect(sn,slot)).join("")
     +(isDw?`<div class="hint">⚠ 神典韦「以武将为武器」,武器请在其专属工具里设;此处武器槽仅作通用登记。</div>`:"")+`</div>`;
-  h+=`<div class="shsec"><div class="shh">判定区</div><div class="hint">乐不思蜀/兵粮寸断/闪电 等——下一步(⑤层)加进这里。</div></div>`;
+  const jAbol=abol(s,"judgment"), J=[["乐不思蜀","乐"],["兵粮寸断","兵"],["闪电","闪电"]];
+  h+=`<div class="shsec"><div class="shh">判定区 <span class="hint" style="margin:0">同名不叠·只记种类</span>`
+    +`<button class="pnl-flag${jAbol?' on':''}" data-abolish="${sn}:judgment" style="float:right">${jAbol?"恢复":"废除"}</button></div>`
+    +`<div class="row"${jAbol?' style="opacity:.45"':''}>`
+    +J.map(([k,lbl])=>`<button class="pnl-flag${(s.judgments||[]).includes(k)?' on':''}" data-judge="${sn}:${k}">${lbl}</button>`).join("")
+    +`<span class="hint" style="margin:0">闪电沿座次传下家请手动挪</span></div></div>`;
   return h+`</div></div>`;
 }
 function openSeatSheet(sn){ sheetSeat=sn; renderSheet(); }
@@ -1150,9 +1156,13 @@ function bindAll(){
       if(f)card={name:f.name,suit:f.suit,rank:f.rank,type:f.type,range:f.range}; }
     send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelSetEquip",slot,card}});
   });
-  q("[data-abolish]").forEach(b=>b.onclick=()=>{ // #2 ④废除/恢复装备槽
+  q("[data-abolish]").forEach(b=>b.onclick=()=>{ // #2 ④废除/恢复装备槽或判定区
     const [sn,slot]=b.dataset.abolish.split(":"); const on=!(state.seats[+sn].abolished||{})[slot];
     send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelAbolish",slot,on}});
+  });
+  q("[data-judge]").forEach(b=>b.onclick=()=>{ // #2 ⑤判定区:乐/兵/闪电 toggle
+    const [sn,kind]=b.dataset.judge.split(":");
+    send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelToggleJudge",kind}});
   });
   q("[data-pd]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.pd;const s=state.seats[sn];const to=!s.dead;if(to&&!confirm("将座位"+sn+" 标记为阵亡?(可再点复生)"))return;pAct(sn,{type:"panelSetDead",dead:to});});
   // 聚焦某工具时,派发给该工具的 bind

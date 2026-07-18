@@ -922,14 +922,24 @@ check("开君主加成→当前血也+1(5/5)", pAct(1, 1, { type: "panelSetLord"
 check("有效上限=基础4+1,置数6被夹到5", pAct(1, 1, { type: "panelSetHp", hp: 6 }).ok && PV(pd[1], 1).hp === 5);
 check("关君主加成→血夹回4", pAct(1, 1, { type: "panelSetLord", on: false }).ok && PV(pd[1], 1).hp === 4 && PV(pd[1], 1).lordBonus === false);
 
+console.log("\n=== 面板6:判定区(#2 ⑤层)—— 乐/兵/闪电 可叠加 + 整区废除 ===");
+check("加乐不思蜀", pAct(1, 1, { type: "panelToggleJudge", kind: "乐不思蜀" }).ok && PV(pd[1], 1).judgments.includes("乐不思蜀"));
+check("再加闪电(可叠加,同时有2张)", pAct(1, 1, { type: "panelToggleJudge", kind: "闪电" }).ok && PV(pd[1], 1).judgments.length === 2);
+check("★判定区对旁人公开", PV(pd[2], 1).judgments.includes("闪电"));
+check("再点乐→移除(toggle)", pAct(1, 1, { type: "panelToggleJudge", kind: "乐不思蜀" }).ok && !PV(pd[1], 1).judgments.includes("乐不思蜀") && PV(pd[1], 1).judgments.length === 1);
+check("非法判定牌被拒(BAD_JUDGE)", pAct(1, 1, { type: "panelToggleJudge", kind: "杀" }).error === "BAD_JUDGE");
+check("废除判定区(slot=judgment)", pAct(1, 1, { type: "panelAbolish", slot: "judgment", on: true }).ok && PV(pd[1], 1).abolished.judgment === true);
+check("恢复判定区", pAct(1, 1, { type: "panelAbolish", slot: "judgment", on: false }).ok && !PV(pd[1], 1).abolished.judgment);
+
 pAct(1, 1, { type: "panelSetEquip", slot: "atkHorse", card: HORSE }); // 换将前挂满,验证重置
 pAct(1, 1, { type: "panelSetLord", on: true }); pAct(1, 1, { type: "panelAbolish", slot: "weapon", on: true });
+pAct(1, 1, { type: "panelToggleJudge", kind: "兵粮寸断" });
 roomPanel.setGeneral(pd[1], 1, "simayi");             // 换武将
 const R = PV(pd[1], 1);
-check("★换武将→面板全重置(血/状态/坐骑/武器/宝物/废除/君主 全清)",
+check("★换武将→面板全重置(血/状态/坐骑/武器/宝物/废除/君主/判定 全清)",
   R.hp === null && R.hpMax === null && R.flipped === false && R.dead === false && R.lordBonus === false &&
   R.weapon === null && R.armor === null && R.atkHorse === null && R.defHorse === null && R.treasure === null &&
-  Object.keys(R.abolished).length === 0);
+  Object.keys(R.abolished).length === 0 && R.judgments.length === 0);
 
 // ═══════════ 动态座位数(#2):2~10,只从末位增减,删占用位撤持有 ═══════════
 const roomSeat = new RoomCore("8080", 3, () => 0); // 起始 3 座
