@@ -1,0 +1,441 @@
+[
+ {
+  "name": "雌雄双股剑",
+  "type": "武器",
+  "suit": "S",
+  "rank": "2",
+  "origin": "源生",
+  "range": 2
+ },
+ {
+  "name": "方天画戟",
+  "type": "武器",
+  "suit": "D",
+  "rank": "Q",
+  "origin": "源生",
+  "range": 4
+ },
+ {
+  "name": "古锭刀",
+  "type": "武器",
+  "suit": "S",
+  "rank": "A",
+  "origin": "源生",
+  "range": 2
+ },
+ {
+  "name": "贯石斧",
+  "type": "武器",
+  "suit": "D",
+  "rank": "5",
+  "origin": "源生",
+  "range": 3
+ },
+ {
+  "name": "寒冰剑",
+  "type": "武器",
+  "suit": "S",
+  "rank": "2",
+  "origin": "源生",
+  "range": 2
+ },
+ {
+  "name": "麒麟弓",
+  "type": "武器",
+  "suit": "H",
+  "rank": "5",
+  "origin": "源生",
+  "range": 5
+ },
+ {
+  "name": "青釭剑",
+  "type": "武器",
+  "suit": "S",
+  "rank": "6",
+  "origin": "源生",
+  "range": 2
+ },
+ {
+  "name": "青龙偃月刀",
+  "type": "武器",
+  "suit": "S",
+  "rank": "5",
+  "origin": "源生",
+  "range": 3
+ },
+ {
+  "name": "丈八蛇矛",
+  "type": "武器",
+  "suit": "S",
+  "rank": "Q",
+  "origin": "源生",
+  "range": 3
+ },
+ {
+  "name": "朱雀羽扇",
+  "type": "武器",
+  "suit": "D",
+  "rank": "A",
+  "origin": "源生",
+  "range": 4
+ },
+ {
+  "name": "诸葛连弩",
+  "type": "武器",
+  "suit": "C",
+  "rank": "A",
+  "origin": "源生",
+  "range": 1
+ },
+ {
+  "name": "诸葛连弩",
+  "type": "武器",
+  "suit": "D",
+  "rank": "A",
+  "origin": "源生",
+  "range": 1
+ },
+ {
+  "name": "百辟刀",
+  "type": "武器",
+  "suit": "S",
+  "rank": "2",
+  "origin": "衍生",
+  "srcHero": "魔曹操",
+  "range": 2
+ },
+ {
+  "name": "镔铁双戟",
+  "type": "武器",
+  "suit": "D",
+  "rank": "K",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 3
+ },
+ {
+  "name": "赤血青锋",
+  "type": "武器",
+  "suit": "S",
+  "rank": "6",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 2
+ },
+ {
+  "name": "鬼龙斩月刀",
+  "type": "武器",
+  "suit": "S",
+  "rank": "5",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 3
+ },
+ {
+  "name": "魂·诸葛连弩",
+  "type": "武器",
+  "suit": "C",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "神黄月英",
+  "range": 1,
+  "note": "魂·覆盖【折戟】"
+ },
+ {
+  "name": "七宝刀",
+  "type": "武器",
+  "suit": "S",
+  "rank": "6",
+  "origin": "衍生",
+  "srcHero": "魔曹操",
+  "range": 2
+ },
+ {
+  "name": "乌铁锁链",
+  "type": "武器",
+  "suit": "S",
+  "rank": "K",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 3
+ },
+ {
+  "name": "无双方天戟",
+  "type": "武器",
+  "suit": "D",
+  "rank": "Q",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 4
+ },
+ {
+  "name": "五行鹤翎扇",
+  "type": "武器",
+  "suit": "D",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "蒲元",
+  "range": 4
+ },
+ {
+  "name": "折戟",
+  "type": "武器",
+  "suit": "C",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "神黄月英",
+  "range": 0
+ },
+ {
+  "name": "八卦阵",
+  "type": "防具",
+  "suit": "S",
+  "rank": "2",
+  "origin": "源生"
+ },
+ {
+  "name": "八卦阵",
+  "type": "防具",
+  "suit": "C",
+  "rank": "2",
+  "origin": "源生"
+ },
+ {
+  "name": "白银狮子",
+  "type": "防具",
+  "suit": "C",
+  "rank": "A",
+  "origin": "源生"
+ },
+ {
+  "name": "仁王盾",
+  "type": "防具",
+  "suit": "C",
+  "rank": "2",
+  "origin": "源生"
+ },
+ {
+  "name": "藤甲",
+  "type": "防具",
+  "suit": "S",
+  "rank": "2",
+  "origin": "源生"
+ },
+ {
+  "name": "藤甲",
+  "type": "防具",
+  "suit": "C",
+  "rank": "2",
+  "origin": "源生"
+ },
+ {
+  "name": "国风玉袍",
+  "type": "防具",
+  "suit": "S",
+  "rank": "9",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "黑光铠",
+  "type": "防具",
+  "suit": "C",
+  "rank": "2",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "红锦百花袍",
+  "type": "防具",
+  "suit": "C",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "护心镜",
+  "type": "防具",
+  "suit": "C",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "魂·八卦阵",
+  "type": "防具",
+  "suit": "H",
+  "rank": "9",
+  "origin": "衍生",
+  "srcHero": "神黄月英",
+  "note": "魂·覆盖【女装】"
+ },
+ {
+  "name": "玲珑狮蛮带",
+  "type": "防具",
+  "suit": "S",
+  "rank": "2",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "女装",
+  "type": "防具",
+  "suit": "H",
+  "rank": "9",
+  "origin": "衍生",
+  "srcHero": "神黄月英"
+ },
+ {
+  "name": "奇门八卦",
+  "type": "防具",
+  "suit": "S",
+  "rank": "2",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "的卢",
+  "type": "+1马",
+  "suit": "C",
+  "rank": "5",
+  "origin": "源生"
+ },
+ {
+  "name": "骅骝",
+  "type": "+1马",
+  "suit": "D",
+  "rank": "K",
+  "origin": "源生"
+ },
+ {
+  "name": "绝影",
+  "type": "+1马",
+  "suit": "S",
+  "rank": "5",
+  "origin": "源生"
+ },
+ {
+  "name": "爪黄飞电",
+  "type": "+1马",
+  "suit": "H",
+  "rank": "K",
+  "origin": "源生"
+ },
+ {
+  "name": "赤兔",
+  "type": "-1马",
+  "suit": "H",
+  "rank": "5",
+  "origin": "源生"
+ },
+ {
+  "name": "大宛",
+  "type": "-1马",
+  "suit": "S",
+  "rank": "K",
+  "origin": "源生"
+ },
+ {
+  "name": "紫骍",
+  "type": "-1马",
+  "suit": "D",
+  "rank": "K",
+  "origin": "源生"
+ },
+ {
+  "name": "軨軨",
+  "type": "坐骑",
+  "suit": "C",
+  "rank": "K",
+  "origin": "衍生",
+  "srcHero": "神黄月英",
+  "note": "魂·覆盖【驽马】"
+ },
+ {
+  "name": "驽马",
+  "type": "坐骑",
+  "suit": "C",
+  "rank": "K",
+  "origin": "衍生",
+  "srcHero": "神黄月英"
+ },
+ {
+  "name": "木牛流马",
+  "type": "宝物",
+  "suit": "D",
+  "rank": "5",
+  "origin": "源生"
+ },
+ {
+  "name": "金梳",
+  "type": "宝物",
+  "suit": "H",
+  "rank": "Q",
+  "origin": "衍生",
+  "srcHero": "冯方女"
+ },
+ {
+  "name": "琼梳",
+  "type": "宝物",
+  "suit": "S",
+  "rank": "Q",
+  "origin": "衍生",
+  "srcHero": "冯方女"
+ },
+ {
+  "name": "三略",
+  "type": "宝物",
+  "suit": "S",
+  "rank": "5",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "束发紫金冠",
+  "type": "宝物",
+  "suit": "D",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "太公阴符",
+  "type": "宝物",
+  "suit": "S",
+  "rank": "2",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "天机图",
+  "type": "宝物",
+  "suit": "C",
+  "rank": "Q",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "犀梳",
+  "type": "宝物",
+  "suit": "C",
+  "rank": "Q",
+  "origin": "衍生",
+  "srcHero": "冯方女"
+ },
+ {
+  "name": "虚妄之冕",
+  "type": "宝物",
+  "suit": "C",
+  "rank": "4",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ },
+ {
+  "name": "照骨镜",
+  "type": "宝物",
+  "suit": "D",
+  "rank": "A",
+  "origin": "衍生",
+  "srcHero": "蒲元"
+ }
+]
