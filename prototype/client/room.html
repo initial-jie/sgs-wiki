@@ -136,9 +136,16 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .ring-mini.me{border-color:var(--seal);box-shadow:0 0 0 2px rgba(163,46,34,.22)}
 .ring-mini.dead{opacity:.45}
 .ring-mini.dying{border-color:var(--seal);background:rgba(163,46,34,.15)}
-.ring-mini[data-distfrom]{cursor:pointer}
+.ring-mini[data-seatsheet]{cursor:pointer}
 .ring-mini.vp{border-color:var(--qi);box-shadow:0 0 0 2px rgba(169,134,47,.4)}
 .ring-mini.adj{border-color:var(--ok);background:rgba(61,122,82,.12)}
+.ring-mini.reach{outline:2px solid rgba(183,121,31,.6);outline-offset:1px}
+/* 详情浮窗分区 */
+.shsec{border-top:1px solid var(--line);padding:8px 0}
+.shsec:first-of-type{border-top:none}
+.shh{font-size:12px;color:var(--ink-soft);font-weight:600;margin-bottom:6px}
+.shslot{flex:0 0 62px;font-size:12px;color:var(--ink-soft);text-align:right}
+.shslot.abol{color:var(--warn);text-decoration:line-through}
 .ring-mini .rhp{font-size:18px;font-weight:700;color:var(--seal);line-height:1.15}
 .ring-mini .rhp small{font-size:10px;color:var(--ink-soft);font-weight:400}
 .ring-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--ink-soft);text-align:center;width:88px;line-height:1.35}
@@ -303,7 +310,7 @@ function seatGeneralName(general){
 
 /* ---------- 弹层:选武将 / 查看技能 ---------- */
 let pickerSeat=null;
-function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;}
+function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;sheetSeat=null;}
 function maskClose(){document.querySelectorAll("[data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b)closeModal();});}
 function openHeroPicker(seatNo){
   if(!HEROES.length){toast("武将库还在加载…稍等再试");return;}
@@ -502,7 +509,7 @@ function openSocket(){
   ws.onerror=()=>{};                               // close 会随后触发,重连统一由 onclose 调度,避免重复
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
-    if(m.type==="roomState"){state=m;maybeSeedPanel();render();}
+    if(m.type==="roomState"){state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();}
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
     else if(m.type==="roomClosed"){intentionalClose=true;connected=false;updateConnBar();toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
     else if(m.type==="error"){toast("操作被拒:"+m.code);}
@@ -717,20 +724,31 @@ function viewPanelList(seats){
     h+=`<div class="pnl-seat">`
       +`<div class="pnl-row ${s.dead?'dead':(dying?'dying':'')}${hold.has(s.seatNo)?' me':''}">`
       +`<button class="pnl-step" data-ph="${s.seatNo}:-1">−</button>`
-      +`<span class="pnl-hp" data-hpset="${s.seatNo}">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></span>`
+      +`<span class="pnl-hp" data-hpset="${s.seatNo}">${s.hp==null?'–':s.hp}<small>/${effMax(s)==null?'?':effMax(s)}</small></span>`
       +`<button class="pnl-step" data-ph="${s.seatNo}:1">+</button>`
       +`<span class="grow" style="min-width:64px"><span class="pnl-nm">座位${s.seatNo} ${esc(nm)}</span>`
+      +(s.lordBonus?'<span class="fc" style="color:var(--qi);border-color:var(--qi)">君+1</span>':"")
       +(fac?`<span class="fc ${FCLS[fac]||'shen'}">${esc(fac)}</span>`:"")+`</span>`
       +`<button class="pnl-flag ${s.flipped?'on':''}" data-pf="${s.seatNo}:flipped">翻</button>`
       +`<button class="pnl-flag ${s.tapped?'on':''}" data-pf="${s.seatNo}:tapped">横</button>`
       +`<button class="pnl-flag ${s.chained?'on':''}" data-pf="${s.seatNo}:chained">链</button>`
       +`<button class="pnl-flag ${s.dead?'on':''}" data-pd="${s.seatNo}"${dying&&!s.dead?' style="border-color:var(--seal);color:var(--seal)"':''}>${s.dead?'复生':'阵亡'}</button>`
       +`</div>`
-      +`<div class="pnl-mounts"><span class="hint" style="margin:0">🐎坐骑</span>${mountSelect(s.seatNo,"atk")}${mountSelect(s.seatNo,"def")}</div>`
+      +`<div class="pnl-mounts"><button class="pnl-flag" data-seatsheet="${s.seatNo}">🎴装备/详情</button><span class="hint" style="margin:0">${equipSummary(s)}</span></div>`
       +`</div>`;
   }
-  h+=`<div class="hint">点大数字改血(支持「当前/上限」如 3/5);换武将自动按体力上限重置。翻=翻面 横=横置 链=连环。坐骑影响环形距离(进攻马-1别人算你近、防御马+1别人算你远)。</div>`;
+  h+=`<div class="hint">点大数字改血(支持「当前/上限」如 3/5)。翻=翻面 横=横置 链=连环。<b>装备/详情</b>=开浮窗设 5 装备槽·废除·君主+1上限。换武将自动全重置。</div>`;
   return h;
+}
+function equipSummary(s){ // 列表行紧凑装备摘要(废除的不计)
+  const p=[];
+  if(s.weapon&&!abol(s,"weapon")) p.push("⚔"+(s.weapon.range??"?"));
+  if(s.armor&&!abol(s,"armor")) p.push("盾");
+  if(s.atkHorse&&!abol(s,"atkHorse")) p.push('<span style="color:var(--ok)">-'+mountMag(s.atkHorse)+'</span>');
+  if(s.defHorse&&!abol(s,"defHorse")) p.push('<span style="color:var(--seal)">+1</span>');
+  if(s.treasure&&!abol(s,"treasure")) p.push("宝");
+  const ab=Object.keys(s.abolished||{}).length;
+  return (p.length?"装备 "+p.join(" "):"无装备")+(ab?` <span style="color:var(--warn)">废${ab}</span>`:"");
 }
 function aliveRingSeats(){ // #2 距离环:登记武将且未阵亡的座位(阵亡跳过、空座位不入环)
   return Object.values(state.seats).filter(s=>s.general&&s.general!=="none"&&!s.dead).map(s=>s.seatNo).sort((a,b)=>a-b);
@@ -740,12 +758,24 @@ function ringDist(aliveNos,from,to){ // 座位环基础距离=存活环上最短
   const n=aliveNos.length,d=Math.abs(i-j); return Math.min(d,n-d);
 }
 function mountMag(card){ return card ? (card.name==="軨軨"?2:1) : 0; } // 坐骑距离贡献(軨軨=-2,余=±1)
-// #2 非对称距离:from 到 to = 基础弧 − from进攻马 + to防御马,下限1(from有-1马算别人近;to有+1马算它远)
+const abol=(s,slot)=>!!(s&&s.abolished&&s.abolished[slot]);              // 该装备槽是否被废除
+function effMax(s){ return (!s||s.hpMax==null)?null:s.hpMax+(s.lordBonus?1:0); } // 有效体力上限=基础+君主加成
+function atkRange(s){ return (s&&s.weapon&&!abol(s,"weapon"))?(Number(s.weapon.range)||1):1; } // 攻击范围(无武器/废除=1)
+// #2 非对称距离:from 到 to = 基础弧 − from进攻马 + to防御马(废除的马不计),下限1
 function seatDist(aliveNos,from,to){
   const base=ringDist(aliveNos,from,to); if(base==null) return null;
   const f=state.seats[from],t=state.seats[to];
-  return Math.max(1, base - mountMag(f&&f.atkHorse) + mountMag(t&&t.defHorse));
+  const fAtk=abol(f,"atkHorse")?0:mountMag(f&&f.atkHorse), tDef=abol(t,"defHorse")?0:mountMag(t&&t.defHorse);
+  return Math.max(1, base - fAtk + tDef);
 }
+// 装备槽定义(展示顺序):k=seat字段,types=下拉可选装备类型
+const EQ_SLOTS=[
+  {k:"weapon",label:"武器",types:["武器"]},
+  {k:"armor",label:"防具",types:["防具"]},
+  {k:"atkHorse",label:"进攻马-1",types:["-1马","坐骑"]},
+  {k:"defHorse",label:"防御马+1",types:["+1马"]},
+  {k:"treasure",label:"宝物",types:["宝物"]},
+];
 function viewPanelRing(seats){
   const ordered=seats.slice().sort((a,b)=>a.seatNo-b.seatNo), N=ordered.length;
   const self=selfSeatForRing(), selfIdx=Math.max(0,ordered.findIndex(s=>s.seatNo===self));
@@ -753,9 +783,14 @@ function viewPanelRing(seats){
   const alive=aliveRingSeats();
   // 距离视角:默认自己(若在存活环内),否则第一个存活位;失效(阵亡/换空)则重挑
   if(distFrom==null||!alive.includes(distFrom)) distFrom = alive.includes(self)?self:(alive.length?alive[0]:null);
-  let h='<div class="ring"><div class="ring-hub">'
-    +(distFrom!=null?`距离视角<br><b style="color:var(--seal)">座位${distFrom}</b><br>点座位切换`:'点存活座位<br>设为距离视角')
-    +'</div>';
+  const vpSeat=distFrom!=null?state.seats[distFrom]:null, range=vpSeat?atkRange(vpSeat):1;
+  // 视角快速切换下拉 + 攻击范围
+  let h=`<div class="row" style="margin-bottom:6px"><span class="hint" style="margin:0">距离视角</span>`
+    +`<select class="pnl-msel" data-vpsel style="flex:0 0 auto;min-width:100px">`
+    +alive.map(sn=>`<option value="${sn}"${sn===distFrom?" selected":""}>座位${sn} ${esc((seatGeneralName(state.seats[sn].general)||"").slice(0,4))}</option>`).join("")
+    +`</select>`
+    +(vpSeat?`<span class="grow" style="text-align:right;font-size:12px;color:var(--ink-soft)">攻击范围 <b style="color:var(--seal)">${range}</b></span>`:"")+`</div>`;
+  h+='<div class="ring"><div class="ring-hub">距离视角<br><b style="color:var(--seal)">座位'+(distFrom??"–")+'</b><br>点座位看装备</div>';
   ordered.forEach((s,i)=>{
     const delta=((i-selfIdx)%N+N)%N, ang=2*Math.PI*delta/N, R=44;
     const x=50+R*Math.sin(ang), y=50+R*Math.cos(ang); // delta=0→正下方;delta↑→逆时针(先向右)
@@ -763,17 +798,63 @@ function viewPanelRing(seats){
     const nm=has?seatGeneralName(s.general):"空";
     const isVp=(s.seatNo===distFrom);
     const d=(inRing&&!isVp&&distFrom!=null)?seatDist(alive,distFrom,s.seatNo):null;
-    const cls='ring-mini'+(hold.has(s.seatNo)?' me':'')+(s.dead?' dead':'')+(dying?' dying':'')+(isVp?' vp':'')+(d===1?' adj':'');
-    const horse=has?((s.atkHorse?'<span style="color:var(--ok)">-'+mountMag(s.atkHorse)+'</span>':'')+(s.defHorse?'<span style="color:var(--seal)">+1</span>':'')):'';
-    h+=`<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"${inRing?` data-distfrom="${s.seatNo}"`:''}>`
-      +`<div style="color:var(--ink-soft);font-size:10px">座位${s.seatNo}${isVp?' ·视角':(d!=null?` ·距${d}`:'')}</div>`
+    const reach=(d!=null&&d<=range), em=effMax(s);
+    const cls='ring-mini'+(hold.has(s.seatNo)?' me':'')+(s.dead?' dead':'')+(dying?' dying':'')+(isVp?' vp':'')+(d===1?' adj':'')+(reach&&!isVp?' reach':'');
+    const aH=!abol(s,"atkHorse")&&s.atkHorse, dH=!abol(s,"defHorse")&&s.defHorse;
+    const horse=has?((aH?'<span style="color:var(--ok)">-'+mountMag(s.atkHorse)+'</span>':'')+(dH?'<span style="color:var(--seal)">+1</span>':'')):'';
+    h+=`<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"${has?` data-seatsheet="${s.seatNo}"`:''}>`
+      +`<div style="color:var(--ink-soft);font-size:10px">座位${s.seatNo}${isVp?' ·视角':(d!=null?` ·距${d}`+(reach?'✓':''):'')}</div>`
       +`<div class="pnl-nm">${esc(nm.length>5?nm.slice(0,5):nm)}${horse?' '+horse:''}</div>`
-      +(has?`<div class="rhp">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></div>`:'')
+      +(has?`<div class="rhp">${s.hp==null?'–':s.hp}<small>/${em==null?'?':em}</small></div>`:'')
       +(has&&(s.flipped||s.tapped||s.chained)?`<div style="font-size:10px">${s.flipped?'翻':''}${s.tapped?'横':''}${s.chained?'链':''}</div>`:'')
       +`</div>`;
   });
-  h+='</div><div class="hint" style="text-align:center">自己钉正下方、逆时针递增。点存活座位设为<b>视角</b>,看它到各座位的<b>距离</b>(阵亡不计入环、含坐骑修正);<b style="color:var(--ok)">距1=相邻</b>绿框。马标<span style="color:var(--ok)">-N</span>=进攻马、<span style="color:var(--seal)">+1</span>=防御马;改血量/坐骑切「列表」。</div>';
+  h+='</div><div class="hint" style="text-align:center"><b style="color:var(--ok)">距1=相邻</b>绿框、<b style="color:var(--warn)">✓可杀</b>=在视角攻击范围内(橙框)。点座位开<b>装备/详情</b>浮窗;马标<span style="color:var(--ok)">-N</span>/<span style="color:var(--seal)">+1</span>=进攻/防御马。</div>';
   return h;
+}
+
+/* ---------- 每座位详情浮窗(#2 ④层):装备区5槽 + 血量/君主 + 状态 + 判定区(⑤占位)---------- */
+let sheetSeat=null; // 打开的详情浮窗座位;roomState 到达时若非空则刷新浮窗
+function equipSelect(sn,slot){
+  const s=state.seats[sn], cur=s[slot.k], curKey=cur?`${cur.name}|${cur.suit}|${cur.rank}`:"", isAbol=abol(s,slot.k);
+  const list=EQUIP.filter(e=>slot.types.includes(e.type));
+  const optOf=e=>{const key=`${e.name}|${e.suit}|${e.rank}`;return `<option value="${esc(key)}"${key===curKey?" selected":""}>${SUIT_CH[e.suit]||""}${e.rank} ${esc(e.name)}${(e.type==="武器"&&e.range!=null)?" 范"+e.range:""}</option>`;};
+  const src=list.filter(e=>e.origin==="源生"), der=list.filter(e=>e.origin==="衍生");
+  let opts=`<option value="">${slot.label}:无</option>`;
+  if(src.length) opts+=`<optgroup label="源生">${src.map(optOf).join("")}</optgroup>`;
+  if(der.length) opts+=`<optgroup label="衍生">${der.map(optOf).join("")}</optgroup>`;
+  return `<div class="row" style="gap:5px;margin-bottom:5px"><span class="shslot${isAbol?' abol':''}">${slot.label}</span>`
+    +`<select class="pnl-msel" data-equip="${sn}:${slot.k}"${isAbol?" disabled":""} style="flex:1 1 0;min-width:0">${opts}</select>`
+    +`<button class="pnl-flag${isAbol?' on':''}" data-abolish="${sn}:${slot.k}">${isAbol?"恢复":"废除"}</button></div>`;
+}
+function sheetHtml(s){
+  const nm=seatGeneralName(s.general), em=effMax(s), dying=(s.hp===0&&!s.dead), sn=s.seatNo, isDw=s.general==="dianwei";
+  let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>座位${sn} ${esc(nm)}<span class="x" data-mclose="1">×</span></h2>`;
+  h+=`<div class="row" style="margin-bottom:8px"><button class="ghost" data-vp2="${sn}">📍设为距离视角</button>`
+    +(state.youHold.includes(sn)?'<span class="lb">你的座位</span>':'')+`<span class="grow"></span></div>`;
+  h+=`<div class="shsec"><div class="shh">血量</div><div class="row">`
+    +`<button class="pnl-step" data-ph="${sn}:-1">−</button>`
+    +`<span class="pnl-hp" data-hpset="${sn}"${dying?' style="color:var(--seal)"':''}>${s.hp==null?'–':s.hp}<small>/${em==null?'?':em}</small></span>`
+    +`<button class="pnl-step" data-ph="${sn}:1">+</button>`
+    +`<button class="pnl-flag${s.lordBonus?' on':''}" data-lord="${sn}">+1上限</button>`
+    +`<span class="hint" style="margin:0">主公/地主/主帅</span></div></div>`;
+  h+=`<div class="shsec"><div class="shh">状态</div><div class="row">`
+    +`<button class="pnl-flag${s.flipped?' on':''}" data-pf="${sn}:flipped">翻面</button>`
+    +`<button class="pnl-flag${s.tapped?' on':''}" data-pf="${sn}:tapped">横置</button>`
+    +`<button class="pnl-flag${s.chained?' on':''}" data-pf="${sn}:chained">连环</button>`
+    +`<button class="pnl-flag${s.dead?' on':''}" data-pd="${sn}">${s.dead?"复生":"阵亡"}</button></div></div>`;
+  h+=`<div class="shsec"><div class="shh">装备区 <span class="hint" style="margin:0">下拉选牌 · 废除=技能作废该区</span></div>`
+    +EQ_SLOTS.map(slot=>equipSelect(sn,slot)).join("")
+    +(isDw?`<div class="hint">⚠ 神典韦「以武将为武器」,武器请在其专属工具里设;此处武器槽仅作通用登记。</div>`:"")+`</div>`;
+  h+=`<div class="shsec"><div class="shh">判定区</div><div class="hint">乐不思蜀/兵粮寸断/闪电 等——下一步(⑤层)加进这里。</div></div>`;
+  return h+`</div></div>`;
+}
+function openSeatSheet(sn){ sheetSeat=sn; renderSheet(); }
+function renderSheet(){
+  if(sheetSeat==null) return;
+  const s=state.seats[sheetSeat];
+  if(!s||!s.general||s.general==="none"){ closeModal(); return; }
+  $("#modal").innerHTML=sheetHtml(s); bindAll(); maskClose();
 }
 
 /* ---------- 吕布工具 ---------- */
@@ -1059,12 +1140,19 @@ function bindAll(){
     if(str.includes("/")){const[a,mx]=str.split("/").map(x=>parseInt(x,10));if(Number.isFinite(mx))pAct(sn,{type:"panelSetHpMax",hp:mx});if(Number.isFinite(a))pAct(sn,{type:"panelSetHp",hp:a});}
     else{const n=parseInt(str,10);if(!Number.isFinite(n))return toast("请输入数字");pAct(sn,{type:"panelSetHp",hp:n});}});
   q("[data-pf]").forEach(b=>b.onclick=()=>{const[sn,flag]=b.dataset.pf.split(":");pAct(sn,{type:"panelToggle",flag});});
-  q("[data-distfrom]").forEach(b=>b.onclick=()=>{distFrom=+b.dataset.distfrom;render();}); // #2 环形:点座位设为距离视角(纯本机)
-  q("[data-mount]").forEach(sel=>sel.onchange=()=>{ // #2 坐骑:选进攻/防御马→panelSetMount
-    const [sn,kind]=sel.dataset.mount.split(":"); const v=sel.value; let card=null;
-    if(v){ const [name,suit,rank]=v.split("|"); const L=kind==="atk"?MOUNTS_ATK:MOUNTS_DEF;
-      const f=L.find(e=>e.name===name&&e.suit===suit&&String(e.rank)===rank); if(f)card={name:f.name,suit:f.suit,rank:f.rank,type:f.type}; }
-    send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelSetMount",slot:kind,card}});
+  q("[data-seatsheet]").forEach(b=>b.onclick=()=>openSeatSheet(+b.dataset.seatsheet)); // #2 开每座位详情浮窗
+  q("[data-vpsel]").forEach(sel=>sel.onchange=()=>{distFrom=+sel.value;render();});     // #2 环形距离视角下拉(纯本机)
+  q("[data-vp2]").forEach(b=>b.onclick=()=>{distFrom=+b.dataset.vp2;closeModal();panelView="ring";localStorage.setItem("sgs_panelView","ring");render();}); // 浮窗内设视角→关窗看环
+  q("[data-lord]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.lord;pAct(sn,{type:"panelSetLord",on:!state.seats[sn].lordBonus});}); // 君主+1上限
+  q("[data-equip]").forEach(sel=>sel.onchange=()=>{ // #2 ④装备槽:选牌→panelSetEquip
+    const [sn,slot]=sel.dataset.equip.split(":"); const v=sel.value; let card=null;
+    if(v){ const [name,suit,rank]=v.split("|"); const f=EQUIP.find(e=>e.name===name&&e.suit===suit&&String(e.rank)===rank);
+      if(f)card={name:f.name,suit:f.suit,rank:f.rank,type:f.type,range:f.range}; }
+    send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelSetEquip",slot,card}});
+  });
+  q("[data-abolish]").forEach(b=>b.onclick=()=>{ // #2 ④废除/恢复装备槽
+    const [sn,slot]=b.dataset.abolish.split(":"); const on=!(state.seats[+sn].abolished||{})[slot];
+    send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelAbolish",slot,on}});
   });
   q("[data-pd]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.pd;const s=state.seats[sn];const to=!s.dead;if(to&&!confirm("将座位"+sn+" 标记为阵亡?(可再点复生)"))return;pAct(sn,{type:"panelSetDead",dead:to});});
   // 聚焦某工具时,派发给该工具的 bind

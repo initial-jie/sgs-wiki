@@ -436,11 +436,12 @@ export class RoomCore {
   }
 
   // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/横置/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)
-  // atkHorse(-1马/进攻)、defHorse(+1马/防御):{name,suit,rank,type} 或 null,用于 #2 距离非对称
+  // 装备区5槽(weapon/armor/atkHorse(-1马)/defHorse(+1马)/treasure)=各 {name,suit,rank,type,range?} 或 null;
+  // abolished={槽名:true} 废除的槽(张绣/刘宏等);lordBonus=主公/地主/主帅 +1 体力上限
   _newSeat(i) {
     return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
-      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false,
-      atkHorse: null, defHorse: null };
+      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false, lordBonus: false,
+      weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {} };
   }
 
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
@@ -477,8 +478,8 @@ export class RoomCore {
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
-    ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.tapped = false; ps.chained = false; ps.dead = false;
-    ps.atkHorse = null; ps.defHorse = null;
+    ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.tapped = false; ps.chained = false; ps.dead = false; ps.lordBonus = false;
+    ps.weapon = null; ps.armor = null; ps.atkHorse = null; ps.defHorse = null; ps.treasure = null; ps.abolished = {};
     return { ok: true };
   }
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
@@ -524,17 +525,26 @@ export class RoomCore {
     const isLvbu = bySeat === targetSeat && iHold(bySeat); // 吕布本人(或代持吕布座位)
 
     // ───────── 全场状态面板(全公开,任意设备可改任意座位,无 holder 守卫)。与武将无关,置于工具分发之前 ─────────
-    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead" || t === "panelSetMount") {
+    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead" || t === "panelSetEquip" || t === "panelAbolish" || t === "panelSetLord") {
       const clampInt = (v, lo, hi) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; };
-      if (t === "panelSetHpMax") { // 播种/调体力上限:hp 首次播种=上限;调低上限时夹住当前血
-        const m = clampInt(toolAction.hp, 1, 20);
-        target.hpMax = m;
-        target.hp = (target.hp == null) ? m : Math.min(target.hp, m);
+      const effMax = () => target.hpMax == null ? null : target.hpMax + (target.lordBonus ? 1 : 0); // 有效上限=基础+君主加成
+      const EQ_SLOTS = ["weapon", "armor", "atkHorse", "defHorse", "treasure"];
+      if (t === "panelSetHpMax") { // 播种/调基础体力上限:hp 首次播种=有效上限;调低时夹住
+        target.hpMax = clampInt(toolAction.hp, 1, 20);
+        const em = effMax();
+        target.hp = (target.hp == null) ? em : Math.min(target.hp, em);
         return { ok: true };
       }
-      if (t === "panelSetHp") { // 绝对置数当前血(0..上限;未播种上限时按请求值 0..20)
-        const hi = target.hpMax ?? 20;
-        target.hp = clampInt(toolAction.hp, 0, hi);
+      if (t === "panelSetHp") { // 绝对置数当前血(0..有效上限)
+        target.hp = clampInt(toolAction.hp, 0, effMax() ?? 20);
+        return { ok: true };
+      }
+      if (t === "panelSetLord") { // 主公/地主/无间道主帅 +1 体力上限
+        const was = target.lordBonus; target.lordBonus = !!toolAction.on;
+        if (target.hp != null) {
+          if (target.lordBonus && !was) target.hp = Math.min(target.hp + 1, effMax());       // 开启→当前血也+1(起始满)
+          else if (!target.lordBonus && was) target.hp = Math.min(target.hp, effMax());        // 关闭→夹回
+        }
         return { ok: true };
       }
       if (t === "panelToggle") { // 翻面/横置/连环 布尔切换
@@ -544,9 +554,15 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "panelSetDead") { target.dead = !!toolAction.dead; return { ok: true }; } // 阵亡/复生(手动确认)
-      if (t === "panelSetMount") { // 坐骑:slot=atk(-1马/进攻)/def(+1马/防御);card={name,suit,rank,type}或 null 卸下
-        const slot = toolAction.slot; if (slot !== "atk" && slot !== "def") return { error: "BAD_SLOT" };
-        target[slot === "atk" ? "atkHorse" : "defHorse"] = toolAction.card || null;
+      if (t === "panelSetEquip") { // 装备槽:slot∈5槽;card={name,suit,rank,type,range?}或 null 卸下
+        const slot = toolAction.slot; if (!EQ_SLOTS.includes(slot)) return { error: "BAD_SLOT" };
+        target[slot] = toolAction.card || null;
+        return { ok: true };
+      }
+      if (t === "panelAbolish") { // 废除/恢复某装备槽(张绣/刘宏等)
+        const slot = toolAction.slot; if (!EQ_SLOTS.includes(slot)) return { error: "BAD_SLOT" };
+        if (!target.abolished) target.abolished = {};
+        if (toolAction.on) target.abolished[slot] = true; else delete target.abolished[slot];
         return { ok: true };
       }
     }
@@ -1775,8 +1791,8 @@ export class RoomCore {
     for (const [n, s] of Object.entries(this.seats))
       seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
         // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
-        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead,
-        atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null };
+        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
+        weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {} };
     return { roomCode: this.roomCode, youHold: [...holds], seats };
   }
 

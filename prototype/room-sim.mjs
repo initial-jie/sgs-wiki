@@ -903,18 +903,33 @@ check("★dev1 改座位2翻面(跨座位)成功", pAct(1, 2, { type: "panelTogg
 check("空座位(无武将)面板动作被拒(BAD_TARGET)", pAct(1, 3, { type: "panelSetHp", hp: 3 }).error === "BAD_TARGET");
 pAct(1, 1, { type: "panelToggle", flag: "chained" }); // 座位1 先挂上连环+血量
 
-console.log("\n=== 面板4:坐骑(#2 距离层)—— 进攻马/防御马 挂载与卸下 ===");
+console.log("\n=== 面板4:装备区5槽 + 废除/恢复(#2 ④层)===");
 const HORSE = { name: "赤兔", suit: "H", rank: "5", type: "-1马" };
-check("挂进攻马(atk)成功", pAct(1, 1, { type: "panelSetMount", slot: "atk", card: HORSE }).ok && PV(pd[1], 1).atkHorse?.name === "赤兔");
-check("★进攻马对旁人公开(dev2 看座位1)", PV(pd[2], 1).atkHorse?.name === "赤兔");
-check("挂防御马(def)成功", pAct(1, 1, { type: "panelSetMount", slot: "def", card: { name: "绝影", suit: "S", rank: "5", type: "+1马" } }).ok && PV(pd[1], 1).defHorse?.name === "绝影");
-check("卸下进攻马(card=null)", pAct(1, 1, { type: "panelSetMount", slot: "atk", card: null }).ok && PV(pd[1], 1).atkHorse === null);
-check("非法 slot 被拒(BAD_SLOT)", pAct(1, 1, { type: "panelSetMount", slot: "zzz", card: HORSE }).error === "BAD_SLOT");
-pAct(1, 1, { type: "panelSetMount", slot: "atk", card: HORSE }); // 换将前再挂上,验证重置
+const WEAPON = { name: "青龙偃月刀", suit: "S", rank: "5", type: "武器", range: 3 };
+check("挂进攻马(atkHorse)成功", pAct(1, 1, { type: "panelSetEquip", slot: "atkHorse", card: HORSE }).ok && PV(pd[1], 1).atkHorse?.name === "赤兔");
+check("★装备对旁人公开(dev2 看座位1)", PV(pd[2], 1).atkHorse?.name === "赤兔");
+check("挂武器(weapon)成功", pAct(1, 1, { type: "panelSetEquip", slot: "weapon", card: WEAPON }).ok && PV(pd[1], 1).weapon?.range === 3);
+check("挂宝物(treasure)成功", pAct(1, 1, { type: "panelSetEquip", slot: "treasure", card: { name: "木牛流马", suit: "D", rank: "5", type: "宝物" } }).ok && PV(pd[1], 1).treasure?.name === "木牛流马");
+check("卸下进攻马(card=null)", pAct(1, 1, { type: "panelSetEquip", slot: "atkHorse", card: null }).ok && PV(pd[1], 1).atkHorse === null);
+check("非法 slot 被拒(BAD_SLOT)", pAct(1, 1, { type: "panelSetEquip", slot: "zzz", card: HORSE }).error === "BAD_SLOT");
+check("废除武器槽", pAct(1, 1, { type: "panelAbolish", slot: "weapon", on: true }).ok && PV(pd[1], 1).abolished.weapon === true);
+check("恢复武器槽(delete)", pAct(1, 1, { type: "panelAbolish", slot: "weapon", on: false }).ok && !PV(pd[1], 1).abolished.weapon);
+check("废除非法 slot 被拒", pAct(1, 1, { type: "panelAbolish", slot: "zzz", on: true }).error === "BAD_SLOT");
 
+console.log("\n=== 面板5:君主 +1 体力上限(主公/地主/主帅)===");
+pAct(1, 1, { type: "panelSetHpMax", hp: 4 }); pAct(1, 1, { type: "panelSetHp", hp: 4 }); // 置满 4/4
+check("开君主加成→当前血也+1(5/5)", pAct(1, 1, { type: "panelSetLord", on: true }).ok && PV(pd[1], 1).hp === 5 && PV(pd[1], 1).lordBonus === true);
+check("有效上限=基础4+1,置数6被夹到5", pAct(1, 1, { type: "panelSetHp", hp: 6 }).ok && PV(pd[1], 1).hp === 5);
+check("关君主加成→血夹回4", pAct(1, 1, { type: "panelSetLord", on: false }).ok && PV(pd[1], 1).hp === 4 && PV(pd[1], 1).lordBonus === false);
+
+pAct(1, 1, { type: "panelSetEquip", slot: "atkHorse", card: HORSE }); // 换将前挂满,验证重置
+pAct(1, 1, { type: "panelSetLord", on: true }); pAct(1, 1, { type: "panelAbolish", slot: "weapon", on: true });
 roomPanel.setGeneral(pd[1], 1, "simayi");             // 换武将
-check("★换武将→面板全重置(hp/hpMax=null,翻面/横置/连环/阵亡=false,坐骑=null)",
-  PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null && PV(pd[1], 1).flipped === false && PV(pd[1], 1).tapped === false && PV(pd[1], 1).chained === false && PV(pd[1], 1).dead === false && PV(pd[1], 1).atkHorse === null && PV(pd[1], 1).defHorse === null);
+const R = PV(pd[1], 1);
+check("★换武将→面板全重置(血/状态/坐骑/武器/宝物/废除/君主 全清)",
+  R.hp === null && R.hpMax === null && R.flipped === false && R.dead === false && R.lordBonus === false &&
+  R.weapon === null && R.armor === null && R.atkHorse === null && R.defHorse === null && R.treasure === null &&
+  Object.keys(R.abolished).length === 0);
 
 // ═══════════ 动态座位数(#2):2~10,只从末位增减,删占用位撤持有 ═══════════
 const roomSeat = new RoomCore("8080", 3, () => 0); // 起始 3 座
