@@ -884,7 +884,7 @@ gzAct(1, 1, { type: "setColor", color: "black" }); gzAct(1, 1, { type: "addNeixu
 const grst = gzAct(1, 1, { type: "resetGame" });
 check("郭照重置成功、声明色清空、内训清空", grst.reset === true && GZT(gzd[1]).color === null && GZT(gzd[1]).neixun.length === 0);
 
-// ═══════════ 全场状态面板(#1):血量/翻面/横置/连环/阵亡 —— 全公开,任意座位可改任意座位 ═══════════
+// ═══════════ 全场状态面板(#1):血量/翻面/连环/阵亡 —— 全公开,任意座位可改任意座位(横置并入连环)═══════════
 const roomPanel = new RoomCore("7070", 5, () => 0);
 const pd = {}; for (let i = 1; i <= 5; i++) { pd[i] = `pd${i}`; roomPanel.claimSeat(pd[i], i); }
 roomPanel.setGeneral(pd[1], 1, "guozhao");  // 座位1 有武将
@@ -901,11 +901,11 @@ check("置数超上限被夹到4", pAct(1, 1, { type: "panelSetHp", hp: 9 }).ok 
 check("置数负数被夹到0(濒死)", pAct(1, 1, { type: "panelSetHp", hp: -3 }).ok && PV(pd[1], 1).hp === 0);
 check("调低上限3→当前血夹到3", (pAct(1, 1, { type: "panelSetHp", hp: 4 }), pAct(1, 1, { type: "panelSetHpMax", hp: 3 }).ok) && PV(pd[1], 1).hp === 3 && PV(pd[1], 1).hpMax === 3);
 
-console.log("\n=== 面板2:翻面/横置/连环 切换 + 阵亡 ===");
+console.log("\n=== 面板2:翻面/连环 切换 + 阵亡(横置并入连环,只留 chained)===");
 check("翻面 toggle on", pAct(1, 1, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 1).flipped === true);
 check("翻面 toggle off", pAct(1, 1, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 1).flipped === false);
-check("横置 on", pAct(1, 1, { type: "panelToggle", flag: "tapped" }).ok && PV(pd[1], 1).tapped === true);
 check("连环 on", pAct(1, 1, { type: "panelToggle", flag: "chained" }).ok && PV(pd[1], 1).chained === true);
+check("横置 flag 已废除(BAD_FLAG)", pAct(1, 1, { type: "panelToggle", flag: "tapped" }).error === "BAD_FLAG");
 check("非法 flag 被拒(BAD_FLAG)", pAct(1, 1, { type: "panelToggle", flag: "zzz" }).error === "BAD_FLAG");
 check("阵亡置 true", pAct(1, 1, { type: "panelSetDead", dead: true }).ok && PV(pd[1], 1).dead === true);
 check("复生置 false", pAct(1, 1, { type: "panelSetDead", dead: false }).ok && PV(pd[1], 1).dead === false);

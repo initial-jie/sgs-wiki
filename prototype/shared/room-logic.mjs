@@ -435,12 +435,12 @@ export class RoomCore {
     this.devices = {};
   }
 
-  // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/横置/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)
+  // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)。连环=铁索连环,物理表现即横置,合二为一只保留 chained
   // 装备区5槽(weapon/armor/atkHorse(-1马)/defHorse(+1马)/treasure)=各 {name,suit,rank,type,range?} 或 null;
   // abolished={槽名:true} 废除的槽(张绣/刘宏等);lordBonus=主公/地主/主帅 +1 体力上限
   _newSeat(i) {
     return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
-      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false, lordBonus: false,
+      hp: null, hpMax: null, flipped: false, chained: false, dead: false, lordBonus: false,
       weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {},
       judgments: [] }; // 判定区:乐不思蜀/兵粮寸断/闪电 种类列表(同名不叠;只记种类不记花色点数)
   }
@@ -479,7 +479,7 @@ export class RoomCore {
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
-    ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.tapped = false; ps.chained = false; ps.dead = false; ps.lordBonus = false;
+    ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.chained = false; ps.dead = false; ps.lordBonus = false;
     ps.weapon = null; ps.armor = null; ps.atkHorse = null; ps.defHorse = null; ps.treasure = null; ps.abolished = {}; ps.judgments = [];
     return { ok: true };
   }
@@ -548,9 +548,9 @@ export class RoomCore {
         }
         return { ok: true };
       }
-      if (t === "panelToggle") { // 翻面/横置/连环 布尔切换
+      if (t === "panelToggle") { // 翻面/连环 布尔切换(横置并入连环)
         const f = toolAction.flag;
-        if (f !== "flipped" && f !== "tapped" && f !== "chained") return { error: "BAD_FLAG" };
+        if (f !== "flipped" && f !== "chained") return { error: "BAD_FLAG" };
         target[f] = !target[f];
         return { ok: true };
       }
@@ -1811,7 +1811,7 @@ export class RoomCore {
     for (const [n, s] of Object.entries(this.seats))
       seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
         // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
-        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
+        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
         weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
         judgments: s.judgments ?? [] };
     return { roomCode: this.roomCode, youHold: [...holds], seats };

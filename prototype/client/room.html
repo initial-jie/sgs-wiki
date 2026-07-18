@@ -667,7 +667,7 @@ function viewSeats(){
   return h;
 }
 
-/* ---------- 全场状态面板(#1):血量/翻面/横置/连环/阵亡。常驻,全公开,任意座位可改任意座位 ---------- */
+/* ---------- 全场状态面板(#1):血量/翻面/连环/阵亡。常驻,全公开,任意座位可改任意座位。连环=铁索连环(物理即横置),横置并入连环只留一个 ---------- */
 let panelView=localStorage.getItem("sgs_panelView")||"list"; // 视图选择存本机(per-device)
 let distFrom=null;                                            // #2 环形距离视角座位(本机,非房间态;纯派生显示)
 const panelSeeded=new Set();                                  // 已按体力上限播种过的 seatNo:general(避免重复发)
@@ -694,7 +694,7 @@ function panelFac(s,hero){ return s.chosenFaction||(hero&&!hero.factionSelectabl
 function viewPanel(){
   const seats=Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
   const playing=seats.filter(s=>s.general&&s.general!=="none");
-  let h='<div class="card"><h2>全场状态<span class="tag">血量·翻面·横置·连环·阵亡</span></h2>';
+  let h='<div class="card"><h2>全场状态<span class="tag">血量·翻面·连环·阵亡</span></h2>';
   h+=`<div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">视图</span>`
     +`<button class="pnl-tab ${panelView==='list'?'on':''}" data-pv="list">列表</button>`
     +`<button class="pnl-tab ${panelView==='ring'?'on':''}" data-pv="ring">环形</button>`
@@ -719,14 +719,13 @@ function viewPanelList(seats){
       +(s.lordBonus?'<span class="fc" style="color:var(--qi);border-color:var(--qi)">君+1</span>':"")
       +(fac?`<span class="fc ${FCLS[fac]||'shen'}">${esc(fac)}</span>`:"")+`</span>`
       +`<button class="pnl-flag ${s.flipped?'on':''}" data-pf="${s.seatNo}:flipped">翻</button>`
-      +`<button class="pnl-flag ${s.tapped?'on':''}" data-pf="${s.seatNo}:tapped">横</button>`
       +`<button class="pnl-flag ${s.chained?'on':''}" data-pf="${s.seatNo}:chained">链</button>`
       +`<button class="pnl-flag ${s.dead?'on':''}" data-pd="${s.seatNo}"${dying&&!s.dead?' style="border-color:var(--seal);color:var(--seal)"':''}>${s.dead?'复生':'阵亡'}</button>`
       +`</div>`
       +`<div class="pnl-mounts"><button class="pnl-flag" data-seatsheet="${s.seatNo}">🎴装备/详情</button><span class="hint" style="margin:0">${equipSummary(s)}</span></div>`
       +`</div>`;
   }
-  h+=`<div class="hint">点大数字改血(支持「当前/上限」如 3/5)。翻=翻面 横=横置 链=连环。<b>装备/详情</b>=开浮窗设 5 装备槽·废除·君主+1上限。换武将自动全重置。</div>`;
+  h+=`<div class="hint">点大数字改血(支持「当前/上限」如 3/5)。翻=翻面 链=连环(铁索连环,物理即横置)。<b>装备/详情</b>=开浮窗设 5 装备槽·废除·君主+1上限。换武将自动全重置。</div>`;
   return h;
 }
 function equipSummary(s){ // 列表行紧凑装备摘要(废除的不计)
@@ -802,7 +801,7 @@ function viewPanelRing(seats){
       +`<div style="color:var(--ink-soft);font-size:10px">座位${s.seatNo}${isVp?' ·视角':(d!=null?` ·距${d}`+(reach?'✓':''):'')}</div>`
       +`<div class="pnl-nm">${esc(nm.length>5?nm.slice(0,5):nm)}${horse?' '+horse:''}</div>`
       +(has?`<div class="rhp">${s.hp==null?'–':s.hp}<small>/${em==null?'?':em}</small></div>`:'')
-      +(has&&(s.flipped||s.tapped||s.chained)?`<div style="font-size:10px">${s.flipped?'翻':''}${s.tapped?'横':''}${s.chained?'链':''}</div>`:'')
+      +(has&&(s.flipped||s.chained)?`<div style="font-size:10px">${s.flipped?'翻':''}${s.chained?'链':''}</div>`:'')
       +`</div>`;
   });
   h+='</div><div class="hint" style="text-align:center"><b style="color:var(--ok)">距1=相邻</b>绿框、<b style="color:var(--warn)">✓可杀</b>=在视角攻击范围内(橙框)。点座位开<b>装备/详情</b>浮窗;马标<span style="color:var(--ok)">-N</span>/<span style="color:var(--seal)">+1</span>=进攻/防御马。</div>';
@@ -851,7 +850,6 @@ function sheetHtml(s){
     +`<span class="hint" style="margin:0">主公/地主/主帅</span></div></div>`;
   h+=`<div class="shsec"><div class="shh">状态</div><div class="row">`
     +`<button class="pnl-flag${s.flipped?' on':''}" data-pf="${sn}:flipped">翻面</button>`
-    +`<button class="pnl-flag${s.tapped?' on':''}" data-pf="${sn}:tapped">横置</button>`
     +`<button class="pnl-flag${s.chained?' on':''}" data-pf="${sn}:chained">连环</button>`
     +`<button class="pnl-flag${s.dead?' on':''}" data-pd="${sn}">${s.dead?"复生":"阵亡"}</button></div></div>`;
   h+=`<div class="shsec"><div class="shh">装备区 <span class="hint" style="margin:0">下拉选牌 · 废除=技能作废该区</span></div>`;
