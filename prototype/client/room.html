@@ -121,6 +121,10 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .pnl-row.me{border-color:var(--seal)}
 .pnl-row.dead{opacity:.5}
 .pnl-row.dying{border-color:var(--seal);background:rgba(163,46,34,.14)}
+.pnl-seat{margin-bottom:6px}
+.pnl-seat .pnl-row{margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.pnl-mounts{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:5px 8px;background:rgba(255,252,244,.35)}
+.pnl-msel{flex:1 1 0;min-width:0;font-size:12px;padding:5px 6px}
 .pnl-hp{font-size:21px;font-weight:700;color:var(--seal);min-width:26px;text-align:center;line-height:1;cursor:pointer;user-select:none}
 .pnl-hp small{font-size:11px;color:var(--ink-soft);font-weight:400}
 .pnl-step{min-width:28px;padding:5px 0;font-size:16px;flex:0 0 auto}
@@ -227,7 +231,10 @@ const HERO_BY_ID=new Map();    // id(数字) -> hero
 const HERO_BY_TOOL=new Map();  // toolId -> hero
 let DERIVED={};                // 常见武将牌衍生技,按来源武将存:{武将名(去·空格)→[{name,tag,text}]};从 /derived-skills.json 拉
 let DCARDS={};                  // 常见武将牌衍生牌,按来源武将存:{武将名(去·空格)→[{name,src,text}]};从 /derived-cards.json 拉
+let EQUIP=[];                    // 装备牌库(/equipment.json);#2 距离层坐骑下拉数据源
+let MOUNTS_ATK=[],MOUNTS_DEF=[]; // 进攻马(-1马/坐骑)、防御马(+1马)
 const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
+const SUIT_CH={S:"♠",H:"♥",C:"♣",D:"♦"}; // 纯字符(用于 <option> 文本,不能用返回 HTML 的 suitGlyph)
 function loadHeroes(){
   fetch("/generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(list=>{
     HEROES=list;HERO_BY_ID.clear();HERO_BY_TOOL.clear();
@@ -237,6 +244,10 @@ function loadHeroes(){
   }).catch(e=>console.warn("武将库加载失败(worker 可能未更新):",e));
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
+  fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ // 装备牌库→坐骑下拉
+    EQUIP=d; MOUNTS_ATK=d.filter(e=>e.type==="-1马"||e.type==="坐骑"); MOUNTS_DEF=d.filter(e=>e.type==="+1马");
+    if(state)render();
+  }).catch(()=>{});
 }
 // 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
 function derivedCardsHtml(hero){
@@ -687,6 +698,15 @@ function viewPanel(){
   h+= panelView==='ring'?viewPanelRing(seats):viewPanelList(seats);
   return h+'</div>';
 }
+function mountSelect(sn,kind){ // kind: atk(-1马/进攻) / def(+1马/防御)
+  const list=kind==="atk"?MOUNTS_ATK:MOUNTS_DEF;
+  const cur=state.seats[sn][kind==="atk"?"atkHorse":"defHorse"];
+  const curKey=cur?`${cur.name}|${cur.suit}|${cur.rank}`:"";
+  let opts=`<option value="">${kind==="atk"?"进攻马 -1":"防御马 +1"}:无</option>`;
+  for(const e of list){ const key=`${e.name}|${e.suit}|${e.rank}`;
+    opts+=`<option value="${esc(key)}"${key===curKey?" selected":""}>${SUIT_CH[e.suit]||""}${e.rank} ${esc(e.name)}${e.origin==="衍生"?"·衍":""}</option>`; }
+  return `<select class="pnl-msel" data-mount="${sn}:${kind}">${opts}</select>`;
+}
 function viewPanelList(seats){
   const hold=new Set(state.youHold||[]);
   let h='';
@@ -694,7 +714,8 @@ function viewPanelList(seats){
     if(!s.general||s.general==="none"){ h+=`<div class="pnl-row" style="opacity:.4"><span class="grow"><span class="pnl-nm">座位 ${s.seatNo}</span> <span class="hint" style="margin:0">空</span></span></div>`; continue; }
     const nm=seatGeneralName(s.general), hero=heroForSeat(s.general), fac=panelFac(s,hero);
     const dying=(s.hp===0&&!s.dead);
-    h+=`<div class="pnl-row ${s.dead?'dead':(dying?'dying':'')}${hold.has(s.seatNo)?' me':''}">`
+    h+=`<div class="pnl-seat">`
+      +`<div class="pnl-row ${s.dead?'dead':(dying?'dying':'')}${hold.has(s.seatNo)?' me':''}">`
       +`<button class="pnl-step" data-ph="${s.seatNo}:-1">−</button>`
       +`<span class="pnl-hp" data-hpset="${s.seatNo}">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></span>`
       +`<button class="pnl-step" data-ph="${s.seatNo}:1">+</button>`
@@ -704,9 +725,11 @@ function viewPanelList(seats){
       +`<button class="pnl-flag ${s.tapped?'on':''}" data-pf="${s.seatNo}:tapped">横</button>`
       +`<button class="pnl-flag ${s.chained?'on':''}" data-pf="${s.seatNo}:chained">链</button>`
       +`<button class="pnl-flag ${s.dead?'on':''}" data-pd="${s.seatNo}"${dying&&!s.dead?' style="border-color:var(--seal);color:var(--seal)"':''}>${s.dead?'复生':'阵亡'}</button>`
+      +`</div>`
+      +`<div class="pnl-mounts"><span class="hint" style="margin:0">🐎坐骑</span>${mountSelect(s.seatNo,"atk")}${mountSelect(s.seatNo,"def")}</div>`
       +`</div>`;
   }
-  h+=`<div class="hint">点大数字可直接改血(支持「当前/上限」如 3/5);换武将自动按体力上限重置。翻=翻面 横=横置 链=连环。</div>`;
+  h+=`<div class="hint">点大数字改血(支持「当前/上限」如 3/5);换武将自动按体力上限重置。翻=翻面 横=横置 链=连环。坐骑影响环形距离(进攻马-1别人算你近、防御马+1别人算你远)。</div>`;
   return h;
 }
 function aliveRingSeats(){ // #2 距离环:登记武将且未阵亡的座位(阵亡跳过、空座位不入环)
@@ -715,6 +738,13 @@ function aliveRingSeats(){ // #2 距离环:登记武将且未阵亡的座位(阵
 function ringDist(aliveNos,from,to){ // 座位环基础距离=存活环上最短弧步数(顺/逆取小)
   const i=aliveNos.indexOf(from),j=aliveNos.indexOf(to); if(i<0||j<0) return null;
   const n=aliveNos.length,d=Math.abs(i-j); return Math.min(d,n-d);
+}
+function mountMag(card){ return card ? (card.name==="軨軨"?2:1) : 0; } // 坐骑距离贡献(軨軨=-2,余=±1)
+// #2 非对称距离:from 到 to = 基础弧 − from进攻马 + to防御马,下限1(from有-1马算别人近;to有+1马算它远)
+function seatDist(aliveNos,from,to){
+  const base=ringDist(aliveNos,from,to); if(base==null) return null;
+  const f=state.seats[from],t=state.seats[to];
+  return Math.max(1, base - mountMag(f&&f.atkHorse) + mountMag(t&&t.defHorse));
 }
 function viewPanelRing(seats){
   const ordered=seats.slice().sort((a,b)=>a.seatNo-b.seatNo), N=ordered.length;
@@ -732,16 +762,17 @@ function viewPanelRing(seats){
     const has=s.general&&s.general!=="none", dying=(s.hp===0&&!s.dead), inRing=has&&!s.dead;
     const nm=has?seatGeneralName(s.general):"空";
     const isVp=(s.seatNo===distFrom);
-    const d=(inRing&&!isVp&&distFrom!=null)?ringDist(alive,distFrom,s.seatNo):null;
+    const d=(inRing&&!isVp&&distFrom!=null)?seatDist(alive,distFrom,s.seatNo):null;
     const cls='ring-mini'+(hold.has(s.seatNo)?' me':'')+(s.dead?' dead':'')+(dying?' dying':'')+(isVp?' vp':'')+(d===1?' adj':'');
+    const horse=has?((s.atkHorse?'<span style="color:var(--ok)">-'+mountMag(s.atkHorse)+'</span>':'')+(s.defHorse?'<span style="color:var(--seal)">+1</span>':'')):'';
     h+=`<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"${inRing?` data-distfrom="${s.seatNo}"`:''}>`
       +`<div style="color:var(--ink-soft);font-size:10px">座位${s.seatNo}${isVp?' ·视角':(d!=null?` ·距${d}`:'')}</div>`
-      +`<div class="pnl-nm">${esc(nm.length>5?nm.slice(0,5):nm)}</div>`
+      +`<div class="pnl-nm">${esc(nm.length>5?nm.slice(0,5):nm)}${horse?' '+horse:''}</div>`
       +(has?`<div class="rhp">${s.hp==null?'–':s.hp}<small>/${s.hpMax==null?'?':s.hpMax}</small></div>`:'')
       +(has&&(s.flipped||s.tapped||s.chained)?`<div style="font-size:10px">${s.flipped?'翻':''}${s.tapped?'横':''}${s.chained?'链':''}</div>`:'')
       +`</div>`;
   });
-  h+='</div><div class="hint" style="text-align:center">自己钉正下方、逆时针递增。点存活座位设为<b>视角</b>,看它到各座位的<b>距离</b>(阵亡不计入环);<b style="color:var(--ok)">距1=相邻</b>绿框高亮。坐骑/武器修正见后续层;改血量/状态切「列表」。</div>';
+  h+='</div><div class="hint" style="text-align:center">自己钉正下方、逆时针递增。点存活座位设为<b>视角</b>,看它到各座位的<b>距离</b>(阵亡不计入环、含坐骑修正);<b style="color:var(--ok)">距1=相邻</b>绿框。马标<span style="color:var(--ok)">-N</span>=进攻马、<span style="color:var(--seal)">+1</span>=防御马;改血量/坐骑切「列表」。</div>';
   return h;
 }
 
@@ -1029,6 +1060,12 @@ function bindAll(){
     else{const n=parseInt(str,10);if(!Number.isFinite(n))return toast("请输入数字");pAct(sn,{type:"panelSetHp",hp:n});}});
   q("[data-pf]").forEach(b=>b.onclick=()=>{const[sn,flag]=b.dataset.pf.split(":");pAct(sn,{type:"panelToggle",flag});});
   q("[data-distfrom]").forEach(b=>b.onclick=()=>{distFrom=+b.dataset.distfrom;render();}); // #2 环形:点座位设为距离视角(纯本机)
+  q("[data-mount]").forEach(sel=>sel.onchange=()=>{ // #2 坐骑:选进攻/防御马→panelSetMount
+    const [sn,kind]=sel.dataset.mount.split(":"); const v=sel.value; let card=null;
+    if(v){ const [name,suit,rank]=v.split("|"); const L=kind==="atk"?MOUNTS_ATK:MOUNTS_DEF;
+      const f=L.find(e=>e.name===name&&e.suit===suit&&String(e.rank)===rank); if(f)card={name:f.name,suit:f.suit,rank:f.rank,type:f.type}; }
+    send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelSetMount",slot:kind,card}});
+  });
   q("[data-pd]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.pd;const s=state.seats[sn];const to=!s.dead;if(to&&!confirm("将座位"+sn+" 标记为阵亡?(可再点复生)"))return;pAct(sn,{type:"panelSetDead",dead:to});});
   // 聚焦某工具时,派发给该工具的 bind
   const fseat=(focus!=null)?state.seats[focus]:null;

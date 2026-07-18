@@ -436,9 +436,11 @@ export class RoomCore {
   }
 
   // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/横置/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)
+  // atkHorse(-1马/进攻)、defHorse(+1马/防御):{name,suit,rank,type} 或 null,用于 #2 距离非对称
   _newSeat(i) {
     return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
-      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false };
+      hp: null, hpMax: null, flipped: false, tapped: false, chained: false, dead: false,
+      atkHorse: null, defHorse: null };
   }
 
   connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
@@ -476,6 +478,7 @@ export class RoomCore {
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
     ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.tapped = false; ps.chained = false; ps.dead = false;
+    ps.atkHorse = null; ps.defHorse = null;
     return { ok: true };
   }
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
@@ -521,7 +524,7 @@ export class RoomCore {
     const isLvbu = bySeat === targetSeat && iHold(bySeat); // 吕布本人(或代持吕布座位)
 
     // ───────── 全场状态面板(全公开,任意设备可改任意座位,无 holder 守卫)。与武将无关,置于工具分发之前 ─────────
-    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead") {
+    if (t === "panelSetHpMax" || t === "panelSetHp" || t === "panelToggle" || t === "panelSetDead" || t === "panelSetMount") {
       const clampInt = (v, lo, hi) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; };
       if (t === "panelSetHpMax") { // 播种/调体力上限:hp 首次播种=上限;调低上限时夹住当前血
         const m = clampInt(toolAction.hp, 1, 20);
@@ -541,6 +544,11 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "panelSetDead") { target.dead = !!toolAction.dead; return { ok: true }; } // 阵亡/复生(手动确认)
+      if (t === "panelSetMount") { // 坐骑:slot=atk(-1马/进攻)/def(+1马/防御);card={name,suit,rank,type}或 null 卸下
+        const slot = toolAction.slot; if (slot !== "atk" && slot !== "def") return { error: "BAD_SLOT" };
+        target[slot === "atk" ? "atkHorse" : "defHorse"] = toolAction.card || null;
+        return { ok: true };
+      }
     }
 
     // ───────── 神典韦:挈挟 roll 池(全公开生成器)。抽 5 在 DO 跑(可 seed 复现),神典韦选任意张当武器 ─────────
@@ -1767,7 +1775,8 @@ export class RoomCore {
     for (const [n, s] of Object.entries(this.seats))
       seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
         // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
-        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead };
+        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, tapped: !!s.tapped, chained: !!s.chained, dead: !!s.dead,
+        atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null };
     return { roomCode: this.roomCode, youHold: [...holds], seats };
   }
 

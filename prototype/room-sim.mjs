@@ -902,9 +902,19 @@ check("★dev2 改座位1血量(跨座位无守卫)成功", pAct(2, 1, { type: "
 check("★dev1 改座位2翻面(跨座位)成功", pAct(1, 2, { type: "panelToggle", flag: "flipped" }).ok && PV(pd[1], 2).flipped === true);
 check("空座位(无武将)面板动作被拒(BAD_TARGET)", pAct(1, 3, { type: "panelSetHp", hp: 3 }).error === "BAD_TARGET");
 pAct(1, 1, { type: "panelToggle", flag: "chained" }); // 座位1 先挂上连环+血量
+
+console.log("\n=== 面板4:坐骑(#2 距离层)—— 进攻马/防御马 挂载与卸下 ===");
+const HORSE = { name: "赤兔", suit: "H", rank: "5", type: "-1马" };
+check("挂进攻马(atk)成功", pAct(1, 1, { type: "panelSetMount", slot: "atk", card: HORSE }).ok && PV(pd[1], 1).atkHorse?.name === "赤兔");
+check("★进攻马对旁人公开(dev2 看座位1)", PV(pd[2], 1).atkHorse?.name === "赤兔");
+check("挂防御马(def)成功", pAct(1, 1, { type: "panelSetMount", slot: "def", card: { name: "绝影", suit: "S", rank: "5", type: "+1马" } }).ok && PV(pd[1], 1).defHorse?.name === "绝影");
+check("卸下进攻马(card=null)", pAct(1, 1, { type: "panelSetMount", slot: "atk", card: null }).ok && PV(pd[1], 1).atkHorse === null);
+check("非法 slot 被拒(BAD_SLOT)", pAct(1, 1, { type: "panelSetMount", slot: "zzz", card: HORSE }).error === "BAD_SLOT");
+pAct(1, 1, { type: "panelSetMount", slot: "atk", card: HORSE }); // 换将前再挂上,验证重置
+
 roomPanel.setGeneral(pd[1], 1, "simayi");             // 换武将
-check("★换武将→面板全重置(hp/hpMax=null,翻面/横置/连环/阵亡=false)",
-  PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null && PV(pd[1], 1).flipped === false && PV(pd[1], 1).tapped === false && PV(pd[1], 1).chained === false && PV(pd[1], 1).dead === false);
+check("★换武将→面板全重置(hp/hpMax=null,翻面/横置/连环/阵亡=false,坐骑=null)",
+  PV(pd[1], 1).hp === null && PV(pd[1], 1).hpMax === null && PV(pd[1], 1).flipped === false && PV(pd[1], 1).tapped === false && PV(pd[1], 1).chained === false && PV(pd[1], 1).dead === false && PV(pd[1], 1).atkHorse === null && PV(pd[1], 1).defHorse === null);
 
 // ═══════════ 动态座位数(#2):2~10,只从末位增减,删占用位撤持有 ═══════════
 const roomSeat = new RoomCore("8080", 3, () => 0); // 起始 3 座
