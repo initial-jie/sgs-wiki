@@ -608,6 +608,19 @@ check("下一轮:清抽牌、保留武器、轮次+1", DT().rolled === null && D
 check("卸下已不在抽牌里的持留武器仍可(马超)", dwAct(1, { type: "equipToggle", name: "马超" }).ok === true && DT().weapons.length === 1);
 check("重开清空", dwAct(1, { type: "resetGame" }).reset === true && DT().round === 1 && DT().weapons.length === 0 && DT().rolled === null);
 check("重开后座位武将仍是神典韦", roomD.seats[1].general === "dianwei");
+// equipCard:神典韦装常规军争武器(#2 单一数据源=同一 weapons[])
+const zhu = { name: "诸葛连弩", suit: "C", rank: "A", range: 1 };
+check("非神典韦不能装源生武器", dwAct(2, { type: "equipCard", card: zhu }).error === "NOT_DW_ACTION");
+check("空 card 被拒", dwAct(1, { type: "equipCard", card: null }).error === "BAD_CARD");
+dwAct(1, { type: "equipCard", card: zhu });
+check("装源生武器成功(kind:card/范围)", DT().weapons.length === 1 && DT().weapons[0].kind === "card" && DT().weapons[0].name === "诸葛连弩" && DT().weapons[0].range === 1);
+check("再点同一源生武器=卸下(toggle)", dwAct(1, { type: "equipCard", card: zhu }).ok === true && DT().weapons.length === 0);
+dwAct(1, { type: "qiexie" });                       // rng=0 抽出 关羽… 混装武将+源生
+dwAct(1, { type: "equipToggle", name: "关羽" });
+dwAct(1, { type: "equipCard", card: zhu });
+check("武将+源生混装占同 slots(共2)", DT().weapons.length === 2 && DT().weapons.some(w => w.name === "关羽") && DT().weapons.some(w => w.kind === "card"));
+check("满栏再装源生被拒", dwAct(1, { type: "equipCard", card: { name: "青龙偃月刀", suit: "S", rank: "5", range: 3 } }).error === "SLOTS_FULL");
+dwAct(1, { type: "resetGame" });
 
 // ============ 场景 15:李傕 狼袭(0~2 掷伤害)============
 console.log("\n=== 场景 15:李傕 狼袭 ===");

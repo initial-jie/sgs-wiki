@@ -596,6 +596,17 @@ export class RoomCore {
         ts.weapons.push(card); this._log(ts, `装备武器【${card.name}】(范围${card.range})`);
         return { ok: true };
       }
+      if (t === "equipCard") { // 装备/卸下一把源生武器到武器栏(神典韦可用常规军争武器,主/副栏皆可,与武将牌共用 ≤slots)。card={name,suit,rank,range}
+        if (!isDw) return { error: "NOT_DW_ACTION" };
+        const c = toolAction.card; if (!c || !c.name) return { error: "BAD_CARD" };
+        const ck = `${c.name}|${c.suit}|${c.rank}`;
+        const at = ts.weapons.findIndex((w) => w.kind === "card" && `${w.name}|${w.suit}|${w.rank}` === ck);
+        if (at >= 0) { ts.weapons.splice(at, 1); this._log(ts, `卸下源生武器【${c.name}】`); return { ok: true }; } // 再点=卸下(toggle)
+        if (ts.weapons.length >= ts.slots) return { error: "SLOTS_FULL" };
+        ts.weapons.push({ name: c.name, suit: c.suit, rank: c.rank, range: Number(c.range) || 1, kind: "card" }); // kind:"card" 区分武将牌(武将无 kind);去重/panel 读同一 weapons[]
+        this._log(ts, `装备源生武器【${c.name}】(范围${Number(c.range) || 1})`);
+        return { ok: true };
+      }
       if (t === "clearWeapons") { if (!isDw) return { error: "NOT_DW_ACTION" }; ts.weapons = []; return { ok: true }; }
       if (t === "newTurn") { // 下一轮准备阶段:清掉本次抽的 5 张(武器保留),轮次+1
         if (!isDw) return { error: "NOT_DW_ACTION" };
