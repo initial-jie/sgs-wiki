@@ -142,12 +142,30 @@
   "note": "魂·覆盖【折戟】"
  },
  {
+  "name": "霹雳车",
+  "type": "武器",
+  "suit": "D",
+  "rank": "9",
+  "origin": "衍生",
+  "srcHero": "刘晔",
+  "range": 9
+ },
+ {
   "name": "七宝刀",
   "type": "武器",
   "suit": "S",
   "rank": "6",
   "origin": "衍生",
   "srcHero": "魔曹操",
+  "range": 2
+ },
+ {
+  "name": "思召剑",
+  "type": "武器",
+  "suit": "D",
+  "rank": "6",
+  "origin": "衍生",
+  "srcHero": "谋袁绍",
   "range": 2
  },
  {
