@@ -60,6 +60,19 @@ check("座位5 现在认领 [5,2]", eqSet(room.viewFor(dev[5]).youHold, [5, 2]))
 check("代持者能看到座位2 明细(含已被夺 taken 的牌)", eqSet(Object.keys(LT(dev[5]).qiRegister.mine), ["5", "2"]) && LT(dev[5]).qiRegister.mine["2"].cards[0].taken === true);
 check("代持者可替座位2 重新登记", room.action(dev[5], { targetSeat: 1, bySeat: 2, toolAction: { type: "registerQi", cards: [{ s: "H", r: "5", n: "桃" }] } }).ok === true);
 
+console.log("\n=== 场景 5b:房内改名(原子改键,座位归属不丢)===");
+check("改名空串被拒(EMPTY_NAME)", room.renameDevice(dev[5], "   ").error === "EMPTY_NAME");
+check("改名撞已占名被拒(NAME_TAKEN)", room.renameDevice(dev[5], dev[1]).error === "NAME_TAKEN");
+check("改名成同名=no-op ok", room.renameDevice(dev[5], dev[5]).ok === true);
+const rnm = room.renameDevice(dev[5], "阿强");
+check("改名成功返回 newId", rnm.ok === true && rnm.newId === "阿强");
+check("新名保留原 holds [5,2]", eqSet(room.viewFor("阿强").youHold, [5, 2]));
+check("旧名 device 已移除(youHold 空)", eqSet(room.viewFor(dev[5]).youHold, []));
+check("座位2 holderDevices 已改到新名", room.seats[2].holderDevices.includes("阿强") && !room.seats[2].holderDevices.includes(dev[5]));
+check("改名后仍能以新名操作座位(代座位2登记)", room.action("阿强", { targetSeat: 1, bySeat: 2, toolAction: { type: "registerQi", cards: [{ s: "S", r: "K", n: "杀" }] } }).ok === true);
+check("改名进 serialize→hydrate 存活", (() => { const h = RoomCore.hydrate(room.serialize()); return h.seats[2].holderDevices.includes("阿强"); })());
+room.renameDevice("阿强", dev[5]); // 复原,避免影响后续场景
+
 console.log("\n=== 场景 6:狂魔 —— 击败后立即重新指定,入魔状态保持 ===");
 room.action(dev[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "enterMo", kuangTarget: 3 } });
 check("入魔状态对所有人公开", LT(dev[4]).entered === true && LT(dev[4]).kuangTarget === 3);

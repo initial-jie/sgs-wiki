@@ -472,6 +472,18 @@ export class RoomCore {
     if (this.seats[n]) this.seats[n].holderDevices = this.seats[n].holderDevices.filter((d) => d !== id);
     return { ok: true };
   }
+  // 房内改名:deviceId 同时是身份 key(devices/holderDevices)与显示名,故原子改键——搬 holds + 更新座位持有者标记,座位归属不丢
+  renameDevice(oldId, newId) {
+    newId = (newId ?? "").toString().trim().slice(0, 12); // 同入口 maxlength 12
+    if (!newId) return { error: "EMPTY_NAME" };
+    if (newId === oldId) return { ok: true, newId };
+    if (this.devices[newId]) return { error: "NAME_TAKEN" };            // 房内重名(含占着座位的别的设备)→ 拒绝
+    this.devices[newId] = this.devices[oldId] || { holds: new Set() };  // 搬 holds(oldId 从未连接→空册)
+    delete this.devices[oldId];
+    for (const s of Object.values(this.seats))
+      if (s.holderDevices.includes(oldId)) s.holderDevices = s.holderDevices.map((d) => (d === oldId ? newId : d));
+    return { ok: true, newId };
+  }
   setGeneral(id, n, g) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };

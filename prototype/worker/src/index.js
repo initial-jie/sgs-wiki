@@ -193,6 +193,14 @@ export class RoomDO {
         break;
       }
       case "releaseSeat": core.releaseSeat(this.dev(ws), msg.seatNo); break;
+      case "rename": { // 房内改名:原子改键(搬 holds+座位归属),回执让发起端更新本地 deviceId
+        const oldId = this.dev(ws);
+        const r = core.renameDevice(oldId, msg.newId);
+        if (r && r.error) { ws.send(JSON.stringify({ type: "error", code: r.error })); break; }
+        for (const [s, id] of this.sessions) if (id === oldId) this.sessions.set(s, r.newId); // 同设备多标签一并改
+        ws.send(JSON.stringify({ type: "renamed", newId: r.newId }));
+        break;
+      }
       case "addSeat": { const r = core.addSeat(this.dev(ws)); if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); break; }
       case "removeSeat": { const r = core.removeSeat(this.dev(ws)); if (r && r.error) ws.send(JSON.stringify({ type: "error", code: r.error })); break; }
       case "disbandRoom": // 任意玩家解散房间

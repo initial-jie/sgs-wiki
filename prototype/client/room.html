@@ -508,7 +508,8 @@ function openSocket(){
     if(m.type==="roomState"){state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();}
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
     else if(m.type==="roomClosed"){intentionalClose=true;connected=false;updateConnBar();toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
-    else if(m.type==="error"){toast("操作被拒:"+m.code);}
+    else if(m.type==="renamed"){deviceId=m.newId;localStorage.setItem("sgs_device",m.newId);toast("已改名为「"+m.newId+"」");render();} // 改名成功→更新本地身份
+    else if(m.type==="error"){const M={NAME_TAKEN:"该名字已被同房玩家占用,换一个",EMPTY_NAME:"名字不能为空"};toast(M[m.code]||("操作被拒:"+m.code));}
   };
 }
 function connect(base,code){
@@ -617,7 +618,7 @@ function bindConnect(){
 
 function viewHeader(){
   return `<div class="card"><div class="row"><span class="grow">房间 <b>${esc(state.roomCode)}</b></span>
-    <span class="chip">我 ${esc(deviceId)}</span><span class="chip">座位 [${state.youHold.join(",")||"未入座"}]</span>
+    <button class="chip" data-rename="1" title="改名(仅换显示名,座位不丢)" style="cursor:pointer;border:none">我 ${esc(deviceId)} ✎</button><span class="chip">座位 [${state.youHold.join(",")||"未入座"}]</span>
     <button class="ghost" data-newroom="1" style="font-size:12px">新开房间</button></div></div>`;
 }
 
@@ -1138,6 +1139,7 @@ function bindAll(){
   const q=(sel)=>document.querySelectorAll(sel);
   // 通用:换房 / 返回大厅 / 进入工具
   q("[data-newroom]").forEach(b=>b.onclick=()=>{const c=String(Math.floor(1000+Math.random()*9000));if(confirm("将离开当前房间、新开一局(房间号 "+c+")。\n下一局与本局互相独立——座位、武将全部重来。\n记得把新房间号告诉其他玩家。"))connect(localStorage.getItem("sgs_base")||defaultBase(),c);});
+  q("[data-rename]").forEach(b=>b.onclick=()=>{const nn=(prompt("改名(房内显示,不影响座位归属)",deviceId)||"").trim();if(!nn||nn===deviceId)return;send({type:"rename",newId:nn.slice(0,12)});});
   q("[data-back]").forEach(b=>b.onclick=()=>{focus=null;nhFlow=null;nhGive=null;xyPick=null;yjPrompt=null;yjEdit=null;zyRolled=null;smRolled=null;render();});
   q("[data-enter]").forEach(b=>b.onclick=()=>{focus=+b.dataset.enter;nhFlow=null;nhGive=null;xyPick=null;yjPrompt=null;yjEdit=null;zyRolled=null;smRolled=null;render();});
   // 大厅:座位认领 / 释放 / 选武将
