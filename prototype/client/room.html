@@ -362,6 +362,8 @@ function choosePick(id){
   if(cur&&!confirm("改武将会清空该座位已登记的数据,确定?"))return;
   send({type:"setGeneral",seatNo:seat,generalId:val});closeModal();
 }
+// ① 技能修正提示:该将技能经校正(线下版/线上增强/补全),与你手上的实体卡版本可能不同→查将时弹⚠
+function cardWarnHtml(hero){ return (hero&&hero.cardWarn)?`<div style="background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:var(--seal)"><b>⚠ 技能修正</b> ${esc(hero.cardWarn)}</div>`:""; }
 function openSkillView(general,seatNo){
   const hero=heroForSeat(general);
   if(!hero){toast("该武将暂无技能资料(线下/手输)");return;}
@@ -380,6 +382,7 @@ function openSkillView(general,seatNo){
         <div class="hmeta" style="margin-top:3px">${dots} ${cap} ${T("体力上限","max HP")}${start!==cap?(T("(起始 ","(start ")+start+")"):""}</div>
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
+    ${cardWarnHtml(hero)}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
@@ -404,6 +407,7 @@ function previewHero(id){
         <div class="hmeta" style="margin-top:3px">${dots} ${cap} ${T("体力上限","max HP")}${start!==cap?(T("(起始 ","(start ")+start+")"):""}</div>
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
+    ${cardWarnHtml(hero)}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
