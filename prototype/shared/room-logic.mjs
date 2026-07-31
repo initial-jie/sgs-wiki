@@ -425,6 +425,11 @@ export function initToolState(generalId) {
   return {};
 }
 
+// ② 禁将池(全局默认):存"被禁的 generalId"字符串集(=tool 名或 String(id),与 setGeneral 收到的一致)。
+// worker 启动时按 banned-generals.json + generals.json 建集并调 setBannedGenerals;sim 可直接设。空集=不禁。
+let BANNED_GENERALS = new Set();
+export function setBannedGenerals(arr) { BANNED_GENERALS = new Set((arr || []).map(String)); }
+
 // ---------- 房间权威(纯逻辑,不含 IO / WebSocket)----------
 export class RoomCore {
   constructor(roomCode, seatCount, rng = Math.random) {
@@ -487,6 +492,8 @@ export class RoomCore {
   setGeneral(id, n, g) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
+    if (g && g !== "none" && BANNED_GENERALS.has(String(g))) return { error: "BANNED" }; // ② 禁将:即便拿到也不能落座(查将不拦)
+
     this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)

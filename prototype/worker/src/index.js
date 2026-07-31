@@ -3,7 +3,7 @@
 // 本地跑:cd prototype/worker && npx wrangler dev
 // 部署:  npx wrangler deploy
 
-import { RoomCore } from "../../shared/room-logic.mjs";
+import { RoomCore, setBannedGenerals } from "../../shared/room-logic.mjs";
 import ROOM_HTML from "../../client/room.html"; // 文本模块(见 wrangler.toml [[rules]] Text)
 import GENERALS_DATA from "../../shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
 import DERIVED_DATA from "../../shared/derived-skills.json"; // 常见武将牌衍生技(查将时带出;从 index.html 衍生技区抽取)
@@ -12,6 +12,18 @@ import DCARDS_DATA from "../../shared/derived-cards.json"; // 常见武将牌衍
 import DCARDS_ROOM from "../../shared/derived-cards-room.json"; // 房间专属衍生牌(神黄月英三神装/族陆绩浑天仪等,不进 wiki)
 import DERIVED_EN from "../../shared/derived-en.json"; // 衍生技/牌英文补丁 {武将→{名称→英文}};独立文件,重抽 derived-* 不丢 EN
 import EQUIPMENT_DATA from "../../shared/equipment.json"; // 装备牌库(#2 距离层:坐骑/装备下拉数据源;build-equipment.mjs 生成)
+import BANNED_DATA from "../../shared/banned-generals.json"; // ② 禁将池(全局默认;改文件+deploy 生效)
+
+// ② 把禁将 id 映射成 setGeneral 收到的 generalId 形式(有工具→工具名,否则→String(id)),喂给 RoomCore 拦截落座
+{
+  const set = [];
+  for (const id of (BANNED_DATA.ids || [])) {
+    const h = GENERALS_DATA.find((x) => x.id === id);
+    set.push(String(id));                 // 无工具将:generalId=String(id)
+    if (h && h.tool) set.push(h.tool);     // 有工具将:generalId=工具名
+  }
+  setBannedGenerals(set);
+}
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 const GENERALS_JSON = JSON.stringify(GENERALS_DATA); // 一次序列化,静态资源直接吐
@@ -40,6 +52,7 @@ for (const merged of [DERIVED_MERGED, DCARDS_MERGED]) {
 const DERIVED_JSON = JSON.stringify(DERIVED_MERGED); // 衍生技(小),同上
 const DCARDS_JSON = JSON.stringify(DCARDS_MERGED);   // 衍生牌(小),同上
 const EQUIPMENT_JSON = JSON.stringify(EQUIPMENT_DATA); // 装备牌库(静态,直接吐)
+const BANNED_JSON = JSON.stringify({ ids: BANNED_DATA.ids || [] }); // ② 禁将池 id(客户端 fetch 标记/展示;静态)
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 房间闲置存活:每次操作把 TTL 推后到"此刻+2h";到点自动清盘=房间消失
 
 export default {
@@ -93,6 +106,14 @@ export default {
         headers: {
           "content-type": "application/json; charset=utf-8",
           "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
+        },
+      });
+    }
+    if (url.pathname === "/banned-generals.json" && request.method === "GET") {
+      return new Response(BANNED_JSON, {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=300, stale-while-revalidate=3600",
         },
       });
     }

@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE, setBannedGenerals } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -72,6 +72,20 @@ check("座位2 holderDevices 已改到新名", room.seats[2].holderDevices.inclu
 check("改名后仍能以新名操作座位(代座位2登记)", room.action("阿强", { targetSeat: 1, bySeat: 2, toolAction: { type: "registerQi", cards: [{ s: "S", r: "K", n: "杀" }] } }).ok === true);
 check("改名进 serialize→hydrate 存活", (() => { const h = RoomCore.hydrate(room.serialize()); return h.seats[2].holderDevices.includes("阿强"); })());
 room.renameDevice("阿强", dev[5]); // 复原,避免影响后续场景
+
+console.log("\n=== 场景 5c:禁将系统(全局默认禁池,setGeneral 拦截落座)===");
+{ // 独立房间,避免动到 room 的座位1(吕布 toolState 后续场景要用)
+  const rb = new RoomCore("9099", 3, () => 0);
+  const bd = {}; for (let i = 1; i <= 3; i++) { bd[i] = `bd${i}`; rb.claimSeat(bd[i], i); }
+  setBannedGenerals(["353", "dianwei"]); // 禁 曹婴(id 形式) + 神典韦(工具名形式)
+  check("禁将(id)落座被拒(BANNED)", rb.setGeneral(bd[1], 1, "353").error === "BANNED");
+  check("禁将(工具名)落座被拒", rb.setGeneral(bd[1], 1, "dianwei").error === "BANNED");
+  check("非禁将正常落座", rb.setGeneral(bd[1], 1, "1").ok === true && rb.seats[1].general === "1");
+  check("查将不受禁将影响(禁的只是落座,setGeneral 才拦)", rb.setGeneral(bd[2], 2, "353").error === "BANNED" && rb.seats[2].general === null);
+  setBannedGenerals([]);
+  check("解禁后可落座", rb.setGeneral(bd[1], 1, "353").ok === true && rb.seats[1].general === "353");
+}
+setBannedGenerals([]); // ⚠ 全局态:测完必须清空,否则污染后续场景
 
 console.log("\n=== 场景 6:狂魔 —— 击败后立即重新指定,入魔状态保持 ===");
 room.action(dev[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "enterMo", kuangTarget: 3 } });

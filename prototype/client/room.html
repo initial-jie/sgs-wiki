@@ -253,6 +253,7 @@ function loadHeroes(){
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
   fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ EQUIP=d; if(state)render(); }).catch(()=>{}); // 装备牌库→装备槽下拉
+  fetch("/banned-generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ BANNED=new Set((d.ids||d||[]).map(Number)); if(state)render(); }).catch(()=>{}); // ② 禁将池 id 集
 }
 // 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
 function derivedCardsHtml(hero){
@@ -344,10 +345,11 @@ function renderPickerList(qstr){
   let h=shown.map(hero=>{
     const fc=FCLS[hero.faction]||"";
     const fname=hero.factionSelectable?"神·自选":(hero.faction||"?");
-    return `<div class="grow-item" data-pickid="${hero.id}">
+    const banned=isBanned(hero.id);
+    return `<div class="grow-item" data-pickid="${hero.id}"${banned?' style="opacity:.6"':''}>
       <img class="ava" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
-      <div class="grow"><div class="gn">${esc(hero.name)}<span class="fc ${fc}">${esc(fname)}</span></div>
-      <div class="gmeta">${esc(hero.genre||"")} · ${hero.hp??"?"}血${hero.tool?" · 有工具":""} · ${(hero.skills||[]).map(s=>esc(s.name)).join("/")}</div></div>
+      <div class="grow"><div class="gn">${esc(hero.name)}${banned?' <span style="color:var(--seal);font-size:11px;border:1px solid var(--seal);border-radius:3px;padding:0 3px">禁</span>':''}<span class="fc ${fc}">${esc(fname)}</span></div>
+      <div class="gmeta">${banned?'<span style="color:var(--seal)">禁将·不能落座</span> · ':''}${esc(hero.genre||"")} · ${hero.hp??"?"}血${hero.tool?" · 有工具":""} · ${(hero.skills||[]).map(s=>esc(s.name)).join("/")}</div></div>
       <button class="gv" data-viewid="${hero.id}">查看技能</button></div>`;
   }).join("");
   if(!shown.length)h=`<div class="hint" style="padding:12px">没找到「${esc(qstr)}」。可点上方「手动输入」。</div>`;
@@ -358,6 +360,7 @@ function renderPickerList(qstr){
 }
 function choosePick(id){
   const hero=HERO_BY_ID.get(id);if(!hero)return;
+  if(isBanned(id)){toast("「"+hero.name+"」在禁将池,不能落座(仍可查看技能)");return;} // ② 客户端拦(服务端 setGeneral 也拦=双保险)
   const seat=pickerSeat,cur=state.seats[seat].general||"";
   const val=hero.tool?hero.tool:String(hero.id); // 有工具→工具id(工具逻辑不变);否则→OL id字符串
   if(cur===val){closeModal();return;}
@@ -412,6 +415,7 @@ function openSkillView(general,seatNo){
 // 选将弹层里「查看技能」:叠加在列表之上预览某版本技能(不选定),看完可「返回列表」比较别的版本,或「选定此武将」提交
 function previewHero(id){
   const hero=HERO_BY_ID.get(id); if(!hero){toast("该武将暂无技能资料");return;}
+  const banned=isBanned(id); // ② 禁将:可查看技能,但「选定」禁用
   const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
   const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
@@ -432,7 +436,8 @@ function previewHero(id){
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
     ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,选定后在大厅「登场工具」处进入。","This hero has a dedicated offline tool — open it from the lobby's tool list after selecting.")}</div>`:""}
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${T("返回列表","Back")}</button><button class="primary" data-pvpick="1">${T("选定此武将","Select")}</button></div>
+    ${banned?`<div style="margin-top:10px;padding:7px 10px;background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;font-size:12px;color:var(--seal)">🚫 ${T("此武将在禁将池,不能落座(仅可查看技能)","This hero is banned — viewing only, cannot be seated")}</div>`:""}
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${T("返回列表","Back")}</button><button class="primary" data-pvpick="1"${banned?' disabled style="opacity:.45;cursor:not-allowed"':''}>${banned?T("已禁用","Banned"):T("选定此武将","Select")}</button></div>
   </div>`;
   $("#modal").appendChild(ov);
   ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest("[data-pvclose]")) ov.remove(); }); // 背景/×/返回:只关预览,列表还在
@@ -533,7 +538,7 @@ function openSocket(){
     else if(m.type==="actionResult"){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();}
     else if(m.type==="roomClosed"){intentionalClose=true;connected=false;updateConnBar();toast(m.reason==="ttl"?"房间闲置超时,已自动解散":"房间已被解散");state=null;focus=null;try{ws.close();}catch(e){}render();}
     else if(m.type==="renamed"){deviceId=m.newId;localStorage.setItem("sgs_device",m.newId);toast("已改名为「"+m.newId+"」");render();} // 改名成功→更新本地身份
-    else if(m.type==="error"){const M={NAME_TAKEN:"该名字已被同房玩家占用,换一个",EMPTY_NAME:"名字不能为空"};toast(M[m.code]||("操作被拒:"+m.code));}
+    else if(m.type==="error"){const M={NAME_TAKEN:"该名字已被同房玩家占用,换一个",EMPTY_NAME:"名字不能为空",BANNED:"该武将在禁将池,不能落座"};toast(M[m.code]||("操作被拒:"+m.code));}
   };
 }
 function connect(base,code){
@@ -565,6 +570,7 @@ function render(){
     h+=viewSeats();
     h+=viewPanel();
     h+=viewToolsIndex();
+    h+=viewBannedPool();
     h+=viewRoomAdmin();
   }
   h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
@@ -580,6 +586,19 @@ function viewFocusHeader(seat){
     +(mine?' <span class="lb">你的座位</span>':' <span class="chip">查看</span>')+`</span></div></div>`;
 }
 
+// ② 禁将池展示:任何玩家可看,拼音序 + 缩略图;点开=查看技能(选定被禁)。空池不显示。数据=/banned-generals.json
+function viewBannedPool(){
+  if(!BANNED.size||!Array.isArray(HEROES)) return "";
+  const list=[...BANNED].map(id=>HERO_BY_ID.get(id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name,"zh"));
+  if(!list.length) return "";
+  let h=`<div class="card"><h2>禁将池<span class="tag">${list.length} 将 · 拿到也不能落座</span></h2>`;
+  h+=`<div class="hint" style="margin-bottom:6px">全局默认禁将,任何人可看。点头像看技能(仍可查),但不能选其落座。调整需后台改配置并部署。</div>`;
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:6px">`+list.map(hero=>
+    `<div data-banview="${hero.id}" style="display:flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);border-radius:16px;padding:2px 9px 2px 2px;opacity:.85">`
+    +`<img class="ava" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'" style="width:26px;height:26px;border-radius:50%"/>`
+    +`<span style="font-size:13px">${esc(hero.name)}</span></div>`).join("")+`</div></div>`;
+  return h;
+}
 function viewToolsIndex(){
   const tools=Object.values(state.seats).filter(s=>hasTool(s.general));
   let h='<div class="card"><h2>登场工具<span class="tag">点进入操作 / 查看</span></h2>';
@@ -1175,6 +1194,7 @@ function bindAll(){
   q("[data-disband]").forEach(b=>b.onclick=()=>{if(confirm("确定解散整个房间?\n所有座位、工具进度将清空,全体退出,且不可恢复。\n(仅想自己换桌请用「新开房间」)"))send({type:"disbandRoom"});});
   q("[data-tejump]").forEach(b=>b.onclick=()=>{focus=+b.dataset.tejump;render();});
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
+  q("[data-banview]").forEach(b=>b.onclick=()=>previewHero(+b.dataset.banview)); // ② 禁将池点头像→查看技能(选定被禁)
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});
   // 全场状态面板:视图切换 / 血量±1 / 点数改血(可含上限)/ 翻横链切换 / 阵亡

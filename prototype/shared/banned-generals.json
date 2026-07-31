@@ -1,0 +1,4 @@
+{
+  "note": "禁将池(全局默认,所有房间统一)。玩家即使拿到禁池里的武将也不能在房间落座,但仍可查看其技能。修改下面 ids 后需 `cd prototype/worker && npx wrangler deploy` 才生效(暂无管理员页/运行时编辑)。id 见 shared/generals.json,例:魔貂蝉/魔曹操 等。",
+  "ids": []
+}
