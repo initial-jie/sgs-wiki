@@ -239,6 +239,8 @@ const HERO_BY_TOOL=new Map();  // toolId -> hero
 let DERIVED={};                // 常见武将牌衍生技,按来源武将存:{武将名(去·空格)→[{name,tag,text}]};从 /derived-skills.json 拉
 let DCARDS={};                  // 常见武将牌衍生牌,按来源武将存:{武将名(去·空格)→[{name,src,text}]};从 /derived-cards.json 拉
 let EQUIP=[];                    // 装备牌库(/equipment.json);#2 装备区/坐骑下拉数据源(按 slot.types 过滤)
+let BANNED=new Set();            // ② 禁将池 id 集(/banned-generals.json);全局默认,后端改文件+wrangler deploy 更新
+function isBanned(id){ return BANNED.has(Number(id)); }
 const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
 const SUIT_CH={S:"♠",H:"♥",C:"♣",D:"♦"}; // 纯字符(用于 <option> 文本,不能用返回 HTML 的 suitGlyph)
 function loadHeroes(){
@@ -364,6 +366,22 @@ function choosePick(id){
 }
 // ① 技能修正提示:该将技能经校正(线下版/线上增强/补全),与你手上的实体卡版本可能不同→查将时弹⚠
 function cardWarnHtml(hero){ return (hero&&hero.cardWarn)?`<div style="background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:var(--seal)"><b>⚠ 技能修正</b> ${esc(hero.cardWarn)}</div>`:""; }
+// ③ 同名可替换:OL 规则=同名武将只能选其一落座,神版为独立武将(可与一个非神版共存)。基名=剥版本前缀(神/界/谋/魔/SP);分组审计确认无假阳性
+function heroBaseName(name){ return (name||"").replace(/^(神|界|谋|魔|SP)/,""); }
+function sameNameVersions(hero){
+  if(!hero||!hero.name||!Array.isArray(HEROES)) return null;
+  const base=heroBaseName(hero.name);
+  const all=HEROES.filter(h=>heroBaseName(h.name)===base);
+  if(all.length<2) return null;                       // 无其他同名版本→不提示
+  return { base, nonShen: all.filter(h=>!h.name.startsWith("神")), shen: all.filter(h=>h.name.startsWith("神")) };
+}
+function sameNameHtml(hero){
+  const g=sameNameVersions(hero); if(!g) return "";
+  const nm=h=>{ const banned=isBanned(h.id); const b=(h.name===hero.name)?`<b>${esc(h.name)}</b>`:esc(h.name); return banned?`<span style="text-decoration:line-through;opacity:.5">${b}</span><span style="color:var(--seal);font-size:11px">禁</span>`:b; };
+  const ns=g.nonShen.map(nm).join(" / ");
+  const shenLine=g.shen.length?`<div style="margin-top:3px">神版<b>独立武将</b>(可与上面一个共存):${g.shen.map(nm).join(" / ")}</div>`:"";
+  return `<div class="hint" style="margin:2px 0 8px;padding:7px 10px;background:rgba(0,0,0,.035);border-radius:6px;font-size:12px">🔄 <b>同名可替换</b>(只能选其一落座):${ns}${shenLine}</div>`;
+}
 function openSkillView(general,seatNo){
   const hero=heroForSeat(general);
   if(!hero){toast("该武将暂无技能资料(线下/手输)");return;}
@@ -383,6 +401,7 @@ function openSkillView(general,seatNo){
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
     ${cardWarnHtml(hero)}
+    ${sameNameHtml(hero)}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
@@ -408,6 +427,7 @@ function previewHero(id){
         <div class="hmeta">${(hero.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div></div>
     ${hero.characteristic?`<div class="hint" style="margin-bottom:8px">${T("特点:","Traits: ")}${esc(hero.characteristic)}</div>`:""}
     ${cardWarnHtml(hero)}
+    ${sameNameHtml(hero)}
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
