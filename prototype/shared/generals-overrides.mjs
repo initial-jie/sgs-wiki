@@ -183,7 +183,9 @@ export const OFFLINE_HEROES = [
       { name: "牙镰", effect: "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。" },
     ],
     characteristic: "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
-    cover: null, avatar: null, tool: null, offline: true,
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
+    tool: null, offline: true,
   },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
