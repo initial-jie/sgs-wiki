@@ -4447,8 +4447,7 @@
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/22700.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/22700.png",
     "tool": null,
-    "offline": false,
-    "cardWarn": "异兆/肆军/天劫 为线下版(与官方线上描述不同)——以你手上的实体卡为准"
+    "offline": false
   },
   {
     "id": 229,
@@ -6115,7 +6114,7 @@
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/35100.png",
     "tool": null,
     "offline": false,
-    "cardWarn": "许身 已校正为线下版(无线上「回复体力至1点」结尾)——以你手上的实体卡为准"
+    "cardWarn": "许身 房间已是 OL 最新版,你的实体卡略有出入——以本房间描述为准"
   },
   {
     "id": 352,
@@ -8212,8 +8211,7 @@
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/42600.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/42600.png",
     "tool": null,
-    "offline": false,
-    "cardWarn": "缮甲 已校正为线下版(与官方线上描述不同)——以你手上的实体卡为准"
+    "offline": false
   },
   {
     "id": 427,
@@ -16653,7 +16651,7 @@
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/72600.png",
     "tool": null,
     "offline": false,
-    "cardWarn": "矫诏 已补全「殚心」两级修改(OL 原文过简)——机制以你手上的实体卡为准"
+    "cardWarn": "矫诏 已把 OL 过简原文补全「殚心」两级说明——以本房间(OL现状)描述为准"
   },
   {
     "id": 727,
