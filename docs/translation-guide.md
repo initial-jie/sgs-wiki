@@ -49,8 +49,8 @@ Use these house translations so every hero reads as one voice. If you hit a term
 | 出牌阶段 | Play phase | 摸牌阶段 | Draw phase |
 | 准备阶段 | Preparation phase | 结束阶段 | End phase |
 | 判定 / 判定区 | judgement / judgement zone | 濒死状态 | dying state |
-| 锁定技 | Compulsory Skill | 限定技 | Limit Skill |
-| 觉醒技 | Awakening Skill | 转换技 (阳/阴) | Transform Skill (Yang/Yin) |
+| 锁定技 | Compulsory Skill | 限定技 | Limited Skill |
+| 觉醒技 | Awakening Skill | 转换技 (阳/阴) | Alternating Skill (Yang/Yin) |
 | 主公技 | Lord Skill | 宗族技 | Clan Skill |
 | 势力 | faction | 距离 | distance |
 | 攻击范围 | attack range | 目标 / 唯一目标 | target / sole target |
@@ -59,6 +59,7 @@ Use these house translations so every hero reads as one voice. If you hit a term
 | 重铸 | recast | 连环状态 | chained |
 | 火焰伤害 / 雷电伤害 | fire damage / thunder damage | 属性伤害 | elemental damage |
 | 横置 / 重置 | turn sideways / turn upright | 翻面 | flip |
+| 非伤害 | non-damaging | | |
 
 **Conventions:**
 - Keep the **skill name in Chinese** (the friend sees the Chinese name on the physical card). Only the effect text becomes English.
