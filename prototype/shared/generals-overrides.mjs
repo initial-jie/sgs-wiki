@@ -173,6 +173,18 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
     tool: null, offline: true,
   },
+  // 谋祝融 —— OL 2026-08-01 新上,官方 wiki/花名册(683)暂未收录,先手录(用户游戏内截图)。蜀/4血(截图4勾玉)/传说/操作难度困难。⚠ 官网重爬收录后 graduate 删此条(同裴秀/谋贾诩坑)。
+  {
+    id: 9010, name: "谋祝融", genre: "谋", series: "谋", faction: "蜀",
+    factionSelectable: false, quality: "传说", hp: 4, initialHp: null,
+    tags: ["进攻", "防御", "控制"],
+    skills: [
+      { name: "刃犟", effect: "出牌阶段限X次，你可弃置X张牌并令至多X名其他角色各弃置一张牌（X为本回合弃牌堆中【杀】的数量且至少为1）。每有角色因此弃置牌不为【杀】，你便摸一张牌。" },
+      { name: "牙镰", effect: "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。" },
+    ],
+    characteristic: "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
     id: 9007, name: "司马炎", genre: "其他", series: "标", faction: "晋",
