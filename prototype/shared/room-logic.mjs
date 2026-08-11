@@ -394,6 +394,8 @@ export function initToolState(generalId) {
     };
   if (generalId === "lijue")
     return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
+  if (generalId === "caoying")
+    return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
   if (generalId === "xurong")
     return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
   if (generalId === "xushi")
@@ -649,6 +651,37 @@ export class RoomCore {
       }
       if (t === "newTurn") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; ts.round++; ts.lastRoll = null; this._log(ts, `进入第${ts.round}轮`); return { ok: true }; }
       if (t === "resetGame") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 曹婴:伏间(全公开生成器)。OL增强版=随机观看"手牌数不是全场唯一最多"的一名其他角色手牌。
+    // 曹婴输入唯一手牌最多的座位号(平手/无则 null),DO 从「登记武将且未阵亡、非曹婴、非唯一最多」座位里随机出观看目标(可 seed 复现) ─────────
+    if (target.general === "caoying") {
+      const cSeat = targetSeat;
+      const isCy = bySeat === cSeat && iHold(cSeat); // 曹婴本人(或代持)
+      if (t === "fujian") { // { maxSeat: 座位号|null, phase: "prep"|"end" }
+        if (!isCy) return { error: "NOT_CY_ACTION" };
+        const maxSeat = toolAction.maxSeat == null ? null : Number(toolAction.maxSeat);
+        if (maxSeat != null && !this.seats[maxSeat]) return { error: "BAD_SEAT" };
+        const phase = toolAction.phase === "end" ? "end" : "prep";
+        // 候选池:登记了武将且未阵亡的其他座位;唯一最多者排除(maxSeat=曹婴自己等价于只排自己)
+        const pool = Object.values(this.seats)
+          .filter((s) => s.general && s.general !== "none" && !s.dead && s.seatNo !== cSeat && s.seatNo !== maxSeat)
+          .map((s) => s.seatNo);
+        const phTxt = phase === "end" ? "结束阶段" : "准备阶段";
+        const maxTxt = maxSeat == null ? "无唯一最多(平手)" : `唯一最多=座位${maxSeat}`;
+        if (!pool.length) {
+          ts.lastPeek = { phase, maxSeat, target: null };
+          this._log(ts, `伏间(${phTxt}):${maxTxt},无合法目标`);
+          return { ok: true, target: null };
+        }
+        const target2 = pool[Math.floor(this.rng() * pool.length)];
+        ts.lastPeek = { phase, maxSeat, target: target2 };
+        this._log(ts, `伏间(${phTxt}):${maxTxt},随机命中 座位${target2}(候选 ${pool.join("/")})`);
+        return { ok: true, target: target2 };
+      }
+      if (t === "newTurn") { if (!isCy) return { error: "NOT_CY_ACTION" }; ts.round++; ts.lastPeek = null; this._log(ts, `进入第${ts.round}轮`); return { ok: true }; }
+      if (t === "resetGame") { if (!isCy) return { error: "NOT_CY_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

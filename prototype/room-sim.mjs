@@ -666,6 +666,37 @@ roomL.action(ld[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "newTurn" } 
 check("下一轮:round2、lastRoll 清空", LJT().round === 2 && LJT().lastRoll === null);
 check("重开", ljAct(1, { type: "resetGame" }).reset === true && LJT().round === 1);
 
+// ============ 场景 15b:曹婴 伏间(排除自己+唯一最多,随机看牌目标)============
+console.log("\n=== 场景 15b:曹婴 伏间 ===");
+let cyRng = 0;
+const roomC = new RoomCore("4680", 5, () => cyRng);
+const cd2 = {}; for (let i = 1; i <= 5; i++) { cd2[i] = `cy${i}`; roomC.claimSeat(cd2[i], i); }
+roomC.setGeneral(cd2[1], 1, "caoying");                     // 座位1 = 曹婴
+for (let i = 2; i <= 4; i++) roomC.setGeneral(cd2[i], i, String(i)); // 2/3/4 登记武将;座位5 空着(不入候选)
+const cyAct = (by, o) => roomC.action(cd2[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const CYT = () => roomC.seats[1].toolState;
+check("init:round1/lastPeek null", CYT().round === 1 && CYT().lastPeek === null);
+check("非曹婴不能发动", cyAct(2, { type: "fujian", maxSeat: null }).error === "NOT_CY_ACTION");
+check("非法 maxSeat 被拒", cyAct(1, { type: "fujian", maxSeat: 99 }).error === "BAD_SEAT");
+cyRng = 0;
+check("唯一最多=座位2 → 候选3/4,rng=0 命中3", cyAct(1, { type: "fujian", maxSeat: 2, phase: "prep" }).target === 3 && CYT().lastPeek.target === 3);
+cyRng = 0.9;
+check("平手(null)→ 候选2/3/4,rng=.9 命中4;空座位5 不入候选", cyAct(1, { type: "fujian", maxSeat: null, phase: "end" }).target === 4);
+check("maxSeat=曹婴自己 等价只排自己(候选2/3/4)", cyAct(1, { type: "fujian", maxSeat: 1 }).target === 4);
+roomC.action(cd2[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "panelSetHpMax", hp: 4 } });
+roomC.action(cd2[2], { targetSeat: 2, bySeat: 2, toolAction: { type: "panelSetDead", dead: true } });
+cyRng = 0;
+check("阵亡座位2 不入候选(唯一最多=3 → 只剩4)", cyAct(1, { type: "fujian", maxSeat: 3 }).target === 4);
+check("旁人可见结果(全公开)", roomC.viewFor(cd2[5]).seats[1].toolState.lastPeek.target === 4);
+// 无合法目标:3人局,唯一最多是仅存的另一人
+const roomC2 = new RoomCore("4681", 2, () => 0);
+const ce = {}; for (let i = 1; i <= 2; i++) { ce[i] = `ce${i}`; roomC2.claimSeat(ce[i], i); }
+roomC2.setGeneral(ce[1], 1, "caoying"); roomC2.setGeneral(ce[2], 2, "24");
+check("无合法目标 → target null 并记日志", roomC2.action(ce[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "fujian", maxSeat: 2 } }).target === null && roomC2.seats[1].toolState.log[0].includes("无合法目标"));
+cyAct(1, { type: "newTurn" });
+check("下一轮:round2、lastPeek 清空", CYT().round === 2 && CYT().lastPeek === null);
+check("重开", cyAct(1, { type: "resetGame" }).reset === true && CYT().round === 1);
+
 // ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
 console.log("\n=== 场景 16:徐荣 暴戾 ===");
 const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)

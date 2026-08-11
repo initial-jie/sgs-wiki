@@ -208,8 +208,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"}, caoying:{name:"曹婴"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan"||g==="caoying";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -225,6 +225,7 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              sunquan:{view:s=>viewSqTool(s),bind:(s,q)=>bindSq(s,q)},
              dianwei:{view:s=>viewDwTool(s),bind:(s,q)=>bindDw(s,q)},
              lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
+             caoying:{view:s=>viewCyTool(s),bind:(s,q)=>bindCy(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
              xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
              guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)},
@@ -2495,6 +2496,37 @@ function bindLj(lj,q){
   q("[data-ljroll]").forEach(b=>b.onclick=()=>act({type:"langxi"}));
   q("[data-ljturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
   q("[data-ljreset]").forEach(b=>b.onclick=()=>{if(confirm("重开狼袭工具?"))act({type:"resetGame"});});
+}
+
+/* ---------- 曹婴工具(伏间随机看牌目标;全公开生成器)---------- */
+let cyMaxSel=null; // 本机暂存:唯一手牌最多的座位("null"=平手/无唯一最多)
+function viewCyTool(cy){
+  const ts=cy.toolState||{}, iAm=state.youHold.includes(cy.seatNo);
+  const others=Object.values(state.seats).filter(s=>s.general&&s.general!=="none"&&!s.dead); // 下拉含曹婴自己(自己也可能是唯一最多,等价只排自己)
+  let h=`<div class="card"><h2>曹婴 · 伏间<span class="tag">第 ${ts.round||1} 轮 · 全公开</span></h2>`;
+  h+=`<div class="hint">锁定技,准备阶段和结束阶段:随机观看「手牌数<b>不是全场唯一最多</b>」的一名其他角色的手牌。先选当前唯一手牌最多的座位(平手则选「无」),随机在房间跑、可复现,全场可见。</div>`;
+  const lp=ts.lastPeek;
+  h+=`<div style="text-align:center;margin:14px 0"><div style="font-size:13px;color:var(--ink-soft)">${lp?(lp.phase==="end"?"结束阶段":"准备阶段")+" · "+(lp.maxSeat==null?"平手无唯一最多":"唯一最多=座位"+lp.maxSeat):"本轮观看目标"}</div>`
+    +`<div style="font-size:34px;font-weight:900;color:var(--seal);line-height:1.2">${lp?(lp.target==null?"无合法目标":"座位"+lp.target+" "+esc((seatGeneralName(state.seats[lp.target]?.general)||"").slice(0,6))):"—"}</div>`
+    +(lp&&lp.target!=null?`<div class="hint" style="margin-top:2px">曹婴观看该角色手牌(桌面执行)</div>`:"")+`</div>`;
+  if(iAm){
+    h+=`<div class="row" style="margin-bottom:6px"><span class="hint" style="margin:0;flex:none">唯一手牌最多</span>`
+      +`<select class="pnl-msel" data-cymax style="flex:1 1 0;min-width:0"><option value="null"${cyMaxSel==null||cyMaxSel==="null"?" selected":""}>无唯一最多(平手)</option>`
+      +others.map(s=>`<option value="${s.seatNo}"${String(cyMaxSel)===String(s.seatNo)?" selected":""}>座位${s.seatNo} ${esc((seatGeneralName(s.general)||"").slice(0,5))}${s.seatNo===cy.seatNo?"(曹婴自己)":""}</option>`).join("")
+      +`</select></div>`;
+    h+=`<div class="row"><button class="primary" data-cygo="prep">准备阶段发动</button><button class="primary" data-cygo="end">结束阶段发动</button>`
+      +`<button class="ghost" data-cyturn="1">下一轮</button><button class="ghost" data-cyreset="1" style="font-size:12px">重开</button></div>`;
+  } else h+=`<div class="hint">曹婴本人操作,你只读(结果全场公开)。</div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindCy(cy,q){
+  const C=cy.seatNo, act=(o)=>send({type:"action",targetSeat:C,bySeat:C,toolAction:o});
+  q("[data-cymax]").forEach(sel=>sel.onchange=()=>{cyMaxSel=sel.value;});
+  q("[data-cygo]").forEach(b=>b.onclick=()=>{const v=(cyMaxSel==null||cyMaxSel==="null")?null:+cyMaxSel;act({type:"fujian",maxSeat:v,phase:b.dataset.cygo});});
+  q("[data-cyturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
+  q("[data-cyreset]").forEach(b=>b.onclick=()=>{if(confirm("重开伏间工具?"))act({type:"resetGame"});});
 }
 
 /* ---------- 徐荣工具(暴戾计数 + 凶镬发放/三选一结算 + 杀绝濒死+1;全公开)---------- */
