@@ -123,6 +123,16 @@
   "range": 2
  },
  {
+  "name": "赤血刃",
+  "type": "武器",
+  "suit": null,
+  "rank": null,
+  "origin": "衍生",
+  "srcHero": "神黄忠",
+  "range": 3,
+  "note": "无花色点数"
+ },
+ {
   "name": "鬼龙斩月刀",
   "type": "武器",
   "suit": "S",

@@ -20936,8 +20936,38 @@
       }
     ],
     "characteristic": "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
-    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
-    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76500.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76500.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9011,
+    "name": "神黄忠",
+    "genre": "神将",
+    "series": "神",
+    "faction": "神",
+    "factionSelectable": true,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "爆发"
+    ],
+    "skills": [
+      {
+        "name": "神御",
+        "effect": "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将【赤血刃】置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且【赤血刃】在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。"
+      },
+      {
+        "name": "化刃",
+        "effect": "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数量的牌，视为拥有其技能。"
+      }
+    ],
+    "characteristic": "通过赤血刃创造收益；可以对武器进行炼化。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/23000.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/23000.png",
     "tool": null,
     "offline": true
   }

@@ -173,7 +173,7 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
     tool: null, offline: true,
   },
-  // 谋祝融 —— OL 2026-08-01 新上,官方 wiki/花名册(683)暂未收录,先手录(用户游戏内截图)。蜀/4血(截图4勾玉)/传说/操作难度困难。⚠ 官网重爬收录后 graduate 删此条(同裴秀/谋贾诩坑)。
+  // 谋祝融 —— OL 2026-08-01 新上,官方花名册暂未收录(olwiki 确认真 id=765),先手录。蜀/4血/传说。图=官方图床新路径(general/big/static + skinShop,老 xingxiang 对新将 404)。⚠ 官网重爬收录后 graduate 删此条(同裴秀/谋贾诩坑)。
   {
     id: 9010, name: "谋祝融", genre: "谋", series: "谋", faction: "蜀",
     factionSelectable: false, quality: "传说", hp: 4, initialHp: null,
@@ -183,8 +183,22 @@ export const OFFLINE_HEROES = [
       { name: "牙镰", effect: "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。" },
     ],
     characteristic: "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
-    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
-    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mouzhurong.jpg",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76500.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76500.png",
+    tool: null, offline: true,
+  },
+  // 神黄忠 —— OL 神话再临新神将,官方花名册暂未收录(olwiki 确认真 id=230),先手录。神/4血/传说,势力自选(神将惯例)。衍生武器赤血刃在 derived-cards-room.json+equipment.json。⚠ 官网重爬收录后 graduate 删此条。
+  {
+    id: 9011, name: "神黄忠", genre: "神将", series: "神", faction: "神",
+    factionSelectable: true, quality: "传说", hp: 4, initialHp: null,
+    tags: ["进攻", "爆发"],
+    skills: [
+      { name: "神御", effect: "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将【赤血刃】置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且【赤血刃】在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。" },
+      { name: "化刃", effect: "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数量的牌，视为拥有其技能。" },
+    ],
+    characteristic: "通过赤血刃创造收益；可以对武器进行炼化。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/23000.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/23000.png",
     tool: null, offline: true,
   },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。

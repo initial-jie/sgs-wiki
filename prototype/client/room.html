@@ -873,7 +873,7 @@ function equipSelect(sn,slot){
   const s=state.seats[sn], cur=s[slot.k], curKey=cur?`${cur.name}|${cur.suit}|${cur.rank}`:"", isAbol=abol(s,slot.k);
   const taken=equipTaken(sn,slot.k); // #3 全局去重:别的座位已装的物理牌从下拉剔除(本槽当前这张始终保留)
   const list=EQUIP.filter(e=>{const key=`${e.name}|${e.suit}|${e.rank}`;return slot.types.includes(e.type)&&(!taken.has(key)||key===curKey);});
-  const optOf=e=>{const key=`${e.name}|${e.suit}|${e.rank}`;return `<option value="${esc(key)}"${key===curKey?" selected":""}>${SUIT_CH[e.suit]||""}${e.rank} ${esc(e.name)}${(e.type==="武器"&&e.range!=null)?" 范"+e.range:""}</option>`;};
+  const optOf=e=>{const key=`${e.name}|${e.suit}|${e.rank}`;return `<option value="${esc(key)}"${key===curKey?" selected":""}>${SUIT_CH[e.suit]||""}${e.rank??""} ${esc(e.name)}${(e.type==="武器"&&e.range!=null)?" 范"+e.range:""}</option>`;}; // rank??"" :赤血刃等虚拟牌无花色点数
   const src=list.filter(e=>e.origin==="源生"), der=list.filter(e=>e.origin==="衍生");
   let opts=`<option value="">${slot.label}:无</option>`;
   if(src.length) opts+=`<optgroup label="源生">${src.map(optOf).join("")}</optgroup>`;
@@ -1214,7 +1214,7 @@ function bindAll(){
   q("[data-lord]").forEach(b=>b.onclick=()=>{const sn=+b.dataset.lord;pAct(sn,{type:"panelSetLord",on:!state.seats[sn].lordBonus});}); // 君主+1上限
   q("[data-equip]").forEach(sel=>sel.onchange=()=>{ // #2 ④装备槽:选牌→panelSetEquip
     const [sn,slot]=sel.dataset.equip.split(":"); const v=sel.value; let card=null;
-    if(v){ const [name,suit,rank]=v.split("|"); const f=EQUIP.find(e=>e.name===name&&e.suit===suit&&String(e.rank)===rank);
+    if(v){ const [name,suit,rank]=v.split("|"); const f=EQUIP.find(e=>e.name===name&&String(e.suit)===suit&&String(e.rank)===rank); // String(suit):无花色虚拟牌(赤血刃)suit=null→键"null"
       if(f)card={name:f.name,suit:f.suit,rank:f.rank,type:f.type,range:f.range}; }
     send({type:"action",targetSeat:+sn,bySeat:+sn,toolAction:{type:"panelSetEquip",slot,card}});
   });
@@ -2423,7 +2423,7 @@ function bindSq(sq,q){
 function dwWeaponCard(p,toggleOn){
   if(p.kind==="card"){ // 源生军争武器(非武将牌):无技能,显花色点数,卸下走 data-dwcard
     const btn=(toggleOn!==undefined)?`<button class="${toggleOn?'primary':''}" data-dwcard="${esc(p.name+'|'+p.suit+'|'+p.rank+'|'+(p.range??1))}" style="font-size:12px;padding:4px 10px;flex:none">${toggleOn?'卸下':'装备'}</button>`:"";
-    return `<div class="slot" style="${toggleOn?'border-style:solid;border-color:var(--qi)':''}"><div class="row"><span class="grow"><b>${(SUIT_CH[p.suit]||"")}${p.rank} ${esc(p.name)}</b> <span class="chip gold">范围 ${p.range}</span> <span class="chip">源生武器</span></span>${btn}</div></div>`;
+    return `<div class="slot" style="${toggleOn?'border-style:solid;border-color:var(--qi)':''}"><div class="row"><span class="grow"><b>${(SUIT_CH[p.suit]||"")}${(p.rank==null||p.rank==="null")?"":p.rank} ${esc(p.name)}</b> <span class="chip gold">范围 ${p.range}</span> <span class="chip">源生武器</span></span>${btn}</div></div>`;
   }
   const skills=p.blank?'<span class="hint">白板(无技能)</span>':(p.skills||[]).map(s=>`<div style="margin-top:3px"><b style="color:var(--seal)">${esc(s.name)}</b> <span style="font-size:12px">${esc(s.effect)}</span></div>`).join("");
   const btn=(toggleOn!==undefined)?`<button class="${toggleOn?'primary':''}" data-dwequip="${esc(p.name)}" style="font-size:12px;padding:4px 10px;flex:none">${toggleOn?'卸下':'装备'}</button>`:"";
@@ -2448,7 +2448,7 @@ function viewDwTool(dw){
       const wpnTaken=equipTaken(dw.seatNo,"dwtool");
       const cand=EQUIP.filter(e=>e.type==="武器"&&!wpnTaken.has(`${e.name}|${e.suit}|${e.rank}`)&&!weps.some(w=>w.kind==="card"&&w.name===e.name&&w.suit===e.suit&&String(w.rank)===String(e.rank)));
       const src=cand.filter(e=>e.origin==="源生"), der=cand.filter(e=>e.origin==="衍生");
-      const optOf=e=>`<option value="${esc(e.name+'|'+e.suit+'|'+e.rank+'|'+(e.range??1))}">${(SUIT_CH[e.suit]||"")}${e.rank} ${esc(e.name)} 范${e.range??1}</option>`;
+      const optOf=e=>`<option value="${esc(e.name+'|'+e.suit+'|'+e.rank+'|'+(e.range??1))}">${(SUIT_CH[e.suit]||"")}${e.rank??""} ${esc(e.name)} 范${e.range??1}</option>`;
       h+=`<div class="row" style="margin-top:8px;gap:6px"><span class="hint" style="margin:0;flex:none">装源生武器</span>`
         +`<select class="pnl-msel" data-dwcardsel style="flex:1 1 0;min-width:0"><option value="">选一把常规武器装入武器栏…</option>`
         +(src.length?`<optgroup label="源生">${src.map(optOf).join("")}</optgroup>`:"")
@@ -2470,7 +2470,7 @@ function bindDw(dw,q){
   const D=dw.seatNo, act=(o)=>send({type:"action",targetSeat:D,bySeat:D,toolAction:o});
   q("[data-dwroll]").forEach(b=>b.onclick=()=>act({type:"qiexie"}));
   q("[data-dwequip]").forEach(b=>b.onclick=()=>act({type:"equipToggle",name:b.dataset.dwequip}));
-  const dwCard=v=>{const[name,suit,rank,range]=v.split("|");act({type:"equipCard",card:{name,suit,rank,range:Number(range)||1}});};
+  const dwCard=v=>{const[name,suit,rank,range]=v.split("|");act({type:"equipCard",card:{name,suit:suit==="null"?null:suit,rank:rank==="null"?null:rank,range:Number(range)||1}});}; // "null"字符串还原为 null(无花色虚拟牌)
   q("[data-dwcardsel]").forEach(sel=>sel.onchange=()=>{if(sel.value)dwCard(sel.value);}); // 选源生武器→装入武器栏
   q("[data-dwcard]").forEach(b=>b.onclick=()=>dwCard(b.dataset.dwcard));                   // 卸下已装源生武器(toggle)
   q("[data-dwclear]").forEach(b=>b.onclick=()=>{if(confirm("清空当前武器?"))act({type:"clearWeapons"});});
