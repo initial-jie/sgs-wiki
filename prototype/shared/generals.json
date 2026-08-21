@@ -20970,5 +20970,102 @@
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/23000.png",
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9012,
+    "name": "曹金玉",
+    "genre": "其他",
+    "series": "标",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "限定",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "防御",
+      "辅助",
+      "颜色爱好者"
+    ],
+    "skills": [
+      {
+        "name": "春晖",
+        "effect": "锁定技，准备阶段或当你受到伤害后，令一名角色交给你一张手牌。若此牌为黑色，本回合你或其下一次成为红色牌的目标时，各弃置一张手牌。"
+      },
+      {
+        "name": "夏晟",
+        "effect": "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标。"
+      },
+      {
+        "name": "秋暮",
+        "effect": "锁定技，本回合成为过你的红色牌目标的角色进入濒死状态时，你将“春晖”“夏晟”或“秋暮”描述中的“红色”改为“黑色”，若描述变化，你获得其所有黑色手牌。"
+      }
+    ],
+    "characteristic": "防御能力强，可以辅助队友，需要关注手牌中的颜色分布。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74000.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74000.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9013,
+    "name": "界步练师",
+    "genre": "界限突破",
+    "series": "界",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "辅助",
+      "回复"
+    ],
+    "skills": [
+      {
+        "name": "安恤",
+        "effect": "出牌阶段限一次，你可以获得两名角色各一张牌。然后你展示一张牌并交给其中手牌较少的角色，若不为黑桃，你摸一张牌。"
+      },
+      {
+        "name": "追忆",
+        "effect": "限定技，结束阶段，你可令一名其他角色摸三张牌并回复1点体力。然后你死亡时，可以对其再次发动本技能。"
+      }
+    ],
+    "characteristic": "安恤灵活给牌辅助队友；追忆为队友回血摸牌。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77500.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77500.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9014,
+    "name": "刘璋",
+    "genre": "璀璨星河",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "防御",
+      "辅助",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "丰蔚",
+        "effect": "锁定技，每轮开始时，你摸至多五张牌。若你手牌中有本轮以此法获得的牌，你跳过摸牌阶段；当你受到牌造成的伤害时，若手牌中有本轮以此法获得的牌，此伤害+1。"
+      },
+      {
+        "name": "宗护",
+        "effect": "每回合限一次，当你需要使用【杀】或【闪】时，你可将X张牌交给一名其他角色，然后视为你使用之（X为游戏轮数且至多为3）。"
+      }
+    ],
+    "characteristic": "摸牌多所受负面效果越大，需要合理运用技能吸引嘲讽并辅助队友。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/68300.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/68300.png",
+    "tool": null,
+    "offline": true
   }
 ]
