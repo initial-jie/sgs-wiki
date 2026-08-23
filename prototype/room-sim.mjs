@@ -697,6 +697,28 @@ cyAct(1, { type: "newTurn" });
 check("下一轮:round2、lastPeek 清空", CYT().round === 2 && CYT().lastPeek === null);
 check("重开", cyAct(1, { type: "resetGame" }).reset === true && CYT().round === 1);
 
+// ============ 场景 15c:族王明山 剩墨台账(已选点数 + 已用基本牌)============
+console.log("\n=== 场景 15c:族王明山 剩墨台账 ===");
+const roomW = new RoomCore("5791", 3, () => 0);
+const wd = {}; for (let i = 1; i <= 3; i++) { wd[i] = `wd${i}`; roomW.claimSeat(wd[i], i); }
+roomW.setGeneral(wd[1], 1, "wangmingshan");
+const wmsAct = (by, o) => roomW.action(wd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const WT = () => roomW.seats[1].toolState;
+check("init:round1/两台账皆空", WT().round === 1 && WT().usedRanks.length === 0 && WT().usedBasics.length === 0);
+check("非本人不能操作", wmsAct(2, { type: "wmsToggleRank", rank: "A" }).error === "NOT_WMS_ACTION");
+check("非法点数被拒", wmsAct(1, { type: "wmsToggleRank", rank: "14" }).error === "BAD_RANK");
+check("非法基本牌被拒", wmsAct(1, { type: "wmsToggleBasic", basic: "闪电" }).error === "BAD_BASIC");
+check("标记点数 A", wmsAct(1, { type: "wmsToggleRank", rank: "A" }).on === true && WT().usedRanks.includes("A"));
+check("标记点数 10 与 K", wmsAct(1, { type: "wmsToggleRank", rank: "10" }).ok && wmsAct(1, { type: "wmsToggleRank", rank: "K" }).ok && WT().usedRanks.length === 3);
+check("再点 A = 撤销(toggle)", wmsAct(1, { type: "wmsToggleRank", rank: "A" }).on === false && !WT().usedRanks.includes("A") && WT().usedRanks.length === 2);
+check("标记基本牌 杀/桃", wmsAct(1, { type: "wmsToggleBasic", basic: "杀" }).ok && wmsAct(1, { type: "wmsToggleBasic", basic: "桃" }).ok && WT().usedBasics.length === 2);
+check("再点 杀 = 撤销", wmsAct(1, { type: "wmsToggleBasic", basic: "杀" }).on === false && WT().usedBasics.length === 1);
+check("台账全场公开(旁人可见)", roomW.viewFor(wd[2]).seats[1].toolState.usedRanks.length === 2);
+wmsAct(1, { type: "newTurn" });
+check("下一轮:round+1 但台账保留(整局累计)", WT().round === 2 && WT().usedRanks.length === 2 && WT().usedBasics.length === 1);
+check("序列化/hydrate 存活", (() => { const h = RoomCore.hydrate(roomW.serialize()); const t = h.seats[1].toolState; return t.usedRanks.length === 2 && t.usedBasics.length === 1 && t.round === 2; })());
+check("重开清空台账", wmsAct(1, { type: "resetGame" }).reset === true && WT().round === 1 && WT().usedRanks.length === 0 && WT().usedBasics.length === 0);
+
 // ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
 console.log("\n=== 场景 16:徐荣 暴戾 ===");
 const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)

@@ -396,6 +396,8 @@ export function initToolState(generalId) {
     return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
   if (generalId === "caoying")
     return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
+  if (generalId === "wangmingshan")
+    return { round: 1, usedRanks: [], usedBasics: [], log: [] }; // 剩墨台账:usedRanks=已以此法选过的点数(A~K)、usedBasics=已以此法使用过的基本牌(杀/闪/桃/酒)
   if (generalId === "xurong")
     return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
   if (generalId === "xushi")
@@ -635,6 +637,34 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "resetGame") { if (!isDw) return { error: "NOT_DW_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 族王明山:剩墨台账(全公开计数器,无随机)。记录已以此法选过的点数 + 已以此法使用过的基本牌 ─────────
+    if (target.general === "wangmingshan") {
+      const wSeat = targetSeat;
+      const isWms = bySeat === wSeat && iHold(wSeat); // 族王明山本人(或代持)
+      const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+      const BASICS = ["杀", "闪", "桃", "酒"];
+      const toggle = (arr, v) => { const i = arr.indexOf(v); if (i >= 0) { arr.splice(i, 1); return false; } arr.push(v); return true; };
+      if (t === "wmsToggleRank") { // 点数 A~K:标记/取消"已以此法选择过"
+        if (!isWms) return { error: "NOT_WMS_ACTION" };
+        const r = String(toolAction.rank); if (!RANKS.includes(r)) return { error: "BAD_RANK" };
+        if (!Array.isArray(ts.usedRanks)) ts.usedRanks = [];
+        const on = toggle(ts.usedRanks, r);
+        this._log(ts, `剩墨点数 ${r} ${on ? "已用" : "撤销"}`);
+        return { ok: true, on };
+      }
+      if (t === "wmsToggleBasic") { // 基本牌 杀/闪/桃/酒:标记/取消"已以此法使用过"
+        if (!isWms) return { error: "NOT_WMS_ACTION" };
+        const b = String(toolAction.basic); if (!BASICS.includes(b)) return { error: "BAD_BASIC" };
+        if (!Array.isArray(ts.usedBasics)) ts.usedBasics = [];
+        const on = toggle(ts.usedBasics, b);
+        this._log(ts, `剩墨基本牌【${b}】${on ? "已用" : "撤销"}`);
+        return { ok: true, on };
+      }
+      if (t === "newTurn") { if (!isWms) return { error: "NOT_WMS_ACTION" }; ts.round++; this._log(ts, `进入第${ts.round}轮(台账保留,剩墨每轮限一次)`); return { ok: true }; }
+      if (t === "resetGame") { if (!isWms) return { error: "NOT_WMS_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 
