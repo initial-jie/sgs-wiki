@@ -21068,5 +21068,40 @@
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/68300.png",
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9015,
+    "name": "董予安",
+    "genre": "璀璨星河",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "防御",
+      "辅助",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "和煦",
+        "effect": "锁定技，你每有一个类别的非伤害牌，你的手牌上限便+1。"
+      },
+      {
+        "name": "泽光",
+        "effect": "每回合限一次，当你成为伤害牌的目标后，可重铸三张牌（不足则全部重铸）。然后若此牌造成伤害，你可令一名角色获得重铸牌。"
+      },
+      {
+        "name": "承恩",
+        "effect": "每回合结束时，若当前回合角色手牌数小于等于你，你可与一名角色拼点。若你赢，可使用拼点牌（无距离限制）；若你没赢，拼点目标可对你使用一张【杀】。"
+      }
+    ],
+    "characteristic": "拥有较高的手牌上限，可以辅助可以进攻。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75500.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75500.png",
+    "tool": null,
+    "offline": true
   }
 ]

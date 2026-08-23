@@ -249,6 +249,21 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/68300.png",
     tool: null, offline: true,
   },
+  // 董予安 —— OL 2026-08 新上(olwiki 真 id=755,官方花名册暂未收录)。群/3血/传说/璀璨星河-天极。⚠ graduate 后删。
+  {
+    id: 9015, name: "董予安", genre: "璀璨星河", series: "标", faction: "群",
+    factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
+    tags: ["防御", "辅助", "控制"],
+    skills: [
+      { name: "和煦", effect: "锁定技，你每有一个类别的非伤害牌，你的手牌上限便+1。" },
+      { name: "泽光", effect: "每回合限一次，当你成为伤害牌的目标后，可重铸三张牌（不足则全部重铸）。然后若此牌造成伤害，你可令一名角色获得重铸牌。" },
+      { name: "承恩", effect: "每回合结束时，若当前回合角色手牌数小于等于你，你可与一名角色拼点。若你赢，可使用拼点牌（无距离限制）；若你没赢，拼点目标可对你使用一张【杀】。" },
+    ],
+    characteristic: "拥有较高的手牌上限，可以辅助可以进攻。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75500.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75500.png",
+    tool: null, offline: true,
+  },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
     id: 9007, name: "司马炎", genre: "其他", series: "标", faction: "晋",

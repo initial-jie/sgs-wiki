@@ -2494,6 +2494,20 @@ function viewWmsTool(wms){
   h+=RANKS.map(r=>{const on=uR.includes(r);
     return `<button class="pnl-flag${on?" on":""}"${iAm?` data-wmsr="${esc(r)}"`:" disabled"} style="min-width:38px${on?";text-decoration:line-through;opacity:.75":""}">${r}</button>`;}).join("");
   h+=`</div></div>`;
+  // 弹雀:上一张使用牌的点数(跨回合保留;剩墨印牌无点数→清空)
+  const lr=ts.lastRank??null, ld=ts.lastDiff??null;
+  h+=`<div style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)">`;
+  h+=`<div class="hint" style="margin:0 0 4px">弹雀 · 上一张使用牌的点数 <span style="color:var(--ink-soft)">(跨回合保留)</span></div>`;
+  h+=`<div style="text-align:center;margin:6px 0 8px"><span style="font-size:30px;font-weight:900;color:var(--seal);line-height:1.1">${lr==null?"无点数":lr}</span>`;
+  if(ld!=null) h+=`<div class="hint" style="margin:2px 0 0">本次 X = <b style="color:${ld===0?"var(--ink-soft)":"var(--seal)"}">${ld}</b>${ld===0?"(差为0,不能发动)":" —— 可对体力值或手牌数为 "+ld+" 的角色造成1点伤害"}</div>`;
+  else if(lr!=null) h+=`<div class="hint" style="margin:2px 0 0">此前无点数,本次不能发动</div>`;
+  h+=`</div>`;
+  if(iAm){
+    h+=`<div class="row" style="gap:5px;flex-wrap:wrap">`;
+    h+=RANKS.map(r=>`<button class="pnl-flag${lr===r?" on":""}" data-wmslr="${esc(r)}" style="min-width:38px">${r}</button>`).join("");
+    h+=`</div><div class="row" style="margin-top:6px"><button class="ghost" data-wmsclr="1">清空点数(剩墨印牌无点数)</button></div>`;
+  }
+  h+=`</div>`;
   if(iAm) h+=`<div class="row" style="margin-top:12px"><button class="ghost" data-wmsturn="1">下一轮</button><button class="ghost" data-wmsreset="1" style="font-size:12px">重开(清空台账)</button></div>`;
   else h+=`<div class="hint" style="margin-top:10px">族王明山本人操作,你只读(台账全场公开)。</div>`;
   h+=`</div>`;
@@ -2504,6 +2518,8 @@ function bindWms(wms,q){
   const W=wms.seatNo, act=(o)=>send({type:"action",targetSeat:W,bySeat:W,toolAction:o});
   q("[data-wmsr]").forEach(b=>b.onclick=()=>act({type:"wmsToggleRank",rank:b.dataset.wmsr}));
   q("[data-wmsb]").forEach(b=>b.onclick=()=>act({type:"wmsToggleBasic",basic:b.dataset.wmsb}));
+  q("[data-wmslr]").forEach(b=>b.onclick=()=>act({type:"wmsSetRank",rank:b.dataset.wmslr}));
+  q("[data-wmsclr]").forEach(b=>b.onclick=()=>act({type:"wmsClearRank"}));
   q("[data-wmsturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
   q("[data-wmsreset]").forEach(b=>b.onclick=()=>{if(confirm("重开剩墨工具?清空已用点数与基本牌台账。"))act({type:"resetGame"});});
 }

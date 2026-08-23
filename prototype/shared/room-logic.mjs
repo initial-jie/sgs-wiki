@@ -397,7 +397,7 @@ export function initToolState(generalId) {
   if (generalId === "caoying")
     return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
   if (generalId === "wangmingshan")
-    return { round: 1, usedRanks: [], usedBasics: [], log: [] }; // 剩墨台账:usedRanks=已以此法选过的点数(A~K)、usedBasics=已以此法使用过的基本牌(杀/闪/桃/酒)
+    return { round: 1, usedRanks: [], usedBasics: [], lastRank: null, lastDiff: null, log: [] }; // 剩墨台账:usedRanks=已选过的点数(A~K)、usedBasics=已用过的基本牌;弹雀:lastRank=上一张使用牌的点数(跨回合保留,剩墨印牌无点数需清空)、lastDiff=最近一次算出的 X
   if (generalId === "xurong")
     return { marks: 3, pending: {}, lastResolve: null, log: [] }; // marks=徐荣暴戾(0~3);pending={座位:枚数}待结算;lastResolve=最近一次三选一
   if (generalId === "xushi")
@@ -662,6 +662,24 @@ export class RoomCore {
         const on = toggle(ts.usedBasics, b);
         this._log(ts, `剩墨基本牌【${b}】${on ? "已用" : "撤销"}`);
         return { ok: true, on };
+      }
+      if (t === "wmsSetRank") { // 弹雀:记录"上一张使用牌的点数",并算出本次 X=两点数之差(跨回合有效)
+        if (!isWms) return { error: "NOT_WMS_ACTION" };
+        const r = String(toolAction.rank); if (!RANKS.includes(r)) return { error: "BAD_RANK" };
+        const val = (x) => RANKS.indexOf(x) + 1; // A=1 … K=13
+        const prev = ts.lastRank ?? null;
+        ts.lastDiff = prev == null ? null : Math.abs(val(r) - val(prev));
+        ts.lastRank = r;
+        this._log(ts, prev == null
+          ? `弹雀:记下点数 ${r}(此前无点数,本次不能发动)`
+          : `弹雀:${prev} → ${r},X=${ts.lastDiff}${ts.lastDiff === 0 ? "(为0,不能发动)" : `(可对体力值或手牌数为 ${ts.lastDiff} 的角色造成1点伤害)`}`);
+        return { ok: true, diff: ts.lastDiff };
+      }
+      if (t === "wmsClearRank") { // 剩墨印出的牌无点数 → 清空上一张点数
+        if (!isWms) return { error: "NOT_WMS_ACTION" };
+        ts.lastRank = null; ts.lastDiff = null;
+        this._log(ts, "弹雀:清空上一张点数(剩墨印牌无点数)");
+        return { ok: true };
       }
       if (t === "newTurn") { if (!isWms) return { error: "NOT_WMS_ACTION" }; ts.round++; this._log(ts, `进入第${ts.round}轮(台账保留,剩墨每轮限一次)`); return { ok: true }; }
       if (t === "resetGame") { if (!isWms) return { error: "NOT_WMS_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }

@@ -719,6 +719,23 @@ check("下一轮:round+1 但台账保留(整局累计)", WT().round === 2 && WT(
 check("序列化/hydrate 存活", (() => { const h = RoomCore.hydrate(roomW.serialize()); const t = h.seats[1].toolState; return t.usedRanks.length === 2 && t.usedBasics.length === 1 && t.round === 2; })());
 check("重开清空台账", wmsAct(1, { type: "resetGame" }).reset === true && WT().round === 1 && WT().usedRanks.length === 0 && WT().usedBasics.length === 0);
 
+// —— 弹雀:上一张使用牌的点数(跨回合)+ X 计算 + 清空
+check("init:lastRank/lastDiff 皆 null", WT().lastRank === null && WT().lastDiff === null);
+check("非本人不能记点数", wmsAct(2, { type: "wmsSetRank", rank: "5" }).error === "NOT_WMS_ACTION");
+check("非法点数被拒", wmsAct(1, { type: "wmsSetRank", rank: "Z" }).error === "BAD_RANK");
+check("首次记 J:无前值→diff null(不能发动)", wmsAct(1, { type: "wmsSetRank", rank: "J" }).diff === null && WT().lastRank === "J");
+check("再记 K:X=|13-11|=2", wmsAct(1, { type: "wmsSetRank", rank: "K" }).diff === 2 && WT().lastRank === "K" && WT().lastDiff === 2);
+check("A(=1) 与 K(=13):X=12", wmsAct(1, { type: "wmsSetRank", rank: "A" }).diff === 12);
+check("同点数:X=0(不能发动)", wmsAct(1, { type: "wmsSetRank", rank: "A" }).diff === 0);
+check("10 与 A:X=9(10 按 10 计非 1+0)", wmsAct(1, { type: "wmsSetRank", rank: "10" }).diff === 9);
+check("清空点数(剩墨印牌无点数)", wmsAct(1, { type: "wmsClearRank" }).ok === true && WT().lastRank === null && WT().lastDiff === null);
+check("清空后再记 → 无前值 diff null", wmsAct(1, { type: "wmsSetRank", rank: "3" }).diff === null);
+wmsAct(1, { type: "newTurn" });
+check("跨回合保留点数(下一轮不清 lastRank)", WT().lastRank === "3");
+check("跨回合算 X:回合外用 K → X=|13-3|=10", wmsAct(1, { type: "wmsSetRank", rank: "K" }).diff === 10);
+check("弹雀态进序列化/hydrate", (() => { const h = RoomCore.hydrate(roomW.serialize()); return h.seats[1].toolState.lastRank === "K" && h.seats[1].toolState.lastDiff === 10; })());
+check("重开清空弹雀态", wmsAct(1, { type: "resetGame" }).reset === true && WT().lastRank === null && WT().lastDiff === null);
+
 // ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
 console.log("\n=== 场景 16:徐荣 暴戾 ===");
 const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)
