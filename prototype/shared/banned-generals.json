@@ -1,6 +1,8 @@
 {
-  "note": "禁将池(全局默认,所有房间统一)。玩家即使拿到禁池里的武将也不能在房间落座,但仍可查看其技能。修改下面 ids 后需 `cd prototype/worker && npx wrangler deploy` 才生效(暂无管理员页/运行时编辑)。id 见 shared/generals.json。⚠ 裴秀现用手录 id 9003,将来 graduate 成 OL 606 时此处要同步改。",
-  "ids": [
+  "note": "禁将池(全局默认,所有房间统一)。玩家即使拿到 ids 里的武将也不能在房间落座,但仍可查看其技能。改完需 `cd prototype/worker && npx wrangler deploy` 才生效(暂无管理员页/运行时编辑)。id 见 shared/generals.json。",
+  "howto_restore": "当前禁池已清空(ids 为空=不禁任何将,房间大厅不显示禁将池面板)。要恢复上一批:把 saved_ids 里的数字整段搬进 ids 即可(saved_ids 只是存档,worker 不读它)。也可只搬其中几个。",
+  "ids": [],
+  "saved_ids": [
     664,
     661,
     713,
