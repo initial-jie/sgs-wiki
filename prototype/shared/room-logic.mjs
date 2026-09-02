@@ -521,7 +521,7 @@ export class RoomCore {
   setFaction(id, n, faction) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
-    const ok = faction == null || ["魏", "蜀", "吴", "群"].includes(faction);
+    const ok = faction == null || ["魏", "蜀", "吴", "群", "晋"].includes(faction); // 神将自选势力(含晋,用户 2026-09-01 加)
     if (!ok) return { error: "BAD_FACTION" };
     this.seats[n].chosenFaction = faction ?? null;
     return { ok: true };

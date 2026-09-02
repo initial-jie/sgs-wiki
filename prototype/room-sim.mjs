@@ -618,6 +618,8 @@ check("初始 chosenFaction=null", roomF.seats[1].chosenFaction === null);
 check("非持有者不能设势力", roomF.setFaction(fd[2], 1, "蜀").error === "NOT_HOLDER");
 check("非法势力被拒", roomF.setFaction(fd[1], 1, "神").error === "BAD_FACTION");
 check("本人设蜀成功", roomF.setFaction(fd[1], 1, "蜀").ok === true && roomF.seats[1].chosenFaction === "蜀");
+check("五势力全可选(含晋)", ["魏","蜀","吴","群","晋"].every((f) => roomF.setFaction(fd[1], 1, f).ok === true && roomF.seats[1].chosenFaction === f));
+roomF.setFaction(fd[1], 1, "蜀"); // 复原,后续断言依赖
 check("chosenFaction 公开(他设备也看得到)", roomF.viewFor(fd[2]).seats[1].chosenFaction === "蜀");
 check("可清空(null)", roomF.setFaction(fd[1], 1, null).ok === true && roomF.seats[1].chosenFaction === null);
 roomF.setFaction(fd[1], 1, "吴");

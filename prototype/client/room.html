@@ -710,7 +710,7 @@ function viewSeats(){
         +(hero&&hero.tool?'<span class="hint" style="margin-left:6px">有专属工具(见下方登场工具)</span>':"")+`</div>`;
       if(hero&&hero.factionSelectable){
         h+=`<div class="row" style="margin-top:5px"><label style="font-size:12px;color:var(--ink-soft)">神·自选势力</label>`
-          +["魏","蜀","吴","群"].map(f=>`<button class="pick ${chosen===f?'sel':''}" data-fac="${s.seatNo}:${f}" style="min-width:34px;padding:5px 0">${f}</button>`).join("")
+          +["魏","蜀","吴","群","晋"].map(f=>`<button class="pick ${chosen===f?'sel':''}" data-fac="${s.seatNo}:${f}" style="min-width:34px;padding:5px 0">${f}</button>`).join("")
           +(chosen?`<button class="ghost" data-fac="${s.seatNo}:" style="font-size:12px">清</button>`:"")+`</div>`;
       }
     }
