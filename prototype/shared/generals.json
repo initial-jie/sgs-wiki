@@ -21129,8 +21129,8 @@
       }
     ],
     "characteristic": "线下武将。魅魂声明花色索牌、惑心叠“魅惑”标记夺取他人回合操控权。",
-    "cover": null,
-    "avatar": null,
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shendiaochan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/shendiaochan.jpg",
     "tool": null,
     "offline": true
   },
@@ -21164,8 +21164,8 @@
       }
     ],
     "characteristic": "线下武将。低语给增伤并塞负面技，拂衣拉人分摊【杀】，就计安排两人互斗额外回合。",
-    "cover": null,
-    "avatar": null,
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
     "tool": null,
     "offline": true
   }

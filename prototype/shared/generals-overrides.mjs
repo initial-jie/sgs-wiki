@@ -275,7 +275,9 @@ export const OFFLINE_HEROES = [
       { name: "惑心", effect: "出牌阶段限一次，你可以展示两张花色相同的手牌并分别交给两名其他角色，然后令这两名角色拼点，没赢的角色获得一个“魅惑”标记。拥有2个或更多“魅惑”的角色回合即将开始时，该角色移去所有“魅惑”，此回合改为由你操控。" },
     ],
     characteristic: "线下武将。魅魂声明花色索牌、惑心叠“魅惑”标记夺取他人回合操控权。",
-    cover: null, avatar: null, tool: null, offline: true,
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/shendiaochan.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/shendiaochan.jpg",
+    tool: null, offline: true,
   },
   // 梦貂蝉 —— 纯线下武将(OL/olwiki 均无)。用户提供技能文本。「梦」为线下系列前缀。
   // 体力 3 / 势力蜀 = 用户 2026-08-22 确认。立绘走仓库 assets/heroes/。
@@ -289,7 +291,9 @@ export const OFFLINE_HEROES = [
       { name: "就计", effect: "每轮结束后，你可以令两名角色依次执行一个仅能对对方使用牌且双方技能互换的额外回合。" },
     ],
     characteristic: "线下武将。低语给增伤并塞负面技，拂衣拉人分摊【杀】，就计安排两人互斗额外回合。",
-    cover: null, avatar: null, tool: null, offline: true,
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
+    tool: null, offline: true,
   },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
