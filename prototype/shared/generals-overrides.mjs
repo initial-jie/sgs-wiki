@@ -265,7 +265,7 @@ export const OFFLINE_HEROES = [
     tool: null, offline: true,
   },
   // 神貂蝉 —— 纯线下武将(OL 无、olwiki 768 将也无,2026-08-22 查证)。用户提供技能文本。
-  // ⚠ 体力=3 为暂定(OL 五个貂蝉版本均 3 血;神将 hp 2~6 无定式)——待用户确认。无立绘(需用户 commit 图进 assets/heroes/)。
+  // 体力 3 = 用户 2026-08-22 确认。立绘走仓库 assets/heroes/(线下将无官方图床)。
   {
     id: 9016, name: "神貂蝉", genre: "神将", series: "神", faction: "神",
     factionSelectable: true, quality: "线下", hp: 3, initialHp: null,
@@ -278,9 +278,9 @@ export const OFFLINE_HEROES = [
     cover: null, avatar: null, tool: null, offline: true,
   },
   // 梦貂蝉 —— 纯线下武将(OL/olwiki 均无)。用户提供技能文本。「梦」为线下系列前缀。
-  // ⚠ 体力=3 为暂定(同上)——待用户确认。无立绘(需用户 commit 图进 assets/heroes/)。
+  // 体力 3 / 势力蜀 = 用户 2026-08-22 确认。立绘走仓库 assets/heroes/。
   {
-    id: 9017, name: "梦貂蝉", genre: "线下", series: "梦", faction: "群",
+    id: 9017, name: "梦貂蝉", genre: "线下", series: "梦", faction: "蜀",
     factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
     tags: ["辅助", "控制", "爆发"],
     skills: [
