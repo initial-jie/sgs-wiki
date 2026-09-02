@@ -264,6 +264,33 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75500.png",
     tool: null, offline: true,
   },
+  // 神貂蝉 —— 纯线下武将(OL 无、olwiki 768 将也无,2026-08-22 查证)。用户提供技能文本。
+  // ⚠ 体力=3 为暂定(OL 五个貂蝉版本均 3 血;神将 hp 2~6 无定式)——待用户确认。无立绘(需用户 commit 图进 assets/heroes/)。
+  {
+    id: 9016, name: "神貂蝉", genre: "神将", series: "神", faction: "神",
+    factionSelectable: true, quality: "线下", hp: 3, initialHp: null,
+    tags: ["控制", "爆发"],
+    skills: [
+      { name: "魅魂", effect: "结束阶段或当你成为【杀】的目标后，你可以令一名其他角色交给你一张你声明花色的牌，若其没有则你观看其手牌然后弃置其中一张。" },
+      { name: "惑心", effect: "出牌阶段限一次，你可以展示两张花色相同的手牌并分别交给两名其他角色，然后令这两名角色拼点，没赢的角色获得一个“魅惑”标记。拥有2个或更多“魅惑”的角色回合即将开始时，该角色移去所有“魅惑”，此回合改为由你操控。" },
+    ],
+    characteristic: "线下武将。魅魂声明花色索牌、惑心叠“魅惑”标记夺取他人回合操控权。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
+  // 梦貂蝉 —— 纯线下武将(OL/olwiki 均无)。用户提供技能文本。「梦」为线下系列前缀。
+  // ⚠ 体力=3 为暂定(同上)——待用户确认。无立绘(需用户 commit 图进 assets/heroes/)。
+  {
+    id: 9017, name: "梦貂蝉", genre: "线下", series: "梦", faction: "群",
+    factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
+    tags: ["辅助", "控制", "爆发"],
+    skills: [
+      { name: "低语", effect: "每轮开始时，你可以令另一名角色本轮造成的伤害+1，然后你从“崩坏”“同疾”“弼昏”“义拒”中选择一个未选择过的技能令其获得。" },
+      { name: "拂衣", effect: "当你成为【杀】的目标时，你可以为此牌选择一个额外目标并令所有目标摸一张牌，此牌被一名角色抵消后，对其余目标无效。" },
+      { name: "就计", effect: "每轮结束后，你可以令两名角色依次执行一个仅能对对方使用牌且双方技能互换的额外回合。" },
+    ],
+    characteristic: "线下武将。低语给增伤并塞负面技，拂衣拉人分摊【杀】，就计安排两人互斗额外回合。",
+    cover: null, avatar: null, tool: null, offline: true,
+  },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
     id: 9007, name: "司马炎", genre: "其他", series: "标", faction: "晋",

@@ -2,7 +2,7 @@
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
 // node prototype/room-sim.mjs
 
-import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE, setBannedGenerals } from "./shared/room-logic.mjs";
+import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE, setBannedPools, banPoolForSeats } from "./shared/room-logic.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -73,19 +73,35 @@ check("改名后仍能以新名操作座位(代座位2登记)", room.action("阿
 check("改名进 serialize→hydrate 存活", (() => { const h = RoomCore.hydrate(room.serialize()); return h.seats[2].holderDevices.includes("阿强"); })());
 room.renameDevice("阿强", dev[5]); // 复原,避免影响后续场景
 
-console.log("\n=== 场景 5c:禁将系统(全局默认禁池,setGeneral 拦截落座)===");
-{ // 独立房间,避免动到 room 的座位1(吕布 toolState 后续场景要用)
-  const rb = new RoomCore("9099", 3, () => 0);
-  const bd = {}; for (let i = 1; i <= 3; i++) { bd[i] = `bd${i}`; rb.claimSeat(bd[i], i); }
-  setBannedGenerals(["353", "dianwei"]); // 禁 曹婴(id 形式) + 神典韦(工具名形式)
-  check("禁将(id)落座被拒(BANNED)", rb.setGeneral(bd[1], 1, "353").error === "BANNED");
-  check("禁将(工具名)落座被拒", rb.setGeneral(bd[1], 1, "dianwei").error === "BANNED");
-  check("非禁将正常落座", rb.setGeneral(bd[1], 1, "1").ok === true && rb.seats[1].general === "1");
-  check("查将不受禁将影响(禁的只是落座,setGeneral 才拦)", rb.setGeneral(bd[2], 2, "353").error === "BANNED" && rb.seats[2].general === null);
-  setBannedGenerals([]);
-  check("解禁后可落座", rb.setGeneral(bd[1], 1, "353").ok === true && rb.seats[1].general === "353");
+console.log("\n=== 场景 5c:禁将四池(按座位数选池)+ 房内总开关 ===");
+{
+  // 军争池禁 曹婴(id)+神典韦(工具名);斗地主池禁 刘备(1);2v2/1v1 空
+  setBannedPools({ junzheng: ["353", "dianwei"], "2v2": [], douzhu: ["1"], "1v1": [] });
+  check("座位数→池映射", banPoolForSeats(8) === "junzheng" && banPoolForSeats(5) === "junzheng"
+    && banPoolForSeats(4) === "2v2" && banPoolForSeats(3) === "douzhu" && banPoolForSeats(2) === "1v1");
+  // 5 座 → 军争池
+  const rb = new RoomCore("9099", 5, () => 0);
+  const bd = {}; for (let i = 1; i <= 5; i++) { bd[i] = `bd${i}`; rb.claimSeat(bd[i], i); }
+  check("默认 banEnabled=true", rb.banEnabled === true);
+  check("军争池:禁将(id)落座被拒", rb.setGeneral(bd[1], 1, "353").error === "BANNED");
+  check("军争池:禁将(工具名)落座被拒", rb.setGeneral(bd[1], 1, "dianwei").error === "BANNED");
+  check("军争池:斗地主池的将不受影响", rb.setGeneral(bd[1], 1, "1").ok === true);
+  check("viewFor 暴露 banEnabled/banPool", rb.viewFor(bd[2]).banEnabled === true && rb.viewFor(bd[2]).banPool === "junzheng");
+  // 总开关关掉 → 全部放行
+  rb.setBanEnabled(false);
+  check("关掉开关后禁将可落座", rb.setGeneral(bd[1], 1, "353").ok === true && rb.seats[1].general === "353");
+  check("viewFor 反映开关已关", rb.viewFor(bd[2]).banEnabled === false);
+  rb.setBanEnabled(true);
+  check("重新打开后又拦住", rb.setGeneral(bd[1], 1, "dianwei").error === "BANNED");
+  check("开关进序列化/hydrate", (() => { rb.setBanEnabled(false); const h = RoomCore.hydrate(rb.serialize()); return h.banEnabled === false; })());
+  rb.setBanEnabled(true);
+  // 减到 3 座 → 换斗地主池(军争池的禁将放行、斗地主池的被拦)
+  rb.removeSeat(bd[1]); rb.removeSeat(bd[1]);
+  check("减到 3 座 → 池切到斗地主", Object.keys(rb.seats).length === 3 && rb.viewFor(bd[2]).banPool === "douzhu");
+  check("斗地主池:刘备(1)被拒", rb.setGeneral(bd[1], 1, "1").error === "BANNED");
+  check("斗地主池:军争池的曹婴放行", rb.setGeneral(bd[1], 1, "353").ok === true);
+  setBannedPools({});
 }
-setBannedGenerals([]); // ⚠ 全局态:测完必须清空,否则污染后续场景
 
 console.log("\n=== 场景 6:狂魔 —— 击败后立即重新指定,入魔状态保持 ===");
 room.action(dev[1], { targetSeat: 1, bySeat: 1, toolAction: { type: "enterMo", kuangTarget: 3 } });

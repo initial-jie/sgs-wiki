@@ -429,10 +429,15 @@ export function initToolState(generalId) {
   return {};
 }
 
-// ② 禁将池(全局默认):存"被禁的 generalId"字符串集(=tool 名或 String(id),与 setGeneral 收到的一致)。
-// worker 启动时按 banned-generals.json + generals.json 建集并调 setBannedGenerals;sim 可直接设。空集=不禁。
-let BANNED_GENERALS = new Set();
-export function setBannedGenerals(arr) { BANNED_GENERALS = new Set((arr || []).map(String)); }
+// ② 禁将池(全局默认,按对局模式分四池):{poolKey: Set<generalId>},generalId=tool 名或 String(id),与 setGeneral 收到的一致。
+// worker 启动时按 banned-generals.json + generals.json 建好并调 setBannedPools;sim 可直接设。空=不禁。
+let BANNED_POOLS = {};
+export function setBannedPools(map) {
+  BANNED_POOLS = {};
+  for (const k of Object.keys(map || {})) BANNED_POOLS[k] = new Set((map[k] || []).map(String));
+}
+// 座位数 → 池:≥5 军争场 / 4 2v2 / 3 斗地主 / 2 1v1(与 banned-generals.json 各池 seats 字段一致)
+export function banPoolForSeats(n) { n = Number(n); return n >= 5 ? "junzheng" : n === 4 ? "2v2" : n === 3 ? "douzhu" : "1v1"; }
 
 // ---------- 房间权威(纯逻辑,不含 IO / WebSocket)----------
 export class RoomCore {
@@ -442,6 +447,7 @@ export class RoomCore {
     this.seats = {};
     for (let i = 1; i <= seatCount; i++) this.seats[i] = this._newSeat(i);
     this.devices = {};
+    this.banEnabled = true; // ② 禁将总开关(房内共享,任何玩家可切;默认开)
   }
 
   // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)。连环=铁索连环,物理表现即横置,合二为一只保留 chained
@@ -481,6 +487,8 @@ export class RoomCore {
     if (this.seats[n]) this.seats[n].holderDevices = this.seats[n].holderDevices.filter((d) => d !== id);
     return { ok: true };
   }
+  // ② 禁将总开关:任何玩家可切(房内临时状态,不改 banned-generals.json)
+  setBanEnabled(on) { this.banEnabled = !!on; return { ok: true, banEnabled: this.banEnabled }; }
   // 房内改名:deviceId 同时是身份 key(devices/holderDevices)与显示名,故原子改键——搬 holds + 更新座位持有者标记,座位归属不丢
   renameDevice(oldId, newId) {
     newId = (newId ?? "").toString().trim().slice(0, 12); // 同入口 maxlength 12
@@ -496,7 +504,10 @@ export class RoomCore {
   setGeneral(id, n, g) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
-    if (g && g !== "none" && BANNED_GENERALS.has(String(g))) return { error: "BANNED" }; // ② 禁将:即便拿到也不能落座(查将不拦)
+    if (g && g !== "none" && this.banEnabled !== false) { // ② 禁将:按座位数选池;房内总开关关掉则不拦。查将始终不拦
+      const pool = BANNED_POOLS[banPoolForSeats(Object.keys(this.seats).length)];
+      if (pool && pool.has(String(g))) return { error: "BANNED" };
+    }
 
     this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
@@ -1914,18 +1925,19 @@ export class RoomCore {
         hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
         weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
         judgments: s.judgments ?? [] };
-    return { roomCode: this.roomCode, youHold: [...holds], seats };
+    return { roomCode: this.roomCode, youHold: [...holds], seats, banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length) };
   }
 
   // ---- 持久化(worker 落 DO storage 用;devices.holds 是 Set,序列化成数组)----
   serialize() {
     const devices = {};
     for (const id of Object.keys(this.devices)) devices[id] = { holds: [...this.devices[id].holds] };
-    return { roomCode: this.roomCode, seatCount: Object.keys(this.seats).length, seats: this.seats, devices };
+    return { roomCode: this.roomCode, seatCount: Object.keys(this.seats).length, seats: this.seats, devices, banEnabled: this.banEnabled };
   }
   static hydrate(data, rng = Math.random) {
     const core = new RoomCore(data?.roomCode ?? "room", data?.seatCount ?? 8, rng);
     if (data?.seats) core.seats = data.seats;
+    core.banEnabled = data?.banEnabled !== false; // 老房间无此字段→默认开
     core.devices = {};
     for (const id of Object.keys(data?.devices || {})) core.devices[id] = { holds: new Set(data.devices[id].holds || []) };
     return core;
