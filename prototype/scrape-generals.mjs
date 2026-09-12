@@ -116,6 +116,7 @@ const TOOL_NAMES = {
   "蒲元": "puyuan", // OL 已收录(id510);tool 直接写进 generals.json,此处防全量重爬丢失
   "曹婴": "caoying", // OL 已收录(id353);伏间随机器,同蒲元法防重爬丢失
   "族王明山": "wangmingshan", // OL 已收录(id608);剩墨台账,同上防重爬丢失
+  "贾充": "jiachong", // OL 已收录(id7019);凶竖秘密猜测,同上防重爬丢失
 };
 
 (async () => {

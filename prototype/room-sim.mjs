@@ -754,6 +754,48 @@ check("跨回合算 X:回合外用 K → X=|13-3|=10", wmsAct(1, { type: "wmsSet
 check("弹雀态进序列化/hydrate", (() => { const h = RoomCore.hydrate(roomW.serialize()); return h.seats[1].toolState.lastRank === "K" && h.seats[1].toolState.lastDiff === 10; })());
 check("重开清空弹雀态", wmsAct(1, { type: "resetGame" }).reset === true && WT().lastRank === null && WT().lastDiff === null);
 
+// ============ 场景 15d:贾充 凶竖(秘密猜测 + 保密投影 + 揭晓)============
+console.log("\n=== 场景 15d:贾充 凶竖 ===");
+const roomJ = new RoomCore("6420", 4, () => 0);
+const jd = {}; for (let i = 1; i <= 4; i++) { jd[i] = `jd${i}`; roomJ.claimSeat(jd[i], i); }
+roomJ.setGeneral(jd[1], 1, "jiachong");
+for (let i = 2; i <= 4; i++) roomJ.setGeneral(jd[i], i, String(i));
+const jcAct = (by, o) => roomJ.action(jd[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const JT = () => roomJ.seats[1].toolState;
+const JV = (dev) => roomJ.viewFor(dev).seats[1].toolState; // 经 VISIBILITY 投影的视图
+check("init:round1/无 pending/无猜测", JT().round === 1 && JT().pending === null && JT().lastReveal === null);
+check("非贾充不能发动", jcAct(2, { type: "xsStart", targetSeat: 2, cardName: "杀" }).error === "NOT_JC_ACTION");
+check("不能以自己为目标", jcAct(1, { type: "xsStart", targetSeat: 1, cardName: "杀" }).error === "CANT_TARGET_SELF");
+check("必须填牌名", jcAct(1, { type: "xsStart", targetSeat: 2, cardName: "  " }).error === "NEED_CARD_NAME");
+check("首次发动弃 0 张(X=本轮此前次数)", jcAct(1, { type: "xsStart", targetSeat: 2, cardName: "杀" }).cost === 0);
+check("pending 已建立", JT().pending.targetSeat === 2 && JT().pending.cardName === "杀");
+check("重复发动被拒(已有 pending)", jcAct(1, { type: "xsStart", targetSeat: 3, cardName: "闪" }).error === "ALREADY_PENDING");
+check("未猜测不能揭晓", jcAct(1, { type: "xsReveal", actual: "use" }).error === "NO_GUESS");
+check("非法猜测被拒", jcAct(1, { type: "xsGuess", g: "maybe" }).error === "BAD_GUESS");
+jcAct(1, { type: "xsGuess", g: "use" });
+check("猜测已记录", JT().guess.g === "use");
+check("⭐ 猜测锁定,不可更换", jcAct(1, { type: "xsGuess", g: "noUse" }).error === "ALREADY_GUESSED" && JT().guess.g === "use");
+// —— 保密核心:旁人看不到猜测内容,只知道"已猜测"
+check("⭐ 贾充本人看得到猜测内容", JV(jd[1]).guess.g === "use");
+check("⭐ 旁人看不到猜测内容(只见 count=1)", JV(jd[2]).guess.g === undefined && JV(jd[2]).guess.count === 1);
+check("目标与展示牌名对全场公开(牌本就展示)", JV(jd[3]).pending.targetSeat === 2 && JV(jd[3]).pending.cardName === "杀");
+check("log 不泄露猜测内容", !JSON.stringify(JV(jd[2]).log).includes("use") && !JSON.stringify(JV(jd[2]).log).includes("会用"));
+// —— 揭晓
+check("非法 actual 被拒", jcAct(1, { type: "xsReveal", actual: "x" }).error === "BAD_ACTUAL");
+check("猜对:造成1点伤害", jcAct(1, { type: "xsReveal", actual: "use" }).correct === true);
+check("揭晓后 pending 清空、结果公开", JT().pending === null && JV(jd[2]).lastReveal.guess === "use" && JV(jd[2]).lastReveal.correct === true);
+check("揭晓后猜测已清(不再泄露)", JV(jd[2]).guess.count === 0);
+// —— 第二次发动:成本递增
+check("第二次发动需弃 1 张", jcAct(1, { type: "xsStart", targetSeat: 3, cardName: "闪" }).cost === 1);
+jcAct(1, { type: "xsGuess", g: "use" });
+check("猜错:获得该牌", jcAct(1, { type: "xsReveal", actual: "noUse" }).correct === false && JT().lastReveal.correct === false);
+check("第三次发动需弃 2 张", jcAct(1, { type: "xsStart", targetSeat: 4, cardName: "桃" }).cost === 2);
+check("撤销可用", jcAct(1, { type: "xsCancel" }).ok === true && JT().pending === null);
+jcAct(1, { type: "newRound" });
+check("下一轮:成本归零、轮次+1", JT().round === 2 && JT().usedThisRound === 0);
+check("序列化/hydrate 存活(含保密字段)", (() => { jcAct(1, { type: "xsStart", targetSeat: 2, cardName: "酒" }); jcAct(1, { type: "xsGuess", g: "noUse" }); const h = RoomCore.hydrate(roomJ.serialize()); return h.seats[1].toolState.guess.g === "noUse" && h.seats[1].toolState.pending.cardName === "酒"; })());
+check("重开清空", jcAct(1, { type: "resetGame" }).reset === true && JT().round === 1 && JT().pending === null);
+
 // ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
 console.log("\n=== 场景 16:徐荣 暴戾 ===");
 const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)

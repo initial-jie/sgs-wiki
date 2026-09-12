@@ -207,6 +207,11 @@ export const VISIBILITY = {
     neixun: { kind: "ownerSeatOnly" },
     // color / seq / log 默认 public(椒遇声明色是全场信息;log 只记张数不记牌名)
   },
+  jiachong: {
+    // 凶竖:猜测内容仅贾充本人/代持可见(揭晓前全场不可见);他人只见 {count:0|1}=有无猜测
+    guess: { kind: "ownerSeatOnly" },
+    // round / usedThisRound / pending(目标+展示的牌名,牌本就公开展示) / lastReveal(揭晓后) / log 默认 public
+  },
   sunquan: {
     // 权御暗选:每份 pick 自带 revealed;翻开前仅本人可见内容,他人只见"该座位已选"占位(含孙权的也藏)
     picks: { kind: "secretPick" },
@@ -396,6 +401,8 @@ export function initToolState(generalId) {
     return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
   if (generalId === "caoying")
     return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
+  if (generalId === "jiachong")
+    return { round: 1, usedThisRound: 0, pending: null, guess: {}, lastReveal: null, log: [] }; // 凶竖:pending={targetSeat,cardName,cost};guess={}|{g}(保密);lastReveal=揭晓结果(公开)
   if (generalId === "wangmingshan")
     return { round: 1, usedRanks: [], usedBasics: [], lastRank: null, lastDiff: null, log: [] }; // 剩墨台账:usedRanks=已选过的点数(A~K)、usedBasics=已用过的基本牌;弹雀:lastRank=上一张使用牌的点数(跨回合保留,剩墨印牌无点数需清空)、lastDiff=最近一次算出的 X
   if (generalId === "xurong")
@@ -710,6 +717,68 @@ export class RoomCore {
       }
       if (t === "newTurn") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; ts.round++; ts.lastRoll = null; this._log(ts, `进入第${ts.round}轮`); return { ok: true }; }
       if (t === "resetGame") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 贾充:凶竖(秘密猜测)。发动=展示目标一张手牌(公开)+ 秘密猜"此阶段是否使用同名牌";
+    // 猜测锁定不可改、仅贾充可见(VISIBILITY.guess=ownerSeatOnly);阶段结束点揭晓→公开猜测+实际+对错 ─────────
+    if (target.general === "jiachong") {
+      const jSeat = targetSeat;
+      const isJc = bySeat === jSeat && iHold(jSeat); // 贾充本人(或代持)
+      const GUESS = ["use", "noUse"];
+      if (t === "xsStart") { // 发动凶竖:{targetSeat, cardName}。X=本轮此前发动次数(弃牌成本,线下自行弃)
+        if (!isJc) return { error: "NOT_JC_ACTION" };
+        const tg = Number(toolAction.targetSeat);
+        if (!this.seats[tg]) return { error: "BAD_SEAT" };
+        if (tg === jSeat) return { error: "CANT_TARGET_SELF" };
+        if (ts.pending) return { error: "ALREADY_PENDING" };
+        const nm = String(toolAction.cardName || "").trim().slice(0, 12);
+        if (!nm) return { error: "NEED_CARD_NAME" };
+        const cost = ts.usedThisRound || 0; // 发动前的次数=本次弃牌数
+        ts.pending = { targetSeat: tg, cardName: nm, cost };
+        ts.guess = {};                       // 清空上次猜测(ownerSeatOnly)
+        ts.usedThisRound = cost + 1;
+        this._log(ts, `凶竖发动:对座位${tg} 展示【${nm}】(本次需弃 ${cost} 张)`);
+        return { ok: true, cost };
+      }
+      if (t === "xsGuess") { // 秘密猜测,一旦选定不可更换
+        if (!isJc) return { error: "NOT_JC_ACTION" };
+        if (!ts.pending) return { error: "NO_PENDING" };
+        if (ts.guess && ts.guess.g) return { error: "ALREADY_GUESSED" }; // 锁定
+        const g = String(toolAction.g);
+        if (!GUESS.includes(g)) return { error: "BAD_GUESS" };
+        ts.guess = { g };
+        this._log(ts, `已秘密猜测(内容仅你可见,揭晓前全场不可见)`);
+        return { ok: true };
+      }
+      if (t === "xsReveal") { // 阶段结束揭晓:{actual} 实际是否使用同名牌 → 算对错并公开
+        if (!isJc) return { error: "NOT_JC_ACTION" };
+        if (!ts.pending) return { error: "NO_PENDING" };
+        const g = ts.guess && ts.guess.g;
+        if (!g) return { error: "NO_GUESS" };
+        const actual = String(toolAction.actual);
+        if (!GUESS.includes(actual)) return { error: "BAD_ACTUAL" };
+        const correct = g === actual;
+        const p = ts.pending;
+        ts.lastReveal = { targetSeat: p.targetSeat, cardName: p.cardName, guess: g, actual, correct };
+        ts.pending = null; ts.guess = {};
+        this._log(ts, `揭晓:猜「${g === "use" ? "会用" : "不用"}」实际「${actual === "use" ? "用了" : "没用"}」→ ${correct ? `猜对,对座位${p.targetSeat}造成1点伤害` : `猜错,你获得【${p.cardName}】`}`);
+        return { ok: true, correct };
+      }
+      if (t === "xsCancel") { // 误操作撤销(不退还本轮计数,线下自行约定)
+        if (!isJc) return { error: "NOT_JC_ACTION" };
+        if (!ts.pending) return { error: "NO_PENDING" };
+        ts.pending = null; ts.guess = {};
+        this._log(ts, "撤销本次凶竖");
+        return { ok: true };
+      }
+      if (t === "newRound") { // 新一轮:弃牌成本 X 归零(X 按"本轮"计)
+        if (!isJc) return { error: "NOT_JC_ACTION" };
+        ts.round++; ts.usedThisRound = 0;
+        this._log(ts, `进入第${ts.round}轮(弃牌成本归零)`);
+        return { ok: true };
+      }
+      if (t === "resetGame") { if (!isJc) return { error: "NOT_JC_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

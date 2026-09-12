@@ -208,8 +208,8 @@ if(!deviceId){deviceId="dev-"+Math.random().toString(36).slice(2,7);localStorage
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"}, caoying:{name:"曹婴"}, wangmingshan:{name:"族王明山"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan"||g==="caoying"||g==="wangmingshan";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"}, caoying:{name:"曹婴"}, wangmingshan:{name:"族王明山"}, jiachong:{name:"贾充"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan"||g==="caoying"||g==="wangmingshan"||g==="jiachong";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -227,6 +227,7 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              lijue:{view:s=>viewLjTool(s),bind:(s,q)=>bindLj(s,q)},
              caoying:{view:s=>viewCyTool(s),bind:(s,q)=>bindCy(s,q)},
              wangmingshan:{view:s=>viewWmsTool(s),bind:(s,q)=>bindWms(s,q)},
+             jiachong:{view:s=>viewJcTool(s),bind:(s,q)=>bindJc(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
              xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
              guozhao:{view:s=>viewGzTool(s),bind:(s,q)=>bindGz(s,q)},
@@ -2486,6 +2487,75 @@ function bindDw(dw,q){
   q("[data-dwclear]").forEach(b=>b.onclick=()=>{if(confirm("清空当前武器?"))act({type:"clearWeapons"});});
   q("[data-dwnewturn]").forEach(b=>b.onclick=()=>act({type:"newTurn"}));
   q("[data-dwreset]").forEach(b=>b.onclick=()=>{if(confirm("重开神典韦工具?清空武器与抽牌、轮次归1。"))act({type:"resetGame"});});
+}
+
+/* ---------- 贾充工具(凶竖:秘密猜测;猜测仅本人可见,揭晓后公开)---------- */
+let jcTarget=null, jcCard=""; // 本机暂存:发动时选的目标座位 / 展示的牌名
+function viewJcTool(jc){
+  const ts=jc.toolState||{}, iAm=state.youHold.includes(jc.seatNo);
+  const p=ts.pending||null, lr=ts.lastReveal||null;
+  const G=g=>g==="use"?"会用":"不用", A=a=>a==="use"?"用了":"没用";
+  // guess 字段:本人拿到 {g:"use"};旁人被 ownerSeatOnly 折成 {count:0|1}
+  const myGuess=(ts.guess&&ts.guess.g)||null, hasGuess=myGuess?true:!!(ts.guess&&ts.guess.count);
+  const cost=ts.usedThisRound||0;
+  let h=`<div class="card"><h2>贾充 · 凶竖<span class="tag">第 ${ts.round||1} 轮 · 猜测保密</span></h2>`;
+  h+=`<div class="hint">其他角色出牌阶段开始时:弃 X 张牌(X=本轮此前发动次数)、展示其一张手牌,再<b>秘密猜测</b>其此阶段是否使用同名牌。阶段结束揭晓:猜对→对其造成1点伤害;猜错→你获得此牌。<b>猜测内容只有你自己看得到</b>,选定后不可更换。</div>`;
+  if(!p){
+    h+=`<div style="text-align:center;margin:12px 0"><div style="font-size:13px;color:var(--ink-soft)">当前无进行中的猜测</div>`
+      +`<div class="hint" style="margin-top:2px">下次发动需弃 <b style="color:var(--seal)">${cost}</b> 张牌(本轮已发动 ${cost} 次)</div></div>`;
+    if(iAm){
+      const others=Object.values(state.seats).filter(s=>s.seatNo!==jc.seatNo&&s.general&&s.general!=="none"&&!s.dead);
+      h+=`<div class="row" style="gap:6px;margin-bottom:6px"><span class="hint" style="margin:0;flex:none">目标</span>`
+        +`<select class="pnl-msel" data-jctg style="flex:1 1 0;min-width:0"><option value="">选一名其他角色…</option>`
+        +others.map(s=>`<option value="${s.seatNo}"${String(jcTarget)===String(s.seatNo)?" selected":""}>座位${s.seatNo} ${esc((seatGeneralName(s.general)||"").slice(0,6))}</option>`).join("")
+        +`</select></div>`;
+      h+=`<div class="row" style="gap:6px"><span class="hint" style="margin:0;flex:none">展示的牌</span>`
+        +`<input data-jccard value="${esc(jcCard)}" placeholder="牌名,如 杀 / 闪 / 无中生有" style="flex:1 1 0;min-width:0">`
+        +`<button class="primary" data-jcstart="1">发动凶竖</button></div>`;
+    } else h+=`<div class="hint">贾充本人操作,你只读。</div>`;
+  } else {
+    h+=`<div style="margin:10px 0;padding:9px 11px;background:rgba(0,0,0,.035);border-radius:6px">`
+      +`<div>目标 <b>座位${p.targetSeat} ${esc((seatGeneralName(state.seats[p.targetSeat]?.general)||"").slice(0,6))}</b> · 展示牌 <b style="color:var(--seal)">【${esc(p.cardName)}】</b>`
+      +`<span class="hint" style="margin:0"> (本次弃 ${p.cost} 张)</span></div>`
+      +`<div style="margin-top:5px">猜测:${hasGuess
+        ? (myGuess?`<b style="color:var(--seal)">${G(myGuess)}</b> <span class="hint" style="margin:0">(已锁定,仅你可见)</span>`
+                  :`<b>🔒 已秘密猜测</b> <span class="hint" style="margin:0">(内容揭晓前不可见)</span>`)
+        : `<span class="hint" style="margin:0">尚未猜测</span>`}</div></div>`;
+    if(iAm){
+      if(!myGuess) h+=`<div class="row" style="gap:6px"><span class="hint" style="margin:0;flex:none">秘密猜测</span>`
+        +`<button class="primary" data-jcg="use" style="flex:1 1 0">会用同名牌</button>`
+        +`<button class="primary" data-jcg="noUse" style="flex:1 1 0">不会用</button>`
+        +`<button class="ghost" data-jccancel="1" style="font-size:12px;flex:none">撤销</button></div>`
+        +`<div class="hint" style="margin-top:4px">⚠ 选定后不可更换。</div>`;
+      else h+=`<div class="row" style="gap:6px"><span class="hint" style="margin:0;flex:none">阶段结束揭晓 · 实际</span>`
+        +`<button class="primary" data-jcr="use" style="flex:1 1 0">用了同名牌</button>`
+        +`<button class="primary" data-jcr="noUse" style="flex:1 1 0">没用</button>`
+        +`<button class="ghost" data-jccancel="1" style="font-size:12px;flex:none">撤销</button></div>`;
+    } else h+=`<div class="hint">等贾充揭晓。</div>`;
+  }
+  if(lr) h+=`<div style="margin-top:10px;padding:9px 11px;border:1px solid ${lr.correct?"var(--seal)":"var(--line)"};border-radius:6px">`
+    +`<div class="hint" style="margin:0">上次揭晓</div>`
+    +`<div style="margin-top:3px">座位${lr.targetSeat} 【${esc(lr.cardName)}】 · 猜<b>${G(lr.guess)}</b> / 实际<b>${A(lr.actual)}</b> → `
+    +`<b style="color:${lr.correct?"var(--seal)":"var(--ink-soft)"}">${lr.correct?`猜对,对其造成1点伤害`:`猜错,你获得【${esc(lr.cardName)}】`}</b></div></div>`;
+  if(iAm) h+=`<div class="row" style="margin-top:12px"><button class="ghost" data-jcround="1">下一轮(弃牌成本归零)</button><button class="ghost" data-jcreset="1" style="font-size:12px">重开</button></div>`;
+  h+=`</div>`;
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindJc(jc,q){
+  const J=jc.seatNo, act=(o)=>send({type:"action",targetSeat:J,bySeat:J,toolAction:o});
+  q("[data-jctg]").forEach(s=>s.onchange=()=>{jcTarget=s.value||null;});
+  q("[data-jccard]").forEach(i=>i.oninput=()=>{jcCard=i.value;});
+  q("[data-jcstart]").forEach(b=>b.onclick=()=>{
+    if(!jcTarget) return toast("先选目标座位");
+    if(!jcCard.trim()) return toast("填上展示的牌名");
+    act({type:"xsStart",targetSeat:+jcTarget,cardName:jcCard.trim()}); jcTarget=null; jcCard="";
+  });
+  q("[data-jcg]").forEach(b=>b.onclick=()=>act({type:"xsGuess",g:b.dataset.jcg}));
+  q("[data-jcr]").forEach(b=>b.onclick=()=>act({type:"xsReveal",actual:b.dataset.jcr}));
+  q("[data-jccancel]").forEach(b=>b.onclick=()=>{if(confirm("撤销本次凶竖?(本轮发动次数不退还)"))act({type:"xsCancel"});});
+  q("[data-jcround]").forEach(b=>b.onclick=()=>act({type:"newRound"}));
+  q("[data-jcreset]").forEach(b=>b.onclick=()=>{if(confirm("重开凶竖工具?清空猜测与轮次。"))act({type:"resetGame"});});
 }
 
 /* ---------- 族王明山工具(剩墨台账:已选过的点数 + 已用过的基本牌;全公开,无随机)---------- */
