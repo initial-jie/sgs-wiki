@@ -796,6 +796,28 @@ check("下一轮:成本归零、轮次+1", JT().round === 2 && JT().usedThisRoun
 check("序列化/hydrate 存活(含保密字段)", (() => { jcAct(1, { type: "xsStart", targetSeat: 2, cardName: "酒" }); jcAct(1, { type: "xsGuess", g: "noUse" }); const h = RoomCore.hydrate(roomJ.serialize()); return h.seats[1].toolState.guess.g === "noUse" && h.seats[1].toolState.pending.cardName === "酒"; })());
 check("重开清空", jcAct(1, { type: "resetGame" }).reset === true && JT().round === 1 && JT().pending === null);
 
+// ============ 场景 15e:族陆郁生 拾昔(每花色首张单目标普通锦囊台账)============
+console.log("\n=== 场景 15e:族陆郁生 拾昔 ===");
+const roomL2 = new RoomCore("3579", 3, () => 0);
+const ld2 = {}; for (let i = 1; i <= 3; i++) { ld2[i] = `ly${i}`; roomL2.claimSeat(ld2[i], i); }
+roomL2.setGeneral(ld2[1], 1, "zuluyusheng");
+const lysAct = (by, o) => roomL2.action(ld2[by], { targetSeat: 1, bySeat: by, toolAction: o });
+const LYT = () => roomL2.seats[1].toolState;
+check("init:四花色皆空", ["S", "H", "C", "D"].every((k) => LYT().records[k] === null));
+check("非本人不能记录", lysAct(2, { type: "sxRecord", suit: "S", cardName: "决斗" }).error === "NOT_LYS_ACTION");
+check("非法花色被拒", lysAct(1, { type: "sxRecord", suit: "X", cardName: "决斗" }).error === "BAD_SUIT");
+check("空牌名被拒", lysAct(1, { type: "sxRecord", suit: "S", cardName: "  " }).error === "NEED_CARD_NAME");
+check("记录黑桃→决斗", lysAct(1, { type: "sxRecord", suit: "S", cardName: "决斗" }).ok === true && LYT().records.S === "决斗");
+check("⭐ 首次语义:同花色不可覆盖", lysAct(1, { type: "sxRecord", suit: "S", cardName: "火攻" }).error === "ALREADY_RECORDED" && LYT().records.S === "决斗");
+check("其他花色互不影响", lysAct(1, { type: "sxRecord", suit: "H", cardName: "无中生有" }).ok === true && LYT().records.S === "决斗" && LYT().records.H === "无中生有");
+check("手填扩展锦囊也能记", lysAct(1, { type: "sxRecord", suit: "C", cardName: "调虎离山" }).ok === true && LYT().records.C === "调虎离山");
+check("台账全场公开(旁人可见)", roomL2.viewFor(ld2[2]).seats[1].toolState.records.S === "决斗");
+check("未记录的花色不能清除", lysAct(1, { type: "sxClear", suit: "D" }).error === "NOT_RECORDED");
+check("清除后可重录(纠错)", lysAct(1, { type: "sxClear", suit: "S" }).ok === true && LYT().records.S === null
+  && lysAct(1, { type: "sxRecord", suit: "S", cardName: "顺手牵羊" }).ok === true && LYT().records.S === "顺手牵羊");
+check("序列化/hydrate 存活", (() => { const h = RoomCore.hydrate(roomL2.serialize()); const r = h.seats[1].toolState.records; return r.S === "顺手牵羊" && r.H === "无中生有" && r.C === "调虎离山" && r.D === null; })());
+check("重开清空四花色", lysAct(1, { type: "resetGame" }).reset === true && ["S", "H", "C", "D"].every((k) => LYT().records[k] === null));
+
 // ============ 场景 16:徐荣 暴戾(凶镬发放/三选一结算 + 杀绝濒死+1)============
 console.log("\n=== 场景 16:徐荣 暴戾 ===");
 const roomX = new RoomCore("4812", 4, () => 0); // rng=0 → 结算恒为效果0(灼伤)

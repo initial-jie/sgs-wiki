@@ -401,6 +401,8 @@ export function initToolState(generalId) {
     return { round: 1, lastRoll: null, log: [] }; // 狼袭:lastRoll = 最近一次 0~2 掷出的伤害
   if (generalId === "caoying")
     return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
+  if (generalId === "zuluyusheng")
+    return { records: { S: null, H: null, C: null, D: null }, log: [] }; // 拾昔:每花色首张单目标普通锦囊的牌名(全公开,整局有效)
   if (generalId === "jiachong")
     return { round: 1, usedThisRound: 0, pending: null, guess: {}, lastReveal: null, log: [] }; // 凶竖:pending={targetSeat,cardName,cost};guess={}|{g}(保密);lastReveal=揭晓结果(公开)
   if (generalId === "wangmingshan")
@@ -717,6 +719,39 @@ export class RoomCore {
       }
       if (t === "newTurn") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; ts.round++; ts.lastRoll = null; this._log(ts, `进入第${ts.round}轮`); return { ok: true }; }
       if (t === "resetGame") { if (!isLi) return { error: "NOT_LIJUE_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 族陆郁生:拾昔台账(全公开,无随机)。每个花色记录"首次使用的单目标普通锦囊"牌名;
+    // 记录后锁定(首次语义),之后该花色所有牌都可当记录牌用 ─────────
+    if (target.general === "zuluyusheng") {
+      const lSeat = targetSeat;
+      const isLys = bySeat === lSeat && iHold(lSeat); // 族陆郁生本人(或代持)
+      const SUITS = ["S", "H", "C", "D"];
+      const SN = { S: "黑桃", H: "红桃", C: "梅花", D: "方块" };
+      if (t === "sxRecord") { // 记录某花色的首张单目标普通锦囊
+        if (!isLys) return { error: "NOT_LYS_ACTION" };
+        const su = String(toolAction.suit);
+        if (!SUITS.includes(su)) return { error: "BAD_SUIT" };
+        if (!ts.records) ts.records = { S: null, H: null, C: null, D: null };
+        if (ts.records[su]) return { error: "ALREADY_RECORDED" }; // 首次语义:已记录不可覆盖(要改先清除)
+        const nm = String(toolAction.cardName || "").trim().slice(0, 12);
+        if (!nm) return { error: "NEED_CARD_NAME" };
+        ts.records[su] = nm;
+        this._log(ts, `拾昔记录:${SN[su]} → 【${nm}】`);
+        return { ok: true };
+      }
+      if (t === "sxClear") { // 清除某花色记录(纠错用;线下若判定记错了)
+        if (!isLys) return { error: "NOT_LYS_ACTION" };
+        const su = String(toolAction.suit);
+        if (!SUITS.includes(su)) return { error: "BAD_SUIT" };
+        if (!ts.records || !ts.records[su]) return { error: "NOT_RECORDED" };
+        const old = ts.records[su];
+        ts.records[su] = null;
+        this._log(ts, `清除记录:${SN[su]} (原【${old}】)`);
+        return { ok: true };
+      }
+      if (t === "resetGame") { if (!isLys) return { error: "NOT_LYS_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 
