@@ -130,6 +130,7 @@ export const TOOL_NAMES = {
   "族王明山": "wangmingshan", // OL 已收录(id608);剩墨台账,同上防重爬丢失
   "贾充": "jiachong", // OL 已收录(id7019);凶竖秘密猜测,同上防重爬丢失
   "族陆郁生": "zuluyusheng", // OL 已收录(id751);拾昔花色台账,同上防重爬丢失
+  "谋程昱": "mouchengyu", // OL 已收录(id734);胆持跨座位秘密选类型,同上防重爬丢失
 };
 
 // 按名回填 tool 字段,返回报告行。只匹配 OL 条目:graduate 时库里可能还残留同名旧手录(offline)条目,不能挂到它上面

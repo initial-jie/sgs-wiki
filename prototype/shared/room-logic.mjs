@@ -212,6 +212,11 @@ export const VISIBILITY = {
     guess: { kind: "ownerSeatOnly" },
     // round / usedThisRound / pending(目标+展示的牌名,牌本就公开展示) / lastReveal(揭晓后) / log 默认 public
   },
+  mouchengyu: {
+    // 胆持:受伤角色秘密选择的牌类型,公开前仅【受伤角色本人/代持】可见(谋程昱自己也看不到,防递给伤害来源);
+    // 他人只见 {count:0|1}=是否已选。pending(受伤角色/伤害来源/是否已公开) / settle / log 默认 public
+    choice: { kind: "pendingTargetOnly" },
+  },
   sunquan: {
     // 权御暗选:每份 pick 自带 revealed;翻开前仅本人可见内容,他人只见"该座位已选"占位(含孙权的也藏)
     picks: { kind: "secretPick" },
@@ -242,6 +247,15 @@ export function filterState(seat, holds) {
       out[field] = holds.has(seat.seatNo)
         ? clone(val)
         : { count: Array.isArray(val) ? val.length : Object.keys(val).length };
+      continue;
+    }
+    // pendingTargetOnly:val 是 {} 或 {c};可见者 = toolState.pending.targetSeat 的持有者,或 pending.revealed 后全场。
+    // 用于"由工具主人以外的某个座位秘密做选择"(谋程昱胆持:受伤角色选类型)
+    if (rule.kind === "pendingTargetOnly") {
+      const p = seat.toolState.pending;
+      out[field] = (p && (p.revealed || holds.has(p.targetSeat)))
+        ? clone(val)
+        : { count: val && val.c ? 1 : 0 };
       continue;
     }
     // secretPick:键值对象 { [座位]: {holder,effect,revealed} }。翻开前仅本人(或代持)可见内容,
@@ -403,6 +417,8 @@ export function initToolState(generalId) {
     return { round: 1, lastPeek: null, log: [] }; // 伏间:lastPeek = {phase,maxSeat,target}(target=null 表示无合法目标)
   if (generalId === "zuluyusheng")
     return { records: { S: null, H: null, C: null, D: null }, log: [] }; // 拾昔:每花色首张单目标普通锦囊的牌名(全公开,整局有效)
+  if (generalId === "mouchengyu")
+    return { pending: null, choice: {}, settle: null, log: [] }; // 胆持:pending={targetSeat,sourceSeat|null,revealed};choice={}|{c}(保密,见 VISIBILITY);settle={actual,diff}(公开)
   if (generalId === "jiachong")
     return { round: 1, usedThisRound: 0, pending: null, guess: {}, lastReveal: null, log: [] }; // 凶竖:pending={targetSeat,cardName,cost};guess={}|{g}(保密);lastReveal=揭晓结果(公开)
   if (generalId === "wangmingshan")
@@ -814,6 +830,70 @@ export class RoomCore {
         return { ok: true };
       }
       if (t === "resetGame") { if (!isJc) return { error: "NOT_JC_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 谋程昱:胆持(跨座位秘密选择)。每回合限一次,距离1以内的角色受到伤害后,程昱发动 → 【受伤角色本人】在其 UI
+    // 秘密选一个类型(基本/锦囊/装备,锁定不可改)→ 伤害来源本回合使用下一张牌后,程昱点公开 → 程昱录入来源所用牌类型:
+    // 视为使用【无中生有】;类型不同则可额外视为使用【杀】。回合结束程昱点「清空重来」(pending 存在即本回合已发动)─────────
+    if (target.general === "mouchengyu") {
+      const cSeat = targetSeat;
+      const isCy = bySeat === cSeat && iHold(cSeat); // 谋程昱本人(或代持)
+      const TYPES = { basic: "基本牌", trick: "锦囊牌", equip: "装备牌" };
+      if (t === "dcStart") { // 发动胆持:{targetSeat 受伤角色(可为自己), sourceSeat? 伤害来源(可不指定)}
+        if (!isCy) return { error: "NOT_CY_ACTION" };
+        if (ts.pending) return { error: "ALREADY_PENDING" }; // 每回合限一次:回合结束清空后才能再发动
+        const tg = Number(toolAction.targetSeat);
+        if (!this.seats[tg]?.general) return { error: "BAD_SEAT" };
+        const srcRaw = toolAction.sourceSeat;
+        const src = srcRaw == null || srcRaw === "" ? null : Number(srcRaw);
+        if (src != null && !this.seats[src]) return { error: "BAD_SOURCE" };
+        ts.pending = { targetSeat: tg, sourceSeat: src, revealed: false };
+        ts.choice = {}; ts.settle = null;
+        this._log(ts, `胆持发动:座位${tg} 受到伤害${src != null ? `(来源 座位${src})` : ""},由其秘密选择一个类型`);
+        return { ok: true };
+      }
+      if (t === "dcChoose") { // 受伤角色本人秘密选择,选定锁定
+        const p = ts.pending;
+        if (!p) return { error: "NO_PENDING" };
+        if (bySeat !== p.targetSeat || !iHold(bySeat)) return { error: "NOT_DC_TARGET" };
+        if (p.revealed) return { error: "ALREADY_REVEALED" };
+        if (ts.choice && ts.choice.c) return { error: "ALREADY_CHOSEN" };
+        const c = String(toolAction.c);
+        if (!TYPES[c]) return { error: "BAD_TYPE" };
+        ts.choice = { c };
+        this._log(ts, `座位${p.targetSeat} 已秘密选择类型`); // ⚠ 不写内容
+        return { ok: true };
+      }
+      if (t === "dcReveal") { // 伤害来源使用下一张牌后,程昱公开
+        if (!isCy) return { error: "NOT_CY_ACTION" };
+        const p = ts.pending;
+        if (!p) return { error: "NO_PENDING" };
+        if (!ts.choice || !ts.choice.c) return { error: "NO_CHOICE" };
+        if (p.revealed) return { error: "ALREADY_REVEALED" };
+        p.revealed = true;
+        this._log(ts, `公开:座位${p.targetSeat} 选择了「${TYPES[ts.choice.c]}」`);
+        return { ok: true, c: ts.choice.c };
+      }
+      if (t === "dcSettle") { // 录入伤害来源所用牌的类型 → 结算(可重录纠错)
+        if (!isCy) return { error: "NOT_CY_ACTION" };
+        const p = ts.pending;
+        if (!p || !p.revealed) return { error: "NOT_REVEALED" };
+        const actual = String(toolAction.actual);
+        if (!TYPES[actual]) return { error: "BAD_TYPE" };
+        const diff = actual !== ts.choice.c;
+        ts.settle = { actual, diff };
+        this._log(ts, `结算:来源使用「${TYPES[actual]}」→ 视为使用【无中生有】${diff ? ";类型不同,可额外视为使用【杀】" : ";类型相同,无额外【杀】"}`);
+        return { ok: true, diff };
+      }
+      if (t === "dcReset") { // 回合结束:清空重来(保留记录)
+        if (!isCy) return { error: "NOT_CY_ACTION" };
+        const log = ts.log || [];
+        target.toolState = initToolState(target.general);
+        target.toolState.log = log;
+        this._log(target.toolState, "回合结束,胆持清空");
+        return { ok: true, reset: true };
+      }
       return { error: "UNKNOWN_ACTION" };
     }
 

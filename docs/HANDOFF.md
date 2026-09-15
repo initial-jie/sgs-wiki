@@ -1,14 +1,14 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **551 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **582 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
-## ⭐ 最新状态(2026-09-15,graduate 8 将 + 录 3 新将后,全部 push 到 main)—— 新会话先读这段
+## ⭐ 最新状态(2026-09-15,graduate + 3 新将 + 谋程昱工具,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/room-sim.mjs` → **551 passed**;`node prototype/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/room-sim.mjs` → **582 passed**;`node prototype/deck-test.mjs` → **26 passed**。
 
-**规模**:武将库 **701 将**(692 OL = 官网花名册全量 + 9 手录/线下)· 房间工具 **23 个** · 装备库 **58 张** · 选将支持拼音。
+**规模**:武将库 **701 将**(692 OL = 官网花名册全量 + 9 手录/线下)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
-**23 个工具**:魔吕布 / 南华老仙 / 族荀攸 / 谋黄月英 / 魔曹操 / 袁姬 / 钟琰 / 魔司马懿 / 谋董昭 / 神孙权 / 魔貂蝉 / 魔孙权 / 神典韦 / 李傕 / 徐荣 / SP徐氏 / 郭照 / 裴秀 / 蒲元 / 曹婴(伏间随机目标) / 族王明山(剩墨台账+弹雀点数) / 贾充(凶竖秘密猜测,保密) / 族陆郁生(拾昔四花色台账)。
+**24 个工具**:魔吕布 / 南华老仙 / 族荀攸 / 谋黄月英 / 魔曹操 / 袁姬 / 钟琰 / 魔司马懿 / 谋董昭 / 神孙权 / 魔貂蝉 / 魔孙权 / 神典韦 / 李傕 / 徐荣 / SP徐氏 / 郭照 / 裴秀 / 蒲元 / 曹婴(伏间随机目标) / 族王明山(剩墨台账+弹雀点数) / 贾充(凶竖秘密猜测,保密) / 族陆郁生(拾昔四花色台账) / 谋程昱(胆持跨座位秘密选类型,保密)。
 
 **房间级功能(已上线代码)**:
 - 全场状态面板:血量/翻面/连环/阵亡(横置已并入连环);残血起手将按 initialHp 播种
@@ -18,7 +18,7 @@
 - **禁将四池**:按座位数自动选池(≥5 军争 / 4 2v2 / 3 斗地主 / 2 1v1),军争池 15 将、其余空;房内共享**总开关**
 - 房内改名(原子改键);神将自选势力含**晋**;**选将拼音/首字母搜索**
 
-**⚠ 部署**:worker 相关改动由用户自己 `cd prototype/worker && npx wrangler deploy`。贾充/族陆郁生/拼音搜索已 deploy(用户 2026-09-15 确认);**graduate + 3 新将这批(generals.json/hero-pinyin/禁将池/room.html)待 deploy**。wiki 侧 `git push` 即 Pages 自动部署。
+**⚠ 部署**:worker 相关改动由用户自己 `cd prototype/worker && npx wrangler deploy`。贾充/族陆郁生/拼音搜索已 deploy(用户 2026-09-15 确认);**graduate + 3 新将 + 谋程昱工具这批(generals.json/hero-pinyin/禁将池/room-logic/room.html)待 deploy**。wiki 侧 `git push` 即 Pages 自动部署。
 
 **进行中/悬而未决(下次可接)**:
 1. **私密手牌助手**(方案已提,用户未拍板):曹金玉「夏晟」私密红黑计数器(只公开"红多/黑多")、董予安「和煦」非伤害牌类别清单(算手牌上限+N);两张争议牌 借刀杀人(倾向非伤害)/闪电(倾向伤害)分类待用户定。
@@ -30,6 +30,11 @@
 4. 禁将池"4人=2v2、3人=斗地主"是按座位数推断的,若打 4 人身份局会套错池(现只有军争池非空暂无影响);管理员页/运行时改禁池暂缓。
 5. 已知未修:数据 JSON 路由 `max-age=3600`,deploy 后老浏览器最长约 1 小时才看到新数据(用户说不急)。
 6. brainstorm 池:威胁地图(谁能杀到我)、血量事件驱动技能提醒、身份场暗置助手、共享回合/阶段条;实体读牌硬件已搁置。
+
+**谋程昱「胆持」工具(2026-09-15,第 24 个)**:第二个保密工具,也是**第一个"秘密选择权在工具主人以外的座位"**的工具 —— 程昱发动→【受伤角色本人】在自己 UI 秘密选类型(基本/锦囊/装备,锁定不可改)→ 伤害来源使用下一张牌后程昱点公开 → 程昱录入来源所用类型算结果(不同则可额外视为使用【杀】)→ 回合结束点「清空重来」(pending 存在 = 本回合已发动)。
+- 新保密原语 `VISIBILITY.mouchengyu.choice = {kind:"pendingTargetOnly"}`:可见者 = `toolState.pending.targetSeat` 的持有者,或 `pending.revealed` 后全场;旁人(**含谋程昱本人**)只见 `{count:0|1}`。**程昱公开前也看不到**是刻意的,防止泄露给伤害来源。要改成"程昱可见"只需在 filterState 该分支加 `|| holds.has(seat.seatNo)`。
+- 跨座位操作沿用魔孙权天恩范式:`bySeat` = 受伤座位(服务端校验持有)+ 全局横幅 `mcyPendingForMe`(受伤角色任何页面顶部弹出「去选择 →」)。worker 零改。
+- 734.tool 直写 generals.json + scrape TOOL_NAMES 防重爬丢;room.html 函数名用 `viewMcyTool/bindMcy`(`viewCyTool` 已被曹婴占用)。**房间版 only**(座位概念房间原生,wiki 单人版未做,同曹婴)。
 
 **常用流程速查**:
 - **官网已收录的将(新将 / graduate)**:`node prototype/scrape-generals.mjs --ids 744,763`(增量抓取合并,新 id 插在 9000+ 段前;graduate 时先删 OFFLINE_HEROES 条目,`applyOverrides` 会清掉库里残留孤儿)→ `node prototype/build-pinyin.mjs`。新将 API 给的是 `…/m/general/big/static/{id}00.png`,头像由 scraper 自动派生 `skinShop/{id}00.png`。
