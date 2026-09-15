@@ -811,7 +811,8 @@ check("目标须已登记武将", danchiAct(1, { type: "dcStart", targetSeat: 4 
 check("未发动不能选择", danchiAct(2, { type: "dcChoose", c: "basic" }).error === "NO_PENDING");
 check("发动:座位2受伤、来源座位3", danchiAct(1, { type: "dcStart", targetSeat: 2, sourceSeat: 3 }).ok === true && dcTS().pending.targetSeat === 2 && dcTS().pending.sourceSeat === 3 && dcTS().pending.revealed === false);
 check("每回合限一次(已有 pending 再发动被拒)", danchiAct(1, { type: "dcStart", targetSeat: 3 }).error === "ALREADY_PENDING");
-check("未选择不能公开", danchiAct(1, { type: "dcReveal" }).error === "NO_CHOICE");
+check("未选择不能公开", danchiAct(2, { type: "dcReveal" }).error === "NO_CHOICE");
+check("⭐ 程昱看不到内容,故也不能公开(公开权在受伤角色)", danchiAct(1, { type: "dcReveal" }).error === "NOT_DC_TARGET");
 check("⭐ 只有受伤角色能选(程昱不行)", danchiAct(1, { type: "dcChoose", c: "basic" }).error === "NOT_DC_TARGET");
 check("⭐ 只有受伤角色能选(来源不行)", danchiAct(3, { type: "dcChoose", c: "basic" }).error === "NOT_DC_TARGET");
 check("非法类型被拒", danchiAct(2, { type: "dcChoose", c: "weapon" }).error === "BAD_TYPE");
@@ -824,10 +825,11 @@ check("⭐ 程昱公开前也看不到(只见 count=1)", dcView(dcDev[1]).choice
 check("⭐ 接管受伤座位的设备看得到(原设备失去)", (() => { roomDanchi.takeoverSeat(dcDev[4], 2); const ok = dcView(dcDev[4]).choice.c === "trick" && dcView(dcDev[2]).choice.count === 1; roomDanchi.takeoverSeat(dcDev[2], 2); return ok; })());
 check("log 不泄露选择内容", !JSON.stringify(dcView(dcDev[3]).log).includes("trick") && !JSON.stringify(dcView(dcDev[3]).log).includes("锦囊"));
 check("未公开不能结算", danchiAct(1, { type: "dcSettle", actual: "basic" }).error === "NOT_REVEALED");
-check("非程昱不能公开", danchiAct(2, { type: "dcReveal" }).error === "NOT_CY_ACTION");
-check("程昱公开 → 返回类型", danchiAct(1, { type: "dcReveal" }).c === "trick" && dcTS().pending.revealed === true);
+check("⭐ 无关座位不能公开", danchiAct(3, { type: "dcReveal" }).error === "NOT_DC_TARGET");
+check("⭐ 程昱不能代为公开(防误触泄露)", danchiAct(1, { type: "dcReveal" }).error === "NOT_DC_TARGET" && dcTS().pending.revealed === false);
+check("受伤角色本人公开 → 返回类型", danchiAct(2, { type: "dcReveal" }).c === "trick" && dcTS().pending.revealed === true);
 check("⭐ 公开后全场可见", dcView(dcDev[3]).choice.c === "trick" && dcView(dcDev[1]).choice.c === "trick");
-check("公开后不能重复公开", danchiAct(1, { type: "dcReveal" }).error === "ALREADY_REVEALED");
+check("公开后不能重复公开", danchiAct(2, { type: "dcReveal" }).error === "ALREADY_REVEALED");
 check("公开后受伤角色不能再选", danchiAct(2, { type: "dcChoose", c: "basic" }).error === "ALREADY_REVEALED");
 check("结算:来源用基本牌(与锦囊不同)→ diff", danchiAct(1, { type: "dcSettle", actual: "basic" }).diff === true && dcView(dcDev[3]).settle.diff === true);
 check("结算可重录纠错:锦囊(相同)→ 无额外杀", danchiAct(1, { type: "dcSettle", actual: "trick" }).diff === false && dcTS().settle.actual === "trick");
@@ -836,7 +838,8 @@ check("序列化/hydrate 存活", (() => { const h = RoomCore.hydrate(JSON.parse
 check("非程昱不能清空", danchiAct(2, { type: "dcReset" }).error === "NOT_CY_ACTION");
 check("回合结束清空重来(保留记录)", danchiAct(1, { type: "dcReset" }).reset === true && dcTS().pending === null && Object.keys(dcTS().choice).length === 0 && dcTS().settle === null && dcTS().log.length > 3);
 check("清空后可再次发动(对自己,不指定来源)", danchiAct(1, { type: "dcStart", targetSeat: 1 }).ok === true && dcTS().pending.sourceSeat === null);
-check("目标为自己时程昱本人选择并可见", danchiAct(1, { type: "dcChoose", c: "equip" }).ok === true && dcView(dcDev[1]).choice.c === "equip" && dcView(dcDev[2]).choice.count === 1);
+check("目标为自己时程昱本人选择并可见(旁人仍只见 count)", danchiAct(1, { type: "dcChoose", c: "equip" }).ok === true && dcView(dcDev[1]).choice.c === "equip" && dcView(dcDev[2]).choice.count === 1);
+check("⭐ 目标为自己时,公开权也在程昱(他就是受伤角色)", danchiAct(1, { type: "dcReveal" }).c === "equip" && dcView(dcDev[2]).choice.c === "equip");
 
 // ============ 场景 15e:族陆郁生 拾昔(每花色首张单目标普通锦囊台账)============
 console.log("\n=== 场景 15e:族陆郁生 拾昔 ===");

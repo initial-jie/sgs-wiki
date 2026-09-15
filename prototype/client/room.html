@@ -2643,19 +2643,21 @@ function bindJc(jc,q){
 /* ---------- 谋程昱工具(胆持:受伤角色跨座位秘密选类型 → 程昱公开 → 结算;选择内容公开前仅受伤角色本人可见)---------- */
 let mcyTarget=null, mcySource=""; // 本机暂存:发动时选的受伤角色 / 伤害来源
 const MCY_TYPES={basic:"基本牌",trick:"锦囊牌",equip:"装备牌"};
-// 胆持待选:若有谋程昱对我持有的座位发动了胆持且我还没选,返回 {cySeat,target} 供全局横幅
+// 胆持待办:谋程昱对我持有的座位发动了胆持 → 未选=该我选、已选未公开=该我公开(公开权在受伤角色本人)
 function mcyPendingForMe(){
   if(!state) return null;
   for(const s of Object.values(state.seats)){
     const p=s.general==="mouchengyu"&&s.toolState&&s.toolState.pending;
-    if(p&&!p.revealed&&state.youHold.includes(p.targetSeat)&&!(s.toolState.choice&&s.toolState.choice.c)) return {cySeat:s.seatNo,target:p.targetSeat};
+    if(!p||p.revealed||!state.youHold.includes(p.targetSeat)) continue;
+    return {cySeat:s.seatNo,target:p.targetSeat,phase:(s.toolState.choice&&s.toolState.choice.c)?"reveal":"choose"};
   }
   return null;
 }
 function viewMcyBanner(call){
+  const choose=call.phase==="choose";
   return `<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.06)"><div class="row">
-    <span class="grow"><b style="color:var(--seal)">🛡 谋程昱对你发动了胆持</b> · 请秘密选择一个类型</span>
-    <button class="primary" data-tejump="${call.cySeat}">去选择 →</button></div></div>`;
+    <span class="grow"><b style="color:var(--seal)">🛡 ${choose?"谋程昱对你发动了胆持":"胆持 · 你的选择待公开"}</b> · ${choose?"请秘密选择一个类型":"伤害来源使用下一张牌后,由你公开"}</span>
+    <button class="primary" data-tejump="${call.cySeat}">${choose?"去选择":"去公开"} →</button></div></div>`;
 }
 function viewMcyTool(cy){
   const ts=cy.toolState||{}, iAm=state.youHold.includes(cy.seatNo);
@@ -2696,11 +2698,14 @@ function viewMcyTool(cy){
       h+=`<div class="hint" style="margin:0 0 4px"><b>你是受伤角色</b> · 秘密选择一个类型(选定后不可更换):</div><div class="row" style="gap:6px">`
         +Object.entries(MCY_TYPES).map(([k,v])=>`<button class="primary" data-mcyc="${k}" style="flex:1 1 0">${v}</button>`).join("")+`</div>`;
     }
-    // 谋程昱:公开 → 结算
-    if(iAm&&!p.revealed){
-      h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-mcyreveal="1"${chosen?"":" disabled"}>伤害来源已使用下一张牌 · 公开选择</button></div>`;
-      if(!chosen) h+=`<div class="hint">受伤角色选择后才能公开。</div>`;
+    // 公开权在受伤角色本人:程昱看不到内容,由他按=误触泄露自己都不知道的信息(且正好泄露给还没出牌的来源)
+    if(iTarget&&!p.revealed&&ch){
+      h+=`<div class="row" style="margin-top:8px"><button class="primary grow" data-mcyreveal="1">伤害来源已使用下一张牌 · 公开我的选择</button></div>`;
+      h+=`<div class="hint">由你本人公开(谋程昱看不到内容,不能替你按)。</div>`;
     }
+    if(iAm&&!p.revealed&&!iTarget) h+=`<div class="hint" style="margin-top:8px">${chosen
+      ? `等座位${p.targetSeat}在其手机上公开(公开权在其本人,你看不到内容也不能替按)。对方不在场可「清空重来」。`
+      : `等座位${p.targetSeat}秘密选择。`}</div>`;
     if(p.revealed){
       if(iAm) h+=`<div class="hint" style="margin:10px 0 4px">伤害来源使用的牌是:</div><div class="row" style="gap:6px">`
         +Object.entries(MCY_TYPES).map(([k,v])=>`<button class="pnl-flag${st&&st.actual===k?" on":""}" data-mcyset="${k}" style="flex:1 1 0">${v}</button>`).join("")+`</div>`;
@@ -2726,7 +2731,8 @@ function bindMcy(cy,q){
   // 受伤角色本人选:bySeat=受伤座位(服务端校验持有)
   q("[data-mcyc]").forEach(b=>b.onclick=()=>{const p=cy.toolState.pending;if(!p)return;
     if(confirm("确定选择「"+MCY_TYPES[b.dataset.mcyc]+"」?选定后不可更换。"))act({type:"dcChoose",c:b.dataset.mcyc},p.targetSeat);});
-  q("[data-mcyreveal]").forEach(b=>b.onclick=()=>act({type:"dcReveal"}));
+  // 公开权在受伤角色本人 → bySeat 必须是受伤座位(服务端同样校验,程昱发的会被拒)
+  q("[data-mcyreveal]").forEach(b=>b.onclick=()=>{const p=cy.toolState.pending;if(!p)return;act({type:"dcReveal"},p.targetSeat);});
   q("[data-mcyset]").forEach(b=>b.onclick=()=>act({type:"dcSettle",actual:b.dataset.mcyset}));
   q("[data-mcyreset]").forEach(b=>b.onclick=()=>{if(confirm("回合结束,清空胆持重来?"))act({type:"dcReset"});});
 }

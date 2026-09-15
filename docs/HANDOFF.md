@@ -1,10 +1,10 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **582 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **585 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
 ## ⭐ 最新状态(2026-09-15,graduate + 3 新将 + 谋程昱工具,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/room-sim.mjs` → **582 passed**;`node prototype/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/room-sim.mjs` → **585 passed**;`node prototype/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **701 将**(692 OL = 官网花名册全量 + 9 手录/线下)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -31,9 +31,10 @@
 5. 已知未修:数据 JSON 路由 `max-age=3600`,deploy 后老浏览器最长约 1 小时才看到新数据(用户说不急)。
 6. brainstorm 池:威胁地图(谁能杀到我)、血量事件驱动技能提醒、身份场暗置助手、共享回合/阶段条;实体读牌硬件已搁置。
 
-**谋程昱「胆持」工具(2026-09-15,第 24 个)**:第二个保密工具,也是**第一个"秘密选择权在工具主人以外的座位"**的工具 —— 程昱发动→【受伤角色本人】在自己 UI 秘密选类型(基本/锦囊/装备,锁定不可改)→ 伤害来源使用下一张牌后程昱点公开 → 程昱录入来源所用类型算结果(不同则可额外视为使用【杀】)→ 回合结束点「清空重来」(pending 存在 = 本回合已发动)。
+**谋程昱「胆持」工具(2026-09-15,第 24 个)**:第二个保密工具,也是**第一个"秘密选择权在工具主人以外的座位"**的工具 —— 程昱发动→【受伤角色本人】在自己 UI 秘密选类型(基本/锦囊/装备,锁定不可改)→ 伤害来源使用下一张牌后**由受伤角色本人点公开** → 程昱录入来源所用类型算结果(不同则可额外视为使用【杀】)→ 回合结束点「清空重来」(pending 存在 = 本回合已发动)。
 - 新保密原语 `VISIBILITY.mouchengyu.choice = {kind:"pendingTargetOnly"}`:可见者 = `toolState.pending.targetSeat` 的持有者,或 `pending.revealed` 后全场;旁人(**含谋程昱本人**)只见 `{count:0|1}`。**程昱公开前也看不到**是刻意的,防止泄露给伤害来源。要改成"程昱可见"只需在 filterState 该分支加 `|| holds.has(seat.seatNo)`。
-- 跨座位操作沿用魔孙权天恩范式:`bySeat` = 受伤座位(服务端校验持有)+ 全局横幅 `mcyPendingForMe`(受伤角色任何页面顶部弹出「去选择 →」)。worker 零改。
+- **公开权也在受伤角色本人**(用户 2026-09-15 提的,已采纳):程昱看不到内容,若由他按,误触泄露的是他自己都不知道的信息,且正好泄露给还没出下一张牌的伤害来源;受伤角色本人按至少是知情的。对方不在场时程昱可「清空重来」,不会死锁。
+- 跨座位操作沿用魔孙权天恩范式:`dcChoose`/`dcReveal` 的 `bySeat` 都必须是受伤座位(服务端校验持有)+ 全局横幅 `mcyPendingForMe` 两态(未选=「去选择」/已选未公开=「去公开」)。worker 零改。⚠ 客户端 `act(o,by)` 第二参必须传 `p.targetSeat`,漏传=服务端静默拒绝(改公开权时踩过)。
 - 734.tool 直写 generals.json + scrape TOOL_NAMES 防重爬丢;room.html 函数名用 `viewMcyTool/bindMcy`(`viewCyTool` 已被曹婴占用)。**房间版 only**(座位概念房间原生,wiki 单人版未做,同曹婴)。
 
 **常用流程速查**:

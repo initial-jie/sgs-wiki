@@ -213,7 +213,7 @@ export const VISIBILITY = {
     // round / usedThisRound / pending(目标+展示的牌名,牌本就公开展示) / lastReveal(揭晓后) / log 默认 public
   },
   mouchengyu: {
-    // 胆持:受伤角色秘密选择的牌类型,公开前仅【受伤角色本人/代持】可见(谋程昱自己也看不到,防递给伤害来源);
+    // 胆持:受伤角色秘密选择的牌类型,公开前仅【受伤角色本人/代持】可见(谋程昱自己也看不到,防递给伤害来源;公开也由其本人点);
     // 他人只见 {count:0|1}=是否已选。pending(受伤角色/伤害来源/是否已公开) / settle / log 默认 public
     choice: { kind: "pendingTargetOnly" },
   },
@@ -834,7 +834,7 @@ export class RoomCore {
     }
 
     // ───────── 谋程昱:胆持(跨座位秘密选择)。每回合限一次,距离1以内的角色受到伤害后,程昱发动 → 【受伤角色本人】在其 UI
-    // 秘密选一个类型(基本/锦囊/装备,锁定不可改)→ 伤害来源本回合使用下一张牌后,程昱点公开 → 程昱录入来源所用牌类型:
+    // 秘密选一个类型(基本/锦囊/装备,锁定不可改)→ 伤害来源本回合使用下一张牌后,【受伤角色本人】点公开 → 程昱录入来源所用牌类型:
     // 视为使用【无中生有】;类型不同则可额外视为使用【杀】。回合结束程昱点「清空重来」(pending 存在即本回合已发动)─────────
     if (target.general === "mouchengyu") {
       const cSeat = targetSeat;
@@ -865,10 +865,12 @@ export class RoomCore {
         this._log(ts, `座位${p.targetSeat} 已秘密选择类型`); // ⚠ 不写内容
         return { ok: true };
       }
-      if (t === "dcReveal") { // 伤害来源使用下一张牌后,程昱公开
-        if (!isCy) return { error: "NOT_CY_ACTION" };
+      // 公开权归【受伤角色本人】(而非程昱):程昱看不到内容,若由他按,误触泄露的是他自己都不知道的信息,
+      // 且正好泄露给还没出下一张牌的伤害来源。对方迟迟不公开时程昱可用 dcReset 清空重来,不会死锁。
+      if (t === "dcReveal") { // 伤害来源使用下一张牌后,受伤角色本人公开
         const p = ts.pending;
         if (!p) return { error: "NO_PENDING" };
+        if (bySeat !== p.targetSeat || !iHold(bySeat)) return { error: "NOT_DC_TARGET" };
         if (!ts.choice || !ts.choice.c) return { error: "NO_CHOICE" };
         if (p.revealed) return { error: "ALREADY_REVEALED" };
         p.revealed = true;
