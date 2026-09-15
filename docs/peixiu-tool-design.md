@@ -123,7 +123,7 @@
 数据 + 规则已齐,工具本身是独立大件,建议**新开对话**做。新会话让我读:`docs/peixiu-tool-design.md`(本文)+ `prototype/shared/peixiu-maps.json`(16 图数据)+ `docs/HANDOFF.md` + `docs/room-protocol.md`,即可开工。要点:
 - 接入范式同其他 17 个工具:`room-logic.mjs`(initToolState + action 块)+ `room.html`(viewPx/bindPx)+ `tools/peixiu.html` 单人版 + `index.html` 卡 + `generals.json` 裴秀(9003).tool="peixiu" + scraper TOOL_NAMES。
 - 工具逻辑:①随机展开地图(回合内不重复,16 张跑完才循环)→ 棋盘按 peixiu-maps.json 画(格子/墙/起点/四城/图标);②玩家点方向(♠东/♥西/♣南/♦北)→ 模拟推箱子滑到墙,经过城市执行图标(draw/heal/move,move 停留后可能触发新城);③四城画完→亮"下一张";④结束阶段:池=本回合各州 stateSkill + 已经过城市 skill,随机 3 选 1,记录留到下回合。**不含最优解 solver**。
-- 裴秀 9003 目前 offline;olwiki 有(id 606,SP),官网 scrape 收录后可 graduate。
+- 裴秀已 graduate(2026-09-15):手录 9003 → 官网 id 606,tool=peixiu 由 scrape-generals.mjs TOOL_NAMES 按名接管。
 
 ---
 

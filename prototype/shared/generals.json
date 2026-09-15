@@ -20618,6 +20618,270 @@
     "offline": false
   },
   {
+    "id": 606,
+    "name": "裴秀",
+    "genre": "其他",
+    "series": "标",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "限定",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "茂著",
+        "effect": "锁定技，回合开始时，或你绘制了一幅“地图”的所有城市，你将手牌中的花色补至4，并展开一幅“地图”。回合结束时，你获得一个本回合已展开的“地图”技能，直到你下回合结束。"
+      },
+      {
+        "name": "尽览",
+        "effect": "当你于回合内使用♠/♥/♣/♦牌后，你可以绘制东/西/南/北方位的所有“地图”。你绘制一处城市后，执行对应城市的效果。"
+      },
+      {
+        "name": "采风",
+        "effect": "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。"
+      }
+    ],
+    "characteristic": "可以在牌局中绘制地图赚取收益",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/60600.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/60600.png",
+    "tool": "peixiu",
+    "offline": false
+  },
+  {
+    "id": 663,
+    "name": "谋贾诩",
+    "genre": "谋",
+    "series": "谋",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌",
+      "加伤"
+    ],
+    "skills": [
+      {
+        "name": "乱朝",
+        "effect": "限定技，每轮开始时，你可令所有角色依次选择从牌堆获得一张【杀】或【闪】。获得【杀】的角色本轮首次造成的伤害+1。"
+      },
+      {
+        "name": "完策",
+        "effect": "出牌阶段限一次，你可指定一名角色并声明一张指定唯一目标的普通锦囊牌，然后其依次将X张手牌当此牌使用（X为游戏轮数且至多为3）。其以此法指定目标时，你可弃置一张牌并更改目标。"
+      },
+      {
+        "name": "沉智",
+        "effect": "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。"
+      }
+    ],
+    "characteristic": "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/66300.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/66300.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 765,
+    "name": "谋祝融",
+    "genre": "谋",
+    "series": "谋",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "刃掣",
+        "effect": "出牌阶段限X次，你可弃置X张牌并令至多X名其他角色各弃置一张牌（X为本回合弃牌堆中【杀】的数量且至少为1）。每有角色因此弃置牌不为【杀】，你便摸一张牌。"
+      },
+      {
+        "name": "牙镰",
+        "effect": "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。"
+      }
+    ],
+    "characteristic": "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/76500.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/76500.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 230,
+    "name": "神黄忠",
+    "genre": "神将",
+    "series": "神",
+    "faction": "神",
+    "factionSelectable": true,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "神御",
+        "effect": "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将【赤血刃】置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且【赤血刃】在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。"
+      },
+      {
+        "name": "化刃",
+        "effect": "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数量的牌，视为拥有其技能。"
+      }
+    ],
+    "characteristic": "通过赤血刃创造收益；可以对武器进行炼化",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/23000.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/23000.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 740,
+    "name": "曹金玉",
+    "genre": "其他",
+    "series": "标",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "限定",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "防御",
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "春晖",
+        "effect": "锁定技，准备阶段或当你受到伤害后，令一名角色交给你一张手牌。若此牌为黑色，本回合你或其下一次成为红色牌的目标时，各弃置一张手牌。"
+      },
+      {
+        "name": "夏晟",
+        "effect": "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标。"
+      },
+      {
+        "name": "秋暮",
+        "effect": "锁定技，本回合成为过你的红色牌目标的角色进入濒死状态时，你将“春晖”“夏晟”或“秋暮”描述中的“红色”改为“黑色”，若描述变化，你获得其所有黑色手牌。"
+      }
+    ],
+    "characteristic": "防御能力强，可以辅助队友，需要关注手牌中的颜色分布。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/74000.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/74000.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 775,
+    "name": "界步练师",
+    "genre": "界限突破",
+    "series": "界",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌",
+      "辅助"
+    ],
+    "skills": [
+      {
+        "name": "安恤",
+        "effect": "出牌阶段限一次，你可以获得两名角色各一张牌。然后你展示一张牌并交给其中手牌较少的角色，若不为黑桃，你摸一张牌。"
+      },
+      {
+        "name": "追忆",
+        "effect": "限定技，结束阶段，你可令一名其他角色摸三张牌并回复1点体力。然后你死亡时，可以对其再次发动本技能。"
+      }
+    ],
+    "characteristic": "安恤灵活给牌辅助队友；追忆为队友回血摸牌",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/77500.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/77500.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 683,
+    "name": "刘璋",
+    "genre": "其他",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "辅助"
+    ],
+    "skills": [
+      {
+        "name": "丰蔚",
+        "effect": "锁定技，每轮开始时，你摸至多五张牌。若你手牌中有本轮以此法获得的牌，你跳过摸牌阶段； 当你受到牌造成的伤害时，若手牌中有本轮以此法获得的牌，此伤害+1。"
+      },
+      {
+        "name": "宗护",
+        "effect": "每回合限一次，当你需要使用【杀】或【闪】时，你可将X张牌交给一名其他角色，然后视为你使用之（X为游戏轮数且至多为3）。"
+      }
+    ],
+    "characteristic": "摸牌多所受负面效果越大，需要合理运用技能吸引嘲讽并辅助队友。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/68300.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/68300.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 755,
+    "name": "董予安",
+    "genre": "其他",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "和煦",
+        "effect": "锁定技，你每有一个类别的非伤害牌，你的手牌上限便+1。"
+      },
+      {
+        "name": "泽光",
+        "effect": "每回合限一次，当你成为伤害牌的目标后，可重铸三张牌（不足则全部重铸)。然后若此牌造成伤害，你可令一名角色获得重铸牌。"
+      },
+      {
+        "name": "承恩",
+        "effect": "每回合结束时，若当前回合角色手牌数小于等于你，你可与一名角色拼点。若你赢，可使用拼点牌（无距离限制）；若你没赢，拼点目标可对你使用一张【杀】。"
+      }
+    ],
+    "characteristic": "拥有较高的手牌上限，可以辅助可以进攻。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/75500.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/75500.png",
+    "tool": null,
+    "offline": false
+  },
+  {
     "id": 9001,
     "name": "孙寒华",
     "genre": "线下",
@@ -20649,76 +20913,6 @@
     "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sunhanhua.jpg",
     "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sunhanhua.jpg",
     "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9002,
-    "name": "谋贾诩",
-    "genre": "谋",
-    "series": "谋",
-    "faction": "群",
-    "factionSelectable": false,
-    "quality": "传说",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "控制",
-      "过牌",
-      "加伤"
-    ],
-    "skills": [
-      {
-        "name": "乱朝",
-        "effect": "限定技，每轮开始时，你可令所有角色依次选择从牌堆获得一张【杀】或【闪】。获得【杀】的角色本轮首次造成的伤害+1。"
-      },
-      {
-        "name": "完策",
-        "effect": "出牌阶段限一次，你可指定一名角色并声明一张指定唯一目标的普通锦囊牌，然后其依次将X张手牌当此牌使用（X为游戏轮数且至多为3）。其以此法指定目标时，你可弃置一张牌并更改目标。"
-      },
-      {
-        "name": "沉智",
-        "effect": "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。"
-      }
-    ],
-    "characteristic": "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/66300.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/66300.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9003,
-    "name": "裴秀",
-    "genre": "其他",
-    "series": "标",
-    "faction": "魏",
-    "factionSelectable": false,
-    "quality": "限定",
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "进攻",
-      "防御",
-      "过牌"
-    ],
-    "skills": [
-      {
-        "name": "茂著",
-        "effect": "锁定技，回合开始时，或你绘制了一幅“地图”的所有城市，你将手牌中的花色补至4，并展开一幅“地图”。回合结束时，你获得一个本回合已展开的“地图”技能，直到你下回合结束。"
-      },
-      {
-        "name": "尽览",
-        "effect": "当你于回合内使用♠/♥/♣/♦牌后，你可以绘制东/西/南/北方位的所有“地图”。你绘制一处城市后，执行对应城市的效果。"
-      },
-      {
-        "name": "采风",
-        "effect": "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。"
-      }
-    ],
-    "characteristic": "可以在牌局中绘制地图赚取收益。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/60600.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/60600.png",
-    "tool": "peixiu",
     "offline": true
   },
   {
@@ -20908,199 +21102,6 @@
     "characteristic": "龙吟帮全场刷【杀】次数并借红杀过牌，竭勇把最后一张红牌转【杀】。",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/76600.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9010,
-    "name": "谋祝融",
-    "genre": "谋",
-    "series": "谋",
-    "faction": "蜀",
-    "factionSelectable": false,
-    "quality": "传说",
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "进攻",
-      "防御",
-      "控制"
-    ],
-    "skills": [
-      {
-        "name": "刃犟",
-        "effect": "出牌阶段限X次，你可弃置X张牌并令至多X名其他角色各弃置一张牌（X为本回合弃牌堆中【杀】的数量且至少为1）。每有角色因此弃置牌不为【杀】，你便摸一张牌。"
-      },
-      {
-        "name": "牙镰",
-        "effect": "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。"
-      }
-    ],
-    "characteristic": "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76500.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76500.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9011,
-    "name": "神黄忠",
-    "genre": "神将",
-    "series": "神",
-    "faction": "神",
-    "factionSelectable": true,
-    "quality": "传说",
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "进攻",
-      "爆发"
-    ],
-    "skills": [
-      {
-        "name": "神御",
-        "effect": "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将【赤血刃】置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且【赤血刃】在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。"
-      },
-      {
-        "name": "化刃",
-        "effect": "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数量的牌，视为拥有其技能。"
-      }
-    ],
-    "characteristic": "通过赤血刃创造收益；可以对武器进行炼化。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/23000.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/23000.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9012,
-    "name": "曹金玉",
-    "genre": "其他",
-    "series": "标",
-    "faction": "魏",
-    "factionSelectable": false,
-    "quality": "限定",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "防御",
-      "辅助",
-      "颜色爱好者"
-    ],
-    "skills": [
-      {
-        "name": "春晖",
-        "effect": "锁定技，准备阶段或当你受到伤害后，令一名角色交给你一张手牌。若此牌为黑色，本回合你或其下一次成为红色牌的目标时，各弃置一张手牌。"
-      },
-      {
-        "name": "夏晟",
-        "effect": "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标。"
-      },
-      {
-        "name": "秋暮",
-        "effect": "锁定技，本回合成为过你的红色牌目标的角色进入濒死状态时，你将“春晖”“夏晟”或“秋暮”描述中的“红色”改为“黑色”，若描述变化，你获得其所有黑色手牌。"
-      }
-    ],
-    "characteristic": "防御能力强，可以辅助队友，需要关注手牌中的颜色分布。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74000.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74000.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9013,
-    "name": "界步练师",
-    "genre": "界限突破",
-    "series": "界",
-    "faction": "吴",
-    "factionSelectable": false,
-    "quality": "史诗",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "控制",
-      "辅助",
-      "回复"
-    ],
-    "skills": [
-      {
-        "name": "安恤",
-        "effect": "出牌阶段限一次，你可以获得两名角色各一张牌。然后你展示一张牌并交给其中手牌较少的角色，若不为黑桃，你摸一张牌。"
-      },
-      {
-        "name": "追忆",
-        "effect": "限定技，结束阶段，你可令一名其他角色摸三张牌并回复1点体力。然后你死亡时，可以对其再次发动本技能。"
-      }
-    ],
-    "characteristic": "安恤灵活给牌辅助队友；追忆为队友回血摸牌。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77500.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77500.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9014,
-    "name": "刘璋",
-    "genre": "璀璨星河",
-    "series": "标",
-    "faction": "群",
-    "factionSelectable": false,
-    "quality": "史诗",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "防御",
-      "辅助",
-      "过牌"
-    ],
-    "skills": [
-      {
-        "name": "丰蔚",
-        "effect": "锁定技，每轮开始时，你摸至多五张牌。若你手牌中有本轮以此法获得的牌，你跳过摸牌阶段；当你受到牌造成的伤害时，若手牌中有本轮以此法获得的牌，此伤害+1。"
-      },
-      {
-        "name": "宗护",
-        "effect": "每回合限一次，当你需要使用【杀】或【闪】时，你可将X张牌交给一名其他角色，然后视为你使用之（X为游戏轮数且至多为3）。"
-      }
-    ],
-    "characteristic": "摸牌多所受负面效果越大，需要合理运用技能吸引嘲讽并辅助队友。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/68300.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/68300.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9015,
-    "name": "董予安",
-    "genre": "璀璨星河",
-    "series": "标",
-    "faction": "群",
-    "factionSelectable": false,
-    "quality": "传说",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "防御",
-      "辅助",
-      "控制"
-    ],
-    "skills": [
-      {
-        "name": "和煦",
-        "effect": "锁定技，你每有一个类别的非伤害牌，你的手牌上限便+1。"
-      },
-      {
-        "name": "泽光",
-        "effect": "每回合限一次，当你成为伤害牌的目标后，可重铸三张牌（不足则全部重铸）。然后若此牌造成伤害，你可令一名角色获得重铸牌。"
-      },
-      {
-        "name": "承恩",
-        "effect": "每回合结束时，若当前回合角色手牌数小于等于你，你可与一名角色拼点。若你赢，可使用拼点牌（无距离限制）；若你没赢，拼点目标可对你使用一张【杀】。"
-      }
-    ],
-    "characteristic": "拥有较高的手牌上限，可以辅助可以进攻。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75500.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75500.png",
     "tool": null,
     "offline": true
   },

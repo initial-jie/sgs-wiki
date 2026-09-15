@@ -93,38 +93,6 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/sunhanhua.jpg",
     tool: null, offline: true,
   },
-  // 谋贾诩 —— OL 新将(官网未收录,先手录)。⚠ 临时:官网上线重爬后应从这里删掉,让 scrape 接管(会有真 id + 立绘)
-  {
-    id: 9002, name: "谋贾诩", genre: "谋", series: "谋", faction: "群",
-    factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
-    tags: ["控制", "过牌", "加伤"],
-    skills: [
-      { name: "乱朝", effect: "限定技，每轮开始时，你可令所有角色依次选择从牌堆获得一张【杀】或【闪】。获得【杀】的角色本轮首次造成的伤害+1。" },
-      { name: "完策", effect: "出牌阶段限一次，你可指定一名角色并声明一张指定唯一目标的普通锦囊牌，然后其依次将X张手牌当此牌使用（X为游戏轮数且至多为3）。其以此法指定目标时，你可弃置一张牌并更改目标。" },
-      { name: "沉智", effect: "你每轮受到第X次以后的伤害时，你弃置一张牌防止之（X为游戏轮数且至多为3）。每轮结束时，若你本轮未发动此技能，则你可复原一名角色的一个限定技（每局游戏限一次）。" },
-    ],
-    characteristic: "有威力巨大的限定技，可以转化单目标锦囊牌，防御伤害可以刷新限定技。",
-    // 已上 OL(olwiki id 663)→ 直接用官方图床:xingxiang=全身像(cover)、dianjiang=头部特写(avatar),同 681 官方将。code=官方id×100=66300
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/66300.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/66300.png",
-    tool: null, offline: true,
-  },
-  // 裴秀 —— OL 新将(官网未收录,先手录)。地图机制,后续要开工具(暂缓,需完整机制)。⚠ 同样:官网上线后从这里删,让 scrape 接管
-  {
-    id: 9003, name: "裴秀", genre: "其他", series: "标", faction: "魏",
-    factionSelectable: false, quality: "限定", hp: 4, initialHp: null,
-    tags: ["进攻", "防御", "过牌"],
-    skills: [
-      { name: "茂著", effect: "锁定技，回合开始时，或你绘制了一幅“地图”的所有城市，你将手牌中的花色补至4，并展开一幅“地图”。回合结束时，你获得一个本回合已展开的“地图”技能，直到你下回合结束。" },
-      { name: "尽览", effect: "当你于回合内使用♠/♥/♣/♦牌后，你可以绘制东/西/南/北方位的所有“地图”。你绘制一处城市后，执行对应城市的效果。" },
-      { name: "采风", effect: "出牌阶段每幅地图限一次，你可以弃置任意张牌，然后从牌堆或弃牌堆中随机获得等量张其余花色的牌。" },
-    ],
-    characteristic: "可以在牌局中绘制地图赚取收益。",
-    // 已上 OL(olwiki id 606)→ 官方图床 code=60600(xingxiang=全身/cover、dianjiang=头部特写/avatar)
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/60600.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/60600.png",
-    tool: "peixiu", offline: true,
-  },
   // SP徐氏 —— 线下/同人卡(吴,WU064,江魂龙谶),带专属工具 xushi。
   // ⚠ 命名:OL 已有「徐氏」(id390,问卦/伏诛),故线下版叫「SP徐氏」区分(SP前缀,搜"徐氏"仍命中),否则重名告警+选将歧义。
   {
@@ -176,92 +144,6 @@ export const OFFLINE_HEROES = [
     characteristic: "龙吟帮全场刷【杀】次数并借红杀过牌，竭勇把最后一张红牌转【杀】。",
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/76600.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/76600.png",
-    tool: null, offline: true,
-  },
-  // 谋祝融 —— OL 2026-08-01 新上,官方花名册暂未收录(olwiki 确认真 id=765),先手录。蜀/4血/传说。图=官方图床新路径(general/big/static + skinShop,老 xingxiang 对新将 404)。⚠ 官网重爬收录后 graduate 删此条(同裴秀/谋贾诩坑)。
-  {
-    id: 9010, name: "谋祝融", genre: "谋", series: "谋", faction: "蜀",
-    factionSelectable: false, quality: "传说", hp: 4, initialHp: null,
-    tags: ["进攻", "防御", "控制"],
-    skills: [
-      { name: "刃犟", effect: "出牌阶段限X次，你可弃置X张牌并令至多X名其他角色各弃置一张牌（X为本回合弃牌堆中【杀】的数量且至少为1）。每有角色因此弃置牌不为【杀】，你便摸一张牌。" },
-      { name: "牙镰", effect: "每阶段结束时，若你此阶段失去过【杀】（不因使用），你可以视为对任意名手牌数小于等于X的角色使用一张火【杀】（X为本回合弃牌堆中【杀】的数量且至少为1）。" },
-    ],
-    characteristic: "有不错的控制过牌能力，失去杀可以视为使用杀，要关注弃牌堆杀的数量。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76500.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76500.png",
-    tool: null, offline: true,
-  },
-  // 神黄忠 —— OL 神话再临新神将,官方花名册暂未收录(olwiki 确认真 id=230),先手录。神/4血/传说,势力自选(神将惯例)。衍生武器赤血刃在 derived-cards-room.json+equipment.json。⚠ 官网重爬收录后 graduate 删此条。
-  {
-    id: 9011, name: "神黄忠", genre: "神将", series: "神", faction: "神",
-    factionSelectable: true, quality: "传说", hp: 4, initialHp: null,
-    tags: ["进攻", "爆发"],
-    skills: [
-      { name: "神御", effect: "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将【赤血刃】置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且【赤血刃】在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。" },
-      { name: "化刃", effect: "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数量的牌，视为拥有其技能。" },
-    ],
-    characteristic: "通过赤血刃创造收益；可以对武器进行炼化。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/23000.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/23000.png",
-    tool: null, offline: true,
-  },
-  // 曹金玉 —— OL 2026-08-21 新上(olwiki 真 id=740,官方花名册暂未收录)。魏/3血/限定/祈福系列,三锁定技随"红色↔黑色"改描述联动。⚠ graduate 后删。
-  {
-    id: 9012, name: "曹金玉", genre: "其他", series: "标", faction: "魏",
-    factionSelectable: false, quality: "限定", hp: 3, initialHp: null,
-    tags: ["防御", "辅助", "颜色爱好者"],
-    skills: [
-      { name: "春晖", effect: "锁定技，准备阶段或当你受到伤害后，令一名角色交给你一张手牌。若此牌为黑色，本回合你或其下一次成为红色牌的目标时，各弃置一张手牌。" },
-      { name: "夏晟", effect: "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标。" },
-      { name: "秋暮", effect: "锁定技，本回合成为过你的红色牌目标的角色进入濒死状态时，你将“春晖”“夏晟”或“秋暮”描述中的“红色”改为“黑色”，若描述变化，你获得其所有黑色手牌。" },
-    ],
-    characteristic: "防御能力强，可以辅助队友，需要关注手牌中的颜色分布。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74000.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74000.png",
-    tool: null, offline: true,
-  },
-  // 界步练师 —— OL 2026-08-21 新上(olwiki 真 id=775,官方花名册暂未收录)。吴/3血/史诗/界一将-2。⚠ graduate 后删。
-  {
-    id: 9013, name: "界步练师", genre: "界限突破", series: "界", faction: "吴",
-    factionSelectable: false, quality: "史诗", hp: 3, initialHp: null,
-    tags: ["控制", "辅助", "回复"],
-    skills: [
-      { name: "安恤", effect: "出牌阶段限一次，你可以获得两名角色各一张牌。然后你展示一张牌并交给其中手牌较少的角色，若不为黑桃，你摸一张牌。" },
-      { name: "追忆", effect: "限定技，结束阶段，你可令一名其他角色摸三张牌并回复1点体力。然后你死亡时，可以对其再次发动本技能。" },
-    ],
-    characteristic: "安恤灵活给牌辅助队友；追忆为队友回血摸牌。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77500.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77500.png",
-    tool: null, offline: true,
-  },
-  // 刘璋 —— OL 2026-08-21 新上(olwiki 真 id=683,官方花名册暂未收录)。群/3血/史诗/璀璨星河-天极。⚠ graduate 后删。
-  {
-    id: 9014, name: "刘璋", genre: "璀璨星河", series: "标", faction: "群",
-    factionSelectable: false, quality: "史诗", hp: 3, initialHp: null,
-    tags: ["防御", "辅助", "过牌"],
-    skills: [
-      { name: "丰蔚", effect: "锁定技，每轮开始时，你摸至多五张牌。若你手牌中有本轮以此法获得的牌，你跳过摸牌阶段；当你受到牌造成的伤害时，若手牌中有本轮以此法获得的牌，此伤害+1。" },
-      { name: "宗护", effect: "每回合限一次，当你需要使用【杀】或【闪】时，你可将X张牌交给一名其他角色，然后视为你使用之（X为游戏轮数且至多为3）。" },
-    ],
-    characteristic: "摸牌多所受负面效果越大，需要合理运用技能吸引嘲讽并辅助队友。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/68300.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/68300.png",
-    tool: null, offline: true,
-  },
-  // 董予安 —— OL 2026-08 新上(olwiki 真 id=755,官方花名册暂未收录)。群/3血/传说/璀璨星河-天极。⚠ graduate 后删。
-  {
-    id: 9015, name: "董予安", genre: "璀璨星河", series: "标", faction: "群",
-    factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
-    tags: ["防御", "辅助", "控制"],
-    skills: [
-      { name: "和煦", effect: "锁定技，你每有一个类别的非伤害牌，你的手牌上限便+1。" },
-      { name: "泽光", effect: "每回合限一次，当你成为伤害牌的目标后，可重铸三张牌（不足则全部重铸）。然后若此牌造成伤害，你可令一名角色获得重铸牌。" },
-      { name: "承恩", effect: "每回合结束时，若当前回合角色手牌数小于等于你，你可与一名角色拼点。若你赢，可使用拼点牌（无距离限制）；若你没赢，拼点目标可对你使用一张【杀】。" },
-    ],
-    characteristic: "拥有较高的手牌上限，可以辅助可以进攻。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75500.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75500.png",
     tool: null, offline: true,
   },
   // 神貂蝉 —— 纯线下武将(OL 无、olwiki 768 将也无,2026-08-22 查证)。用户提供技能文本。
@@ -329,7 +211,11 @@ export const OFFLINE_HEROES = [
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
 export function applyOverrides(list, warn = (m) => console.warn(m)) {
-  let skillHits = 0, added = 0, reordered = 0, enHits = 0;
+  let skillHits = 0, added = 0, reordered = 0, enHits = 0, pruned = 0;
+  // 清孤儿:库里 offline 条目已不在 OFFLINE_HEROES(= 已 graduate 或删除)→ 移除,否则 rebake 永远留着旧 9000+ 条
+  const offlineIds = new Set(OFFLINE_HEROES.map((h) => h.id));
+  for (let i = list.length - 1; i >= 0; i--)
+    if (list[i].offline && !offlineIds.has(list[i].id)) { list.splice(i, 1); pruned++; }
   for (const h of list) {
     const ov = SKILL_OVERRIDES[h.id];
     if (!ov) continue;
@@ -372,5 +258,5 @@ export function applyOverrides(list, warn = (m) => console.warn(m)) {
   for (const h of list) seen[h.name] = (seen[h.name] || 0) + 1;
   for (const [nm, c] of Object.entries(seen))
     if (c > 1) warn(`[overrides] ⚠ 重名 ${c}×「${nm}」—— 可能官网已收录该将,应从 OFFLINE_HEROES 删除临时条目`);
-  return { list, skillHits, added, reordered, enHits };
+  return { list, skillHits, added, reordered, enHits, pruned };
 }

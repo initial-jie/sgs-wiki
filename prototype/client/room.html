@@ -302,10 +302,14 @@ function derivedSkillsHtml(hero){
     +list.map(d=>{const tags=d.tags||(d.tag?[d.tag]:[]);const body=(LANG==="en"&&d.text_en)?d.text_en:d.text; // 英文缺失回退中文
       return `<div class="skl" style="border-left:2px solid var(--seal);padding-left:8px"><div class="sn">${esc(d.name)}${stagHtml(tags)}</div><div class="se">${esc(body)}</div></div>`;}).join("");
 }
+// graduate 过渡:手录 9000+ id ↔ 官网真 id(2026-09-15)。deploy 时进行中的房间座位可能存旧 id,
+// 而 generals.json 有 1h 缓存的老客户端又不认新 id —— 双向兜底,找不到本 id 时查另一边
+const GRADUATED={9002:663,9003:606,9010:765,9011:230,9012:740,9013:775,9014:683,9015:755};
+const GRADUATED_REV=Object.fromEntries(Object.entries(GRADUATED).map(([a,b])=>[b,+a]));
 function heroForSeat(general){
   if(!general||general==="none")return null;
   if(HERO_BY_TOOL.has(general))return HERO_BY_TOOL.get(general);
-  if(/^\d+$/.test(general))return HERO_BY_ID.get(+general)||null;
+  if(/^\d+$/.test(general)){const n=+general;return HERO_BY_ID.get(n)||HERO_BY_ID.get(GRADUATED[n])||HERO_BY_ID.get(GRADUATED_REV[n])||null;}
   return null;
 }
 function seatGeneralName(general){

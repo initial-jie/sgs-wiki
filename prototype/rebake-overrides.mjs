@@ -11,7 +11,7 @@ const warns = [];
 const r = applyOverrides(list, (m) => warns.push(m));
 writeFileSync(p, JSON.stringify(list, null, 2));
 console.log(
-  `✅ generals.json re-baked: ${list.length} 将 | skillHits=${r.skillHits} enHits=${r.enHits} reordered=${r.reordered} added=${r.added}`
+  `✅ generals.json re-baked: ${list.length} 将 | pruned=${r.pruned} skillHits=${r.skillHits} enHits=${r.enHits} reordered=${r.reordered} added=${r.added}`
 );
 // 选将拼音搜索依赖 hero-pinyin.json:新增/改名武将后没重生成,该将只能用中文搜到 → 提醒一句(不算失败)
 try {
