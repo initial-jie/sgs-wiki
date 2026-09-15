@@ -13,6 +13,7 @@ import DCARDS_ROOM from "../../shared/derived-cards-room.json"; // 房间专属�
 import DERIVED_EN from "../../shared/derived-en.json"; // 衍生技/牌英文补丁 {武将→{名称→英文}};独立文件,重抽 derived-* 不丢 EN
 import EQUIPMENT_DATA from "../../shared/equipment.json"; // 装备牌库(#2 距离层:坐骑/装备下拉数据源;build-equipment.mjs 生成)
 import BANNED_DATA from "../../shared/banned-generals.json"; // ② 禁将池(全局默认;改文件+deploy 生效)
+import PINYIN_DATA from "../../shared/hero-pinyin.json"; // 武将名→拼音音节(build-pinyin.mjs 生成),贴到 generals.json 的 py 字段供选将拼音搜索
 
 // ② 禁将四池:把每池的 id 映射成 setGeneral 收到的 generalId 形式(有工具→工具名,否则→String(id)),喂给 RoomCore
 {
@@ -30,7 +31,8 @@ import BANNED_DATA from "../../shared/banned-generals.json"; // ② 禁将池(�
 }
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
-const GENERALS_JSON = JSON.stringify(GENERALS_DATA); // 一次序列化,静态资源直接吐
+// 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)
+const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => (PINYIN_DATA[h.name] ? { ...h, py: PINYIN_DATA[h.name] } : h)));
 // 合并 wiki 抽取的衍生技 + 房间专属补充(同名武将则数组拼接;房间补充仅房间可见)。map 浅拷贝每条,便于下面贴 text_en 不污染 import 源
 const DERIVED_MERGED = (() => {
   const out = {};
