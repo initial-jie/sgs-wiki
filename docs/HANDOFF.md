@@ -1,6 +1,41 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **321 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **551 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+
+## ⭐ 最新状态(2026-09-15,HEAD `3c6a5c7`,全部 push 到 main)—— 新会话先读这段
+
+**基线**:`node prototype/room-sim.mjs` → **551 passed**;`node prototype/deck-test.mjs` → **26 passed**。
+
+**规模**:武将库 **698 将**(681 OL + 17 手录 9001–9017)· 房间工具 **23 个** · 装备库 **58 张** · 选将支持拼音。
+
+**23 个工具**:魔吕布 / 南华老仙 / 族荀攸 / 谋黄月英 / 魔曹操 / 袁姬 / 钟琰 / 魔司马懿 / 谋董昭 / 神孙权 / 魔貂蝉 / 魔孙权 / 神典韦 / 李傕 / 徐荣 / SP徐氏 / 郭照 / 裴秀 / 蒲元 / 曹婴(伏间随机目标) / 族王明山(剩墨台账+弹雀点数) / 贾充(凶竖秘密猜测,保密) / 族陆郁生(拾昔四花色台账)。
+
+**房间级功能(已上线代码)**:
+- 全场状态面板:血量/翻面/连环/阵亡(横置已并入连环);残血起手将按 initialHp 播种
+- 动态座位 2–10;环形距离(阵亡跳过、坐骑非对称、✓可杀);每座位详情浮窗(5 装备槽+判定区+废除+君主+1)
+- 装备库 58 张:全局去重(名|花色|点数);支持无花色虚拟牌(神黄忠赤血刃);神典韦可装源生武器
+- 查将:衍生技/衍生牌、彩色技能标签、中英切换、**技能修正⚠提示**(仅"房间≠实体卡"时标,一律以房间为准,现 3 将:曹婴/鲍三娘/界郭皇后)、**同名可替换提示**(剥 神/界/谋/魔/SP/梦 前缀,神版独立)
+- **禁将四池**:按座位数自动选池(≥5 军争 / 4 2v2 / 3 斗地主 / 2 1v1),军争池 15 将、其余空;房内共享**总开关**
+- 房内改名(原子改键);神将自选势力含**晋**;**选将拼音/首字母搜索**
+
+**⚠ 部署**:worker 相关改动由用户自己 `cd prototype/worker && npx wrangler deploy`。最近几批(贾充/族陆郁生/拼音搜索等)是否已 deploy 需向用户确认。wiki 侧 `git push` 即 Pages 自动部署。
+
+**进行中/悬而未决(下次可接)**:
+1. **私密手牌助手**(方案已提,用户未拍板):曹金玉「夏晟」私密红黑计数器(只公开"红多/黑多")、董予安「和煦」非伤害牌类别清单(算手牌上限+N);两张争议牌 借刀杀人(倾向非伤害)/闪电(倾向伤害)分类待用户定。
+2. **曹金玉「秋暮」改写工具**:规则已确认(一次改写=该技能描述里的"红色"全部替换;改写秋暮自身会自锁),未做。现只有衍生技文本。
+3. **graduate 候选 8 个**(官网收录后要删手录条目换正式 id,**re-scrape 前必须先做否则重复**):606裴秀→9003、663谋贾诩→9002、765谋祝融→9010、230神黄忠→9011、740曹金玉→9012、775界步练师→9013、683刘璋→9014、755董予安→9015。
+4. 禁将池"4人=2v2、3人=斗地主"是按座位数推断的,若打 4 人身份局会套错池(现只有军争池非空暂无影响);管理员页/运行时改禁池暂缓。
+5. 已知未修:数据 JSON 路由 `max-age=3600`,deploy 后老浏览器最长约 1 小时才看到新数据(用户说不急)。
+6. brainstorm 池:威胁地图(谁能杀到我)、血量事件驱动技能提醒、身份场暗置助手、共享回合/阶段条;实体读牌硬件已搁置。
+
+**常用流程速查**:
+- **录 OL 新将**:olwiki `https://olwiki.hmty.top/generals/index.html` 搜名拿 href 真 id → `general-game-{id}.html` 抓技能/特点,JS 数 `.hp-row .hp-icon` 得体力 → 写 `generals-overrides.mjs` OFFLINE_HEROES(9000+) → `node prototype/rebake-overrides.mjs` → 立绘用官方图床 `web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/{id}00.png` + `…/general/skinShop/{id}00.png`(先 curl 验 200)→ **`node prototype/build-pinyin.mjs`**(需 `cd prototype && npm i --no-save --no-package-lock pinyin-pro@3`)。
+- **线下将立绘**:用户把图拖进 `assets/heroes/`,我 `sips` 转 JPEG 压缩后挂 Pages 直链(聊天附件无法直接存成文件)。
+- **技能修正**:`SKILL_OVERRIDES[id]`(+ 可选 `cardWarn`)→ rebake。**房间专属衍生技/牌**:`derived-skills-room.json` / `derived-cards-room.json`(衍生条目名不能与本体技能同名,会被过滤)。
+- **新工具**:room-logic(保密则加 `VISIBILITY` + initToolState + action 块)→ `generals.json` 该将 `tool` 直写 + `scrape-generals.mjs` TOOL_NAMES → room.html 三注册(GENERALS/hasTool/TOOLS)+ view/bind → room-sim 断言 → 浏览器验。大段含反引号的代码先写 scratchpad 文件再用 node 插入(`node -e '…'` 会被引号搞坏且静默失败)。
+- **浏览器验证坑**:① generals.json 被缓存 → 页内 `fetch('/generals.json',{cache:'no-store'})` 重灌 HEROES/HERO_BY_ID;② 换将有 confirm → 先 `window.confirm=()=>true`;③ `preview_start` 报 reused 可能是假的,先 curl 确认;④ 截图需要浏览器面板在前台。
+
+---
 
 ## 零、当前状态(2026-07-09 会话收尾)
 
