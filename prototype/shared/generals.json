@@ -14848,12 +14848,12 @@
     "skills": [
       {
         "name": "历勇",
-        "effect": "转换技，出牌阶段，阳：你可以将一张本回合你未使用过的花色的牌当【决斗】使用；阴：你可以从牌堆中获得一张你本回合使用过的花色的牌，令一名角色视为对你使用一张【决斗】。###转换技，出牌阶段，阳：你可以将一张本回合你未使用过的花色的牌当【决斗】使用。阴：你可以从牌堆中获得一张你本回合使用过的花色的牌，令一名角色视为对你使用一张【决斗】。###转换技，出牌阶段，阳：你可以将一张本回合你未使用过的花色的牌当【决斗】使用。阴：你可以从牌堆中获得一张你本回合使用过的花色的牌，令一名角色视为对你使用一张【决斗】。"
+        "effect": "转换技，出牌阶段，阳：你可以将一张本回合你未使用过的花色的牌当【决斗】使用；阴：你可以从牌堆中获得一张你本回合使用过的花色的牌，令一名角色视为对你使用一张【决斗】。"
       }
     ],
     "characteristic": "计算好使用的牌来转化决斗。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/65000.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/65000.png",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/65000.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/65000.png",
     "tool": null,
     "offline": false
   },
@@ -20878,6 +20878,95 @@
     "characteristic": "拥有较高的手牌上限，可以辅助可以进攻。",
     "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/75500.png",
     "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/75500.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 744,
+    "name": "唐棠",
+    "genre": "其他",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "择行",
+        "effect": "出牌阶段限一次，你可展示一张牌并选择一名其他角色，令其选择一项： 1.你观看其手牌并获得两张与展示牌花色不同的牌，然后其获得展示牌； 2.其失去1点体力，然后你可重新选择一名其他角色并重复此流程（本回合每名角色限一次）。"
+      },
+      {
+        "name": "知意",
+        "effect": "每回合限一次，当你获得牌后或其他角色获得你的牌后，若你手牌中有其他此颜色的牌，你可令一名角色摸一张牌。"
+      }
+    ],
+    "characteristic": "能让其他角色交换牌或失去体力。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/74400.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/74400.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 763,
+    "name": "段煨",
+    "genre": "其他",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "过牌",
+      "阴阳转换"
+    ],
+    "skills": [
+      {
+        "name": "讨怀",
+        "effect": "转换技，你使用手牌中点数： 阳：最大的牌； 阴：最小的牌。 摸一张牌。 否则你可弃置一张牌。"
+      }
+    ],
+    "characteristic": "使用点数最大与最小的牌可摸牌。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/76300.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/76300.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 734,
+    "name": "谋程昱",
+    "genre": "谋",
+    "series": "谋",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "戾断",
+        "effect": "你使用【杀】后，令你使用的下一张锦囊牌可以多指定一个目标；你使用锦囊牌后，令你使用的下一张【杀】可以多指定一个目标。"
+      },
+      {
+        "name": "胆持",
+        "effect": "每回合限一次，距离1以内的角色受到伤害后，你可令受到伤害的角色选择一个类型。然后伤害来源本回合使用下一张牌后，你视为使用一张【无中生有】，若与“胆持”选择的类型不同，你可额外视为使用一张【杀】。"
+      }
+    ],
+    "characteristic": "交替使用锦囊牌和杀能够赚取收益。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/73400.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/73400.png",
     "tool": null,
     "offline": false
   },

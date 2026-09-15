@@ -28,9 +28,10 @@ async function curlRetry(url, referer, tries = 3) {
   throw last;
 }
 
-// 技能文本清洗:<br>→空格、去标签、解实体
+// 技能文本清洗:<br>→空格、去标签、解实体。
+// 转换技官网会用 ### 拼三份(原文 / 阳高亮 / 阴高亮,游戏 UI 状态),只取第一份原文(段煨讨怀、武安国历勇)
 function cleanSkill(s) {
-  return (s || "")
+  return (s || "").split("###")[0]
     .replace(/<br\s*\/?>/gi, " ")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
