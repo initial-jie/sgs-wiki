@@ -144,7 +144,7 @@ footer{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:20px;lin
 'use strict';
 /* ================= 数据 =================
    将池与房间版 prototype/shared/room-logic.mjs 的 DIANWEI_POOL 保持一致。
-   28 张:16 特殊(带杀技能)+12 白板;关羽/张飞互斥(ex:gy_zf)。 */
+   33 张:21 特殊(带杀技能)+12 白板;关羽/张飞互斥(ex:gy_zf);w=抽取权重(默认1,神赵云 0.5=概率减半)。 */
 const BUILTIN = [
   {"name":"关羽","range":4,"ex":"gy_zf","skills":[{"name":"武圣","effect":"你可以将一张红色牌当【杀】使用或打出。"}]},
   {"name":"张飞","range":4,"ex":"gy_zf","skills":[{"name":"咆哮","effect":"锁定技，你使用【杀】无次数限制。"}]},
@@ -162,6 +162,11 @@ const BUILTIN = [
   {"name":"族荀粲","range":3,"skills":[{"name":"熨身","effect":"出牌阶段限一次，你可以令一名其他角色回复1点体力并视为你对其或其对你使用一张冰【杀】。"}]},
   {"name":"雅丹","range":4,"skills":[{"name":"倾轧","effect":"当你使用【杀】指定唯一目标后，你可以弃置你与其之间的角色各一张手牌，然后可以于本回合下个阶段结束时使用其中一张牌。"}]},
   {"name":"界姜维","range":4,"skills":[{"name":"挑衅","effect":"出牌阶段限一次，你可以选择一名攻击范围内包含你的角色，然后除非其对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后本阶段本技能限两次。"}]},
+  {"name":"神赵云","range":2,"w":0.5,"skills":[{"name":"龙魂","effect":"你可以将至多两张花色相同的牌按以下规则使用或打出：红桃当【桃】；方片当火【杀】；梅花当【闪】；黑桃当【无懈可击】。若你以此法转化使用了两张：红色牌，此牌回复值或伤害值+1；黑色牌，你弃置当前回合角色一张牌。"}]},
+  {"name":"界陈宫","range":3,"skills":[{"name":"明策","effect":"出牌阶段限一次，你可以交给一名其他角色一张【杀】或装备牌，然后其选择一项：1.视为对你选择的另一名角色使用一张【杀】，若造成伤害，执行另一项；2.你与其各摸一张牌。"}]},
+  {"name":"界太史慈","range":4,"skills":[{"name":"天义","effect":"出牌阶段限一次，你可以拼点：若你赢，你本回合使用【杀】的次数+1、无距离限制且可以多指定一个目标；若你没赢，你本回合不能使用【杀】。"}]},
+  {"name":"界夏侯氏","range":3,"skills":[{"name":"燕语","effect":"出牌阶段，你可以重铸【杀】。出牌阶段结束时，若你本阶段失去过至少两张【杀】，你可以令一名男性角色摸两张牌。"}]},
+  {"name":"界刘禅","range":3,"skills":[{"name":"享乐","effect":"锁定技，当你成为一名角色使用【杀】的目标后，除非其弃置一张基本牌，否则令此【杀】对你无效。"}]},
   {"name":"刘备","range":4,"blank":true},
   {"name":"孙权","range":4,"blank":true},
   {"name":"曹操","range":4,"blank":true},
@@ -181,7 +186,7 @@ let S = null, memFallback = null, pend = {};
 
 function defaultState(){
   return {
-    pool: BUILTIN.map(p=>({id:p.name, name:p.name, range:p.range, ex:p.ex||null, blank:!!p.blank, skills:p.skills||[], enabled:true, custom:false})),
+    pool: BUILTIN.map(p=>({id:p.name, name:p.name, range:p.range, ex:p.ex||null, blank:!!p.blank, w:p.w||1, skills:p.skills||[], enabled:true, custom:false})),
     round:1,
     rolled:null,     // [id...] 本轮抽出的 5 张,或 null
     weapons:[],      // [id...] 已装备(≤SLOTS)
@@ -194,6 +199,10 @@ function load(){
   try{ raw=localStorage.getItem(LS_KEY); }catch(e){ raw=memFallback; }
   S=defaultState();
   if(raw){ try{ const o=JSON.parse(raw); if(o&&Array.isArray(o.pool)) S=Object.assign(defaultState(),o); }catch(e){} }
+  // 续档迁移:池存在 localStorage 里,内置池新增的武将要补进老存档(按名去重);老条目补 w
+  const have=new Set(S.pool.map(p=>p.id));
+  for(const p of BUILTIN) if(!have.has(p.name)) S.pool.push({id:p.name, name:p.name, range:p.range, ex:p.ex||null, blank:!!p.blank, w:p.w||1, skills:p.skills||[], enabled:true, custom:false});
+  for(const p of S.pool) if(p.w==null) p.w=1;
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function cardById(id){ return S.pool.find(p=>p.id===id) || null; }
@@ -203,7 +212,10 @@ function doRoll(){
   const bag = S.pool.filter(p=>p.enabled).slice();
   const picked=[], usedEx=new Set();
   while(picked.length<5 && bag.length){
-    const p = bag.splice(Math.floor(Math.random()*bag.length),1)[0];
+    // 加权无放回(w 默认 1;与房间版 rollQiexie 同算法)
+    let r=Math.random()*bag.reduce((t,x)=>t+(x.w||1),0), k=0;
+    for(;k<bag.length-1;k++){ r-=(bag[k].w||1); if(r<0)break; }
+    const p = bag.splice(k,1)[0];
     if(p.ex && usedEx.has(p.ex)) continue;   // 互斥组已出过 → 跳过
     if(p.ex) usedEx.add(p.ex);
     picked.push(p.id);
@@ -234,7 +246,7 @@ function addCustom(){
   const range=(rg>=1&&rg<=9)?rg:4;
   let skills=[], blank=true;
   if(skRaw){ const sp=skRaw.indexOf(' '); const snm=sp>0?skRaw.slice(0,sp):skRaw; const eff=sp>0?skRaw.slice(sp+1):''; skills=[{name:snm,effect:eff}]; blank=false; }
-  S.pool.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), name:nm, range:range, ex:null, blank:blank, skills:skills, enabled:true, custom:true});
+  S.pool.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), name:nm, range:range, ex:null, blank:blank, w:1, skills:skills, enabled:true, custom:true});
   document.getElementById('addName').value=''; document.getElementById('addRange').value=''; document.getElementById('addSkill').value='';
   save(); render();
 }
@@ -263,7 +275,7 @@ function toggleSec(id){
 function cardHTML(c, kind){
   // kind: 'weapon'(装备栏,可卸) | 'cand'(候选,可装/卸)
   const rng = '<span class="chip rng">范围 '+esc(c.range)+'</span>';
-  const blankChip = c.blank ? '<span class="chip">白板</span>' : '';
+  const blankChip = (c.blank ? '<span class="chip">白板</span>' : '') + (c.w&&c.w<1 ? '<span class="chip" title="抽取权重 '+esc(c.w)+'">低概率</span>' : '');
   const sk = c.blank ? '<div class="sk note" style="margin:0">白板（无技能）</div>'
     : (c.skills||[]).map(s=>'<div class="sk skilltext"><span class="skname">'+esc(s.name)+'</span> '+esc(s.effect)+'</div>').join('');
   let btn='';

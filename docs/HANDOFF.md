@@ -1,10 +1,10 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **585 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/room-sim.mjs`(应 **589 passed**)+ `node prototype/deck-test.mjs`(应 26 passed)确认基线,即可继续。
 
-## ⭐ 最新状态(2026-09-15,graduate + 3 新将 + 谋程昱工具,全部 push 到 main)—— 新会话先读这段
+## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/room-sim.mjs` → **585 passed**;`node prototype/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/room-sim.mjs` → **589 passed**;`node prototype/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **701 将**(692 OL = 官网花名册全量 + 9 手录/线下)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -18,7 +18,7 @@
 - **禁将四池**:按座位数自动选池(≥5 军争 / 4 2v2 / 3 斗地主 / 2 1v1),军争池 15 将、其余空;房内共享**总开关**
 - 房内改名(原子改键);神将自选势力含**晋**;**选将拼音/首字母搜索**
 
-**⚠ 部署**:worker 相关改动由用户自己 `cd prototype/worker && npx wrangler deploy`。贾充/族陆郁生/拼音搜索已 deploy(用户 2026-09-15 确认);**graduate + 3 新将 + 谋程昱工具这批(generals.json/hero-pinyin/禁将池/room-logic/room.html)待 deploy**。wiki 侧 `git push` 即 Pages 自动部署。
+**⚠ 部署**:worker 相关改动由用户自己 `cd prototype/worker && npx wrangler deploy`。贾充/族陆郁生/拼音搜索已 deploy(用户 2026-09-15 确认);**graduate + 3 新将 + 谋程昱工具 + 神典韦池这批(generals.json/hero-pinyin/禁将池/room-logic/room.html)待 deploy**;wiki 侧 tools/dianwei.html 已随 push 上 Pages。wiki 侧 `git push` 即 Pages 自动部署。
 
 **进行中/悬而未决(下次可接)**:
 1. **私密手牌助手**(方案已提,用户未拍板):曹金玉「夏晟」私密红黑计数器(只公开"红多/黑多")、董予安「和煦」非伤害牌类别清单(算手牌上限+N);两张争议牌 借刀杀人(倾向非伤害)/闪电(倾向伤害)分类待用户定。
@@ -36,6 +36,8 @@
 - **公开权也在受伤角色本人**(用户 2026-09-15 提的,已采纳):程昱看不到内容,若由他按,误触泄露的是他自己都不知道的信息,且正好泄露给还没出下一张牌的伤害来源;受伤角色本人按至少是知情的。对方不在场时程昱可「清空重来」,不会死锁。
 - 跨座位操作沿用魔孙权天恩范式:`dcChoose`/`dcReveal` 的 `bySeat` 都必须是受伤座位(服务端校验持有)+ 全局横幅 `mcyPendingForMe` 两态(未选=「去选择」/已选未公开=「去公开」)。worker 零改。⚠ 客户端 `act(o,by)` 第二参必须传 `p.targetSeat`,漏传=服务端静默拒绝(改公开权时踩过)。
 - 734.tool 直写 generals.json + scrape TOOL_NAMES 防重爬丢;room.html 函数名用 `viewMcyTool/bindMcy`(`viewCyTool` 已被曹婴占用)。**房间版 only**(座位概念房间原生,wiki 单人版未做,同曹婴)。
+
+**神典韦挈挟池扩容 + 加权抽取(2026-09-22)**:池 28→**33**(21 特殊+12 白板),新增 神赵云·龙魂(**w=0.5 低概率**)/界陈宫·明策/界太史慈·天义/界夏侯氏·燕语/界刘禅·享乐。`rollQiexie` 改**加权无放回**(条目 `w` 默认 1;rng 恒 0 仍取首个候选,老 sim 断言不变);单人版 `tools/dianwei.html` 同算法 + **老存档迁移**(池存 localStorage,load 时按名补内置新将、老条目补 w)。⚠ **范围 = 武将体力上限**(挈挟原文),新加将必须按库里 hp 填 range(神赵云 2 血→范围 2,我一开始填错成 4);sim 有全池 range=hp 一致性审计的思路可复用(本次用 node 一次性核过)。⚠ 无放回连抽 5 张会压缩权重差:w=0.5 实测出现率≈普通将的 0.59 倍,要更稀有把 w 调到 0.3 左右。两处池 node 逐字校验一致(见 [[tool-logic-dup]] 同类内联)。
 
 **常用流程速查**:
 - **官网已收录的将(新将 / graduate)**:`node prototype/scrape-generals.mjs --ids 744,763`(增量抓取合并,新 id 插在 9000+ 段前;graduate 时先删 OFFLINE_HEROES 条目,`applyOverrides` 会清掉库里残留孤儿)→ `node prototype/build-pinyin.mjs`。新将 API 给的是 `…/m/general/big/static/{id}00.png`,头像由 scraper 自动派生 `skinShop/{id}00.png`。

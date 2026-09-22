@@ -628,7 +628,18 @@ check("改武将后 chosenFaction 归零", roomF.seats[1].chosenFaction === null
 
 // ============ 场景 14:神典韦 挈挟 roll 池(生成器,cut 3)============
 console.log("\n=== 场景 14:神典韦 挈挟 ===");
-check("池共28张(16特殊+12白板)", DIANWEI_POOL.length === 28 && DIANWEI_POOL.filter(p => p.blank).length === 12);
+check("池共33张(21特殊+12白板)", DIANWEI_POOL.length === 33 && DIANWEI_POOL.filter(p => p.blank).length === 12);
+check("新增5将在池(神赵云/界陈宫/界太史慈/界夏侯氏/界刘禅)", ["神赵云", "界陈宫", "界太史慈", "界夏侯氏", "界刘禅"].every(n => DIANWEI_POOL.some(p => p.name === n && !p.blank && p.skills.length === 1)));
+check("神赵云权重 0.5,其余无权重(默认1)", DIANWEI_POOL.find(p => p.name === "神赵云").w === 0.5 && DIANWEI_POOL.filter(p => p.w != null).length === 1);
+// 加权统计:固定 LCG 跑 4000 次,神赵云出现率应≈赵云的一半(容差 ±25%);每次恰 5 张且不重复
+{
+  let seed = 12345; const lcg = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  let shen = 0, zhao = 0, bad = 0;
+  for (let i = 0; i < 4000; i++) { const r = rollQiexie(lcg); if (r.length !== 5 || new Set(r.map(p => p.name)).size !== 5) bad++; for (const p of r) { if (p.name === "神赵云") shen++; if (p.name === "赵云") zhao++; } }
+  const ratio = shen / zhao;
+  check(`加权抽取:神赵云/赵云 出现比 ${ratio.toFixed(2)}(期望≈0.5)`, ratio > 0.375 && ratio < 0.625);
+  check("4000 次抽取每次恰 5 张不重复", bad === 0);
+}
 const roll0 = rollQiexie(() => 0);
 check("rng=0 抽5张确定性", roll0.length === 5 && roll0.map(p => p.name).join(",") === "关羽,赵云,马超,许褚,吕布");
 check("关羽/张飞互斥(关羽在则无张飞)", roll0.some(p => p.name === "关羽") && !roll0.some(p => p.name === "张飞"));

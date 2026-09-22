@@ -2467,7 +2467,7 @@ function dwWeaponCard(p,toggleOn){
   }
   const skills=p.blank?'<span class="hint">白板(无技能)</span>':(p.skills||[]).map(s=>`<div style="margin-top:3px"><b style="color:var(--seal)">${esc(s.name)}</b> <span style="font-size:12px">${esc(s.effect)}</span></div>`).join("");
   const btn=(toggleOn!==undefined)?`<button class="${toggleOn?'primary':''}" data-dwequip="${esc(p.name)}" style="font-size:12px;padding:4px 10px;flex:none">${toggleOn?'卸下':'装备'}</button>`:"";
-  return `<div class="slot" style="${toggleOn?'border-style:solid;border-color:var(--qi)':''}"><div class="row"><span class="grow"><b>${esc(p.name)}</b> <span class="chip gold">范围 ${p.range}</span>${p.blank?' <span class="chip">白板</span>':''}</span>${btn}</div>${skills}</div>`;
+  return `<div class="slot" style="${toggleOn?'border-style:solid;border-color:var(--qi)':''}"><div class="row"><span class="grow"><b>${esc(p.name)}</b> <span class="chip gold">范围 ${p.range}</span>${p.blank?' <span class="chip">白板</span>':''}${p.w&&p.w<1?' <span class="chip" title="抽取权重 '+p.w+'">低概率</span>':''}</span>${btn}</div>${skills}</div>`;
 }
 function viewDwTool(dw){
   const ts=dw.toolState||{}, iAm=state.youHold.includes(dw.seatNo), slots=ts.slots||2;

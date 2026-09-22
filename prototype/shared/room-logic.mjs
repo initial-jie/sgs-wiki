@@ -50,6 +50,11 @@ export const DIANWEI_POOL = [
   {"name":"族荀粲","range":3,"skills":[{"name":"熨身","effect":"出牌阶段限一次，你可以令一名其他角色回复1点体力并视为你对其或其对你使用一张冰【杀】。"}]},
   {"name":"雅丹","range":4,"skills":[{"name":"倾轧","effect":"当你使用【杀】指定唯一目标后，你可以弃置你与其之间的角色各一张手牌，然后可以于本回合下个阶段结束时使用其中一张牌。"}]},
   {"name":"界姜维","range":4,"skills":[{"name":"挑衅","effect":"出牌阶段限一次，你可以选择一名攻击范围内包含你的角色，然后除非其对你使用一张【杀】且此【杀】对你造成伤害，否则你弃置其一张牌，然后本阶段本技能限两次。"}]},
+  {"name":"神赵云","range":2,"w":0.5,"skills":[{"name":"龙魂","effect":"你可以将至多两张花色相同的牌按以下规则使用或打出：红桃当【桃】；方片当火【杀】；梅花当【闪】；黑桃当【无懈可击】。若你以此法转化使用了两张：红色牌，此牌回复值或伤害值+1；黑色牌，你弃置当前回合角色一张牌。"}]},
+  {"name":"界陈宫","range":3,"skills":[{"name":"明策","effect":"出牌阶段限一次，你可以交给一名其他角色一张【杀】或装备牌，然后其选择一项：1.视为对你选择的另一名角色使用一张【杀】，若造成伤害，执行另一项；2.你与其各摸一张牌。"}]},
+  {"name":"界太史慈","range":4,"skills":[{"name":"天义","effect":"出牌阶段限一次，你可以拼点：若你赢，你本回合使用【杀】的次数+1、无距离限制且可以多指定一个目标；若你没赢，你本回合不能使用【杀】。"}]},
+  {"name":"界夏侯氏","range":3,"skills":[{"name":"燕语","effect":"出牌阶段，你可以重铸【杀】。出牌阶段结束时，若你本阶段失去过至少两张【杀】，你可以令一名男性角色摸两张牌。"}]},
+  {"name":"界刘禅","range":3,"skills":[{"name":"享乐","effect":"锁定技，当你成为一名角色使用【杀】的目标后，除非其弃置一张基本牌，否则令此【杀】对你无效。"}]},
   {"name":"刘备","range":4,"blank":true},
   {"name":"孙权","range":4,"blank":true},
   {"name":"曹操","range":4,"blank":true},
@@ -63,12 +68,16 @@ export const DIANWEI_POOL = [
   {"name":"黄月英","range":3,"blank":true},
   {"name":"貂蝉","range":3,"blank":true},
 ];
-// 从池中抽 n 张(默认5):无放回;同一互斥组(ex)至多出一张。rng 注入以便 sim 复现。
+// 从池中抽 n 张(默认5):加权无放回(条目 w 默认 1,神赵云 0.5=出现概率减半);同一互斥组(ex)至多出一张。
+// rng 注入以便 sim 复现(rng 恒 0 → 每次取剩余候选的第一个)。
 export function rollQiexie(rng = Math.random, n = 5) {
   const cand = DIANWEI_POOL.map((_, i) => i);
   const out = [], usedEx = new Set();
+  const wOf = (i) => DIANWEI_POOL[i].w ?? 1;
   while (out.length < n && cand.length) {
-    const idx = cand.splice(Math.floor(rng() * cand.length), 1)[0];
+    let r = rng() * cand.reduce((t, i) => t + wOf(i), 0), k = 0;
+    for (; k < cand.length - 1; k++) { r -= wOf(cand[k]); if (r < 0) break; }
+    const idx = cand.splice(k, 1)[0];
     const p = DIANWEI_POOL[idx];
     if (p.ex && usedEx.has(p.ex)) continue; // 互斥组已出过 → 跳过
     if (p.ex) usedEx.add(p.ex);
