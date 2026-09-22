@@ -177,6 +177,20 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
     tool: null, offline: true,
   },
+  // 界钟会 —— OL 2026-09 新上(olwiki 真 id=758,官方花名册暂未收录;用户线下买到实体卡)。魏/4血/界一将-2。衍生技「排异」在 derived-skills-room.json。⚠ graduate 后删。
+  {
+    id: 9018, name: "界钟会", genre: "界限突破", series: "界", faction: "魏",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["卖血", "进攻"],
+    skills: [
+      { name: "权计", effect: "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。你每有一张“权”，你的手牌上限便+1。" },
+      { name: "自立", effect: "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后减少1点体力上限，获得“排异”。" },
+    ],
+    characteristic: "造成伤害可权计，排异可两项都执行。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75800.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75800.png",
+    tool: null, offline: true,
+  },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
     id: 9007, name: "司马炎", genre: "其他", series: "标", faction: "晋",

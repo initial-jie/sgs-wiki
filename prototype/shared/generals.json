@@ -21258,5 +21258,35 @@
     "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9018,
+    "name": "界钟会",
+    "genre": "界限突破",
+    "series": "界",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": null,
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "卖血",
+      "进攻"
+    ],
+    "skills": [
+      {
+        "name": "权计",
+        "effect": "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。你每有一张“权”，你的手牌上限便+1。"
+      },
+      {
+        "name": "自立",
+        "effect": "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后减少1点体力上限，获得“排异”。"
+      }
+    ],
+    "characteristic": "造成伤害可权计，排异可两项都执行。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75800.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75800.png",
+    "tool": null,
+    "offline": true
   }
 ]
