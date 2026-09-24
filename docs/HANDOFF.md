@@ -1,10 +1,10 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **589 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 63 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **589 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 68 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **589** · `node prototype/sgs/deck-test.mjs` → **26** · `node prototype/fengsheng/fs-sim.mjs` → **63**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **589** · `node prototype/sgs/deck-test.mjs` → **26** · `node prototype/fengsheng/fs-sim.mjs` → **68**。
 
 **目录重排(`git mv` 保历史)**:
 - `prototype/common/` 公共房间库(游戏无关):`room-base.mjs`(RoomBase:座位认领/独占/替换/释放/改名/增删座位/序列化)· `visibility.mjs`(保密原语 applyVisibility,新增 `seatKeyed`)· `room-do.mjs`(RoomDOBase:WebSocket/持久化/2h TTL/解散/广播;游戏只写 `createCore/hydrateCore/onGameMessage`)· `client/room-client.js`(浏览器 RoomClient:设备 ID/断线重连/写阻断/改名/toast/加入表单,worker 在 `/common/room-client.js` 下发,wrangler.toml 有 Text 规则)。
@@ -18,6 +18,8 @@
 - 台账(全公开,任何人可改):情报区 红/蓝/黑/红黑/蓝黑(双色同时计两色),黑≥3 自动濒死,澄清=移除情报可脱离,确认死亡公开身份;当前回合/下一回合(跳过死者)。
 - 胜负:宣胜由服务端校验(阵营=任一队友集齐 3 张本色;神秘人按任务:双面间谍/镇压者/篡夺者自动判,篡夺者在其回合强制代替胜利);手动结算兜底;再来一局保留座位。
 - 数据 `fengsheng/shared/fs-data.mjs`:49 角色 + 13 功能牌 + 7 神秘人任务,抽自开源典藏版复刻客户端 Death-alter/TheMessage(AGPL,只取文本不取代码)。**⚠ 基础包名单是推断的**(id 1~30 去掉铁屋子的连鸢/端木静 = 28 人,官方基础包应为 30 人)→ **待用户对照实体盒子核对**;功能牌 平衡/欲擒故纵 归属也待核对。牌堆构成网上查不到(线下辅助形态用不到)。
+- **v1.1 三国杀同款交互(用户确认角色名单无误后提的)**:座位框上直接 认领/释放/替换/查看技能;自己座位「选角色 ▾」→ 搜索弹层(中文/拼音/首字母,排名逻辑已抽进公共库 `RoomClient.searchRank/searchList`,三国杀选将同用)→「查看技能」预览 → 选定。**隐藏角色选定时二选一:暗置(默认,面朝下仅本人可见)/ 公开**;之后「发动技能 · 翻开」/「翻回暗置」。别人已**公开**选用的角色不能重复选(`CHAR_TAKEN`;面朝下的不拦,否则泄露)。发过 2 选 1 时弹层只列候选。拼音 `fengsheng/build-pinyin.mjs` → `shared/char-pinyin.json`(改名/新增角色后重跑)。
+- 风声数据 `/fs/data.json?v=<内容哈希>`:worker 启动时算哈希注入页面,deploy 后立即生效(风声不再有三国杀那个 1h 旧缓存坑;三国杀的 JSON 路由仍是旧方式)。
 - ⚠ **须 `cd prototype/worker && npx wrangler deploy`**(本批含新 DO 迁移 v2)。
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段

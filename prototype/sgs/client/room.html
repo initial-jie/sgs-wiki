@@ -349,30 +349,10 @@ function openHeroPicker(seatNo){
   });
   try{inp.focus();}catch(e){}
 }
-// 选将搜索:中文按名字包含;纯字母按拼音(h.py="guan yu",worker 从 hero-pinyin.json 贴上)。
-// 拼音匹配对齐音节边界做前缀:gua→关羽/关平/关银屏、guanyu→关羽/界关羽…(不会误中 huang 黄);
-// 首字母≥2位也认:gy→关羽、zgl→诸葛亮。ü 存为 v,查询 lv/lu 都命中吕布。返回名次(越小越靠前),-1=不匹配
-function heroSearchRank(h,qraw){
-  const q=(qraw||"").trim();
-  if(!q) return 0;
-  if(/[^a-zA-Z\s]/.test(q)) return h.name.includes(q) ? (h.name.startsWith(q)?0:1) : -1; // 含中文等:沿用名字包含
-  const qn=q.toLowerCase().replace(/\s+/g,"");
-  if(!h.py) return -1;
-  if(!h._pyIdx){ // 懒构建并缓存:各音节边界起的后缀(v/u 两种写法)+ 首字母串
-    const syl=h.py.split(" "), sylU=syl.map(s=>s.replace(/v/g,"u"));
-    const sufs=[];
-    for(let i=0;i<syl.length;i++){ sufs.push([i,syl.slice(i).join("")]); if(sylU[i]!==syl[i]||sylU.slice(i).join("")!==syl.slice(i).join("")) sufs.push([i,sylU.slice(i).join("")]); }
-    h._pyIdx={sufs, ini:syl.map(s=>s[0]).join("")};
-  }
-  let best=-1;
-  for(const [i,s] of h._pyIdx.sufs) if(s.startsWith(qn)){ const r=(i===0?10:20)+i; if(best<0||r<best) best=r; }
-  if(best>=0) return best;
-  if(qn.length>=2){ const at=h._pyIdx.ini.indexOf(qn); if(at>=0) return 40+at; }
-  return -1;
-}
+// 选将搜索(中文/拼音/首字母):排名逻辑在公共库 RoomClient.searchRank / searchList(风声选角共用)
 function renderPickerList(qstr){
   const box=$("#glist");if(!box)return;
-  const list=qstr?HEROES.map((h,i)=>[h,heroSearchRank(h,qstr),i]).filter(x=>x[1]>=0).sort((a,b)=>a[1]-b[1]||a[0].name.length-b[0].name.length||a[2]-b[2]).map(x=>x[0]):HEROES; // 名次→名字短者→原序
+  const list=qstr?RoomClient.searchList(HEROES,qstr):HEROES; // 名次→名字短者→原序
   const shown=list.slice(0,60);
   let h=shown.map(hero=>{
     const fc=FCLS[hero.faction]||"";

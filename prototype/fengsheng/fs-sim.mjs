@@ -46,6 +46,17 @@ for (let i = 2; i <= N; i++) act(i, { op: "pickChar", seatNo: i, charId: V(i).se
 { const pub = [2, 3, 4, 5].filter((n) => !CHAR_BY_ID[room.seats[n].charId].hidden), hid = [2, 3, 4, 5].filter((n) => CHAR_BY_ID[room.seats[n].charId].hidden);
   check("公开角色他人可见", pub.every((n) => V(1).seats[n].charId === room.seats[n].charId), JSON.stringify(pub));
   check("候选里的隐藏角色选定后他人不可见", hid.every((n) => V(1).seats[n].charId === null)); }
+check("隐藏角色可选择公开落座", (act(1, { op: "clearChar", seatNo: 1 }), act(1, { op: "pickChar", seatNo: 1, charId: 28, faceUp: true }).ok) && V(2).seats[1].charId === 28);
+check("公开角色不能暗置(faceUp 忽略)", (() => { const pubId = CHARACTERS.find((c) => !c.hidden && ![2, 3, 4, 5].some((n) => room.seats[n].charId === c.id)).id; room.seats[1].offers = []; const r = act(1, { op: "pickChar", seatNo: 1, charId: pubId, faceUp: false }); return r.ok && room.seats[1].faceUp === true; })());
+{ const other = [2, 3, 4, 5].find((n) => room.seats[n].faceUp); room.seats[1].offers = [];
+  check("别人已公开的角色不能重复选", act(1, { op: "pickChar", seatNo: 1, charId: room.seats[other].charId }).error === "CHAR_TAKEN"); }
+act(1, { op: "pickChar", seatNo: 1, charId: 28 }); // 回到李宁玉·暗置(默认)
+check("暗置是默认", room.seats[1].faceUp === false);
+{ const hidOther = CHARACTERS.find((c) => c.hidden && c.id !== 28 && ![2, 3, 4, 5].some((n) => room.seats[n].charId === c.id)).id;
+  room.seats[2].offers = []; const was = room.seats[2].charId;
+  act(2, { op: "pickChar", seatNo: 2, charId: 28 });
+  check("别人暗置的角色不拦(不泄露)", room.seats[2].charId === 28);
+  room.seats[2].charId = was; room.seats[2].faceUp = !CHAR_BY_ID[was].hidden; void hidOther; }
 check("翻开隐藏角色后全场可见", act(3, { op: "flipChar", seatNo: 1, faceUp: true }).ok && V(2).seats[1].charId === 28);
 act(1, { op: "flipChar", seatNo: 1, faceUp: false });
 check("翻回面朝下又隐藏", V(2).seats[1].charId === null);

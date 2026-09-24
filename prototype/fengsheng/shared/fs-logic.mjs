@@ -147,13 +147,17 @@ export class FsCore extends RoomBase {
         return { ok: true };
       }
       case "pickChar": { // 本人从候选里选;没有候选时(用实体牌选角)可直接登记任意角色
+        // 隐藏角色可选「暗置」(默认,面朝下,发动技能时再翻开)或「公开」;公开角色一律面朝上
         const e = needSeat(); if (e) return e;
         if (!holder) return { error: "NOT_HOLDER" };
         const cid = Number(msg.charId);
         const ch = CHAR_BY_ID[cid]; if (!ch) return { error: "BAD_CHAR" };
         if (s.offers.length && !s.offers.includes(cid)) return { error: "NOT_OFFERED" };
-        s.charId = cid; s.faceUp = !ch.hidden; s.offers = [];
-        this._log(`${this._name(seatNo)}选定角色` + (ch.hidden ? "(隐藏角色,面朝下)" : `:${ch.name}`));
+        // 同一角色只有一张实体牌:只拦「别人已公开」的同名(面朝下的不查,否则拒绝本身就泄露了别人的隐藏角色)
+        if (this.seatNos().some((n) => n !== seatNo && this.seats[n].charId === cid && this.seats[n].faceUp)) return { error: "CHAR_TAKEN" };
+        const up = ch.hidden ? !!msg.faceUp : true;
+        s.charId = cid; s.faceUp = up; s.offers = [];
+        this._log(`${this._name(seatNo)}选定角色` + (up ? `:${ch.name}` : "(隐藏角色,暗置)"));
         return { ok: true };
       }
       case "clearChar": {

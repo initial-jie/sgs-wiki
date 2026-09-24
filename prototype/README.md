@@ -21,6 +21,7 @@ fengsheng/                 风声(游卡典藏版,线下辅助形态)——同�
   worker.mjs               /fs 页面 + /fs/data.json + FsRoomDO
   client/fs.html           风声房间前端(民国谍报档案风)
   fs-sim.mjs               node 断言:node prototype/fengsheng/fs-sim.mjs
+  build-pinyin.mjs         角色名拼音 → shared/char-pinyin.json(选角拼音搜索)
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由
 ```
 

@@ -65,42 +65,66 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .cnt{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .cnt b.r{color:var(--red)} .cnt b.b{color:var(--blue)} .cnt b.k{color:var(--black)}
 
-/* 座位列表 */
-.seat{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line);cursor:pointer}
-.seat:last-child{border-bottom:none}
-.seat .no{flex:0 0 34px;height:34px;border-radius:50%;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-weight:900;font-size:15px}
-.seat.turn .no{background:var(--ink);color:var(--paper2)}
+/* 座位列表(同三国杀房间:每座一框,认领/释放/替换/查看技能就在座位上) */
+.seat{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;background:rgba(255,252,240,.5)}
+.seat.mine{border-color:var(--stamp);background:rgba(158,43,34,.05)}
+.seat.turn{box-shadow:inset 4px 0 0 var(--ink)}
 .seat.dead{opacity:.55}
 .seat.dead .nm{text-decoration:line-through}
-.seat .nm{font-weight:700}
+.seat .st{font-family:var(--display);font-weight:900;font-size:15px}
+.seat .nm{font-weight:700;font-family:var(--display);margin-left:6px}
 .seat .who{font-size:12px;color:var(--ink-soft)}
-.badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 6px;margin-left:4px;font-weight:700;vertical-align:1px}
+.seat .sub2{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.seat .lbl{font-size:12px;color:var(--ink-soft)}
+.btn-skill{border-color:var(--warn);color:#8a5a12;background:transparent;font-size:12px;padding:4px 9px}
+.badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 6px;margin-left:5px;font-weight:700;vertical-align:1px}
 .badge.dying{background:var(--stamp);color:#fff;animation:pulse 1.2s infinite}
 .badge.dead{background:#6d655a;color:#fff}
 .badge.me{border:1px solid var(--stamp);color:var(--stamp)}
 .badge.turn{background:var(--ink);color:var(--paper2)}
+.badge.hid{border:1px solid #4a4236;color:#4a4236}
 @keyframes pulse{50%{opacity:.45}}
 .hidden-card{display:inline-block;font-size:12px;background:repeating-linear-gradient(45deg,#3a332a 0 4px,#4a4236 4px 8px);color:#e9dcc0;
-  border-radius:3px;padding:0 7px;font-weight:600}
+  border-radius:3px;padding:0 7px;font-weight:600;margin-left:6px}
 
 /* 我的机密 */
 .dossier{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .task{background:rgba(61,122,76,.08);border:1px dashed var(--green);border-radius:5px;padding:6px 9px;font-size:13px;margin-top:8px}
 .winbtn{width:100%;margin-top:10px;font-size:17px;padding:12px;font-family:var(--display);font-weight:900;letter-spacing:.2em}
-.offer{border:1px solid var(--line);border-radius:6px;padding:9px 11px;margin-top:8px;background:rgba(255,252,240,.7)}
-.offer .t{font-size:12px;color:var(--ink-soft)}
-.skill{font-size:13px;margin-top:5px}
-.skill b{font-family:var(--display)}
 
 /* 结果 */
 .result{border-left-color:var(--stamp);background:rgba(158,43,34,.07)}
 .result .big{font-family:var(--display);font-weight:900;font-size:20px;text-align:center;letter-spacing:.15em;color:var(--stamp)}
 
-/* 弹层 */
-#modal .mask{position:fixed;inset:0;background:rgba(20,16,10,.5);z-index:500;display:flex;align-items:flex-end;justify-content:center}
-#modal .sheet{background:var(--paper2);width:100%;max-width:560px;max-height:86vh;overflow:auto;border-radius:12px 12px 0 0;padding:14px 16px 24px}
-#modal .sheet h3{font-family:var(--display);font-weight:900;font-size:18px;margin-bottom:8px}
+/* 弹层(选角色 / 查看技能 / 情报与生死),样式同三国杀房间 */
+.mask{position:fixed;inset:0;background:rgba(20,16,10,.5);z-index:80;display:flex;align-items:flex-start;
+  justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--paper2);border:1px solid var(--line);border-top:3px solid var(--stamp);border-radius:11px;
+  width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(35,30,23,.35)}
+.sheet h2{font-family:var(--display);font-weight:900;font-size:17px;letter-spacing:.06em;
+  border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--ink-soft);cursor:pointer;padding:0 4px}
+.gsearch{position:sticky;top:0;background:var(--paper2);padding-bottom:8px;z-index:1}
+.glist{max-height:56vh;overflow:auto;margin-top:4px}
+.grow-item{display:flex;align-items:center;gap:9px;padding:8px 6px;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:6px}
+.grow-item:active{background:rgba(158,43,34,.07)}
+.grow-item.taken{opacity:.5}
+.ava{width:34px;height:34px;border-radius:6px;flex:none;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-weight:900;font-size:17px;background:var(--paper);color:var(--ink)}
+.ava.hid{background:repeating-linear-gradient(45deg,#3a332a 0 4px,#4a4236 4px 8px);color:#e9dcc0}
+.ava.big{width:56px;height:56px;font-size:28px;border-radius:8px}
+.grow-item .gn{font-family:var(--display);font-weight:700;font-size:15px}
+.grow-item .gmeta{font-size:11px;color:var(--ink-soft)}
+.gv{flex:none;font-size:12px;padding:5px 10px;border:1px solid var(--stamp);color:var(--stamp);background:transparent;border-radius:6px;white-space:nowrap}
+.herohead{display:flex;gap:11px;align-items:center;margin-bottom:10px}
+.herohead .hn{font-family:var(--display);font-weight:900;font-size:19px}
+.herohead .hmeta{font-size:12px;color:var(--ink-soft)}
+.skl{border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:8px;background:rgba(255,252,240,.6)}
+.skl .sn{font-family:var(--display);font-weight:800;font-size:15px;color:var(--stamp);margin-bottom:3px}
+.skl .se{font-size:13px;line-height:1.7}
+.facechoice{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.facechoice button{padding:10px 6px;line-height:1.35}
+.facechoice small{display:block;font-size:11px;font-weight:400;opacity:.8}
 .kinds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .kinds button{padding:10px 0;font-weight:700;color:#fff;border:none}
 .kinds .r{background:var(--red)} .kinds .b{background:var(--blue)} .kinds .k{background:var(--black)}
@@ -127,22 +151,22 @@ footer{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:18px;le
 /* 风声线下房间:桌上用实体牌,手机管「秘密信息(身份/隐藏角色/选角候选)+ 公开台账(情报区/生死/回合)+ 胜负判定」。
    权威逻辑在 DO(prototype/fengsheng/shared/fs-logic.mjs);这里只渲染 roomState 与发 action{op,…}。 */
 const {esc,toast,$}=RoomClient;
-let state=null, DATA=null, sheetSeat=null, charView=null;
+let state=null, DATA=null;
 let CHAR={}, TASK={};
 
 const RC=RoomClient.create({
   wsPath: code=>"/api/fs/"+code+"/ws",
   errorText:{NOT_WIN_YET:"还没达成胜利条件",NO_IDENTITY:"你还没有身份",DEAD:"该角色已阵亡",GAME_OVER:"本局已结束,点「再来一局」",
     COUNT_MISMATCH:"身份配比总数要等于座位数",POOL_TOO_SMALL:"卡池角色不够发",NOT_OFFERED:"只能从发给你的候选里选",
-    TOO_MANY_GREEN:"神秘人太多,任务不够分(可切到「全部」卡池)",NO_CHAR:"该座位还没选角色"},
-  beforeConnect(){ state=null; sheetSeat=null; charView=null; },
+    TOO_MANY_GREEN:"神秘人太多,任务不够分(可切到「全部」卡池)",NO_CHAR:"该座位还没选角色",CHAR_TAKEN:"这名角色已被别人公开选用"},
+  beforeConnect(){ state=null; closeModal(); },
   onState(m){ state=m; render(); },
   onClosed(){ state=null; closeModal(); render(); },
   onRenamed(){ render(); },
 });
 function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
 
-fetch("/fs/data.json").then(r=>r.json()).then(d=>{
+fetch("/fs/data.json?v=__FS_DATA_VER__").then(r=>r.json()).then(d=>{
   DATA=d; CHAR=Object.fromEntries(d.characters.map(c=>[c.id,c])); TASK=Object.fromEntries(d.tasks.map(t=>[t.key,t])); render();
 }).catch(()=>toast("角色数据加载失败,刷新重试"));
 
@@ -154,14 +178,99 @@ const intelHtml=it=>`<span class="intel ${it.kind}" title="${esc(it.kind)}"></sp
 function cntHtml(c){ return `<span class="cnt">红<b class="r">${c.red}</b> 蓝<b class="b">${c.blue}</b> 黑<b class="k">${c.black}</b></span>`; }
 const seatsArr=()=>Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
 const mineSeats=()=>seatsArr().filter(s=>state.youHold.includes(s.seatNo));
+// 座位上显示的角色:公开 → 名字;面朝下的隐藏角色 → 本人看得到名字(标「暗置」),他人只见「隐藏角色」
 function charLabel(s){
-  if(s.charId!=null){ const c=CHAR[s.charId]; if(!c) return "?";
-    return `<span class="nm">${esc(c.name)}</span>`+(c.hidden?(s.faceUp?' <span class="chip">隐藏·已翻开</span>':' <span class="chip">面朝下</span>'):""); }
+  if(s.charId!=null&&CHAR[s.charId]){ const c=CHAR[s.charId];
+    return `<span class="nm">${esc(c.name)}</span>`+(c.hidden?(s.faceUp?'<span class="badge hid">隐藏·已翻开</span>':'<span class="badge hid">暗置 · 仅你可见</span>'):""); }
   if(s.hasChar) return '<span class="hidden-card">隐藏角色</span>';
-  return '<span class="who">未选角色</span>';
+  return "";
 }
-function skillsHtml(c){ return c.skills.map(k=>`<div class="skill"><b>【${esc(k.name)}】</b>${esc(k.text).replace(/\n/g,"<br>")}</div>`).join(""); }
-function closeModal(){ sheetSeat=null; charView=null; $("#modal").innerHTML=""; }
+function skillsHtml(c){ return c.skills.map(k=>`<div class="skl"><div class="sn">${esc(k.name)}</div><div class="se">${esc(k.text).replace(/\n/g,"<br>")}</div></div>`).join(""); }
+const avaHtml=(c,big)=>`<div class="ava${c.hidden?" hid":""}${big?" big":""}">${esc(c.name[0])}</div>`;
+function charMeta(c){ return `${esc(c.title)} · ${c.sex}${c.hidden?" · 隐藏角色":" · 公开角色"}${c.pack!=="base"?" · 扩展":""}`; }
+// 别人已公开选用的角色(只看公开的,不泄露暗置)
+function takenBy(cid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.charId===cid&&x.faceUp); return s?s.seatNo:null; }
+
+/* ---------- 弹层:modal = {t:"picker",seat} | {t:"skill",seat} | {t:"intel",seat} | {t:"char",id};preview 叠加在 picker 上 ---------- */
+let modal=null;
+function closeModal(){ modal=null; $("#modal").innerHTML=""; }
+function rerenderModal(){ // 收到新 roomState 时刷新弹层(picker 只刷列表,不打断输入)
+  if(!modal) return;
+  if(modal.t==="picker"){ if(!state.seats[modal.seat]||!state.youHold.includes(modal.seat)) return closeModal(); renderPickerList(); return; }
+  if(modal.t==="skill") return openSkillView(modal.seat);
+  if(modal.t==="intel") return openIntelSheet(modal.seat);
+}
+
+// 选角色(同三国杀选将):中文/拼音/首字母搜索;发过 2 选 1 时只列候选
+function openPicker(seatNo){
+  if(!DATA){toast("角色数据还在加载…");return;}
+  const s=state.seats[seatNo]; modal={t:"picker",seat:seatNo};
+  const cur=s.charId!=null&&CHAR[s.charId]?CHAR[s.charId].name:"";
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
+    <h2>选角色 · 座位 ${seatNo}<span class="x" data-a="close">×</span></h2>
+    <div class="gsearch">${s.offers&&s.offers.length?`<div class="hint" style="margin:0 0 6px">已发角色:只能从发给你的 ${s.offers.length} 张里选。</div>`
+      :`<input id="gq" placeholder="角色名或拼音,如 李宁玉 / lining / lny" autocomplete="off" autocapitalize="off">`}
+      <div class="row" style="margin-top:6px">${cur?`<button class="ghost sm" data-a="clearChar" data-s="${seatNo}">清除角色</button>`:""}
+        <span class="grow hint" style="text-align:right;margin:0">当前:${cur?esc(cur):"未选"} · 暗置的隐藏角色只有你看得到</span></div></div>
+    <div class="glist" id="glist"></div></div></div>`;
+  renderPickerList();
+  const inp=$("#gq"); if(inp){ inp.oninput=()=>renderPickerList(); try{inp.focus();}catch(e){} }
+}
+function renderPickerList(){
+  const box=$("#glist"); if(!box||!modal||modal.t!=="picker") return;
+  const s=state.seats[modal.seat], q=($("#gq")&&$("#gq").value.trim())||"";
+  const pool=(s.offers&&s.offers.length)?s.offers.map(id=>CHAR[id]).filter(Boolean):DATA.characters.filter(c=>state.pack==="all"||c.pack==="base");
+  const list=RoomClient.searchList(pool,q);
+  box.innerHTML=list.map(c=>{ const tk=takenBy(c.id,modal.seat);
+    return `<div class="grow-item${tk?" taken":""}" data-a="pickItem" data-c="${c.id}">${avaHtml(c)}
+      <div class="grow"><div class="gn">${esc(c.name)}${c.hidden?' <span class="badge hid">隐藏</span>':""}${s.charId===c.id?' <span class="badge me">当前</span>':""}</div>
+      <div class="gmeta">${tk?`<b style="color:var(--stamp)">${tk} 号已公开选用</b> · `:""}${charMeta(c)} · ${c.skills.map(k=>esc(k.name)).join("/")}</div></div>
+      <button class="gv" data-a="preview" data-c="${c.id}">查看技能</button></div>`; }).join("")
+    ||`<div class="hint" style="padding:12px">没找到「${esc(q)}」</div>`;
+}
+// 预览(叠在选角列表上):看技能 → 选定。隐藏角色给两个选定按钮:暗置(默认)/ 公开
+function previewChar(id){
+  const c=CHAR[id]; if(!c||!modal||modal.t!=="picker") return;
+  const seat=modal.seat, tk=takenBy(id,seat);
+  const old=$("#pv"); if(old) old.remove();
+  const ov=document.createElement("div"); ov.className="mask"; ov.id="pv"; ov.style.zIndex="90";
+  ov.innerHTML=`<div class="sheet"><h2>查看技能<span class="x" data-a="pvclose">×</span></h2>
+    <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)}</div></div></div>
+    ${skillsHtml(c)}
+    ${tk?`<div class="hint" style="color:var(--stamp)">${tk} 号已公开选用这名角色,不能重复选。</div>`:""}
+    ${c.hidden?`<div class="facechoice"><button class="primary" data-a="pickFace" data-c="${id}" data-up="0"${tk?" disabled":""}>暗置选定<small>面朝下,只有你知道;发动技能时再翻开</small></button>
+        <button data-a="pickFace" data-c="${id}" data-up="1"${tk?" disabled":""}>公开选定<small>直接翻开,全场可见</small></button></div>
+      <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="ghost" data-a="pvclose">返回列表</button></div>`
+    :`<div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-a="pvclose">返回列表</button><button class="primary" data-a="pickFace" data-c="${id}" data-up="1"${tk?" disabled":""}>选定此角色</button></div>`}
+  </div>`;
+  $("#modal").appendChild(ov);
+}
+function pickChar(id,up){
+  const seat=modal&&modal.seat; if(seat==null) return;
+  const s=state.seats[seat];
+  if(s.charId!=null&&s.charId!==id&&!confirm("更换角色?")) return;
+  act("pickChar",{seatNo:seat,charId:id,faceUp:up});
+  if(CHAR[id].hidden&&!up) toast("已暗置「"+CHAR[id].name+"」:只有你看得到,发动技能时点「翻开角色」");
+  closeModal();
+}
+// 座位「查看技能」:公开角色 / 自己的暗置角色 / 已翻开的隐藏角色
+function openSkillView(seatNo){
+  const s=state.seats[seatNo], c=s&&CHAR[s.charId]; if(!c){closeModal();return;}
+  const mine=state.youHold.includes(seatNo);
+  modal={t:"skill",seat:seatNo};
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
+    <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)} · 座位 ${seatNo}${mine?"(你)":""}</div>
+      ${c.hidden?`<div class="hmeta">${s.faceUp?"已翻开 · 全场可见":"暗置中 · 只有你看得到"}</div>`:""}</div></div>
+    ${skillsHtml(c)}
+    ${mine&&c.hidden&&state.phase!=="over"?(s.faceUp?`<button class="ghost" style="width:100%" data-a="flip" data-s="${seatNo}" data-up="0">翻回暗置(技能让角色牌翻至面朝下时)</button>`
+      :`<button class="danger" style="width:100%;padding:11px" data-a="flip" data-s="${seatNo}" data-up="1">发动技能 · 翻开角色</button>`):""}
+  </div></div>`;
+}
+function openCharView(id){
+  const c=CHAR[id]; if(!c) return; modal={t:"char",id};
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
+    <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)}</div></div></div>${skillsHtml(c)}</div></div>`;
+}
 
 /* ============ 渲染 ============ */
 function render(){
@@ -191,8 +300,7 @@ function render(){
   openK.forEach(k=>{const d=document.querySelector(`details[data-k="${k}"]`); if(d) d.open=true;});
   for(const [id,v] of Object.entries(vals)){ const el=document.getElementById(id); if(el){el.value=v;el.dataset.dirty="1";} }
   if(focusId&&document.getElementById(focusId)) document.getElementById(focusId).focus();
-  if(sheetSeat!=null) renderSheet();
-  if(charView!=null) renderCharView();
+  rerenderModal();
 }
 
 function viewHeader(){
@@ -222,19 +330,19 @@ function viewMine(){
       h+=`<div class="dossier"><span>身份</span>${facHtml(s.identity.faction)}<span class="hint" style="margin:0">${esc(DATA.factions[s.identity.faction].goal)}</span></div>`;
       if(s.identity.task&&TASK[s.identity.task]) h+=`<div class="task"><b>秘密任务 · ${esc(TASK[s.identity.task].name)}</b><br>${esc(TASK[s.identity.task].text)}</div>`;
     } else h+=`<div class="hint" style="margin-top:0">还没有身份 —— 等系统发身份,或用实体身份牌在下面登记。</div>`;
-    // 角色 / 候选
-    if(s.offers&&s.offers.length){
-      h+=`<div style="margin-top:10px"><b>选择你的角色</b>(${s.offers.length} 选 1)</div>`;
-      h+=s.offers.map(id=>{const c=CHAR[id];return `<div class="offer"><div class="row"><b class="grow">${esc(c.name)} <span class="t">${esc(c.title)} · ${c.sex}${c.hidden?" · 隐藏角色(开局面朝下)":""}</span></b>
-        <button class="primary sm" data-a="pick" data-s="${s.seatNo}" data-c="${id}">选这个</button></div>${skillsHtml(c)}</div>`;}).join("");
-    } else if(s.charId!=null&&CHAR[s.charId]){
+    // 角色(选角 / 查技能 / 暗置翻开都在「座位」区;这里只做摘要)
+    if(s.charId!=null&&CHAR[s.charId]){
       const c=CHAR[s.charId];
-      h+=`<div style="margin-top:10px" class="row"><span class="grow">角色 <b>${esc(c.name)}</b> <span class="hint">${esc(c.title)}</span>`
-        +(c.hidden?(s.faceUp?' <span class="chip">已翻开</span>':' <span class="chip">面朝下 · 他人看不到</span>'):"")+`</span>`
-        +`<button class="sm" data-a="flip" data-s="${s.seatNo}" data-up="${s.faceUp?0:1}">${s.faceUp?"翻至面朝下":"翻开角色"}</button></div>`+skillsHtml(c);
+      h+=`<div class="row" style="margin-top:10px"><span class="grow">角色 <b style="font-family:var(--display)">${esc(c.name)}</b> <span class="hint">${esc(c.title)}</span>`
+        +(c.hidden?(s.faceUp?' <span class="badge hid">已翻开</span>':' <span class="badge hid">暗置 · 他人看不到</span>'):"")+`</span>`
+        +`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button>`
+        +(c.hidden&&state.phase!=="over"?(s.faceUp?`<button class="ghost sm" data-a="flip" data-s="${s.seatNo}" data-up="0">翻回暗置</button>`
+          :`<button class="danger sm" data-a="flip" data-s="${s.seatNo}" data-up="1">发动技能 · 翻开</button>`):"")+`</div>`;
+    } else if(s.offers&&s.offers.length){
+      h+=`<div class="row" style="margin-top:10px"><span class="grow">发给你 ${s.offers.length} 张角色候选</span><button class="primary sm" data-a="picker" data-s="${s.seatNo}">去选角色 ▾</button></div>`;
     } else if(state.phase!=="over"){
-      h+=`<div class="row" style="margin-top:10px"><span class="grow hint" style="margin:0">未选角色。可等「发角色」,或用实体牌选好后在这里登记:</span>
-        <button class="sm" data-a="manualChar" data-s="${s.seatNo}">登记角色</button></div>`;
+      h+=`<div class="row" style="margin-top:10px"><span class="grow hint" style="margin:0">还没选角色(可等「发角色」,或用实体牌选好后搜索登记)</span>
+        <button class="sm" data-a="picker" data-s="${s.seatNo}">选角色 ▾</button></div>`;
     }
     // 宣胜
     if(state.phase==="play"&&!s.dead){
@@ -259,7 +367,7 @@ function viewSetup(){
   h+=`<div class="row"><span>卡池</span><button class="sm${state.pack==="base"?" primary":""}" data-a="pack" data-p="base">基础包</button><button class="sm${state.pack==="all"?" primary":""}" data-a="pack" data-p="all">全部角色</button>
     <span class="hint grow" style="margin:0;text-align:right">${DATA.characters.filter(x=>state.pack==="all"||x.pack==="base").length} 名角色</span></div>`;
   h+=`<div class="row" style="margin-top:10px"><b class="grow">① 选角色</b><button data-a="dealChars">随机发角色(每人 2 选 1)</button></div>
-    <div class="hint">发出后每人在「我的机密」里自己选;也可以用实体牌选,再各自「登记角色」。${allChosen?"✓ 全员已选":""}</div>`;
+    <div class="hint">发出后每人点自己座位的「选角色」从候选里挑;也可以不发,用实体牌选好后搜索登记。隐藏角色可暗置,发动技能时再翻开。${allChosen?"✓ 全员已选":""}</div>`;
   h+=`<div style="margin-top:12px"><b>② 发身份</b> <span class="hint">${n} 人 · 配比合计 ${sum}${sum!==n?' <b style="color:var(--stamp)">≠ 座位数</b>':""}</span></div>
     <div class="row" style="margin-top:6px">${["red","blue","green"].map(f=>`<label style="display:flex;align-items:center;gap:5px">${facHtml(f)}<input class="num" type="number" min="0" max="9" id="ic-${f}" value="${c[f]}"></label>`).join("")}
     <button class="sm" data-a="setCounts">改配比</button></div>
@@ -279,18 +387,36 @@ function viewTurn(){
 
 function viewSeats(){
   const N=Object.keys(state.seats).length;
-  let h=`<div class="card"><h2>座位 · 情报区<span class="tag">点座位:登记情报 / 生死 / 查技能</span></h2>`;
+  let h=`<div class="card"><h2>座位<span class="tag">点认领入座 · 可代持没电的座位</span></h2>`;
+  h+=`<div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">共 <b>${N}</b> 座</span>
+    <button class="ghost sm" data-a="seatMinus"${N<=3?" disabled":""}>− 减座位</button><button class="ghost sm" data-a="seatPlus"${N>=9?" disabled":""}>＋ 加座位</button>
+    <span class="grow"></span><span class="hint" style="margin:0">3–9,从末位增减</span></div>`;
   for(const s of seatsArr()){
-    const me=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
-    h+=`<div class="seat${turn?" turn":""}${s.dead?" dead":""}" data-a="sheet" data-s="${s.seatNo}"><div class="no">${s.seatNo}</div><div class="grow">
-      <div>${charLabel(s)}${me?'<span class="badge me">我</span>':""}${turn?'<span class="badge turn">回合中</span>':""}${s.dying?'<span class="badge dying">濒死</span>':""}${s.dead?'<span class="badge dead">阵亡</span>':""}
-      ${s.identity&&!me?" "+idHtml(s.identity):""}</div>
-      <div class="who">${s.holderDevices.length?esc(s.holderDevices[0]):"空座"}${state.phase==="setup"&&!s.hasIdentity?" · 未有身份":""}${s.offerCount?" · 选角中":""}</div>
-      <div style="margin-top:3px">${s.intel.map(intelHtml).join("")||'<span class="hint" style="margin:0">无情报</span>'} ${s.intel.length?cntHtml(s.counts):""}</div>
-    </div></div>`;
+    const mine=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
+    const heldByOther=s.holderDevices.length&&!mine;
+    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}"><div class="row"><span class="st grow">座位 ${s.seatNo}${charLabel(s)}`
+      +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")
+      +(s.identity&&!mine?" "+idHtml(s.identity):"")+`</span>`;
+    if(s.charId!=null) h+=`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button>`;
+    if(mine) h+=`<button class="ghost sm" data-a="release" data-s="${s.seatNo}">释放</button>`;
+    else if(heldByOther) h+=`<button class="sm" data-a="takeover" data-s="${s.seatNo}" style="border-color:var(--stamp);color:var(--stamp)">替换</button>`;
+    else h+=`<button class="sm" data-a="claim" data-s="${s.seatNo}">认领</button>`;
+    h+=`</div>`;
+    if(mine){
+      const c=s.charId!=null?CHAR[s.charId]:null;
+      h+=`<div class="sub2"><span class="lbl">角色</span>`;
+      if(s.offers&&s.offers.length) h+=`<button class="primary sm" data-a="picker" data-s="${s.seatNo}">从 ${s.offers.length} 张候选里选 ▾</button>`;
+      else h+=`<button class="sm" data-a="picker" data-s="${s.seatNo}"${state.phase==="over"?" disabled":""}>${c?esc(c.name)+" ▾":"选角色 ▾"}</button>`;
+      if(c&&c.hidden&&state.phase!=="over") h+=s.faceUp?`<button class="ghost sm" data-a="flip" data-s="${s.seatNo}" data-up="0">翻回暗置</button>`
+        :`<button class="danger sm" data-a="flip" data-s="${s.seatNo}" data-up="1">发动技能 · 翻开</button>`;
+      h+=`</div>`;
+    } else if(s.offerCount) h+=`<div class="who" style="margin-top:3px">选角中…</div>`;
+    // 情报区(公开台账)
+    h+=`<div class="sub2" data-a="intel" data-s="${s.seatNo}" style="cursor:pointer"><span class="lbl">情报</span>${s.intel.map(intelHtml).join("")||'<span class="lbl">无</span>'}${s.intel.length?" "+cntHtml(s.counts):""}
+      <span class="grow"></span>${state.phase!=="over"?'<button class="ghost sm" data-a="intel" data-s="'+s.seatNo+'">登记 / 生死 ▸</button>':""}</div>`;
+    if(heldByOther) h+=`<div class="hint">当前由 <b>${esc(s.holderDevices[0])}</b> 持有 · 若其断线,点「替换」即可接管</div>`;
+    h+=`</div>`;
   }
-  h+=`<div class="row" style="margin-top:8px"><span class="hint grow" style="margin:0">共 ${N} 座(3–9,从末位增减)</span>
-    <button class="ghost sm" data-a="seatMinus"${N<=3?" disabled":""}>− 减座</button><button class="ghost sm" data-a="seatPlus"${N>=9?" disabled":""}>＋ 加座</button></div>`;
   return h+`</div>`;
 }
 
@@ -314,53 +440,47 @@ function viewAdmin(){
     <button class="ghost grow" data-a="disband" style="color:var(--stamp);border-color:var(--stamp)">解散房间</button></div></div>`;
 }
 
-/* ============ 座位弹层:认领 / 情报 / 生死 / 回合 / 技能 ============ */
-function renderSheet(){
-  const s=state&&state.seats[sheetSeat]; if(!s){closeModal();return;}
-  const me=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
-  let h=`<div class="mask" data-mclose="1"><div class="sheet"><div class="row"><h3 class="grow">${s.seatNo} 号 · ${charLabel(s)}</h3><button class="ghost sm" data-a="close">关闭</button></div>`;
-  h+=`<div class="row">${me?`<span class="badge me">你的座位</span><button class="ghost sm" data-a="release" data-s="${s.seatNo}">释放</button>`
-    :held?`<span class="who">由 ${esc(s.holderDevices[0])} 持有</span><button class="ghost sm" data-a="takeover" data-s="${s.seatNo}">替换持有(对方没电时)</button>`
-    :`<button class="primary" data-a="claim" data-s="${s.seatNo}">认领这个座位</button>`}</div>`;
-  if(s.identity&&!me) h+=`<div style="margin-top:8px">身份 ${idHtml(s.identity)}</div>`;
+/* ============ 情报 / 生死弹层(公开台账,任何人可改)============ */
+function openIntelSheet(seatNo){
+  const s=state&&state.seats[seatNo]; if(!s){closeModal();return;}
+  modal={t:"intel",seat:seatNo};
+  let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>座位 ${seatNo}${charLabel(s)}<span class="x" data-a="close">×</span></h2>`;
+  if(s.identity&&!state.youHold.includes(seatNo)) h+=`<div style="margin-bottom:8px">身份 ${idHtml(s.identity)}</div>`;
   if(state.phase!=="over"&&!s.dead){
-    h+=`<div style="margin-top:12px"><b>获得情报</b> <span class="hint">点颜色即登记</span></div><div class="kinds" style="margin-top:6px">`
-      +DATA.intelKinds.map(k=>`<button class="${k.key}" data-a="addIntel" data-s="${s.seatNo}" data-k="${k.key}">${k.label}</button>`).join("")+`</div>`;
+    h+=`<div><b>获得情报</b> <span class="hint">点颜色即登记</span></div><div class="kinds" style="margin-top:6px">`
+      +DATA.intelKinds.map(k=>`<button class="${k.key}" data-a="addIntel" data-s="${seatNo}" data-k="${k.key}">${k.label}</button>`).join("")+`</div>`;
   }
   h+=`<div style="margin-top:12px"><b>情报区</b> ${cntHtml(s.counts)} <span class="hint">${state.phase!=="over"?"点一张移除(澄清/烧毁/被拿走)":""}</span></div>
-    <div class="ilist" style="margin-top:6px">${s.intel.map(it=>`<span class="intel ${it.kind}" data-a="rmIntel" data-s="${s.seatNo}" data-i="${it.id}"></span>`).join("")||'<span class="hint">无</span>'}</div>`;
+    <div class="ilist" style="margin-top:6px">${s.intel.map(it=>`<span class="intel ${it.kind}" data-a="rmIntel" data-s="${seatNo}" data-i="${it.id}"></span>`).join("")||'<span class="hint">无</span>'}</div>`;
   if(state.phase!=="over"){
     h+=`<div class="row" style="margin-top:12px">`;
-    if(s.dead) h+=`<button class="ghost" data-a="revive" data-s="${s.seatNo}">撤销死亡</button>`;
-    else h+=`<button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${s.seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>`;
-    if(state.phase==="play"&&state.turn!==s.seatNo&&!s.dead) h+=`<button class="ghost" data-a="setTurn" data-s="${s.seatNo}">设为当前回合</button>`;
-    if(s.hasChar) h+=`<button class="ghost" data-a="flip" data-s="${s.seatNo}" data-up="${s.faceUp?0:1}">${s.faceUp?"角色翻至面朝下":"翻开角色"}</button>`;
+    if(s.dead) h+=`<button class="ghost" data-a="revive" data-s="${seatNo}">撤销死亡</button>`;
+    else h+=`<button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>`;
+    if(state.phase==="play"&&state.turn!==seatNo&&!s.dead) h+=`<button class="ghost" data-a="setTurn" data-s="${seatNo}">设为当前回合</button>`;
+    if(s.hasChar&&!state.youHold.includes(seatNo)) h+=`<button class="ghost" data-a="flip" data-s="${seatNo}" data-up="${s.faceUp?0:1}">${s.faceUp?"角色翻至面朝下":"翻开其角色(技能效果)"}</button>`;
     h+=`</div>`;
     if(s.dying) h+=`<div class="hint">濒死:可用【澄清】移除一张黑色情报救回;无人救就确认死亡(身份会公开)。</div>`;
   }
-  if(s.charId!=null&&CHAR[s.charId]) h+=`<div style="margin-top:14px"><b>${esc(CHAR[s.charId].name)}</b> <span class="hint">${esc(CHAR[s.charId].title)} · ${CHAR[s.charId].sex}</span>${skillsHtml(CHAR[s.charId])}</div>`;
-  h+=`</div></div>`;
-  $("#modal").innerHTML=h;
-}
-function renderCharView(){
-  const c=CHAR[charView]; if(!c){closeModal();return;}
-  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><div class="row"><h3 class="grow">${esc(c.name)} <span class="hint">${esc(c.title)} · ${c.sex}${c.hidden?" · 隐藏角色":""}</span></h3><button class="ghost sm" data-a="close">关闭</button></div>${skillsHtml(c)}</div></div>`;
-}
-function openManualChar(seatNo){
-  const list=DATA.characters.filter(c=>state.pack==="all"||c.pack==="base");
-  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><div class="row"><h3 class="grow">登记角色(${seatNo} 号)</h3><button class="ghost sm" data-a="close">关闭</button></div>
-    <div class="hint">隐藏角色选定后默认面朝下,只有你看得到。</div><div style="margin-top:8px">${list.map(c=>`<button class="sm" style="margin:3px" data-a="pick" data-s="${seatNo}" data-c="${c.id}">${esc(c.name)}${c.hidden?" 🂠":""}</button>`).join("")}</div></div></div>`;
+  $("#modal").innerHTML=h+`</div></div>`;
 }
 
 /* ============ 事件(委托)============ */
 document.addEventListener("click",e=>{
   const m=e.target.closest("[data-mclose]"); if(m&&e.target===m){closeModal();return;}
+  const pv=$("#pv"); if(pv&&e.target===pv){pv.remove();return;} // 点预览背景:只关预览,列表还在
   const b=e.target.closest("[data-a]"); if(!b) return;
   const a=b.dataset.a, sn=b.dataset.s!=null?+b.dataset.s:null;
   switch(a){
     case "rename": RC.promptRename(); break;
     case "newroom": { const c=RoomClient.randomCode(); if(confirm("离开当前房间、新开一局(房间号 "+c+")?\n记得把新房间号告诉其他玩家。")) RC.connect(RC.base||RoomClient.defaultBase(),c); break; }
-    case "sheet": sheetSeat=sn; renderSheet(); break;
+    case "intel": e.stopPropagation(); openIntelSheet(sn); break;
+    case "skill": openSkillView(sn); break;
+    case "picker": openPicker(sn); break;
+    case "pickItem": { const c=+b.dataset.c; if(CHAR[c].hidden) previewChar(c); else if(takenBy(c,modal.seat)) toast("该角色已被公开选用"); else pickChar(c,true); break; }
+    case "preview": e.stopPropagation(); previewChar(+b.dataset.c); break;
+    case "pvclose": { const pv=$("#pv"); if(pv) pv.remove(); break; }
+    case "pickFace": pickChar(+b.dataset.c,b.dataset.up==="1"); break;
+    case "clearChar": if(confirm("清除已选角色?")){ act("clearChar",{seatNo:sn}); closeModal(); } break;
     case "close": closeModal(); break;
     case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
     case "release": if(confirm("释放这个座位?")) RC.send({type:"releaseSeat",seatNo:sn}); break;
@@ -373,8 +493,6 @@ document.addEventListener("click",e=>{
     case "setCounts": act("setIdCounts",{red:+$("#ic-red").value,blue:+$("#ic-blue").value,green:+$("#ic-green").value}); break;
     case "dealIds": if(!seatsArr().some(s=>s.hasIdentity)||confirm("重新发身份会覆盖所有人的身份,继续?")) act("dealIdentities"); break;
     case "start": act("startGame",{first:+$("#first").value}); break;
-    case "pick": act("pickChar",{seatNo:sn,charId:+b.dataset.c}); closeModal(); break;
-    case "manualChar": openManualChar(sn); break;
     case "flip": act("flipChar",{seatNo:sn,faceUp:b.dataset.up==="1"}); break;
     case "setId": { const f=$("#idf-"+sn).value; act("setIdentity",{seatNo:sn,faction:f||null,task:f==="green"?$("#idt-"+sn).value:undefined}); break; }
     case "declare": if(confirm("确认宣胜?系统会校验,成功则本局结束并公开所有身份。")) act("declareWin",{seatNo:sn}); break;
@@ -388,7 +506,7 @@ document.addEventListener("click",e=>{
     case "forceEnd": { const w=prompt("手动结算(技能特殊胜利/规则争议):输入胜者座位号,用逗号分隔,如 2,5"); if(w==null) break;
       const winners=w.split(/[,，\s]+/).map(Number).filter(Boolean); const note=prompt("备注(可空),如:秦圆圆比翼双飞")||"";
       act("forceEnd",{winners,note}); break; }
-    case "viewChar": charView=+b.dataset.c; renderCharView(); break;
+    case "viewChar": openCharView(+b.dataset.c); break;
   }
 });
 document.addEventListener("input",e=>{ if(e.target.id) e.target.dataset.dirty="1"; }); // 用户改过的输入框,重绘时保留
