@@ -4,7 +4,7 @@
 //
 // 依赖 pinyin-pro(仓库零依赖,不入 package.json;node_modules 已 gitignore):
 //   cd prototype && npm i --no-save --no-package-lock pinyin-pro@3
-//   node prototype/build-pinyin.mjs
+//   node prototype/sgs/build-pinyin.mjs
 // 何时跑:新增/改名武将后(rebake-overrides.mjs 会提示缺拼音的将)。
 import { readFileSync, writeFileSync } from "node:fs";
 

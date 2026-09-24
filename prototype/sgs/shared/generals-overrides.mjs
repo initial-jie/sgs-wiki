@@ -77,7 +77,7 @@ export const SKILL_EN = {
 
 export const OFFLINE_HEROES = [
   // 孙寒华 —— 三国杀移动版武将线下化,OL 无。faction/hp 已确认(吴/3血)。
-  // TODO(原画):用户后补图片文件(建议 prototype/client/assets/sunhanhua.jpg)或 URL 后,把下面 avatar/cover 接上;线下武将无 OL 图床,可能要给 worker 加静态图路由。
+  // TODO(原画):用户后补图片文件(建议 prototype/sgs/client/assets/sunhanhua.jpg)或 URL 后,把下面 avatar/cover 接上;线下武将无 OL 图床,可能要给 worker 加静态图路由。
   {
     id: 9001, name: "孙寒华", genre: "线下", series: "线下", faction: "吴",
     factionSelectable: false, quality: "线下", hp: 3, initialHp: null,

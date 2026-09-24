@@ -51,7 +51,7 @@ fallback 不是额外功能,而是"一个设备可认领多个座位"的自然�
 
 DO 用 `工具数据状态 + spec + 请求设备认领的座位集合` 过滤出**每台设备各自的视图**。新工具接入只声明 spec,DO 无需改动。
 
-> **实现现状**:上述原语均已在 `prototype/shared/room-logic.mjs` 的 `filterState` 实现并被 12 工具使用。`ownerOnly` 为南华用的数组形态(每册自带 owners+revealed);魔孙权暗选另用键值形态 `secretPick`。
+> **实现现状**:上述原语均已在 `prototype/sgs/shared/room-logic.mjs` 的 `filterState` 实现并被 12 工具使用。`ownerOnly` 为南华用的数组形态(每册自带 owners+revealed);魔孙权暗选另用键值形态 `secretPick`。
 
 ## 5. 消息协议(WebSocket)
 

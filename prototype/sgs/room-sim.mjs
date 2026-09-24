@@ -1,6 +1,6 @@
 // 房间协议 "可执行规格" —— 吕布主动夺炁 + 本回合锁 + 狂魔转移 + 吕布被杀 + fallback 代持
 // 复用与真实 Workers 同一份核心逻辑(./shared/room-logic.mjs)。rng 固定 ()=>0 复现随机分支。
-// node prototype/room-sim.mjs
+// node prototype/sgs/room-sim.mjs
 
 import { RoomCore, cardLabel, SQ_EFFECTS, DIANWEI_POOL, rollQiexie, XURONG_EFFECTS, pxComputeSlide, PEIXIU_MAPS, PUYUAN_FORGE, setBannedPools, banPoolForSeats } from "./shared/room-logic.mjs";
 

@@ -1,6 +1,7 @@
 // 房间核心逻辑(运行时无关)—— 被两处共用:
-//   1) prototype/room-sim.mjs      "可执行规格" node 断言
-//   2) prototype/worker/src/index.js  真实 Cloudflare Workers Durable Object
+//   1) prototype/sgs/room-sim.mjs   "可执行规格" node 断言
+//   2) prototype/sgs/worker.mjs     真实 Cloudflare Workers Durable Object
+// 座位/设备/改名/持久化骨架 = common/room-base.mjs;字段级保密原语 = common/visibility.mjs
 // 方案 a:只存纯数据 + 可见性过滤;例外 = 炁转移的随机/结算在 DO 端执行(保密数据不出 DO)。
 //
 // 炁转移由【吕布本人】主动触发,系统随机/结算;失去方"零操作也知情"——
@@ -11,6 +12,9 @@
 //   - 狂角色阵亡 kuangDiedByOther : 非吕布击杀,不转移;入魔保持,吕布重新指定下一个狂角色
 //   - 吕布被击杀 lvbuKilled   : 吕布触发 → 只交出自己【初始】手牌的炁(不含夺来的 gained)
 // 可见性:夺到的那张 —— 吕布(gained)可见、失去方(自己 mine 的 taken)可见、其他人仅见数量。
+
+import { RoomBase, clone } from "../../common/room-base.mjs";
+import { applyVisibility } from "../../common/visibility.mjs";
 
 const GLYPH = { S: "♠", H: "♥", C: "♣", D: "♦" };
 export function cardLabel(c) { return GLYPH[c.s] + c.r + (c.n ? " " + c.n : ""); }
@@ -94,7 +98,7 @@ export const XURONG_EFFECTS = [
 ];
 
 // ---------- 裴秀【十六州地图】(全公开生成器)----------
-// ⚠ 数据源 = prototype/shared/peixiu-maps.json(canonical);此处内联供 sim+worker 用(无法跨包 import)。
+// ⚠ 数据源 = prototype/sgs/shared/peixiu-maps.json(canonical);此处内联供 sim+worker 用(无法跨包 import)。
 //   同一份数据另内联于 tools/peixiu.html(单人版)与 client/room.html(画棋盘)。三处若改务必同步 peixiu-maps.json。
 // 坐标 [x,y],[0,0]=左下角,x→右 / y→上。图标:draw:N 摸牌 · heal:N 回体力 · move:<dir>:N 到达即自动移N格停留(dir=down/left)。
 export const PEIXIU_MAPS = {
@@ -157,7 +161,7 @@ export function pxComputeSlide(m, start, dir, visited){
 }
 
 // ---------- 蒲元【神工锻造库】(全公开生成器)----------
-// ⚠ 数据源 = prototype/shared/derived-cards-room.json 蒲元条目(18装备,武器6/防具6/宝物6);此处内联供 sim+worker,
+// ⚠ 数据源 = prototype/sgs/shared/derived-cards-room.json 蒲元条目(18装备,武器6/防具6/宝物6);此处内联供 sim+worker,
 //   同一份另内联于 tools/puyuan.html(单人版)。改动务必同步两处。
 export const PUYUAN_FORGE = {
 "武器":[
@@ -233,61 +237,9 @@ export const VISIBILITY = {
   },
 };
 
-const clone = (x) => JSON.parse(JSON.stringify(x));
-
+// 字段级保密原语在 common/visibility.mjs(游戏无关);这里只按座位武将挑 spec
 export function filterState(seat, holds) {
-  const spec = VISIBILITY[seat.general];
-  if (!spec) return clone(seat.toolState);
-  const out = {};
-  for (const [field, val] of Object.entries(seat.toolState)) {
-    const rule = spec[field];
-    if (!rule || rule.kind === "public") { out[field] = clone(val); continue; }
-
-    if (rule.kind === "secretHolding") {
-      const mine = {}, counts = {};
-      for (const [bySeat, entry] of Object.entries(val)) {
-        counts[bySeat] = entry.cards.filter((c) => !c.taken).length; // 剩余未被夺数量(公开)
-        if (holds.has(Number(bySeat))) mine[bySeat] = clone(entry);   // 明细仅本人/代持
-      }
-      out[field] = { mine, counts };
-      continue;
-    }
-    if (rule.kind === "ownerSeatOnly") {
-      out[field] = holds.has(seat.seatNo)
-        ? clone(val)
-        : { count: Array.isArray(val) ? val.length : Object.keys(val).length };
-      continue;
-    }
-    // pendingTargetOnly:val 是 {} 或 {c};可见者 = toolState.pending.targetSeat 的持有者,或 pending.revealed 后全场。
-    // 用于"由工具主人以外的某个座位秘密做选择"(谋程昱胆持:受伤角色选类型)
-    if (rule.kind === "pendingTargetOnly") {
-      const p = seat.toolState.pending;
-      out[field] = (p && (p.revealed || holds.has(p.targetSeat)))
-        ? clone(val)
-        : { count: val && val.c ? 1 : 0 };
-      continue;
-    }
-    // secretPick:键值对象 { [座位]: {holder,effect,revealed} }。翻开前仅本人(或代持)可见内容,
-    // 他人只见 {holder,hidden} —— 能知道"该座位已选",数得出进度,但看不到选了什么(孙权的也一样藏)。
-    if (rule.kind === "secretPick") {
-      const out2 = {};
-      for (const [s, pk] of Object.entries(val || {}))
-        out2[s] = (pk.revealed || holds.has(Number(s))) ? clone(pk) : { holder: pk.holder, hidden: true };
-      out[field] = out2;
-      continue;
-    }
-    // ownerOnly:val 是"每册自带 owners 名单"的数组。发动(revealed)后转公开;
-    // 否则仅当请求者代持某位 owner 时给全量,旁人只见占位(保留 holder → 可数出持有册数)。
-    if (rule.kind === "ownerOnly") {
-      out[field] = (val || []).map((bk) =>
-        (bk.revealed || (bk.owners || []).some((s) => holds.has(s)))
-          ? clone(bk)
-          : { holder: bk.holder, hidden: true }
-      );
-      continue;
-    }
-  }
-  return out;
+  return applyVisibility(VISIBILITY[seat.general], seat.toolState, holds, { ownerSeat: seat.seatNo });
 }
 
 export function initToolState(generalId) {
@@ -474,13 +426,9 @@ export function setBannedPools(map) {
 export function banPoolForSeats(n) { n = Number(n); return n >= 5 ? "junzheng" : n === 4 ? "2v2" : n === 3 ? "douzhu" : "1v1"; }
 
 // ---------- 房间权威(纯逻辑,不含 IO / WebSocket)----------
-export class RoomCore {
+export class RoomCore extends RoomBase {
   constructor(roomCode, seatCount, rng = Math.random) {
-    this.roomCode = roomCode;
-    this.rng = rng; // 注入随机源:worker 用 Math.random,sim 传确定值以复现
-    this.seats = {};
-    for (let i = 1; i <= seatCount; i++) this.seats[i] = this._newSeat(i);
-    this.devices = {};
+    super(roomCode, seatCount, rng);
     this.banEnabled = true; // ② 禁将总开关(房内共享,任何玩家可切;默认开)
   }
 
@@ -494,47 +442,9 @@ export class RoomCore {
       judgments: [] }; // 判定区:乐不思蜀/兵粮寸断/闪电 种类列表(同名不叠;只记种类不记花色点数)
   }
 
-  connect(id) { if (!this.devices[id]) this.devices[id] = { holds: new Set() }; }
-  claimSeat(id, n) {
-    n = Number(n); // 座位号统一转数字,holds 与 setGeneral 比对不会因字符串/数字不一致而 NOT_HOLDER
-    const s = this.seats[n];
-    // 座位独占:已被别的设备持有则拒绝(需显式 takeoverSeat 替换),避免两台设备同坐一座位
-    if (s && s.holderDevices.length && !s.holderDevices.includes(id))
-      return { error: "SEAT_TAKEN", by: s.holderDevices[0] };
-    this.connect(id); this.devices[id].holds.add(n);
-    if (s) s.holderDevices = [id]; // 单一持有者
-    return { ok: true };
-  }
-  // 解锁替换:强制把座位从原持有设备转到 id(前端二次确认)。断线设备不会锁死座位——任何人可替换。
-  takeoverSeat(id, n) {
-    n = Number(n);
-    const s = this.seats[n]; if (!s) return { error: "BAD_SEAT" };
-    for (const prev of s.holderDevices) if (prev !== id) this.devices[prev]?.holds.delete(n); // 撤下原持有者
-    this.connect(id); this.devices[id].holds.add(n);
-    const took = s.holderDevices.find((d) => d !== id) || null;
-    s.holderDevices = [id];
-    return { ok: true, took };
-  }
-  releaseSeat(id, n) {
-    n = Number(n);
-    this.devices[id]?.holds.delete(n);
-    if (this.seats[n]) this.seats[n].holderDevices = this.seats[n].holderDevices.filter((d) => d !== id);
-    return { ok: true };
-  }
+  // 座位/设备/改名/增删座位:继承 common/room-base.mjs
   // ② 禁将总开关:任何玩家可切(房内临时状态,不改 banned-generals.json)
   setBanEnabled(on) { this.banEnabled = !!on; return { ok: true, banEnabled: this.banEnabled }; }
-  // 房内改名:deviceId 同时是身份 key(devices/holderDevices)与显示名,故原子改键——搬 holds + 更新座位持有者标记,座位归属不丢
-  renameDevice(oldId, newId) {
-    newId = (newId ?? "").toString().trim().slice(0, 12); // 同入口 maxlength 12
-    if (!newId) return { error: "EMPTY_NAME" };
-    if (newId === oldId) return { ok: true, newId };
-    if (this.devices[newId]) return { error: "NAME_TAKEN" };            // 房内重名(含占着座位的别的设备)→ 拒绝
-    this.devices[newId] = this.devices[oldId] || { holds: new Set() };  // 搬 holds(oldId 从未连接→空册)
-    delete this.devices[oldId];
-    for (const s of Object.values(this.seats))
-      if (s.holderDevices.includes(oldId)) s.holderDevices = s.holderDevices.map((d) => (d === oldId ? newId : d));
-    return { ok: true, newId };
-  }
   setGeneral(id, n, g) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
@@ -559,26 +469,6 @@ export class RoomCore {
     if (!ok) return { error: "BAD_FACTION" };
     this.seats[n].chosenFaction = faction ?? null;
     return { ok: true };
-  }
-
-  // 动态座位数(2~10,只从末位增减,永远 1..N 连续,不删中间/不重编号)。任意设备可点(无 holder 守卫)
-  addSeat(id) {
-    this.connect(id);
-    const nos = Object.keys(this.seats).map(Number);
-    const n = nos.length ? Math.max(...nos) : 0;
-    if (n >= 10) return { error: "MAX_SEATS" };
-    const next = n + 1;
-    this.seats[next] = this._newSeat(next);
-    return { ok: true, seatNo: next };
-  }
-  removeSeat(id) { // 删最高号座位;撤下其在各设备的持有(前端对已占用座位二次确认)
-    this.connect(id);
-    const nos = Object.keys(this.seats).map(Number).sort((a, b) => a - b);
-    if (nos.length <= 2) return { error: "MIN_SEATS" };
-    const last = nos[nos.length - 1];
-    for (const d of Object.keys(this.devices)) this.devices[d].holds.delete(last);
-    delete this.seats[last];
-    return { ok: true, removed: last };
   }
 
   _log(ts, msg) { ts.log.unshift(msg); if (ts.log.length > 200) ts.log.pop(); }
@@ -2111,30 +2001,16 @@ export class RoomCore {
     return { error: "UNKNOWN_ACTION" };
   }
 
-  viewFor(id) {
-    const holds = this.devices[id]?.holds ?? new Set();
-    const seats = {};
-    for (const [n, s] of Object.entries(this.seats))
-      seats[n] = { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
-        // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
-        hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
-        weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
-        judgments: s.judgments ?? [] };
-    return { roomCode: this.roomCode, youHold: [...holds], seats, banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length) };
+  _seatView(s, holds) {
+    return { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
+      // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
+      hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
+      weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
+      judgments: s.judgments ?? [] };
   }
-
-  // ---- 持久化(worker 落 DO storage 用;devices.holds 是 Set,序列化成数组)----
-  serialize() {
-    const devices = {};
-    for (const id of Object.keys(this.devices)) devices[id] = { holds: [...this.devices[id].holds] };
-    return { roomCode: this.roomCode, seatCount: Object.keys(this.seats).length, seats: this.seats, devices, banEnabled: this.banEnabled };
-  }
-  static hydrate(data, rng = Math.random) {
-    const core = new RoomCore(data?.roomCode ?? "room", data?.seatCount ?? 8, rng);
-    if (data?.seats) core.seats = data.seats;
-    core.banEnabled = data?.banEnabled !== false; // 老房间无此字段→默认开
-    core.devices = {};
-    for (const id of Object.keys(data?.devices || {})) core.devices[id] = { holds: new Set(data.devices[id].holds || []) };
-    return core;
-  }
+  _roomView() { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length) }; }
+  // ---- 持久化:通用部分见 RoomBase.serialize/hydrate ----
+  _serializeExtra() { return { banEnabled: this.banEnabled }; }
+  _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; } // 老房间无此字段→默认开
 }
+

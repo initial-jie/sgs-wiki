@@ -12,5 +12,9 @@ class_name = "RoomDO"
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
 
-# 注:room.html 以文本模块打进 worker,worker 在 "/" 直接吐客户端页(手机可直接开)。
-# .html 默认即 Text 模块,无需额外 [[rules]]。
+# 注:各游戏的 *.html 以文本模块打进 worker(.html 默认即 Text),worker 直接吐客户端页(手机可直接开)。
+# 公共客户端脚本 common/client/*.js 也按文本打包,由 worker 在 /common/ 下发(否则会被当成 ES 模块)。
+[[rules]]
+type = "Text"
+globs = ["**/common/client/*.js"]
+fallthrough = true

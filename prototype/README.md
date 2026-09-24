@@ -3,23 +3,33 @@
 房间协议的可运行原型。协议本身见 [`../docs/room-protocol.md`](../docs/room-protocol.md)。
 
 ```
-shared/room-logic.mjs   核心权威逻辑(可见性/夺炁/座位),被 sim 与 worker 共用
-shared/deck.mjs         牌堆数据 + 登记牌合法性校验
-room-sim.mjs            "可执行规格":吕布全流程 node 断言(30 条)
-deck-test.mjs           牌堆校验断言
-worker/                 Cloudflare Workers + Durable Object 服务端
-client/room.html        ★ 正式吕布房间前端(宣纸风)
-client/index.html       早期调试客户端(裸 UI;协议已升级,仅留存参考)
+common/                    ★ 公共房间库(游戏无关;新游戏直接复用)
+  room-base.mjs            RoomBase:座位即身份——认领/独占/替换/释放/改名/增删座位/序列化
+  visibility.mjs           字段级保密原语(ownerSeatOnly/secretPick/seatKeyed…),按设备持有座位过滤
+  room-do.mjs              RoomDOBase:Durable Object 外壳(WebSocket/持久化/2h TTL/解散/广播)+ 响应小工具
+  client/room-client.js    浏览器公共库 RoomClient:设备 ID/连接+断线重连/写阻断/改名/toast/加入表单
+sgs/                       三国杀
+  shared/room-logic.mjs    RoomCore extends RoomBase:武将工具/全场面板/禁将,被 sim 与 worker 共用
+  shared/*.json|mjs        武将库/衍生技/装备/牌堆等数据
+  worker.mjs               三国杀 HTTP 路由 + RoomDO(DO 类名固定)
+  client/room.html         ★ 三国杀房间前端(宣纸风)
+  room-sim.mjs             "可执行规格":node 断言
+  deck-test.mjs / build-*.mjs / scrape-generals.mjs / rebake-overrides.mjs  数据与测试脚本
+fengsheng/                 风声(游卡典藏版)——同一套 common/ 上的第二个游戏
+worker/                    一个 worker 托管所有游戏:src/index.js 只做路由
 ```
+
+新增一个游戏 = 新建 `<game>/`:`XxxCore extends RoomBase` + `XxxRoomDO extends RoomDOBase` + 客户端页引 `/common/room-client.js`,
+再在 `worker/src/index.js` 挂路由、`wrangler.toml` 加 DO 绑定与迁移。
 
 ## 1. 跑逻辑测试(最快,不用装任何东西)
 
 ```bash
-node prototype/room-sim.mjs
-# 期望:18 passed, 0 failed
+node prototype/sgs/room-sim.mjs
+# 期望:全部 passed, 0 failed(当前 589)
 ```
 
-改了 `shared/room-logic.mjs` 后务必重跑,保证协议不回退。
+改了 `sgs/shared/room-logic.mjs` 后务必重跑,保证协议不回退。
 
 ## 2. 本地起服务端 + 多标签联调(真实 WebSocket)
 
@@ -36,7 +46,7 @@ cd prototype\worker
 npx wrangler dev
 ```
 
-然后**双击打开 `prototype/client/index.html`**(直接 file:// 即可),多开几个标签页:
+然后**双击打开 `prototype/sgs/client/index.html`**(直接 file:// 即可),多开几个标签页:
 
 1. 每个标签是一台"设备"。点左上角蓝色 deviceId 可改成不同值,模拟不同手机(或用隐身窗口)。
 2. 所有标签填**同一个房间码**(如 1234)→ 点「连接」。
@@ -52,7 +62,7 @@ npx wrangler dev
 
 ## 2.5 正式吕布房间前端(room.html)
 
-起好 worker(`cd prototype/worker && npx wrangler dev`)后,浏览器开 **`prototype/client/room.html`**,开几个标签(每个标签点"本设备 ID"改成不同值,或用隐身窗口,模拟不同手机)。验证剧本:
+起好 worker(`cd prototype/worker && npx wrangler dev`)后,浏览器开 **`prototype/sgs/client/room.html`**,开几个标签(每个标签点"本设备 ID"改成不同值,或用隐身窗口,模拟不同手机)。验证剧本:
 
 1. 填服务端 `ws://localhost:8787`、同一房间码 → 连接。
 2. 标签A 认领座位1 → 选「魔吕布」;标签B 认领座位2;标签C 认领座位3。
@@ -76,7 +86,7 @@ npx wrangler deploy       # 得到 https://sgs-room.<你的账号>.workers.dev
 **部署即一体化**:worker 把 `client/room.html` 内联打包,根路径 `/` 直接吐客户端页。
 手机浏览器开 `https://sgs-room.<你的账号>.workers.dev/` 就是房间界面,「服务端」一栏
 已自动填成同源 `wss://...`(page 走 https → 自动 wss),**无需手填地址**。各手机填同一
-房间码即进同一桌。(本地 file:// 打开时才回退默认 `ws://localhost:8787`。)
+房间码即进同一桌。(房间页依赖 worker 下发的 `/common/room-client.js`,本地请走 `wrangler dev` 打开 http://localhost:8787,不再支持 file:// 直开。)
 
 ## 已知原型限制(待正式化时处理)
 

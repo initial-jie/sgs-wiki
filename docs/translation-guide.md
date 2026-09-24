@@ -9,10 +9,10 @@
 ## 0. Golden rules (read first, never break these)
 
 1. **Translations are ADDITIVE only.** You only ever ADD English fields (`effect_en`, `text_en`). You NEVER edit, delete, or reword the Chinese (`effect`, `text`). Missing English always falls back to Chinese, so partial coverage is safe and expected.
-2. **Never touch game logic.** Do not edit `prototype/shared/room-logic.mjs`, `prototype/room-sim.mjs`, the worker's business code, any `tools/*.html`, or any skill's **mechanics**. You are translating text, not changing rules.
+2. **Never touch game logic.** Do not edit `prototype/sgs/shared/room-logic.mjs`, `prototype/sgs/room-sim.mjs`, the worker's business code, any `tools/*.html`, or any skill's **mechanics**. You are translating text, not changing rules.
 3. **Never hand-edit generated/extracted files.** Specifically:
-   - `prototype/shared/generals.json` — it is **baked** from the override layer. You edit the override source, then run the re-bake script. Never type into `generals.json` directly.
-   - `prototype/shared/derived-skills.json` and `derived-cards.json` — these are **extracted from `index.html`**. Never edit them. Derived-skill English goes in a separate file (see §4).
+   - `prototype/sgs/shared/generals.json` — it is **baked** from the override layer. You edit the override source, then run the re-bake script. Never type into `generals.json` directly.
+   - `prototype/sgs/shared/derived-skills.json` and `derived-cards.json` — these are **extracted from `index.html`**. Never edit them. Derived-skill English goes in a separate file (see §4).
 4. **Translate faithfully, not creatively.** Preserve exact mechanics, numbers, timing, and conditions. When a term has a house translation (see §2 glossary), use it. Do not invent card names or paraphrase away precision.
 5. **Same-name skills belong to specific heroes.** Different hero versions can share a skill name (e.g. 火计 exists in strong and weak variants). Everything is keyed **per hero**, never globally. Respect the keys exactly.
 6. **Verify before you commit** (see §5). If the re-bake prints a warning or `room-sim` changes its pass count, you did something wrong — fix it, don't commit it.
@@ -25,10 +25,10 @@ There are **two** English channels. Both are pure overlays with Chinese fallback
 
 | What you're translating | Source file you edit | How it reaches the app |
 |---|---|---|
-| A hero's **own** skills (the ones on its character card) | `prototype/shared/generals-overrides.mjs` → `SKILL_EN` | `applyOverrides` bakes `effect_en` into `generals.json` (you run the re-bake script) |
-| **Derived** skills / **derived** cards (the red-bordered "衍生技/衍生牌" section) | `prototype/shared/derived-en.json` | The worker merges `text_en` onto the served `/derived-skills.json` & `/derived-cards.json` at runtime |
+| A hero's **own** skills (the ones on its character card) | `prototype/sgs/shared/generals-overrides.mjs` → `SKILL_EN` | `applyOverrides` bakes `effect_en` into `generals.json` (you run the re-bake script) |
+| **Derived** skills / **derived** cards (the red-bordered "衍生技/衍生牌" section) | `prototype/sgs/shared/derived-en.json` | The worker merges `text_en` onto the served `/derived-skills.json` & `/derived-cards.json` at runtime |
 
-The front-end (`prototype/client/room.html`) already reads these fields: when the user toggles **EN**, it shows `effect_en` / `text_en` if present, otherwise the Chinese. **You do not touch `room.html`.**
+The front-end (`prototype/sgs/client/room.html`) already reads these fields: when the user toggles **EN**, it shows `effect_en` / `text_en` if present, otherwise the Chinese. **You do not touch `room.html`.**
 
 Why two files: hero skills come from the scraper (Chinese in `generals.json`), so their English must live in the override layer to survive a re-scrape. Derived skills/cards are extracted from `index.html`, so their English lives in `derived-en.json` to survive a re-extract. Both are the same idea: keep English in a side file that regeneration can't clobber.
 
@@ -73,7 +73,7 @@ Use these house translations so every hero reads as one voice. If you hit a term
 
 ```bash
 node -e '
-const g=require("./prototype/shared/generals.json");
+const g=require("./prototype/sgs/shared/generals.json");
 const h=g.find(x=>x.name==="张华");   // <- put the hero name here
 console.log("id:", h.id, "| faction:", h.faction, "| hp:", h.hp);
 for(const s of h.skills) console.log("【"+s.name+"】", s.effect);
@@ -85,7 +85,7 @@ for(const s of h.skills) console.log("【"+s.name+"】", s.effect);
 
 > If the name matches several heroes (e.g. `界张华`, `谋X`), search by exact name or inspect ids to pick the right one. Every version has its own id, so translate the version you mean.
 
-### Step 3.2 — Add the entry to `SKILL_EN` in `prototype/shared/generals-overrides.mjs`
+### Step 3.2 — Add the entry to `SKILL_EN` in `prototype/sgs/shared/generals-overrides.mjs`
 
 Find `export const SKILL_EN = { ... }` and add one block. Use backtick strings (they tolerate both `"` and `'` and 【】). Example (already in the repo — copy its shape):
 
@@ -108,7 +108,7 @@ Rules:
 ### Step 3.3 — Re-bake `generals.json`
 
 ```bash
-node prototype/rebake-overrides.mjs
+node prototype/sgs/rebake-overrides.mjs
 ```
 Expected: `✅ generals.json re-baked: ... enHits=<n>` with **exit code 0 and no warnings**. `enHits` should have gone up by the number of skills you added. A warning like `id544「张华」EN 无技能「弼错」` means your inner key doesn't match a real skill name — fix the typo.
 
@@ -124,10 +124,10 @@ These are the entries shown under "衍生技(该武将技能中提及)" / "衍�
 
 ```bash
 node -e '
-const s=require("./prototype/shared/derived-skills.json");
-const c=require("./prototype/shared/derived-cards.json");
-const r1=require("./prototype/shared/derived-skills-room.json");
-const r2=require("./prototype/shared/derived-cards-room.json");
+const s=require("./prototype/sgs/shared/derived-skills.json");
+const c=require("./prototype/sgs/shared/derived-cards.json");
+const r1=require("./prototype/sgs/shared/derived-skills-room.json");
+const r2=require("./prototype/sgs/shared/derived-cards-room.json");
 for(const src of [s,c,r1,r2]) for(const hero of Object.keys(src))
   if(hero.includes("庞统")) console.log(hero, "->", src[hero].map(x=>x.name).join(", "));
 '
@@ -135,7 +135,7 @@ for(const src of [s,c,r1,r2]) for(const hero of Object.keys(src))
 - The **hero key** is the hero name with `·` and spaces removed — i.e. `hero.name.replace(/[·\s]/g,"")`. In these JSON files the keys are already in that normalized form; **use the key exactly as it appears**.
 - The **entry name** (`.name`) is the derived skill/card name (e.g. `飞白`, `折戟`).
 
-### Step 4.2 — Add to `prototype/shared/derived-en.json`
+### Step 4.2 — Add to `prototype/sgs/shared/derived-en.json`
 
 Shape: `{ "<heroKey>": { "<entryName>": "<English>" } }`. Example (already in the repo):
 
@@ -152,7 +152,7 @@ Shape: `{ "<heroKey>": { "<entryName>": "<English>" } }`. Example (already in th
 ```
 - Merge into the existing object; don't duplicate a hero key — add entries under it.
 - This file is **not** baked and **not** extracted — the worker reads it live. No re-bake needed for derived entries.
-- Verify it's valid JSON: `node -e 'require("./prototype/shared/derived-en.json"); console.log("ok")'`.
+- Verify it's valid JSON: `node -e 'require("./prototype/sgs/shared/derived-en.json"); console.log("ok")'`.
 
 ---
 
@@ -168,14 +168,14 @@ A few skills manipulate their own **Chinese text** (e.g. 张芝's 洗墨 "remove
 
 ```bash
 # 1. Re-bake (only needed if you touched SKILL_EN). Must be exit 0, no warnings:
-node prototype/rebake-overrides.mjs
+node prototype/sgs/rebake-overrides.mjs
 
 # 2. derived-en.json must be valid JSON (only if you touched it):
-node -e 'require("./prototype/shared/derived-en.json"); console.log("derived-en OK")'
+node -e 'require("./prototype/sgs/shared/derived-en.json"); console.log("derived-en OK")'
 
 # 3. The room simulator MUST still pass with the SAME count as before your change
 #    (translations never touch logic, so this number must not move):
-node prototype/room-sim.mjs | tail -1     # expect: 结果: 337 passed, 0 failed
+node prototype/sgs/room-sim.mjs | tail -1     # expect: 结果: 337 passed, 0 failed
 ```
 If step 1 warns, or step 3's number changed, your change is wrong — fix it before committing.
 
@@ -199,15 +199,15 @@ Optional visual check (if you can run the room locally): open the skill popup, t
 
 ```bash
 # 1. look up 族荀采
-node -e 'const g=require("./prototype/shared/generals.json");const h=g.find(x=>x.name==="族荀采");console.log(h.id);for(const s of h.skills)console.log(s.name,"=",s.effect)'
+node -e 'const g=require("./prototype/sgs/shared/generals.json");const h=g.find(x=>x.name==="族荀采");console.log(h.id);for(const s of h.skills)console.log(s.name,"=",s.effect)'
 # -> id 524, skills 蹈节 / 烈誓 / 点盏 / 还阴
 
 # 2. add to SKILL_EN in generals-overrides.mjs:
 #    524: { "蹈节": `Clan Skill, Compulsory Skill. ...`, "烈誓": `...`, "点盏": `...`, "还阴": `...` },
 
 # 3. re-bake + verify
-node prototype/rebake-overrides.mjs        # enHits should increase by 4, exit 0
-node prototype/room-sim.mjs | tail -1      # unchanged pass count
+node prototype/sgs/rebake-overrides.mjs        # enHits should increase by 4, exit 0
+node prototype/sgs/room-sim.mjs | tail -1      # unchanged pass count
 
 # 4. commit generals-overrides.mjs + generals.json on a branch, open PR
 ```

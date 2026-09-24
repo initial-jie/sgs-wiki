@@ -1,7 +1,7 @@
-// 生成「装备牌库」数据集 prototype/shared/equipment.json —— #2 距离层(③坐骑/④装备槽)地基。
+// 生成「装备牌库」数据集 prototype/sgs/shared/equipment.json —— #2 距离层(③坐骑/④装备槽)地基。
 // 源生装备:从 deck.mjs 的 CARD_INDEX(军争161张权威)抽花色点数 + 本文件类型/范围映射。
 // 衍生装备:从 derived-cards*.json 解析 src(容错:type/花色点数/范围 顺序无关)。
-// 用法:node prototype/build-equipment.mjs  (改 deck/derived 源后重跑)
+// 用法:node prototype/sgs/build-equipment.mjs  (改 deck/derived 源后重跑)
 import { CARD_INDEX } from "./shared/deck.mjs";
 import { readFileSync, writeFileSync } from "node:fs";
 

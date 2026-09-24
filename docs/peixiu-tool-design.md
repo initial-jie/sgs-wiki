@@ -31,7 +31,7 @@
 
 **坐标系(用户 2026-07-14 定)**:`[x, y]`,**`[0,0]=左下角**;第一位 x=横坐标(0→右),第二位 y=纵坐标(0→上)。
 
-每州结构(最终进 `prototype/shared/peixiu-maps.json`):
+每州结构(最终进 `prototype/sgs/shared/peixiu-maps.json`):
 
 ```jsonc
 {
@@ -113,14 +113,14 @@
 ---
 
 ## 五、数据状态 + 待办
-- ✅ **16 州数据全部就绪** → `prototype/shared/peixiu-maps.json`(从 peixiu DOM 几何自动读取 + 校验自洽 + 用户核对,2026-07-14)。图标分布:draw 43 / heal 11 / move:down 5 / move:left 5。
+- ✅ **16 州数据全部就绪** → `prototype/sgs/shared/peixiu-maps.json`(从 peixiu DOM 几何自动读取 + 校验自洽 + 用户核对,2026-07-14)。图标分布:draw 43 / heal 11 / move:down 5 / move:left 5。
 - ✅ 图标类型全部厘清:draw / heal / move(方向 down 或 left);第4类"未知图标"实为 **move:left**(句町=蓝「左」)。红色「vvv/>>>」是作者路径记号,已排除。
 - ✅ 起点=游戏固定起点(token 位置,已验证梁州=[2,2])。
 - ✅ **move 走位交互(用户 2026-07-16 勘误订正)**:尽览**先沿花色方向一路推到墙/边界**(draw/heal 经过即触发);**move 图标不在城市当场转向**——推到墙后,再从**墙的位置**按该 move 城箭头走 N 格停留。例:益州成都[2,3] move:down:2,从[2,2]向北→先滑到墙[2,4],再向南 2→停[2,2](旧实现误为到成都立即向下→[2,1])。移动后若停留格是新城市则**触发一次**;代码校验:一次滑动至多经过 1 个 move 城、移动后不落墙、**无链式**,故无需递归。~~(废弃:2026-07-14 曾定"到城即自动移动N格停留",时序错误已订正)~~
 - [ ] 展开新图时"手牌花色补至4"对工具是否需要体现(可能只做提示,建工具时定)。
 
 ## 六、下一步:建「带网格棋盘」工具(换新对话开始)
-数据 + 规则已齐,工具本身是独立大件,建议**新开对话**做。新会话让我读:`docs/peixiu-tool-design.md`(本文)+ `prototype/shared/peixiu-maps.json`(16 图数据)+ `docs/HANDOFF.md` + `docs/room-protocol.md`,即可开工。要点:
+数据 + 规则已齐,工具本身是独立大件,建议**新开对话**做。新会话让我读:`docs/peixiu-tool-design.md`(本文)+ `prototype/sgs/shared/peixiu-maps.json`(16 图数据)+ `docs/HANDOFF.md` + `docs/room-protocol.md`,即可开工。要点:
 - 接入范式同其他 17 个工具:`room-logic.mjs`(initToolState + action 块)+ `room.html`(viewPx/bindPx)+ `tools/peixiu.html` 单人版 + `index.html` 卡 + `generals.json` 裴秀(9003).tool="peixiu" + scraper TOOL_NAMES。
 - 工具逻辑:①随机展开地图(回合内不重复,16 张跑完才循环)→ 棋盘按 peixiu-maps.json 画(格子/墙/起点/四城/图标);②玩家点方向(♠东/♥西/♣南/♦北)→ 模拟推箱子滑到墙,经过城市执行图标(draw/heal/move,move 停留后可能触发新城);③四城画完→亮"下一张";④结束阶段:池=本回合各州 stateSkill + 已经过城市 skill,随机 3 选 1,记录留到下回合。**不含最优解 solver**。
 - 裴秀已 graduate(2026-09-15):手录 9003 → 官网 id 606,tool=peixiu 由 scrape-generals.mjs TOOL_NAMES 按名接管。

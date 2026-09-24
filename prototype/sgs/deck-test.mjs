@@ -1,4 +1,4 @@
-// 牌堆校验测试:node prototype/deck-test.mjs
+// 牌堆校验测试:node prototype/sgs/deck-test.mjs
 import { validateCard } from "./shared/deck.mjs";
 
 let pass = 0, fail = 0;

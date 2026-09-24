@@ -1,8 +1,8 @@
 // 三国杀 OL 全量武将爬虫 —— 生产版。
 // 数据源:①列表 ld+json→花名册;②/api/v1/hero/info?gid= →hp/势力/标签/品质/生平/立绘;③详情页 HTML→技能。
 // 用 curl(node fetch 被判 bot)。node18+。
-//   node prototype/scrape-generals.mjs                    全量重爬(⚠ 先 graduate 手录将,否则重复)
-//   node prototype/scrape-generals.mjs --ids 606,740      增量:只抓这些 id 合并进现库(graduate / 新将)
+//   node prototype/sgs/scrape-generals.mjs                    全量重爬(⚠ 先 graduate 手录将,否则重复)
+//   node prototype/sgs/scrape-generals.mjs --ids 606,740      增量:只抓这些 id 合并进现库(graduate / 新将)
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
@@ -167,7 +167,7 @@ async function scrapeIds(ids) {
   writeFileSync(p, JSON.stringify(list, null, 2));
   console.log(`✅ 合并 ${res.length} 将:${res.map((g) => `${g.id}${g.name}`).join(" ")} | 库 ${list.length} 将 | 清孤儿手录 ${ovr.pruned}`);
   if (toolReport.length) console.log(toolReport.join("\n"));
-  console.log("→ 记得跑 node prototype/build-pinyin.mjs(如有新名字)");
+  console.log("→ 记得跑 node prototype/sgs/build-pinyin.mjs(如有新名字)");
 }
 
 const isMain = import.meta.url === pathToFileURL(process.argv[1] || "").href;
