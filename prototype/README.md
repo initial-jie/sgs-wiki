@@ -15,7 +15,12 @@ sgs/                       三国杀
   client/room.html         ★ 三国杀房间前端(宣纸风)
   room-sim.mjs             "可执行规格":node 断言
   deck-test.mjs / build-*.mjs / scrape-generals.mjs / rebake-overrides.mjs  数据与测试脚本
-fengsheng/                 风声(游卡典藏版)——同一套 common/ 上的第二个游戏
+fengsheng/                 风声(游卡典藏版,线下辅助形态)——同一套 common/ 上的第二个游戏
+  shared/fs-logic.mjs      FsCore extends RoomBase:选角/身份保密、情报区、濒死死亡、回合、宣胜校验
+  shared/fs-data.mjs       角色/功能牌/神秘人任务/身份配比
+  worker.mjs               /fs 页面 + /fs/data.json + FsRoomDO
+  client/fs.html           风声房间前端(民国谍报档案风)
+  fs-sim.mjs               node 断言:node prototype/fengsheng/fs-sim.mjs
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由
 ```
 

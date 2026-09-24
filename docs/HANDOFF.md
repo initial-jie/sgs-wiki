@@ -1,6 +1,24 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **589 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **589 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 63 passed)确认基线,即可继续。
+
+## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
+
+**基线**:`node prototype/sgs/room-sim.mjs` → **589** · `node prototype/sgs/deck-test.mjs` → **26** · `node prototype/fengsheng/fs-sim.mjs` → **63**。
+
+**目录重排(`git mv` 保历史)**:
+- `prototype/common/` 公共房间库(游戏无关):`room-base.mjs`(RoomBase:座位认领/独占/替换/释放/改名/增删座位/序列化)· `visibility.mjs`(保密原语 applyVisibility,新增 `seatKeyed`)· `room-do.mjs`(RoomDOBase:WebSocket/持久化/2h TTL/解散/广播;游戏只写 `createCore/hydrateCore/onGameMessage`)· `client/room-client.js`(浏览器 RoomClient:设备 ID/断线重连/写阻断/改名/toast/加入表单,worker 在 `/common/room-client.js` 下发,wrangler.toml 有 Text 规则)。
+- `prototype/sgs/` = 原三国杀全部(shared/ client/ worker.mjs + 各脚本)。`RoomCore extends RoomBase`,行为不变。**房间页不再支持 file:// 直开**(要 worker 下发公共 JS),本地一律 `wrangler dev`。
+- `prototype/fengsheng/` = 风声。`prototype/worker/src/index.js` 只做路由。
+- 新游戏 = 新目录 + `XxxCore extends RoomBase` + `XxxRoomDO extends RoomDOBase` + 页面引 `/common/room-client.js` + 路由 + wrangler DO 绑定/迁移。
+
+**风声 v1(用户选「线下辅助」形态:桌上用实体牌,手机管秘密与台账)**,入口 `/fs`(三国杀连接页底部有互链),WebSocket `/api/fs/<码>/ws`,DO `FsRoomDO`(绑定 `FS_ROOM`,**迁移 v2**):
+- 开局:卡池(基础包/全部)→ 随机发角色 2 选 1(候选仅本人可见;也可用实体牌后手动登记)→ 系统发身份(配比可改,神秘人随机抽任务)或各自手动登记 → 选先手开局。
+- 保密:身份仅本人可见,阵亡/结束公开;隐藏角色面朝下时他人只见「隐藏角色」;「可宣胜」提示只看自己的情报+身份,不泄露队友;日志不写秘密。
+- 台账(全公开,任何人可改):情报区 红/蓝/黑/红黑/蓝黑(双色同时计两色),黑≥3 自动濒死,澄清=移除情报可脱离,确认死亡公开身份;当前回合/下一回合(跳过死者)。
+- 胜负:宣胜由服务端校验(阵营=任一队友集齐 3 张本色;神秘人按任务:双面间谍/镇压者/篡夺者自动判,篡夺者在其回合强制代替胜利);手动结算兜底;再来一局保留座位。
+- 数据 `fengsheng/shared/fs-data.mjs`:49 角色 + 13 功能牌 + 7 神秘人任务,抽自开源典藏版复刻客户端 Death-alter/TheMessage(AGPL,只取文本不取代码)。**⚠ 基础包名单是推断的**(id 1~30 去掉铁屋子的连鸢/端木静 = 28 人,官方基础包应为 30 人)→ **待用户对照实体盒子核对**;功能牌 平衡/欲擒故纵 归属也待核对。牌堆构成网上查不到(线下辅助形态用不到)。
+- ⚠ **须 `cd prototype/worker && npx wrangler deploy`**(本批含新 DO 迁移 v2)。
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 

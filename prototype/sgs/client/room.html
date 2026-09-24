@@ -630,7 +630,7 @@ function viewTeBanner(call){
     <span class="grow"><b style="color:var(--seal)">⚔ 孙权对你发动了天恩</b> · 请选择追加的一项权御</span>
     <button class="primary" data-tejump="${call.sqSeat}">去选择 →</button></div></div>`;
 }
-function viewConnect(){ return RoomClient.connectFormHtml(RC,{hint:"同一房间码即进同一桌(网页版 / app 版进同一个房间)。"}); }
+function viewConnect(){ return RoomClient.connectFormHtml(RC,{hint:"同一房间码即进同一桌(网页版 / app 版进同一个房间)。"})+'<div class="hint" style="text-align:center">玩风声?<a href="/fs" style="color:var(--seal)">去风声线下房间 →</a></div>'; }
 function bindConnect(){ RoomClient.bindConnectForm(RC); }
 
 function viewHeader(){

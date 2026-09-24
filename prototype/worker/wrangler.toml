@@ -7,10 +7,19 @@ compatibility_date = "2024-09-23"
 name = "ROOM"
 class_name = "RoomDO"
 
+# 风声房间(prototype/fengsheng/):同一个 worker,独立 DO 命名空间
+[[durable_objects.bindings]]
+name = "FS_ROOM"
+class_name = "FsRoomDO"
+
 # 用 SQLite-backed Durable Object —— Workers 免费计划即可使用
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["FsRoomDO"]
 
 # 注:各游戏的 *.html 以文本模块打进 worker(.html 默认即 Text),worker 直接吐客户端页(手机可直接开)。
 # 公共客户端脚本 common/client/*.js 也按文本打包,由 worker 在 /common/ 下发(否则会被当成 ES 模块)。
