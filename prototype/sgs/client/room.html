@@ -402,7 +402,7 @@ function choosePick(id){
 // ① 技能修正提示:该将技能经校正(线下版/线上增强/补全),与你手上的实体卡版本可能不同→查将时弹⚠
 function cardWarnHtml(hero){ return (hero&&hero.cardWarn)?`<div style="background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:var(--seal)"><b>⚠ 技能修正</b> ${esc(hero.cardWarn)}</div>`:""; }
 // ③ 同名可替换:OL 规则=同名武将只能选其一落座,神版为独立武将(可与一个非神版共存)。基名=剥版本前缀(神/界/谋/魔/SP);分组审计确认无假阳性
-function heroBaseName(name){ return (name||"").replace(/^(神|界|谋|魔|SP|梦)/,""); } // 梦=线下系列(梦貂蝉),与其他貂蝉同名互斥
+function heroBaseName(name){ return (name||"").replace(/^(神|界|谋|魔|SP|梦|教主|暴君|昏君)/,""); } // 梦=线下系列(梦貂蝉);教主/暴君/昏君=《不臣之心》模式专属将,与同名标准将互斥
 function sameNameVersions(hero){
   if(!hero||!hero.name||!Array.isArray(HEROES)) return null;
   const base=heroBaseName(hero.name);

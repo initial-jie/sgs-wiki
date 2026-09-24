@@ -191,6 +191,54 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75800.png",
     tool: null, offline: true,
   },
+  // ───── 《不臣之心》实体扩展 = OL 2026「不臣之君」身份新玩法的三个模式专属将(数据源:萌娘百科 三国杀:张角/董卓/刘宏 「不臣之君」节,2026-09-24)。
+  // 各自只能在对应模式当"君"用;模式规则写在 derived-skills-room.json 的说明卡里(查将带出)。立绘沿用本库同名标准将的官方图(OL 无独立 id)。
+  // 教主张角 —— 失心疯模式教主专属。群/3血。教主技〖蔽众〗。
+  {
+    id: 9019, name: "教主张角", genre: "不臣之君", series: "不臣", faction: "群",
+    factionSelectable: false, quality: "线下", hp: 3, initialHp: null,
+    tags: ["模式专属", "控制", "爆发"],
+    skills: [
+      { name: "雷击", effect: "当你使用或打出【闪】或使用【闪电】时，你可以进行判定。当你进行判定后，若结果为：黑桃，你对一名角色造成2点雷电伤害；梅花，你回复1点体力，可以对一名角色造成1点雷电伤害。" },
+      { name: "鬼道", effect: "当一名角色的判定牌生效前，你可以打出一张黑色牌替换之。若此牌为黑桃2-9，你摸一张牌。" },
+      { name: "蔽众", effect: "教主技，你杀死失心不执行惩罚；游戏开始时，你可以选择一名不为失心的其他角色，观看其身份牌并令其成为失心，然后可以任意交换所有失心的身份牌。" },
+    ],
+    characteristic: "《不臣之心》失心疯模式教主专属将（只能作为教主使用）。模式规则见下方说明卡。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/21200.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/21200.png",
+    tool: null, offline: true,
+  },
+  // 暴君董卓 —— 暴虐无道模式暴君专属。群/6血(模式规则暴君初始体力上限再+2 → 8,面板手动加)。暴君技〖肆虐〗。
+  {
+    id: 9020, name: "暴君董卓", genre: "不臣之君", series: "不臣", faction: "群",
+    factionSelectable: false, quality: "线下", hp: 6, initialHp: null,
+    tags: ["模式专属", "进攻", "爆发"],
+    skills: [
+      { name: "诈觥", effect: "出牌阶段开始时，你可以令一名其他角色选择一项：1.本回合所有手牌视为【酒】并受到你对其造成的1点伤害；2.视为对你使用一张【酒】并对你造成1点伤害。" },
+      { name: "凶戮", effect: "你可以将一张黑桃手牌当【酒】使用。你使用【酒】无次数限制。你使用【酒】【杀】需X张【闪】才能抵消（X为影响此【杀】的【酒】数量）。" },
+      { name: "崩坏", effect: "锁定技，结束阶段，若你不是体力值最低的角色，你减1点体力上限或失去1点体力。" },
+      { name: "肆虐", effect: "暴君技，锁定技，每轮开始时，你将体力回复至体力上限。每回合限一次，当你造成伤害时，你减1点体力上限并摸伤害值张牌，然后若受伤角色死亡，重置此技能。" },
+    ],
+    characteristic: "《不臣之心》暴虐无道模式暴君专属将（只能作为暴君使用）。牌面6血，模式规则暴君初始体力上限+2，登记后请在状态面板把上限改为8。模式规则见下方说明卡。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/4500.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/4500.png",
+    tool: null, offline: true,
+  },
+  // 昏君刘宏 —— 大忠似奸模式昏君专属。群/4血。昏君技〖障目〗;〖执笏〗是鬻爵授予他人的技能→放衍生技卡。
+  {
+    id: 9021, name: "昏君刘宏", genre: "不臣之君", series: "不臣", faction: "群",
+    factionSelectable: false, quality: "线下", hp: 4, initialHp: null,
+    tags: ["模式专属", "控制", "过牌"],
+    skills: [
+      { name: "鬻爵", effect: "出牌阶段限一次，你可以废除一个装备栏并选择一名有手牌的其他角色，令其交给你一张手牌，然后其获得〖执笏〗直到你的下回合开始。" },
+      { name: "图兴", effect: "锁定技，当你废除一个装备栏时，你加1点体力上限并回复1点体力；当你所有的装备栏首次均废除后，你减4点体力上限，然后你本局游戏接下来造成的伤害+1。" },
+      { name: "障目", effect: "昏君技，锁定技，当其他角色死亡时，若其不为义军，其身份不亮出，然后其他角色观看其身份；你杀死任意角色的奖惩均改为摸两张牌。" },
+    ],
+    characteristic: "《不臣之心》大忠似奸模式昏君专属将（只能作为昏君使用）。模式规则与授予他人的〖执笏〗见下方说明卡。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/50700.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/50700.png",
+    tool: null, offline: true,
+  },
   // 司马炎 —— 线下/OL未收录(用户提供文本+插画 assets/heroes/simayan.jpg)。晋主公,3血(用户 2026-07-13 确认)。
   {
     id: 9007, name: "司马炎", genre: "其他", series: "标", faction: "晋",
