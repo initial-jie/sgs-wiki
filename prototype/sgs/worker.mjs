@@ -7,6 +7,7 @@ import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text
 import GENERALS_DATA from "./shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
 import DERIVED_DATA from "./shared/derived-skills.json"; // 常见武将牌衍生技(查将时带出;从 index.html 衍生技区抽取)
 import DERIVED_ROOM from "./shared/derived-skills-room.json"; // 房间专属补充(如魔张飞入魔修改版,不进 wiki)
+import RULES_DATA from "./shared/rules.json"; // 规则集:身份模式规则/房规(大厅「规则集」卡,标题→iframe 整页)
 import DCARDS_DATA from "./shared/derived-cards.json"; // 常见武将牌衍生牌(查将时带出;从 index.html 衍生牌区抽取,按来源武将存)
 import DCARDS_ROOM from "./shared/derived-cards-room.json"; // 房间专属衍生牌(神黄月英三神装/族陆绩浑天仪等,不进 wiki)
 import DERIVED_EN from "./shared/derived-en.json"; // 衍生技/牌英文补丁 {武将→{名称→英文}};独立文件,重抽 derived-* 不丢 EN
@@ -58,6 +59,14 @@ const DERIVED_JSON = JSON.stringify(DERIVED_MERGED); // 衍生技(小),同上
 const DCARDS_JSON = JSON.stringify(DCARDS_MERGED);   // 衍生牌(小),同上
 const EQUIPMENT_JSON = JSON.stringify(EQUIPMENT_DATA); // 装备牌库(静态,直接吐)
 const BANNED_JSON = JSON.stringify({ pools: BANNED_DATA.pools || {} }); // ② 禁将四池(客户端 fetch 标记/展示;静态)
+// 规则集:目录只给 id/title/sub(小);正文由 /rules/{id}.html 吐成自包含整页,供大厅弹层 iframe 加载
+const RULES_INDEX_JSON = JSON.stringify(RULES_DATA.map(({ id, title, sub }) => ({ id, title, sub })));
+const RULE_PAGES = new Map(RULES_DATA.map((r) => [r.id, `<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${r.title}</title>
+<style>body{margin:0;padding:12px 14px 20px;font:15px/1.65 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;color:#2b2419;background:#fbf7ef}
+h1{font-size:19px;margin:0 0 2px;letter-spacing:.06em}.sub{font-size:12px;color:#7a6f60;margin:0 0 12px}h3{font-size:14px;margin:14px 0 4px;color:#a32e22;letter-spacing:.05em}
+p,li{margin:4px 0}ol,ul{padding-left:1.4em}ol ol{margin-top:4px}table{border-collapse:collapse;margin:6px 0;font-size:14px}th,td{border:1px solid #d9cfbd;padding:3px 12px;text-align:center}th{background:#efe7d6}
+.note{font-size:12.5px;color:#7a6f60;border-top:1px dashed #d9cfbd;padding-top:8px;margin-top:12px}.skill{font-weight:700;color:#a32e22}</style></head>
+<body><h1>${r.title}</h1><p class="sub">${r.sub || ""}</p>${r.html}</body></html>`]));
 
 // 三国杀 HTTP 路由。返回 Response 或 null(不归我管)。
 export function handleSgs(request, env, url) {
@@ -77,6 +86,11 @@ export function handleSgs(request, env, url) {
     if (url.pathname === "/derived-cards.json") return jsonResponse(DCARDS_JSON);
     if (url.pathname === "/equipment.json") return jsonResponse(EQUIPMENT_JSON);
     if (url.pathname === "/banned-generals.json") return jsonResponse(BANNED_JSON, 300);
+    if (url.pathname === "/rules.json") return jsonResponse(RULES_INDEX_JSON, 300);
+    if (url.pathname.startsWith("/rules/") && url.pathname.endsWith(".html")) { // 规则集正文整页(iframe)
+      const page = RULE_PAGES.get(url.pathname.slice(7, -5));
+      return page ? htmlResponse(page) : new Response("no such rule", { status: 404 });
+    }
     // 三国杀房间页:根路径(历史入口,手机收藏的链接不变)+ /sgs
     if (url.pathname === "/" || url.pathname === "/sgs" || url.pathname === "/sgs/" || url.pathname === "/index.html") return htmlResponse(ROOM_HTML);
   }

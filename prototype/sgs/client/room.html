@@ -244,6 +244,7 @@ let DERIVED={};                // 常见武将牌衍生技,按来源武将存:{�
 let DCARDS={};                  // 常见武将牌衍生牌,按来源武将存:{武将名(去·空格)→[{name,src,text}]};从 /derived-cards.json 拉
 let EQUIP=[];                    // 装备牌库(/equipment.json);#2 装备区/坐骑下拉数据源(按 slot.types 过滤)
 let BAN_POOLS={};                // ② 禁将四池(/banned-generals.json):{poolKey:{label,seats,ids:[]}}
+let RULES=[];                    // 规则集目录(/rules.json):[{id,title,sub}];正文在 /rules/{id}.html,弹层 iframe 加载
 function banPoolKey(){ const n=state?Object.keys(state.seats).length:0; return n>=5?"junzheng":n===4?"2v2":n===3?"douzhu":"1v1"; } // 按座位数选池(与 room-logic banPoolForSeats 一致)
 function banPoolIds(){ const p=BAN_POOLS[banPoolKey()]; return (p&&p.ids)||[]; }
 function banOn(){ return !state||state.banEnabled!==false; }  // 房内总开关(默认开)
@@ -261,6 +262,7 @@ function loadHeroes(){
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
   fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ EQUIP=d; if(state)render(); }).catch(()=>{}); // 装备牌库→装备槽下拉
   fetch("/banned-generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ BAN_POOLS=d.pools||{}; if(state)render(); }).catch(()=>{}); // ② 禁将四池
+  fetch("/rules.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ RULES=Array.isArray(d)?d:[]; if(state)render(); }).catch(()=>{}); // 规则集目录
 }
 // 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
 function derivedCardsHtml(hero){
@@ -540,9 +542,10 @@ function render(){
     focus=null;
     h+=viewHeader();
     h+=viewSeats();
+    h+=viewToolsIndex(); // 登场工具最常用,放全场状态之上(用户 2026-09-25)
     h+=viewPanel();
-    h+=viewToolsIndex();
     h+=viewBannedPool();
+    h+=viewRulesIndex();
     h+=viewRoomAdmin();
   }
   h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
@@ -559,6 +562,20 @@ function viewFocusHeader(seat){
 }
 
 // ② 禁将池展示:任何玩家可看/可切总开关。按座位数自动选池(≥5军争/4 2v2/3斗地主/2 1v1);拼音序+缩略图,点开=查看技能(选定被禁)。当前池为空则不显示
+// 规则集:身份模式规则/房规 目录卡(只列标题;点开弹层 iframe 加载 /rules/{id}.html 整页)。目录为空则不显示
+function viewRulesIndex(){
+  if(!RULES.length) return "";
+  let h=`<div class="card"><h2>规则集<span class="tag">${RULES.length} 条 · 点标题查看</span></h2>`;
+  h+=RULES.map(r=>`<div class="row" data-rule="${esc(r.id)}" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer"><span class="grow"><b>${esc(r.title)}</b>${r.sub?`<div class="hint" style="margin:1px 0 0">${esc(r.sub)}</div>`:""}</span><span style="color:var(--ink-soft)">›</span></div>`).join("");
+  return h+`</div>`;
+}
+function openRule(id){
+  const r=RULES.find(x=>x.id===id); if(!r) return;
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet" style="padding:10px 10px 8px">
+    <h2 style="margin-bottom:6px">${esc(r.title)}<span class="x" data-mclose="1">×</span></h2>
+    <iframe src="/rules/${esc(r.id)}.html" title="${esc(r.title)}" style="width:100%;height:min(72vh,640px);border:1px solid var(--line);border-radius:6px;background:#fbf7ef"></iframe></div></div>`;
+  maskClose();
+}
 function viewBannedPool(){
   if(!Array.isArray(HEROES)) return "";
   const key=banPoolKey(), pool=BAN_POOLS[key]||{}, ids=banPoolIds();
@@ -1149,6 +1166,7 @@ function bindAll(){
   q("[data-tejump]").forEach(b=>b.onclick=()=>{focus=+b.dataset.tejump;render();});
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
   q("[data-banview]").forEach(b=>b.onclick=()=>previewHero(+b.dataset.banview));
+  q("[data-rule]").forEach(b=>b.onclick=()=>openRule(b.dataset.rule)); // 规则集:标题→iframe 弹层
   q("[data-bantoggle]").forEach(b=>b.onclick=()=>send({type:"setBanEnabled",on:b.dataset.bantoggle==="1"})); // ② 禁将总开关(房内共享) // ② 禁将池点头像→查看技能(选定被禁)
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});
