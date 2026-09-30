@@ -16,12 +16,14 @@ catch {
 }
 
 const generals = JSON.parse(readFileSync(new URL("./shared/generals.json", import.meta.url), "utf8"));
+// 人工修正:pinyin-pro 的姓氏表也读不对的(生成后整条覆盖)。逢 作姓氏读 páng(《广韵》薄江切),游戏内亦念 pang ji(用户 2026-09-30 核实)
+const FIX = { "逢纪": "pang ji", "郭图逢纪": "guo tu pang ji" };
 const out = {};
 for (const name of [...new Set(generals.map((h) => h.name))].sort((a, b) => a.localeCompare(b, "zh"))) {
   // surname:"head" 让首字按姓氏读音(乐进=yue、张郃=he、单福=shan、尉迟=yuchi);nonZh 让 "SP" 这类整段保留
   const syl = pinyin(name, { toneType: "none", type: "array", surname: "head", nonZh: "consecutive" })
     .map((s) => s.toLowerCase().replace(/ü/g, "v"));
-  out[name] = syl.join(" ");
+  out[name] = FIX[name] || syl.join(" ");
 }
 writeFileSync(new URL("./shared/hero-pinyin.json", import.meta.url), JSON.stringify(out, null, 1) + "\n");
 console.log(`✓ hero-pinyin.json:${Object.keys(out).length} 个武将名`);
