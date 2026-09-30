@@ -158,7 +158,7 @@ const RC=RoomClient.create({
   wsPath: code=>"/api/fs/"+code+"/ws",
   errorText:{NOT_WIN_YET:"还没达成胜利条件",NO_IDENTITY:"你还没有身份",DEAD:"该角色已阵亡",GAME_OVER:"本局已结束,点「再来一局」",
     COUNT_MISMATCH:"身份配比总数要等于座位数",POOL_TOO_SMALL:"卡池角色不够发",NOT_OFFERED:"只能从发给你的候选里选",
-    TOO_MANY_GREEN:"神秘人太多,任务不够分(可切到「全部」卡池)",NO_CHAR:"该座位还没选角色",CHAR_TAKEN:"这名角色已被别人公开选用"},
+    TOO_MANY_GREEN:"神秘人太多,任务不够分(可切到「全部」卡池)",NO_CHAR:"该座位还没选角色",CHAR_TAKEN:"这名角色已被别人公开选用",BAD_GIVE_TO:"手牌只能交给另一名存活角色"},
   beforeConnect(){ state=null; closeModal(); },
   onState(m){ state=m; render(); },
   onClosed(){ state=null; closeModal(); render(); },
@@ -423,7 +423,7 @@ function viewSeats(){
 function viewRef(){
   const cards=DATA.cards.filter(c=>c.pack==="base"), tasks=DATA.tasks.filter(t=>state.pack==="all"||t.pack==="base");
   return `<div class="card ref"><details data-k="ref"><summary><b style="font-family:var(--display);font-size:15px;color:var(--ink)">规则速查</b> · 阵营 / 神秘人任务 / 功能牌</summary>
-    <p style="margin-top:8px"><b>胜负</b>:${facHtml("red")} 本阵营任一角色收集 3 张红色情报;${facHtml("blue")} 收集 3 张蓝色情报;${facHtml("green")} 完成秘密任务。双色情报同时计入两种颜色。收集 3 张黑色情报即濒死,无人救则死亡、身份公开。</p>
+    <p style="margin-top:8px"><b>胜负</b>:${facHtml("red")} 本阵营任一角色收集 3 张红色情报;${facHtml("blue")} 收集 3 张蓝色情报;${facHtml("green")} 完成秘密任务。双色情报同时计入两种颜色。收集 3 张黑色情报即濒死,无人救则死亡:身份不公开,至多 3 张手牌交给一名其他角色,其余手牌和情报区进入弃牌堆。</p>
     <p><b>回合</b>:摸牌 → 出牌 → 传递(必须传出一张情报,按牌上箭头方向)→ 争夺 → 接收。</p>
     <p style="margin-top:8px"><b>神秘人任务</b></p>${tasks.map(t=>`<p>· <b>${esc(t.name)}</b>:${esc(t.text)}</p>`).join("")}
     <p style="margin-top:8px"><b>功能牌</b></p>${cards.map(c=>`<p>· <b>【${esc(c.name)}】</b>${esc(c.text).replace(/\n/g,"<br>")}</p>`).join("")}
@@ -455,11 +455,15 @@ function openIntelSheet(seatNo){
   if(state.phase!=="over"){
     h+=`<div class="row" style="margin-top:12px">`;
     if(s.dead) h+=`<button class="ghost" data-a="revive" data-s="${seatNo}">撤销死亡</button>`;
-    else h+=`<button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>`;
+    else h+=`<label style="display:flex;align-items:center;gap:5px">手牌交给<select id="give-${seatNo}" style="width:auto;padding:6px 8px">
+        <option value="">不交</option>${seatsArr().filter(x=>x.seatNo!==seatNo&&!x.dead).map(x=>`<option value="${x.seatNo}">${x.seatNo} 号</option>`).join("")}</select></label>
+      <button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>`;
     if(state.phase==="play"&&state.turn!==seatNo&&!s.dead) h+=`<button class="ghost" data-a="setTurn" data-s="${seatNo}">设为当前回合</button>`;
     if(s.hasChar&&!state.youHold.includes(seatNo)) h+=`<button class="ghost" data-a="flip" data-s="${seatNo}" data-up="${s.faceUp?0:1}">${s.faceUp?"角色翻至面朝下":"翻开其角色(技能效果)"}</button>`;
     h+=`</div>`;
-    if(s.dying) h+=`<div class="hint">濒死:可用【澄清】移除一张黑色情报救回;无人救就确认死亡(身份会公开)。</div>`;
+    if(s.dying) h+=`<div class="hint">濒死:可用【澄清】移除一张黑色情报救回;无人救就确认死亡。</div>`;
+    if(!s.dead) h+=`<div class="hint">死亡时<b>身份不公开</b>:死者把至多 3 张手牌交给一名其他角色,其余手牌和情报区的牌进入弃牌堆(App 会清空其情报区)。</div>`;
+    else if(s.gaveTo!=null) h+=`<div class="hint">已将至多 3 张手牌交给 ${s.gaveTo} 号。</div>`;
   }
   $("#modal").innerHTML=h+`</div></div>`;
 }
@@ -500,7 +504,8 @@ document.addEventListener("click",e=>{
     case "setTurn": act("setTurn",{seatNo:sn}); break;
     case "addIntel": act("addIntel",{seatNo:sn,kind:b.dataset.k}); break;
     case "rmIntel": act("removeIntel",{seatNo:sn,intelId:+b.dataset.i}); break;
-    case "death": if(confirm(sn+" 号确认死亡?其身份将公开。")) act("confirmDeath",{seatNo:sn}); break;
+    case "death": { const g=$("#give-"+sn), to=g&&g.value?+g.value:null;
+      if(confirm(sn+" 号确认死亡?\n身份不公开;"+(to?"至多 3 张手牌交给 "+to+" 号,":"")+"其余手牌与情报区进入弃牌堆。")) act("confirmDeath",{seatNo:sn,giveTo:to}); break; }
     case "revive": act("revive",{seatNo:sn}); break;
     case "newGame": if(confirm("再来一局?清空角色、身份和情报,保留座位。")) act("newGame"); break;
     case "forceEnd": { const w=prompt("手动结算(技能特殊胜利/规则争议):输入胜者座位号,用逗号分隔,如 2,5"); if(w==null) break;

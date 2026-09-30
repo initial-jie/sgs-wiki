@@ -2,7 +2,7 @@
 // 被 fengsheng/fs-sim.mjs(node 断言)与 fengsheng/worker.mjs(Durable Object)共用;座位/设备骨架继承 common/room-base.mjs。
 //
 // 保密模型(按设备持有的座位过滤,见 _seatView):
-//   - 身份(阵营 + 神秘人任务):仅本人/代持可见;阵亡或本局结束后公开。
+//   - 身份(阵营 + 神秘人任务):仅本人/代持可见;本局结束后公开(阵亡不公开——规则如此)。
 //   - 角色 2 选 1 的候选:仅本人可见。选定的角色若是「隐藏角色」且面朝下,他人只见"隐藏角色",翻开后公开。
 //   - 情报区、濒死/阵亡、当前回合、日志:全公开(桌面本来就是明的)。日志不写任何秘密内容。
 //   - 「你可以宣胜」提示只看自己的情报区 + 自己的身份,不泄露队友信息。
@@ -228,20 +228,25 @@ export class FsCore extends RoomBase {
         if (s.dying && intelCounts(s.intel).black < 3) { s.dying = false; this._log(`${this._name(seatNo)}脱离濒死`); }
         return { ok: true };
       }
-      case "confirmDeath": { // 濒死无人救 / 其他致死 → 确认死亡:身份公开,记入本回合死亡(镇压者/清道夫)
+      case "confirmDeath": { // 濒死无人救 / 其他致死 → 确认死亡。规则:身份【不公开】;死者将至多 3 张手牌交给一名其他角色,
+        // 其余手牌与情报区的牌进入弃牌堆。手牌在桌上(App 不记),App 只清情报区 + 可选记录交给了谁(giveTo,公开动作)。
+        // 死亡瞬间的情报区计数进 turnDeaths(镇压者/清道夫/先行者判定用),原情报区备份在 deathIntel 供「撤销死亡」还原。
         const e = needSeat() || overGuard(); if (e) return e;
         if (s.dead) return { error: "DEAD" };
+        let giveTo = msg.giveTo == null || msg.giveTo === "" ? null : Number(msg.giveTo);
+        if (giveTo != null && (giveTo === seatNo || !this.seats[giveTo] || this.seats[giveTo].dead)) return { error: "BAD_GIVE_TO" };
         const c = intelCounts(s.intel);
         s.dead = true; s.dying = false;
+        s.deathIntel = s.intel; s.intel = []; s.gaveTo = giveTo;
         this.turnDeaths.push({ seat: seatNo, rb: c.red + c.blue, redLe1: c.red <= 1, blueLe1: c.blue <= 1 });
-        const idn = s.identity ? FACTIONS[s.identity.faction].name + (s.identity.task ? "·" + TASK_BY_KEY[s.identity.task].name : "") : "未登记";
-        this._log(`✝ ${this._name(seatNo)}死亡,身份公开:${idn}`);
+        this._log(`✝ ${this._name(seatNo)}死亡:` + (giveTo != null ? `至多 3 张手牌交给 ${this._name(giveTo)},` : "") + "其余手牌与情报区进入弃牌堆");
         return { ok: true };
       }
-      case "revive": { // 误操作撤销
+      case "revive": { // 误操作撤销:还原死亡前的情报区
         const e = needSeat() || overGuard(); if (e) return e;
         if (!s.dead) return { error: "NOT_DEAD" };
-        s.dead = false; s.dying = intelCounts(s.intel).black >= 3;
+        s.dead = false; s.intel = (s.deathIntel || []).concat(s.intel); s.deathIntel = null; s.gaveTo = null;
+        s.dying = intelCounts(s.intel).black >= 3;
         this.turnDeaths = this.turnDeaths.filter((d) => d.seat !== seatNo);
         this._log(`${this._name(seatNo)}撤销死亡`);
         return { ok: true };
@@ -305,11 +310,11 @@ export class FsCore extends RoomBase {
     const mine = holds.has(s.seatNo);
     const open = this.phase === "over";
     const v = { seatNo: s.seatNo, holderDevices: s.holderDevices.slice(), intel: clone(s.intel), counts: intelCounts(s.intel),
-      dying: !!s.dying, dead: !!s.dead, faceUp: !!s.faceUp, hasChar: s.charId != null, hasIdentity: !!s.identity };
+      dying: !!s.dying, dead: !!s.dead, gaveTo: s.gaveTo ?? null, faceUp: !!s.faceUp, hasChar: s.charId != null, hasIdentity: !!s.identity };
     // 角色:面朝上 / 本人 / 结束 → 可见;否则只知道"有一张面朝下的隐藏角色"
     v.charId = (s.charId != null && (s.faceUp || mine || open)) ? s.charId : null;
-    // 身份:本人 / 阵亡 / 结束 → 可见
-    v.identity = (s.identity && (mine || s.dead || open)) ? clone(s.identity) : null;
+    // 身份:本人 / 结束 → 可见(阵亡不公开)
+    v.identity = (s.identity && (mine || open)) ? clone(s.identity) : null;
     if (mine) {
       v.offers = s.offers.slice();
       v.canWin = this.phase === "play" && this._selfCanWin(s.seatNo);

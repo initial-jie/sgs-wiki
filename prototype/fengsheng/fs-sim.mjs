@@ -91,11 +91,15 @@ const blackId = room.seats[3].intel.find((x) => x.kind === "k").id;
 check("移除一张黑情报(澄清)→脱离濒死", act(4, { op: "removeIntel", seatNo: 3, intelId: blackId }).ok && room.seats[3].dying === false);
 act(2, { op: "addIntel", seatNo: 3, kind: "k" });
 check("再次濒死", room.seats[3].dying);
-check("确认死亡", act(1, { op: "confirmDeath", seatNo: 3 }).ok && room.seats[3].dead);
-check("死者身份全场公开", V(1).seats[3].identity?.faction === "blue");
+check("手牌不能交给自己", act(1, { op: "confirmDeath", seatNo: 3, giveTo: 3 }).error === "BAD_GIVE_TO");
+check("确认死亡(手牌交给 4 号)", act(1, { op: "confirmDeath", seatNo: 3, giveTo: 4 }).ok && room.seats[3].dead);
+check("死者身份不公开", V(1).seats[3].identity === null && V(3).seats[3].identity?.faction === "blue");
+check("死者情报区进入弃牌堆(清空)", room.seats[3].intel.length === 0 && V(1).seats[3].counts.total === 0);
+check("记录手牌交给谁(公开)", V(1).seats[3].gaveTo === 4 && room.log[0].includes("交给 4号"));
+check("日志不写死者身份", !room.log[0].includes("特工") && !room.log[0].includes("潜伏"));
 check("本回合死亡被记录(红蓝合计 2)", room.turnDeaths.length === 1 && room.turnDeaths[0].rb === 2);
 check("死者不能再加情报", act(1, { op: "addIntel", seatNo: 3, kind: "r" }).error === "DEAD");
-check("撤销死亡", act(1, { op: "revive", seatNo: 3 }).ok && !room.seats[3].dead && room.seats[3].dying && room.turnDeaths.length === 0);
+check("撤销死亡(情报区还原)", act(1, { op: "revive", seatNo: 3 }).ok && !room.seats[3].dead && room.seats[3].dying && room.seats[3].intel.length === 3 && room.turnDeaths.length === 0);
 act(1, { op: "confirmDeath", seatNo: 3 });
 
 console.log("\n=== 回合 ===");
