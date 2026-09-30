@@ -254,17 +254,16 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77000.png",
     tool: null, offline: true,
   },
-  // 谢灵毓 —— 「元嫡」olwiki 原文含 {0} 占位(卡面为牌名图标组,抓取缺失),已用文字占位并标 cardWarn 待用户对卡核对
+  // 谢灵毓 —— 「元嫡」olwiki 原文含 {0} 占位(卡面为牌名图标组),用户 2026-09-30 对卡补全为【杀】【闪】【桃】【酒】
   {
     id: 9023, name: "谢灵毓", genre: "璀璨星河", series: "标", faction: "吴",
     factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
     tags: ["爆发", "过牌"],
     skills: [
-      { name: "元嫡", effect: "锁定技，当每回合首次有〔一组牌名〕均进入过弃牌堆后，你摸一张牌。若其中有牌不因使用进入弃牌堆，且剩余牌名大于一，你移除一个牌名。" },
+      { name: "元嫡", effect: "锁定技，当每回合首次有【杀】【闪】【桃】【酒】为一组的牌名均进入过弃牌堆后，你摸一张牌。若其中有牌不因使用进入弃牌堆，且剩余牌名大于一，你移除一个牌名。" },
       { name: "心幽", effect: "出牌阶段限一次，你可弃置任意张基本牌，然后摸一张牌，并重复此流程，直到你因此获得未弃置基本牌的牌名（至多摸5且本回合不计入手牌上限）。" },
     ],
     characteristic: "基本牌进入弃牌堆获取收益，可以创造大量过牌。",
-    cardWarn: "「元嫡」中〔一组牌名〕处原文为牌名图标（olwiki 抓取缺失），请以实体卡/游戏内为准并告知补全", // ⚠ 手录将的 cardWarn 直接写条目(SKILL_OVERRIDES 在追加手录将之前处理,贴不上)
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76900.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76900.png",
     tool: null, offline: true,
