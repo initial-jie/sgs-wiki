@@ -21397,5 +21397,129 @@
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/50701.png",
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9022,
+    "name": "谋周瑜",
+    "genre": "谋",
+    "series": "谋",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "限定",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "攻击",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "醉锋",
+        "effect": "出牌阶段限X次（X为你的体力上限），你可弃置一个花色的唯一手牌并选择一名角色，你观看其的手牌并展示其中一张。若弃置牌与展示牌花色相同，你对其造成1点火焰伤害。其可将此牌当【酒】对你使用。"
+      },
+      {
+        "name": "顾曲",
+        "effect": "锁定技，你的回合内：被展示过的手牌称为“阙”；手牌中有“阙”的其他角色只能使用“阙”；当有“阙”被使用后，你摸两张牌。"
+      }
+    ],
+    "characteristic": "操纵全场展示牌，拥有灵活的直伤能力，可以转化多张酒。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77000.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77000.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9023,
+    "name": "谢灵毓",
+    "genre": "璀璨星河",
+    "series": "标",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "爆发",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "元嫡",
+        "effect": "锁定技，当每回合首次有〔一组牌名〕均进入过弃牌堆后，你摸一张牌。若其中有牌不因使用进入弃牌堆，且剩余牌名大于一，你移除一个牌名。"
+      },
+      {
+        "name": "心幽",
+        "effect": "出牌阶段限一次，你可弃置任意张基本牌，然后摸一张牌，并重复此流程，直到你因此获得未弃置基本牌的牌名（至多摸5且本回合不计入手牌上限）。"
+      }
+    ],
+    "characteristic": "基本牌进入弃牌堆获取收益，可以创造大量过牌。",
+    "cardWarn": "「元嫡」中〔一组牌名〕处原文为牌名图标（olwiki 抓取缺失），请以实体卡/游戏内为准并告知补全",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76900.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76900.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9024,
+    "name": "逢纪",
+    "genre": "璀璨星河",
+    "series": "标",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "愎果",
+        "effect": "摸牌阶段结束时，你可弃置一张牌，从牌堆中展示并获得每个类型的牌各一张。然后你本回合成为牌的目标后，你可以拼点，没赢的角色本回合不能使用或打出与双方拼点牌类型相同的牌。"
+      },
+      {
+        "name": "斗誉",
+        "effect": "你的拼点牌亮出前，你可以与对方交换拼点牌，若你赢，你摸两张牌。"
+      }
+    ],
+    "characteristic": "可以通过拼点限制他人出牌，拼点时可以与对手的拼点牌交换。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/67900.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/67900.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9025,
+    "name": "族荀灌",
+    "genre": "门阀士族",
+    "series": "族",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "攻击"
+    ],
+    "skills": [
+      {
+        "name": "遁迹",
+        "effect": "锁定技，当你每回合首次使用黑色牌后，你令一名角色用一张手牌交换此牌。"
+      },
+      {
+        "name": "云影",
+        "effect": "锁定技，每个结束阶段，上次“遁迹”目标角色每满足一项，你便执行一项：1.本回合扣减过体力，你将所有黑色手牌当无距离限制的【杀】使用；2.本回合失去过手牌，你将手牌摸至X张（X为本回合弃牌堆中黑色牌数且至多为5）。"
+      },
+      {
+        "name": "蹈节",
+        "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。"
+      }
+    ],
+    "characteristic": "技能发动较灵活，要关注全场黑色牌流向。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74800.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74800.png",
+    "tool": null,
+    "offline": true
   }
 ]
