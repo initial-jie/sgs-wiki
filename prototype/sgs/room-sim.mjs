@@ -1346,6 +1346,26 @@ console.log("\n=== 场景 20:线上发将 ===");
     if (rm.deal.hands[3].slots.length !== 6 + Math.min(DEAL_LORD_EXTRA, P({ whitelist: SEED }).lord.length)) bad++;
   }
   check("200 个随机种子 × 8 人局:一坑一人/曹丕仅君主/换将不重复 全部成立", bad === 0);
+  // 模式专属君主(教主张角/暴君董卓/昏君刘宏)只允许出现在「对应模式 + 君主的额外候选」;白名单里勾了也不例外(SEED 里三位都勾着)
+  {
+    const { DEAL_MODES } = await import("./shared/deal.mjs");
+    const exIds = new Set(["教主张角", "暴君董卓", "昏君刘宏"].map(idOf));
+    let stray = 0, forcedOk = 0, runs = 0;
+    for (const mode of Object.keys(DEAL_MODES)) for (const lord of [1, null]) for (let s = 1; s <= 40; s++) {
+      let x = s * 104729; const r = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+      const rm = new RoomCore("t", 8, r); for (let i = 1; i <= 8; i++) rm.claimSeat("p" + i, i);
+      rm.dealStart("p1", { mode, lordSeat: lord, pools: P({ whitelist: SEED, mode }) }); runs++;
+      for (let k = 0; k < 6; k++) for (let n = 2; n <= 8; n++) rm.dealSwap("p" + n, { seatNo: n, slot: k });
+      const want = DEAL_MODES[mode].lordHero;
+      for (const [n, h] of Object.entries(rm.deal.hands)) for (const q of h.slots) for (const o of q.opts) {
+        if (!exIds.has(o.id)) continue;
+        if (+n === lord && q.src === "lord" && o.name === want) forcedOk++; else stray++;
+      }
+      for (const g of rm.deal.pool) for (const o of g.opts) if (exIds.has(o.id)) stray++;
+    }
+    check("⭐ 模式专属君主不越界(4 模式×有/无君主×40 种子,含全员换将后与剩余将池)", stray === 0 && runs === 320);
+    check("对应模式且有君主时,专属君主必在君主额外候选里", forcedOk === 3 * 40);
+  }
 }
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
