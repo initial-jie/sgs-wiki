@@ -597,6 +597,7 @@ function viewBannedPool(){
 function viewRoomAdmin(){
   return `<div class="card"><h2>房间设置</h2>
     <div class="hint">房间在最后一次操作 <b>2 小时</b>后自动解散 —— 所有人锁屏 / 离开页面也不会立刻消失,回来还在。</div>
+    <div class="row" style="margin-top:8px"><a href="/pool" target="_blank" rel="noopener" style="font-size:13px;color:var(--ink-soft)">🗂 将池编辑(发将白名单)→</a></div>
     <div class="row" style="margin-top:8px"><button class="ghost grow" data-disband="1" style="color:var(--seal);border-color:var(--seal)">🗑 解散房间(所有人退出,不可恢复)</button></div></div>`;
 }
 // 天恩待选:若有孙权对我持有的座位发动了天恩·不同项,返回 {sqSeat,target} 供全局横幅提示

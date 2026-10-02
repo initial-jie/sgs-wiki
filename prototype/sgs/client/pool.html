@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>将池编辑 · 三国杀线下房间</title>
+<style>
+/* 将池(白名单)编辑页:全部武将按「包」分组,点武将入池/出池;保存即写服务端(SgsConfigDO),所有房间下次发将生效。
+   数据:/generals.json(带 pack 字段,新录武将自动出现)+ /api/pool(GET 读 / PUT 存)。与禁将表无关(禁将=池内但当前环境不让用的强将)。 */
+:root{--bg:#efe6d2;--paper:#fbf7ef;--ink:#2b2419;--soft:#7a6f60;--line:#d9cfbd;--seal:#a32e22;--qi:#c2982f;
+  --wei:#2b6cb0;--shu:#b23b2e;--wu:#2f7d4f;--qun:#6b6257;--jin:#6a4a9c;--shen:#b08a1e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;padding:0 12px 80px;max-width:900px;margin:0 auto}
+h1{font-size:20px;letter-spacing:.06em;margin:14px 0 2px;text-align:center}
+.sub{text-align:center;color:var(--soft);font-size:12px;margin-bottom:10px}
+button{font:inherit;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:7px;padding:6px 11px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--seal);border-color:var(--seal);color:#f6ecd8;font-weight:600}
+button.mini{font-size:12px;padding:2px 9px;color:var(--soft)}
+button:disabled{opacity:.45;cursor:default}
+input{font:inherit;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--paper);color:var(--ink);min-width:0}
+#bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 0 8px;border-bottom:1px solid var(--line)}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.grow{flex:1 1 0;min-width:0}
+#count{font-weight:700;font-size:15px}
+#dirty{font-size:12px;color:var(--seal);font-weight:600}
+.fl{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:3px 11px;background:transparent;color:var(--soft)}
+.fl.on{border-color:var(--seal);color:var(--seal);font-weight:600}
+details.fam{background:rgba(255,252,244,.75);border:1px solid var(--line);border-top:3px solid var(--seal);border-radius:9px;margin-top:11px;padding:0 12px 8px}
+details.fam>summary{cursor:pointer;padding:10px 0 8px;font-weight:800;font-size:16px;letter-spacing:.06em;list-style:none;display:flex;gap:8px;align-items:center}
+details.fam>summary::-webkit-details-marker{display:none}
+details.fam>summary::before{content:"▸";color:var(--soft);font-size:12px}
+details.fam[open]>summary::before{content:"▾"}
+.cnt{font-size:12px;font-weight:400;color:var(--soft);letter-spacing:0}
+.cnt b{color:var(--seal)}
+.pack{border-top:1px dashed var(--line);padding:8px 0 4px}
+.pack-h{display:flex;gap:8px;align-items:center;margin-bottom:5px}
+.pack-h .nm{font-weight:700;font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.h{font-size:13px;padding:3px 9px 3px 7px;border-radius:6px;border:1px solid var(--line);border-left:4px solid var(--qun);background:transparent;color:var(--soft);position:relative}
+.h.f-wei{border-left-color:var(--wei)}.h.f-shu{border-left-color:var(--shu)}.h.f-wu{border-left-color:var(--wu)}
+.h.f-jin{border-left-color:var(--jin)}.h.f-shen{border-left-color:var(--shen)}
+.h.on{background:#fff7e6;color:var(--ink);border-color:var(--qi);border-left-width:4px;font-weight:600;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.h.on::after{content:"✓";color:var(--seal);margin-left:4px;font-size:11px}
+.h.new::before{content:"新";position:absolute;top:-7px;right:-5px;font-size:9px;background:var(--seal);color:#fff;border-radius:8px;padding:0 4px;line-height:14px;font-weight:400}
+.h.tool{text-decoration:underline dotted var(--soft);text-underline-offset:3px}
+.hide{display:none!important}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(43,36,25,.92);color:#f6ecd8;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+#toast.show{opacity:1}
+#exp{display:none;margin-top:8px}
+#exp textarea{width:100%;height:110px;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:7px;padding:8px;background:var(--paper)}
+.legend{font-size:12px;color:var(--soft);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 9px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<h1>将池编辑</h1>
+<div class="sub">点武将入池 / 出池 · 保存后所有房间下次发将立即生效 · 与禁将表互不影响</div>
+
+<div id="bar">
+  <div class="row">
+    <span id="count">加载中…</span><span id="dirty"></span>
+    <span class="grow"></span>
+    <button id="b-exp" class="mini">导出</button>
+    <button id="b-save" class="primary" disabled>保存</button>
+  </div>
+  <div class="row" style="margin-top:7px">
+    <input id="q" class="grow" placeholder="搜武将名 / 拼音 / 首字母,如 关羽 guanyu gy" autocomplete="off" autocapitalize="off">
+    <button class="fl on" data-f="all">全部</button>
+    <button class="fl" data-f="on">已选</button>
+    <button class="fl" data-f="off">未选</button>
+    <button class="fl" data-f="new">新录入</button>
+  </div>
+  <div id="exp"><textarea readonly></textarea>
+    <div class="row" style="margin-top:5px"><button id="b-copy" class="mini">复制</button><span class="legend" style="margin:0">发给 Claude 可作为仓库里的种子/备份快照</span></div></div>
+</div>
+
+<div class="legend">势力色条:<i style="background:var(--wei)"></i>魏<i style="background:var(--shu)"></i>蜀<i style="background:var(--wu)"></i>吴<i style="background:var(--qun)"></i>群<i style="background:var(--jin)"></i>晋<i style="background:var(--shen)"></i>神 · 虚线下划线 = 带房间工具</div>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// 大类(包名「-」前的部分)展示顺序;没列到的排在「国战」之前。国战默认折叠(一般不进身份局将池)
+const FAM_ORDER=["标准","神话再临","界限突破","一将成名","界一将","SP","璀璨星河","门阀士族","谋","魔","祈福","文德武备","闪","限定","不臣之君","线下","移动版","其他"];
+const FAM_LAST=["国战"];
+const FCLS={"魏":"wei","蜀":"shu","吴":"wu","群":"qun","晋":"jin","神":"shen"};
+let HEROES=[],sel=new Set(),saved=new Set(),seen=new Set(),hasSaved=false,filter="all",q="";
+const closed=new Set(FAM_LAST);
+
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),1800);}
+const famOf=p=>String(p||"其他").split("-")[0];
+function famRank(f){const i=FAM_ORDER.indexOf(f);if(i>=0)return i;if(FAM_LAST.includes(f))return 900+FAM_LAST.indexOf(f);return 500;}
+function dirty(){if(sel.size!==saved.size)return true;for(const i of sel)if(!saved.has(i))return true;return false;}
+function matches(h){
+  if(filter==="on"&&!sel.has(h.id))return false;
+  if(filter==="off"&&sel.has(h.id))return false;
+  if(filter==="new"&&!(hasSaved&&!seen.has(h.id)))return false;
+  if(!q)return true;
+  if(/[一-鿿]/.test(q))return h.name.includes(q);
+  const py=(h.py||"").split(" "),s=q.toLowerCase();
+  if(!py[0])return false;
+  if(py.join("").startsWith(s)||py.map(x=>x[0]).join("").startsWith(s))return true;
+  for(let i=1;i<py.length;i++)if(py.slice(i).join("").startsWith(s))return true; // 音节边界起的后缀(guanyu 中 界关羽)
+  return false;
+}
+
+function build(){
+  const fams=new Map();
+  for(const h of HEROES){
+    const p=h.pack||h.genre||"其他",f=famOf(p);
+    if(!fams.has(f))fams.set(f,new Map());
+    const packs=fams.get(f); if(!packs.has(p))packs.set(p,[]);
+    packs.get(p).push(h);
+  }
+  const fkeys=[...fams.keys()].sort((a,b)=>famRank(a)-famRank(b)||a.localeCompare(b,"zh"));
+  let html="";
+  for(const f of fkeys){
+    const packs=fams.get(f);
+    const pkeys=[...packs.keys()].sort((a,b)=>a.localeCompare(b,"zh",{numeric:true}));
+    html+=`<details class="fam" data-fam="${esc(f)}"${closed.has(f)?"":" open"}><summary>${esc(f)}<span class="cnt" data-fcnt="${esc(f)}"></span><span class="grow"></span>`
+      +`<button class="mini" data-fall="${esc(f)}">全选</button><button class="mini" data-fnone="${esc(f)}">清空</button></summary>`;
+    for(const p of pkeys){
+      html+=`<div class="pack" data-pack="${esc(p)}"><div class="pack-h"><span class="nm">${esc(p)}</span><span class="cnt" data-pcnt="${esc(p)}"></span><span class="grow"></span>`
+        +`<button class="mini" data-pall="${esc(p)}">全选</button><button class="mini" data-pnone="${esc(p)}">清空</button></div><div class="chips">`;
+      for(const h of packs.get(p))
+        html+=`<button class="h f-${FCLS[h.faction]||"qun"}${h.tool?" tool":""}" data-id="${h.id}" title="${esc(h.name)} · ${esc(h.faction||"")} · ${h.hp||"?"}血${h.quality?" · "+esc(h.quality):""}">${esc(h.name)}</button>`;
+      html+=`</div></div>`;
+    }
+    html+=`</details>`;
+  }
+  $("#app").innerHTML=html;
+  document.querySelectorAll("details.fam").forEach(d=>d.addEventListener("toggle",()=>{d.open?closed.delete(d.dataset.fam):closed.add(d.dataset.fam);}));
+  refresh();
+}
+// 不重建 DOM:只切 class / 计数(保住滚动位置与折叠状态)
+function refresh(){
+  const byId=new Map(HEROES.map(h=>[h.id,h]));
+  const pc={},fc={};
+  document.querySelectorAll(".h").forEach(b=>{
+    const id=+b.dataset.id,h=byId.get(id),on=sel.has(id),show=matches(h);
+    b.classList.toggle("on",on); b.classList.toggle("new",hasSaved&&!seen.has(id)); b.classList.toggle("hide",!show);
+    const p=h.pack||h.genre||"其他",f=famOf(p);
+    (pc[p]=pc[p]||[0,0,0])[0]+=on?1:0; pc[p][1]++; pc[p][2]+=show?1:0;
+    (fc[f]=fc[f]||[0,0,0])[0]+=on?1:0; fc[f][1]++; fc[f][2]+=show?1:0;
+  });
+  document.querySelectorAll("[data-pcnt]").forEach(e=>{const c=pc[e.dataset.pcnt]||[0,0,0];e.innerHTML=`<b>${c[0]}</b> / ${c[1]}`;e.closest(".pack").classList.toggle("hide",c[2]===0);});
+  document.querySelectorAll("[data-fcnt]").forEach(e=>{const c=fc[e.dataset.fcnt]||[0,0,0];e.innerHTML=`<b>${c[0]}</b> / ${c[1]}`;e.closest("details").classList.toggle("hide",c[2]===0);});
+  $("#count").innerHTML=`将池 <span style="color:var(--seal)">${sel.size}</span> / ${HEROES.length} 将`;
+  const d=dirty(); $("#dirty").textContent=d?"● 未保存":""; $("#b-save").disabled=!d;
+}
+function setMany(ids,on){for(const id of ids){on?sel.add(id):sel.delete(id);}refresh();}
+const idsIn=(sel)=>[...document.querySelectorAll(sel+" .h:not(.hide)")].map(b=>+b.dataset.id); // 批量只动当前可见的(配合搜索/筛选)
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t)return;
+  if(t.classList.contains("h")){const id=+t.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);refresh();return;}
+  if(t.dataset.pall!=null){setMany(idsIn(`[data-pack="${CSS.escape(t.dataset.pall)}"]`),true);return;}
+  if(t.dataset.pnone!=null){setMany(idsIn(`[data-pack="${CSS.escape(t.dataset.pnone)}"]`),false);return;}
+  if(t.dataset.fall!=null){e.preventDefault();setMany(idsIn(`[data-fam="${CSS.escape(t.dataset.fall)}"]`),true);return;}
+  if(t.dataset.fnone!=null){e.preventDefault();setMany(idsIn(`[data-fam="${CSS.escape(t.dataset.fnone)}"]`),false);return;}
+  if(t.dataset.f){filter=t.dataset.f;document.querySelectorAll(".fl").forEach(b=>b.classList.toggle("on",b===t));refresh();return;}
+});
+$("#q").addEventListener("input",e=>{q=e.target.value.trim();refresh();});
+$("#b-save").onclick=async()=>{
+  $("#b-save").disabled=true;
+  try{
+    const r=await fetch("/api/pool",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({ids:[...sel].sort((a,b)=>a-b),seen:HEROES.map(h=>h.id)})});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||r.status);
+    saved=new Set(sel);seen=new Set(HEROES.map(h=>h.id));hasSaved=true;refresh();toast("已保存 · 将池 "+j.count+" 将");
+  }catch(err){toast("保存失败:"+err.message);refresh();}
+};
+$("#b-exp").onclick=()=>{const x=$("#exp");x.style.display=x.style.display==="block"?"none":"block";x.querySelector("textarea").value=JSON.stringify({ids:[...sel].sort((a,b)=>a-b)});};
+$("#b-copy").onclick=()=>{const ta=$("#exp textarea");ta.select();try{navigator.clipboard.writeText(ta.value);toast("已复制");}catch{document.execCommand("copy");toast("已复制");}};
+window.addEventListener("beforeunload",e=>{if(dirty()){e.preventDefault();e.returnValue="";}});
+
+(async()=>{
+  try{
+    const [g,p]=await Promise.all([fetch("/generals.json",{cache:"no-store"}).then(r=>r.json()),fetch("/api/pool",{cache:"no-store"}).then(r=>r.json())]);
+    HEROES=g; const valid=new Set(g.map(h=>h.id));
+    sel=new Set((p.ids||[]).filter(i=>valid.has(i))); saved=new Set(sel);
+    seen=new Set(p.seen||[]); hasSaved=!!p.updatedAt; // 从未保存过时不标「新」
+    build();
+  }catch(err){$("#count").textContent="加载失败:"+err.message;}
+})();
+</script>
+</body>
+</html>

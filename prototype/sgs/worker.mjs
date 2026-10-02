@@ -4,6 +4,9 @@
 import { RoomCore, setBannedPools } from "./shared/room-logic.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
+import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
+import PACKS_DATA from "./shared/hero-packs.json"; // 武将→所属包(olwiki 将灯),贴到 generals.json 的 pack 字段供将池编辑页分组
+import POOL_SEED from "./shared/hero-pool-seed.json"; // 将池种子/备份(服务端没存过时回退)
 import GENERALS_DATA from "./shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
 import DERIVED_DATA from "./shared/derived-skills.json"; // 常见武将牌衍生技(查将时带出;从 index.html 衍生技区抽取)
 import DERIVED_ROOM from "./shared/derived-skills-room.json"; // 房间专属补充(如魔张飞入魔修改版,不进 wiki)
@@ -32,7 +35,8 @@ import PINYIN_DATA from "./shared/hero-pinyin.json"; // 武将名→拼音音节
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 // 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)
-const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => (PINYIN_DATA[h.name] ? { ...h, py: PINYIN_DATA[h.name] } : h)));
+// pack:所属包(缺则回退 genre)—— 新录武将没补 hero-packs.json 也能在编辑页出现
+const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => ({ ...h, pack: PACKS_DATA.packs[h.id] || h.genre || "其他", ...(PINYIN_DATA[h.name] ? { py: PINYIN_DATA[h.name] } : {}) })));
 // 合并 wiki 抽取的衍生技 + 房间专属补充(同名武将则数组拼接;房间补充仅房间可见)。map 浅拷贝每条,便于下面贴 text_en 不污染 import 源
 const DERIVED_MERGED = (() => {
   const out = {};
@@ -79,6 +83,10 @@ export function handleSgs(request, env, url) {
   const wsRes = routeRoomWs(url, request, env.ROOM, "/api/room");
   if (wsRes) return wsRes;
 
+  // 将池(白名单):全局一份,存在 SgsConfigDO(单例 "global");/pool 编辑页读写,发将时房间也读它。无鉴权(朋友局,用户定)
+  if (url.pathname === "/api/pool" && (request.method === "GET" || request.method === "PUT"))
+    return env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
+
   if (request.method === "GET") {
     // 只读参考数据(同源、可缓存):武将库 / 衍生技 / 衍生牌 / 装备 / 禁将池
     if (url.pathname === "/generals.json") return jsonResponse(GENERALS_JSON);
@@ -91,10 +99,30 @@ export function handleSgs(request, env, url) {
       const page = RULE_PAGES.get(url.pathname.slice(7, -5));
       return page ? htmlResponse(page) : new Response("no such rule", { status: 404 });
     }
+    if (url.pathname === "/pool" || url.pathname === "/pool/") return htmlResponse(POOL_HTML); // 将池编辑页
     // 三国杀房间页:根路径(历史入口,手机收藏的链接不变)+ /sgs
     if (url.pathname === "/" || url.pathname === "/sgs" || url.pathname === "/sgs/" || url.pathname === "/index.html") return htmlResponse(ROOM_HTML);
   }
   return null;
+}
+
+// 三国杀全局配置 DO(单例 idFromName("global")):目前只存将池白名单 {ids, seen, updatedAt}。
+// 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
+export class SgsConfigDO {
+  constructor(state) { this.state = state; }
+  async fetch(request) {
+    const noStore = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+    if (request.method === "PUT") {
+      let body;
+      try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: "BAD_JSON" }), { status: 400, headers: noStore }); }
+      const norm = (a) => [...new Set((Array.isArray(a) ? a : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 5000);
+      const pool = { ids: norm(body && body.ids), seen: norm(body && body.seen), updatedAt: Date.now() };
+      await this.state.storage.put("pool", pool);
+      return new Response(JSON.stringify({ ok: true, count: pool.ids.length, updatedAt: pool.updatedAt }), { headers: noStore });
+    }
+    const pool = (await this.state.storage.get("pool")) || { ids: POOL_SEED.ids || [], seen: [], updatedAt: null, seed: true };
+    return new Response(JSON.stringify(pool), { headers: noStore });
+  }
 }
 
 // 三国杀房间 DO。类名 RoomDO 不能改(wrangler.toml 绑定 + 已有 DO 迁移 v1)。
