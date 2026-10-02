@@ -60,7 +60,8 @@ button:disabled{opacity:.4;cursor:default}
 .hint{font-size:12px;color:var(--ink-soft);margin-top:6px}
 .seat{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;background:rgba(255,252,244,.5)}
 .seat.mine{border-color:var(--seal);background:rgba(163,46,34,.06)}
-.seat .st{font-family:var(--display);font-weight:800;font-size:15px}
+.seat .st{font-family:var(--display);font-weight:800;font-size:15px;min-width:max-content} /* 标题不压缩:窄屏放不下时按钮整体换行,而不是把武将名标签挤折行 */
+.seat .st .lb,.seat .st .kb,.seat .st .fc{white-space:nowrap}
 .seat .lb{font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:4px;padding:0 5px;margin-left:6px}
 .seat .kb{font-size:11px;color:#856a1f;border:1px solid var(--qi);border-radius:4px;padding:0 5px;margin-left:5px}
 /* 花色点数选择 */
@@ -422,7 +423,7 @@ function openSkillView(general,seatNo){
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
-    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,在大厅「登场工具」处进入。","This hero has a dedicated offline tool — open it from the lobby's tool list.")}</div>`:""}</div></div>`;
+    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,在大厅座位卡上点「工具 →」进入。","This hero has a dedicated offline tool — tap “工具 →” on its seat card in the lobby.")}</div>`:""}</div></div>`;
   maskClose();
   const lt=$("#modal [data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");openSkillView(general,seatNo);};
 }
@@ -449,7 +450,7 @@ function previewHero(id){
     ${skills}
     ${derivedSkillsHtml(hero)}
     ${derivedCardsHtml(hero)}
-    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,选定后在大厅「登场工具」处进入。","This hero has a dedicated offline tool — open it from the lobby's tool list after selecting.")}</div>`:""}
+    ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,选定后在座位卡上点「工具 →」进入。","This hero has a dedicated offline tool — after selecting, tap “工具 →” on the seat card.")}</div>`:""}
     ${banned?`<div style="margin-top:10px;padding:7px 10px;background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;font-size:12px;color:var(--seal)">🚫 ${T("此武将在禁将池,不能落座(仅可查看技能)","This hero is banned — viewing only, cannot be seated")}</div>`:""}
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${T("返回列表","Back")}</button><button class="primary" data-pvpick="1"${banned?' disabled style="opacity:.45;cursor:not-allowed"':''}>${banned?T("已禁用","Banned"):T("选定此武将","Select")}</button></div>
   </div>`;
@@ -542,7 +543,6 @@ function render(){
     focus=null;
     h+=viewHeader();
     h+=viewSeats();
-    h+=viewToolsIndex(); // 登场工具最常用,放全场状态之上(用户 2026-09-25)
     h+=viewPanel();
     h+=viewBannedPool();
     h+=viewRulesIndex();
@@ -592,18 +592,6 @@ function viewBannedPool(){
   const others=Object.entries(BAN_POOLS).filter(([k,p])=>k!==key&&(p.ids||[]).length);
   if(others.length) h+=`<div class="hint" style="margin-top:7px">其他池:${others.map(([k,p])=>esc(p.label||k)+" "+(p.ids||[]).length+"将").join(" · ")}(改座位数即切换)</div>`;
   return h+`</div>`;
-}
-function viewToolsIndex(){
-  const tools=Object.values(state.seats).filter(s=>hasTool(s.general));
-  let h='<div class="card"><h2>登场工具<span class="tag">点进入操作 / 查看</span></h2>';
-  if(!tools.length) h+='<div class="hint">还没有武将带工具。在上方座位选择带有线下工具的武将即可登场。</div>';
-  for(const s of tools){
-    const nm=GENERALS[s.general].name, mine=state.youHold.includes(s.seatNo);
-    h+=`<div class="row" style="padding:5px 0"><span class="grow"><b>${esc(nm)}</b> · 座位 ${s.seatNo}</span>`
-      +`<button class="${mine?'primary':''}" data-enter="${s.seatNo}">进入 →</button></div>`;
-  }
-  h+='</div>';
-  return h;
 }
 
 function viewRoomAdmin(){
@@ -659,6 +647,7 @@ function viewSeats(){
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
       +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
     if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
+    if(hasTool(s.general)) h+=`<button class="${mine?'primary':''}" data-enter="${s.seatNo}">工具 →</button>`; // 工具入口直接放座位卡(用户 2026-10-01;原座位卡「工具 →」卡已撤)
     const heldByOther=s.holderDevices.length&&!mine;
     if(mine) h+=`<button class="ghost" data-rel="${s.seatNo}">释放</button>`;
     else if(heldByOther) h+=`<button data-takeover="${s.seatNo}" style="border-color:var(--seal);color:var(--seal)">替换</button>`;
@@ -668,7 +657,7 @@ function viewSeats(){
       const has=s.general&&s.general!=="none";
       h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label>`
         +`<button data-pick="${s.seatNo}" style="font-size:13px">${has?esc(nm)+" ▾":"选武将 ▾"}</button>`
-        +(hero&&hero.tool?'<span class="hint" style="margin-left:6px">有专属工具(见下方登场工具)</span>':"")+`</div>`;
+        +`</div>`;
       if(hero&&hero.factionSelectable){
         h+=`<div class="row" style="margin-top:5px"><label style="font-size:12px;color:var(--ink-soft)">神·自选势力</label>`
           +["魏","蜀","吴","群","晋"].map(f=>`<button class="pick ${chosen===f?'sel':''}" data-fac="${s.seatNo}:${f}" style="min-width:34px;padding:5px 0">${f}</button>`).join("")
@@ -871,7 +860,7 @@ function sheetHtml(s){
   if(isDw){ // 神典韦:武器+副武器区=以武将为武器,读其工具(单一数据源),不用通用武器/防具槽
     const w=dwWeapons(s)||[];
     h+=`<div class="row" style="margin-bottom:5px"><span class="shslot">武器/副武器</span>`
-      +`<span class="hint" style="margin:0;flex:1 1 0">神典韦以武将为武器:<b>${w.length?w.map(x=>esc(x.name)+"(范"+(x.range??"?")+")").join("、"):"未装备"}</b> —— 在下方登场工具「神典韦」里设</span></div>`;
+      +`<span class="hint" style="margin:0;flex:1 1 0">神典韦以武将为武器:<b>${w.length?w.map(x=>esc(x.name)+"(范"+(x.range??"?")+")").join("、"):"未装备"}</b> —— 在下方座位卡「工具 →」「神典韦」里设</span></div>`;
     h+=EQ_SLOTS.filter(sl=>sl.k!=="weapon"&&sl.k!=="armor").map(slot=>equipSelect(sn,slot)).join("");
   }else{
     h+=EQ_SLOTS.map(slot=>equipSelect(sn,slot)).join("");
