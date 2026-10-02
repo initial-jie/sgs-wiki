@@ -1346,6 +1346,14 @@ console.log("\n=== 场景 20:线上发将 ===");
     if (rm.deal.hands[3].slots.length !== 6 + Math.min(DEAL_LORD_EXTRA, P({ whitelist: SEED }).lord.length)) bad++;
   }
   check("200 个随机种子 × 8 人局:一坑一人/曹丕仅君主/换将不重复 全部成立", bad === 0);
+  { // 移动版谋韩当 与 OL 各版韩当 同名可替换(一个坑)
+    const { groupKey } = await import("./shared/deal.mjs");
+    const hd = HEROES.filter((h) => h.name.includes("韩当"));
+    check("韩当/界韩当/移动版谋韩当 同一个坑", hd.length === 3 && hd.every((h) => groupKey(h) === "韩当"));
+    const pl = P({ whitelist: [idOf("韩当")] });
+    const slot = pl.normal.find((g) => g.key === "韩当");
+    check("只勾标韩当:坑里三个版本都可选", slot && slot.opts.map((o) => o.name).sort().join() === ["韩当", "界韩当", "移动版谋韩当"].sort().join());
+  }
   // 模式专属君主(教主张角/暴君董卓/昏君刘宏)只允许出现在「对应模式 + 君主的额外候选」;白名单里勾了也不例外(SEED 里三位都勾着)
   {
     const { DEAL_MODES } = await import("./shared/deal.mjs");
