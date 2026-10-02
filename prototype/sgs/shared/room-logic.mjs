@@ -477,7 +477,7 @@ export class RoomCore extends RoomBase {
     if (!idx.length) return null;
     return list.splice(idx[Math.floor(this.rng() * idx.length)], 1)[0];
   }
-  dealStart(id, { mode = "normal", lordSeat = null, pools }) {
+  dealStart(id, { mode = "normal", lordSeat = null, pools, poolKey = null, poolLabel = null }) {
     if (!this.devices[id]) return { error: "NO_DEVICE" };
     if (this.deal) return { error: "DEAL_ACTIVE" };
     if (!DEAL_MODES[mode]) return { error: "BAD_MODE" };
@@ -509,7 +509,7 @@ export class RoomCore extends RoomBase {
         hands[n].initKeys.push(g.key);
       }
     }
-    this.deal = { mode, lordSeat, lordPicked: false, hands, pool: normal };
+    this.deal = { mode, lordSeat, lordPicked: false, hands, pool: normal, poolKey, poolLabel }; // poolKey/Label:用的是哪个环境的名单(仅展示)
     return { ok: true, players: players.length };
   }
   // 换将:起手坑各可换一次 —— 原坑放回将池,重抽一个不与自己起手 6 坑重复的;换来的坑不可再换
@@ -571,7 +571,7 @@ export class RoomCore extends RoomBase {
       if (mine) { seats[n].slots = clone(hand.slots); seats[n].pick = hand.pick ? clone(hand.pick) : null; }
       else if (hand.pick && hand.pick.final) seats[n].pick = { heroId: hand.pick.heroId, name: hand.pick.name, final: true }; // 君主已亮出
     }
-    return { mode: d.mode, lordSeat: d.lordSeat, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length };
+    return { mode: d.mode, lordSeat: d.lordSeat, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length, poolKey: d.poolKey ?? null, poolLabel: d.poolLabel ?? null };
   }
 
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
@@ -2121,7 +2121,8 @@ export class RoomCore extends RoomBase {
       weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
       judgments: s.judgments ?? [] };
   }
-  _roomView(holds) { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length), deal: this._dealView(holds) }; }
+  // cfgRev:服务端名单(/pool)版本号,由 RoomDO.syncConfig 设置;客户端见它变了就重拉禁将面板数据(不持久化)
+  _roomView(holds) { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length), deal: this._dealView(holds), cfgRev: this.cfgRev || 0 }; }
   // ---- 持久化:通用部分见 RoomBase.serialize/hydrate ----
   _serializeExtra() { return { banEnabled: this.banEnabled, deal: this.deal }; }
   _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; this.deal = data.deal || null; } // 老房间无此字段→默认开/无发将

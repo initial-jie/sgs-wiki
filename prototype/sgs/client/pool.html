@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>将池编辑 · 三国杀线下房间</title>
 <style>
-/* 将池(白名单)编辑页:全部武将按「包」分组,点武将入池/出池;保存即写服务端(SgsConfigDO),所有房间下次发将生效。
-   数据:/generals.json(带 pack 字段,新录武将自动出现)+ /api/pool(GET 读 / PUT 存)。与禁将表无关(禁将=池内但当前环境不让用的强将)。 */
+/* 将池编辑页:各环境(军争/2v2/斗地主/1v1)各一份 白名单(可发将)+ 黑名单(禁将)。
+   全部武将按「包」分组,点武将加入/移出当前名单;保存即写服务端(SgsConfigDO),房间下次发将/选将即生效,不用 deploy。
+   数据:/generals.json(带 pack 字段,新录武将自动出现)+ /api/pool(GET 读 / PUT 存)。 */
 :root{--bg:#efe6d2;--paper:#fbf7ef;--ink:#2b2419;--soft:#7a6f60;--line:#d9cfbd;--seal:#a32e22;--qi:#c2982f;
   --wei:#2b6cb0;--shu:#b23b2e;--wu:#2f7d4f;--qun:#6b6257;--jin:#6a4a9c;--shen:#b08a1e}
 *{box-sizing:border-box}
@@ -26,6 +27,14 @@ input{font:inherit;border:1px solid var(--line);border-radius:7px;padding:7px 10
 #dirty{font-size:12px;color:var(--seal);font-weight:600}
 .fl{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:3px 11px;background:transparent;color:var(--soft)}
 .fl.on{border-color:var(--seal);color:var(--seal);font-weight:600}
+/* 环境切换 + 白/黑页签 */
+.env{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:transparent;color:var(--soft);text-align:left;line-height:1.25}
+.env small{display:block;font-size:11px;font-weight:400}
+.env.on{border-color:var(--ink);color:var(--ink);font-weight:700;background:var(--paper)}
+.tab{flex:1 1 0;font-size:14px;padding:7px 8px;border-radius:8px;background:transparent;color:var(--soft)}
+.tab.on.white{background:#fff7e6;border-color:var(--qi);color:var(--ink);font-weight:700}
+.tab.on.ban{background:#fbeceb;border-color:var(--seal);color:var(--seal);font-weight:700}
+#tip{font-size:12px;color:var(--soft);margin-top:6px}
 details.fam{background:rgba(255,252,244,.75);border:1px solid var(--line);border-top:3px solid var(--seal);border-radius:9px;margin-top:11px;padding:0 12px 8px}
 details.fam>summary{cursor:pointer;padding:10px 0 8px;font-weight:800;font-size:16px;letter-spacing:.06em;list-style:none;display:flex;gap:8px;align-items:center}
 details.fam>summary::-webkit-details-marker{display:none}
@@ -40,10 +49,15 @@ details.fam[open]>summary::before{content:"▾"}
 .h{font-size:13px;padding:3px 9px 3px 7px;border-radius:6px;border:1px solid var(--line);border-left:4px solid var(--qun);background:transparent;color:var(--soft);position:relative}
 .h.f-wei{border-left-color:var(--wei)}.h.f-shu{border-left-color:var(--shu)}.h.f-wu{border-left-color:var(--wu)}
 .h.f-jin{border-left-color:var(--jin)}.h.f-shen{border-left-color:var(--shen)}
-.h.on{background:#fff7e6;color:var(--ink);border-color:var(--qi);border-left-width:4px;font-weight:600;box-shadow:0 1px 0 rgba(0,0,0,.06)}
-.h.on::after{content:"✓";color:var(--seal);margin-left:4px;font-size:11px}
+/* 白名单页:选中=入池(金);该环境被禁的将加删除线提示 */
+body.l-white .h.on{background:#fff7e6;color:var(--ink);border-color:var(--qi);font-weight:600}
+body.l-white .h.on::after{content:"✓";color:var(--seal);margin-left:4px;font-size:11px}
+body.l-white .h.x{text-decoration:line-through;text-decoration-color:var(--seal)}
+/* 黑名单页:选中=禁用(红);在本环境将池里的将加粗提示(禁的通常是池内强将) */
+body.l-ban .h.on{background:#fbeceb;color:var(--seal);border-color:var(--seal);font-weight:600}
+body.l-ban .h.on::after{content:"⊘";margin-left:4px;font-size:11px}
+body.l-ban .h.x{color:var(--ink);border-style:dashed}
 .h.new::before{content:"新";position:absolute;top:-7px;right:-5px;font-size:9px;background:var(--seal);color:#fff;border-radius:8px;padding:0 4px;line-height:14px;font-weight:400}
-.h.tool{text-decoration:underline dotted var(--soft);text-underline-offset:3px}
 .hide{display:none!important}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(43,36,25,.92);color:#f6ecd8;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
 #toast.show{opacity:1}
@@ -53,9 +67,9 @@ details.fam[open]>summary::before{content:"▾"}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 9px;vertical-align:-1px}
 </style>
 </head>
-<body>
+<body class="l-white">
 <h1>将池编辑</h1>
-<div class="sub">点武将入池 / 出池 · 保存后所有房间下次发将立即生效 · 与禁将表互不影响</div>
+<div class="sub">各环境的白名单(可发将)与黑名单(禁将) · 保存后房间立即生效</div>
 
 <div id="bar">
   <div class="row">
@@ -64,6 +78,12 @@ details.fam[open]>summary::before{content:"▾"}
     <button id="b-exp" class="mini">导出</button>
     <button id="b-save" class="primary" disabled>保存</button>
   </div>
+  <div class="row" id="envs" style="margin-top:7px"></div>
+  <div class="row" style="margin-top:7px">
+    <button class="tab white on" data-list="white">白名单 · 可发将</button>
+    <button class="tab ban" data-list="ban">黑名单 · 禁将</button>
+  </div>
+  <div id="tip"></div>
   <div class="row" style="margin-top:7px">
     <input id="q" class="grow" placeholder="搜武将名 / 拼音 / 首字母,如 关羽 guanyu gy" autocomplete="off" autocapitalize="off">
     <button class="fl on" data-f="all">全部</button>
@@ -75,7 +95,7 @@ details.fam[open]>summary::before{content:"▾"}
     <div class="row" style="margin-top:5px"><button id="b-copy" class="mini">复制</button><span class="legend" style="margin:0">发给 Claude 可作为仓库里的种子/备份快照</span></div></div>
 </div>
 
-<div class="legend">势力色条:<i style="background:var(--wei)"></i>魏<i style="background:var(--shu)"></i>蜀<i style="background:var(--wu)"></i>吴<i style="background:var(--qun)"></i>群<i style="background:var(--jin)"></i>晋<i style="background:var(--shen)"></i>神 · 虚线下划线 = 带房间工具</div>
+<div class="legend">势力色条:<i style="background:var(--wei)"></i>魏<i style="background:var(--shu)"></i>蜀<i style="background:var(--wu)"></i>吴<i style="background:var(--qun)"></i>群<i style="background:var(--jin)"></i>晋<i style="background:var(--shen)"></i>神</div>
 <div id="app"></div>
 <div id="toast"></div>
 
@@ -87,23 +107,30 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 const FAM_ORDER=["标准","神话再临","界限突破","一将成名","界一将","SP","璀璨星河","门阀士族","谋","魔","祈福","文德武备","闪","限定","不臣之君","线下","移动版","其他"];
 const FAM_LAST=["国战"];
 const FCLS={"魏":"wei","蜀":"shu","吴":"wu","群":"qun","晋":"jin","神":"shen"};
-let HEROES=[],sel=new Set(),saved=new Set(),seen=new Set(),hasSaved=false,filter="all",q="";
+let HEROES=[],KEYS=[],CFG={},seen=new Set(),hasSaved=false,savedSnap="",filter="all",q="";
+let env="",list="white"; // 当前环境 / 当前名单(white|ban)
 const closed=new Set(FAM_LAST);
+const DEF=()=>KEYS[0];                       // 默认环境(军争):其它环境白名单留空时沿用它
+const cur=()=>CFG[env][list];                // 当前正在编辑的那个 Set
+const other=()=>CFG[env][list==="white"?"ban":"white"];
+const effWhite=k=>CFG[k].white.size?CFG[k].white:CFG[DEF()].white; // 该环境实际生效的白名单
 
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),1800);}
 const famOf=p=>String(p||"其他").split("-")[0];
 function famRank(f){const i=FAM_ORDER.indexOf(f);if(i>=0)return i;if(FAM_LAST.includes(f))return 900+FAM_LAST.indexOf(f);return 500;}
-function dirty(){if(sel.size!==saved.size)return true;for(const i of sel)if(!saved.has(i))return true;return false;}
+const snap=()=>JSON.stringify(KEYS.map(k=>[[...CFG[k].white].sort((a,b)=>a-b),[...CFG[k].ban].sort((a,b)=>a-b)]));
+const dirty=()=>snap()!==savedSnap;
 function matches(h){
-  if(filter==="on"&&!sel.has(h.id))return false;
-  if(filter==="off"&&sel.has(h.id))return false;
+  const s=cur();
+  if(filter==="on"&&!s.has(h.id))return false;
+  if(filter==="off"&&s.has(h.id))return false;
   if(filter==="new"&&!(hasSaved&&!seen.has(h.id)))return false;
   if(!q)return true;
   if(/[一-鿿]/.test(q))return h.name.includes(q);
-  const py=(h.py||"").split(" "),s=q.toLowerCase();
+  const py=(h.py||"").split(" "),t=q.toLowerCase();
   if(!py[0])return false;
-  if(py.join("").startsWith(s)||py.map(x=>x[0]).join("").startsWith(s))return true;
-  for(let i=1;i<py.length;i++)if(py.slice(i).join("").startsWith(s))return true; // 音节边界起的后缀(guanyu 中 界关羽)
+  if(py.join("").startsWith(t)||py.map(x=>x[0]).join("").startsWith(t))return true;
+  for(let i=1;i<py.length;i++)if(py.slice(i).join("").startsWith(t))return true; // 音节边界起的后缀(guanyu 中 界关羽)
   return false;
 }
 
@@ -126,7 +153,7 @@ function build(){
       html+=`<div class="pack" data-pack="${esc(p)}"><div class="pack-h"><span class="nm">${esc(p)}</span><span class="cnt" data-pcnt="${esc(p)}"></span><span class="grow"></span>`
         +`<button class="mini" data-pall="${esc(p)}">全选</button><button class="mini" data-pnone="${esc(p)}">清空</button></div><div class="chips">`;
       for(const h of packs.get(p))
-        html+=`<button class="h f-${FCLS[h.faction]||"qun"}${h.tool?" tool":""}" data-id="${h.id}" title="${esc(h.name)} · ${esc(h.faction||"")} · ${h.hp||"?"}血${h.quality?" · "+esc(h.quality):""}">${esc(h.name)}</button>`;
+        html+=`<button class="h f-${FCLS[h.faction]||"qun"}" data-id="${h.id}" title="${esc(h.name)} · ${esc(h.faction||"")} · ${h.hp||"?"}血${h.quality?" · "+esc(h.quality):""}${h.tool?" · 有房间工具":""}">${esc(h.name)}</button>`;
       html+=`</div></div>`;
     }
     html+=`</details>`;
@@ -137,26 +164,43 @@ function build(){
 }
 // 不重建 DOM:只切 class / 计数(保住滚动位置与折叠状态)
 function refresh(){
-  const byId=new Map(HEROES.map(h=>[h.id,h]));
+  const byId=new Map(HEROES.map(h=>[h.id,h])),s=cur();
+  // x 标记:白名单页=该环境被禁的将;黑名单页=在该环境实际将池里的将
+  const mark=list==="white"?CFG[env].ban:effWhite(env);
+  document.body.className="l-"+list;
   const pc={},fc={};
   document.querySelectorAll(".h").forEach(b=>{
-    const id=+b.dataset.id,h=byId.get(id),on=sel.has(id),show=matches(h);
-    b.classList.toggle("on",on); b.classList.toggle("new",hasSaved&&!seen.has(id)); b.classList.toggle("hide",!show);
+    const id=+b.dataset.id,h=byId.get(id),on=s.has(id),show=matches(h);
+    b.classList.toggle("on",on); b.classList.toggle("x",mark.has(id)); b.classList.toggle("new",hasSaved&&!seen.has(id)); b.classList.toggle("hide",!show);
     const p=h.pack||h.genre||"其他",f=famOf(p);
     (pc[p]=pc[p]||[0,0,0])[0]+=on?1:0; pc[p][1]++; pc[p][2]+=show?1:0;
     (fc[f]=fc[f]||[0,0,0])[0]+=on?1:0; fc[f][1]++; fc[f][2]+=show?1:0;
   });
   document.querySelectorAll("[data-pcnt]").forEach(e=>{const c=pc[e.dataset.pcnt]||[0,0,0];e.innerHTML=`<b>${c[0]}</b> / ${c[1]}`;e.closest(".pack").classList.toggle("hide",c[2]===0);});
   document.querySelectorAll("[data-fcnt]").forEach(e=>{const c=fc[e.dataset.fcnt]||[0,0,0];e.innerHTML=`<b>${c[0]}</b> / ${c[1]}`;e.closest("details").classList.toggle("hide",c[2]===0);});
-  $("#count").innerHTML=`将池 <span style="color:var(--seal)">${sel.size}</span> / ${HEROES.length} 将`;
+  // 顶栏
+  $("#envs").innerHTML=KEYS.map(k=>{const c=CFG[k],inh=k!==DEF()&&!c.white.size;
+    return `<button class="env${k===env?" on":""}" data-env="${esc(k)}">${esc(c.label||k)}<small>白 ${inh?"沿用军争":c.white.size} · 黑 ${c.ban.size}</small></button>`;}).join("");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.list===list));
+  const lab=esc(CFG[env].label||env);
+  $("#count").innerHTML=`${lab} · ${list==="white"?"白名单":"黑名单"} <span style="color:var(--seal)">${s.size}</span> 将`;
+  let tip="";
+  if(list==="white"){
+    if(env!==DEF()&&!s.size) tip=`这个环境还没单独设白名单 → 发将时<b>沿用「${esc(CFG[DEF()].label)}」的 ${CFG[DEF()].white.size} 将</b>。想要专属将池就在下面勾选,或 <button class="mini" data-copydef="1">复制军争白名单过来再改</button>`;
+    else tip=`白名单 = 这个环境可以发的武将。同名武将勾一个即可(黄盖/界黄盖 算一个坑,任选其一)。带<span style="text-decoration:line-through;text-decoration-color:var(--seal)">删除线</span>的是本环境黑名单里的将。`;
+  } else tip=`黑名单 = 当前环境禁用的强将:发将时不会发出,手动选将会被拒,房间里的「禁将池」展示的就是这份。<span style="border-bottom:1px dashed var(--ink);color:var(--ink)">虚线框</span>的是本环境将池里的将。`;
+  $("#tip").innerHTML=tip;
   const d=dirty(); $("#dirty").textContent=d?"● 未保存":""; $("#b-save").disabled=!d;
 }
-function setMany(ids,on){for(const id of ids){on?sel.add(id):sel.delete(id);}refresh();}
+function setMany(ids,on){const s=cur();for(const id of ids){on?s.add(id):s.delete(id);}refresh();}
 const idsIn=(sel)=>[...document.querySelectorAll(sel+" .h:not(.hide)")].map(b=>+b.dataset.id); // 批量只动当前可见的(配合搜索/筛选)
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button"); if(!t)return;
-  if(t.classList.contains("h")){const id=+t.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);refresh();return;}
+  if(t.classList.contains("h")){const id=+t.dataset.id,s=cur();s.has(id)?s.delete(id):s.add(id);refresh();return;}
+  if(t.dataset.env){env=t.dataset.env;refresh();return;}
+  if(t.dataset.list){list=t.dataset.list;refresh();return;}
+  if(t.dataset.copydef){CFG[env].white=new Set(CFG[DEF()].white);refresh();toast("已复制,可以开始删改");return;}
   if(t.dataset.pall!=null){setMany(idsIn(`[data-pack="${CSS.escape(t.dataset.pall)}"]`),true);return;}
   if(t.dataset.pnone!=null){setMany(idsIn(`[data-pack="${CSS.escape(t.dataset.pnone)}"]`),false);return;}
   if(t.dataset.fall!=null){e.preventDefault();setMany(idsIn(`[data-fam="${CSS.escape(t.dataset.fall)}"]`),true);return;}
@@ -164,15 +208,16 @@ document.addEventListener("click",e=>{
   if(t.dataset.f){filter=t.dataset.f;document.querySelectorAll(".fl").forEach(b=>b.classList.toggle("on",b===t));refresh();return;}
 });
 $("#q").addEventListener("input",e=>{q=e.target.value.trim();refresh();});
+const payload=()=>({pools:Object.fromEntries(KEYS.map(k=>[k,{white:[...CFG[k].white].sort((a,b)=>a-b),ban:[...CFG[k].ban].sort((a,b)=>a-b)}]))});
 $("#b-save").onclick=async()=>{
   $("#b-save").disabled=true;
   try{
-    const r=await fetch("/api/pool",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({ids:[...sel].sort((a,b)=>a-b),seen:HEROES.map(h=>h.id)})});
+    const r=await fetch("/api/pool",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...payload(),seen:HEROES.map(h=>h.id)})});
     const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||r.status);
-    saved=new Set(sel);seen=new Set(HEROES.map(h=>h.id));hasSaved=true;refresh();toast("已保存 · 将池 "+j.count+" 将");
+    savedSnap=snap();seen=new Set(HEROES.map(h=>h.id));hasSaved=true;refresh();toast("已保存 · 房间立即生效");
   }catch(err){toast("保存失败:"+err.message);refresh();}
 };
-$("#b-exp").onclick=()=>{const x=$("#exp");x.style.display=x.style.display==="block"?"none":"block";x.querySelector("textarea").value=JSON.stringify({ids:[...sel].sort((a,b)=>a-b)});};
+$("#b-exp").onclick=()=>{const x=$("#exp");x.style.display=x.style.display==="block"?"none":"block";x.querySelector("textarea").value=JSON.stringify(payload());};
 $("#b-copy").onclick=()=>{const ta=$("#exp textarea");ta.select();try{navigator.clipboard.writeText(ta.value);toast("已复制");}catch{document.execCommand("copy");toast("已复制");}};
 window.addEventListener("beforeunload",e=>{if(dirty()){e.preventDefault();e.returnValue="";}});
 
@@ -180,8 +225,10 @@ window.addEventListener("beforeunload",e=>{if(dirty()){e.preventDefault();e.retu
   try{
     const [g,p]=await Promise.all([fetch("/generals.json",{cache:"no-store"}).then(r=>r.json()),fetch("/api/pool",{cache:"no-store"}).then(r=>r.json())]);
     HEROES=g; const valid=new Set(g.map(h=>h.id));
-    sel=new Set((p.ids||[]).filter(i=>valid.has(i))); saved=new Set(sel);
-    seen=new Set(p.seen||[]); hasSaved=!!p.updatedAt; // 从未保存过时不标「新」
+    KEYS=Object.keys(p.pools||{}); env=KEYS[0];
+    for(const k of KEYS) CFG[k]={label:p.pools[k].label,white:new Set((p.pools[k].white||[]).filter(i=>valid.has(i))),ban:new Set((p.pools[k].ban||[]).filter(i=>valid.has(i)))};
+    seen=new Set(p.seen||[]); hasSaved=!!p.updatedAt&&seen.size>0; // 从未保存过时不标「新」
+    savedSnap=snap();
     build();
   }catch(err){$("#count").textContent="加载失败:"+err.message;}
 })();

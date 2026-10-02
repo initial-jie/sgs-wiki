@@ -1318,6 +1318,11 @@ console.log("\n=== 场景 20:线上发将 ===");
   // 无君主局 + 中止
   check("无君主:可直接选,不卡 LORD_FIRST", room.dealStart(dv[1], { mode: "normal", lordSeat: null, pools: P({ whitelist: SEED }) }).ok === true && room.dealPick(dv[3], { seatNo: 3, slot: 0, heroId: room.deal.hands[3].slots[0].opts[0].id }).ok === true && room.deal.hands[1].slots.length === 6);
   check("任何人可中止发将", room.dealCancel(dv[2]).ok === true && room.deal === null && room.dealCancel(dv[2]).error === "NO_DEAL");
+  // 环境(将池)标识透传 + 服务端名单版本号
+  room.dealStart(dv[1], { mode: "normal", lordSeat: null, pools: P({ whitelist: SEED }), poolKey: "douzhu", poolLabel: "斗地主(3人)" });
+  check("发将视图带所用环境(poolKey/poolLabel)", V(dv[2]).poolKey === "douzhu" && V(dv[2]).poolLabel === "斗地主(3人)");
+  room.dealCancel(dv[1]);
+  check("cfgRev 默认 0,由 DO 同步后进 roomState", room.viewFor(dv[1]).cfgRev === 0 && ((room.cfgRev = 123), room.viewFor(dv[1]).cfgRev === 123));
   // 多种子:规则不变量
   let bad = 0;
   for (let s = 1; s <= 200; s++) {

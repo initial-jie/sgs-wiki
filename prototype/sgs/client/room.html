@@ -272,9 +272,12 @@ function loadHeroes(){
   fetch("/derived-skills.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DERIVED=d;}).catch(()=>{}); // 衍生技可选,失败静默降级
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
   fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ EQUIP=d; if(state)render(); }).catch(()=>{}); // 装备牌库→装备槽下拉
-  fetch("/banned-generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ BAN_POOLS=d.pools||{}; if(state)render(); }).catch(()=>{}); // ② 禁将四池
+  loadBans(); // ② 禁将四池(服务端名单,/pool 页可改)
   fetch("/rules.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ RULES=Array.isArray(d)?d:[]; if(state)render(); }).catch(()=>{}); // 规则集目录
 }
+// ② 禁将四池:现读服务端(no-store)。roomState.cfgRev 变了(有人在 /pool 页保存)→ onState 里再拉一次
+let banRev=-1;
+function loadBans(){ fetch("/banned-generals.json",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ BAN_POOLS=d.pools||{}; banRev=d.rev||0; if(state)render(); }).catch(()=>{}); }
 // 查某武将时,带出【该武将来源的衍生牌】(按武将名去·空格匹配;带来源标注,保留版本清晰)
 function derivedCardsHtml(hero){
   if(!hero||!hero.name)return"";
@@ -531,7 +534,8 @@ const RC=RoomClient.create({
     POOL_EMPTY:"将池里没有可换的了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束"},
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
   beforeConnect(){ state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k]; },
-  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal(); },
+  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal();
+    if(banRev>=0&&(m.cfgRev||0)!==banRev){ banRev=m.cfgRev||0; loadBans(); } }, // 服务端名单变了 → 刷新禁将面板
   onMessage(m){ if(m.type==="actionResult"&&m.card!==undefined){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();} },
   onClosed(){ state=null;focus=null;render(); },
   onRenamed(){ render(); },
@@ -585,7 +589,7 @@ const dealLordTitle=()=>(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI
 function viewDealBar(){
   const d=state.deal; if(!d) return "";
   const mu=DEAL_MODE_UI[d.mode]||DEAL_MODE_UI.normal, all=d.picked===d.total;
-  let h=`<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.05)"><h2>🎴 线上发将<span class="tag">${mu[0]}${d.lordSeat!=null?" · "+mu[1]+" 座位"+d.lordSeat:" · 无君主"}</span></h2>`;
+  let h=`<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.05)"><h2>🎴 线上发将<span class="tag">${mu[0]}${d.lordSeat!=null?" · "+mu[1]+" 座位"+d.lordSeat:" · 无君主"}${d.poolLabel?" · 将池:"+esc(d.poolLabel):""}</span></h2>`;
   h+=`<div class="row" style="gap:5px;margin-bottom:8px">`+Object.entries(d.seats).map(([n,s])=>
     `<span class="chip${s.picked?" on":""}">座位${n}${+n===d.lordSeat?"("+mu[1]+")":""} ${s.final?"✓ "+esc(s.pick&&s.pick.name||""):s.picked?"✓ 已选":"…"}</span>`).join("")+`</div>`;
   if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:0 0 8px">等${mu[1]}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
@@ -603,15 +607,17 @@ function openDealSetup(){
   const held=Object.values(state.seats).filter(s=>s.holderDevices.length);
   $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
     <h2>线上发将<span class="x" data-mclose="1">×</span></h2>
-    <div class="hint" style="margin:0 0 10px">给<b>已入座</b>的 ${held.length} 个座位各发 6 将(只有本人看得到),每将可换一次、换来的不能再换;同名武将(如黄盖/界黄盖)算一个坑,任选其一登场。君主位另得 6 个带主公技的候选,先选先亮,其余人再暗选、一起亮出。将池=白名单(房间设置里的「将池编辑」),禁将按当前开关。</div>
+    <div class="hint" style="margin:0 0 10px">给<b>已入座</b>的 ${held.length} 个座位各发 6 将(只有本人看得到),每将可换一次、换来的不能再换;同名武将(如黄盖/界黄盖)算一个坑,任选其一登场。君主位另得 6 个带主公技的候选,先选先亮,其余人再暗选、一起亮出。将池与禁将都在「将池编辑」页维护(房间设置里有入口);各环境没单独设白名单时沿用军争池,禁将按房内开关。</div>
     <div class="row" style="margin-bottom:8px"><label style="flex:none;width:64px">模式</label><select id="deal-mode" class="grow">`
       +Object.entries(DEAL_MODE_UI).map(([k,v])=>`<option value="${k}">${v[0]}${k!=="normal"?"("+v[1]+"专属将必出)":""}</option>`).join("")+`</select></div>
+    <div class="row" style="margin-bottom:8px"><label style="flex:none;width:64px">将池</label><select id="deal-pool" class="grow"><option value="">自动(按座位数:${esc((BAN_POOLS[banPoolKey()]||{}).label||banPoolKey())})</option>`
+      +Object.entries(BAN_POOLS).map(([k,p])=>`<option value="${esc(k)}">${esc(p.label||k)}</option>`).join("")+`</select></div>
     <div class="row" style="margin-bottom:12px"><label style="flex:none;width:64px">君主座位</label><select id="deal-lord" class="grow"><option value="">无君主(不发主公技候选)</option>`
       +held.map(s=>`<option value="${s.seatNo}">座位${s.seatNo} · ${esc(s.holderDevices[0])}</option>`).join("")+`</select></div>
     <div class="row"><button class="primary grow" id="deal-go"${held.length?"":" disabled"}>开始发将</button></div>
     ${held.length?"":'<div class="hint">还没有人入座,先认领座位。</div>'}</div></div>`;
   maskClose();
-  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,lordSeat:lord===""?null:+lord});closeModal();};
+  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,lordSeat:lord===""?null:+lord});closeModal();};
 }
 function openDeal(sn){ dealSeat=sn; dealOpen=null; renderDeal(); }
 function renderDeal(){
@@ -695,7 +701,7 @@ function viewBannedPool(){
 function viewRoomAdmin(){
   return `<div class="card"><h2>房间设置</h2>
     <div class="hint">房间在最后一次操作 <b>2 小时</b>后自动解散 —— 所有人锁屏 / 离开页面也不会立刻消失,回来还在。</div>
-    <div class="row" style="margin-top:8px"><a href="/pool" target="_blank" rel="noopener" style="font-size:13px;color:var(--ink-soft)">🗂 将池编辑(发将白名单)→</a></div>
+    <div class="row" style="margin-top:8px"><a href="/pool" target="_blank" rel="noopener" style="font-size:13px;color:var(--ink-soft)">🗂 将池编辑(各环境白名单 / 黑名单)→</a></div>
     <div class="row" style="margin-top:8px"><button class="ghost grow" data-disband="1" style="color:var(--seal);border-color:var(--seal)">🗑 解散房间(所有人退出,不可恢复)</button></div></div>`;
 }
 // 天恩待选:若有孙权对我持有的座位发动了天恩·不同项,返回 {sqSeat,target} 供全局横幅提示
