@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **642 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **646 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
@@ -24,7 +24,7 @@
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **642 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **646 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **709 将**(692 OL = 官网花名册全量 + 17 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -38,7 +38,7 @@
 - **禁将四池**:按座位数自动选池(≥5 军争 / 4 2v2 / 3 斗地主 / 2 1v1),军争池 15 将、其余空;房内共享**总开关**
 - 房内改名(原子改键);神将自选势力含**晋**;**选将拼音/首字母搜索**
 - **线上发将(2026-10-02,代替线下手抽武将)**:座位卡顶部「🎴 线上发将」→ 选模式(身份局/暴虐无道/失心疯/大忠似奸)+ 君主座位(可无)。只发给**已入座**的座位;每人 6 个「坑」(仅本人可见),起手坑各可换一次(原坑回池、重抽不与自己起手 6 坑重复的,换来的不可再换);君主位另得 6 个带主公技的坑(模式专属君主必出且排第一,不可换)。君主先选、选定即亮出落座且不可改;其余人随后暗选(亮出前可改),全员选完任何人点「亮出」→ 全部落座,发将结束;任何人可中止。
-  - **坑 = 同名可替换组**(`shared/deal.mjs` groupKey:剥 神以外的 界/谋/魔/SP/梦/教主/暴君/昏君 前缀;神版独立)。坑里只要有一个「白名单勾选且当前可用」的版本就整坑入池,同名其它版本也可选;**被禁版本剔除**(当前座位数的禁将池,房内禁将开关关着则不禁)。全场一坑一人。
+  - **坑 = 同名可替换组**(`shared/deal.mjs` groupKey:剥 界/谋/魔/SP/梦/**族/闪/标**/教主/暴君/昏君 前缀;神版独立。族/闪/标 是 2026-10-02 用户实测报 bug 后补的——(标)界谋族闪SP 同名都算同一位武将;room.html `heroBaseName` 必须同步)。坑里只要有一个「白名单勾选且当前可用」的版本就整坑入池,同名其它版本也可选;**被禁版本剔除**(当前座位数的禁将池,房内禁将开关关着则不禁)。全场一坑一人。
   - **特殊规则**(deal.mjs 顶部常量):曹丕只进君主池(LORD_ONLY);董昭 355 只在身份局可选(IDENTITY_ONLY,其它模式该坑只剩谋董昭);genre=不臣之君 的专属君主只在对应模式作必出坑。
   - **实现**:组池纯函数 `buildDealPools`(deal.mjs)→ `RoomCore.dealStart/dealSwap/dealPick/dealReveal/dealCancel`(room-logic.mjs,`this.deal` 进 serialize);保密在 `_dealView`(自己座位给全量,别人只给坑数/是否已选,剩余池只给数量)。worker `dealStart` 是 async:先从 `SgsConfigDO` 读白名单,所以 `RoomDOBase.onMessage` 改成 `await this.onGameMessage(...)`。客户端 `viewDealBar/openDealSetup/openDeal/renderDeal`(room.html)。
   - **✅ 分环境名单 + 黑名单上服务端(2026-10-02)**:`SgsConfigDO` 存储改为 `{pools:{junzheng|2v2|douzhu|1v1:{white,ban}}, seen, updatedAt}`(旧格式 `{ids}` 读取时自动迁移:ids→军争白名单,黑名单取 banned-generals.json 种子)。`/pool` 页顶部切环境 + 「白名单/黑名单」页签;非军争环境白名单留空=沿用军争(页面有「复制军争白名单」按钮)。**禁将从此在 /pool 页维护,保存即生效**:

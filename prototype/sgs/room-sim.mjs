@@ -1256,7 +1256,15 @@ console.log("\n=== 场景 20:线上发将 ===");
   p = P({ whitelist: [idOf("黄盖")], mode: "dazhong" });
   check("大忠似奸:必出坑=昏君刘宏(未勾也出)", p.forced && p.forced.opts[0].name === "昏君刘宏" && p.forced.opts.length === 1);
   p = P({ whitelist: [idOf("刘宏")], mode: "dazhong" });
-  check("大忠似奸:刘宏已入池 → 并入必出坑,普通池不再重复", names(p.forced).join() === "昏君刘宏,刘宏" && !grp(p, "刘宏"));
+  check("大忠似奸:刘宏已入池 → 并入必出坑(含闪刘宏),普通池/君主池不再重复", names(p.forced).join() === "昏君刘宏,刘宏,闪刘宏" && !grp(p, "刘宏") && !grp(p, "刘宏", "lord") && !p.lord.some((g) => names(g).includes("闪刘宏")));
+  // 同名前缀:族 / 闪 / 标 也算同一位武将(用户 2026-10-02 报 bug:闪刘宏、族荀彧 被当成独立武将)
+  p = P({ whitelist: [idOf("族荀彧")] });
+  check("⭐ 族版同名成坑:荀彧/界荀彧/族荀彧 是一个坑", p.normal.length === 1 && ["荀彧", "界荀彧", "族荀彧"].every((n) => names(grp(p, "荀彧")).includes(n)));
+  p = P({ whitelist: [idOf("闪刘宏"), idOf("刘宏")] });
+  check("⭐ 闪版同名成坑:刘宏/闪刘宏 是一个坑(不出两个)", p.normal.length === 1 && names(grp(p, "刘宏")).join() === "刘宏,闪刘宏");
+  p = P({ whitelist: [idOf("标袁术")] });
+  check("标版同名成坑:袁术/标袁术/谋袁术", ["袁术", "标袁术", "谋袁术"].every((n) => names(grp(p, "袁术")).includes(n)));
+  check("神版仍独立(神赵云 不并入 赵云/闪赵云)", (() => { const q = P({ whitelist: [idOf("闪赵云"), idOf("神赵云")] }); return q.normal.length === 2 && !names(grp(q, "赵云")).includes("神赵云") && names(grp(q, "赵云")).includes("闪赵云"); })());
   check("暴虐无道必出暴君董卓 / 失心疯必出教主张角", P({ whitelist: [], mode: "baonue" }).forced.opts[0].name === "暴君董卓" && P({ whitelist: [], mode: "shixin" }).forced.opts[0].name === "教主张角");
   p = P({ whitelist: [idOf("魔曹操")] });
   check("带工具的将 gid=工具名(落座后工具可用)", grp(p, "曹操").opts.find((o) => o.name === "魔曹操").gid === "caocao");

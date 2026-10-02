@@ -1,7 +1,7 @@
 // 线上发将 —— 纯逻辑(组池规则)。RoomCore 的 dealStart 吃这里产出的 pools;sim 与 worker 共用。
 //
 // 概念:
-//   将坑(group) = 同名可替换的一组武将版本(黄盖/界黄盖 是同一个坑;神版独立成坑)。发将、换将都以坑为单位,
+//   将坑(group) = 同名可替换的一组武将版本(黄盖/界黄盖、荀彧/界荀彧/族荀彧、刘宏/闪刘宏 是同一个坑;神版独立成坑)。发将、换将都以坑为单位,
 //                 全场一个坑只发给一个人;玩家从坑里任选一个版本登场。
 //   白名单      = /pool 编辑页勾选的武将 id(服务端 SgsConfigDO)。坑里只要有一个"勾选且当前可用"的版本,整坑入池,
 //                 且同名的其它版本也可选(用户 2026-10-02:只勾标黄盖,界黄盖也能选)——但被禁的版本除外。
@@ -27,8 +27,9 @@ const LORD_ONLY_KEYS = new Set(["曹丕"]);
 const IDENTITY_ONLY_IDS = new Set([355]); // 董昭
 const MODE_EXCLUSIVE_GENRE = "不臣之君";
 
-// 与 room.html heroBaseName 同一前缀集(改一处要同步另一处)
-export function heroBaseName(name) { return (name || "").replace(/^(神|界|谋|魔|SP|梦|教主|暴君|昏君)/, ""); }
+// 与 room.html heroBaseName 同一前缀集(改一处要同步另一处)。
+// 用户 2026-10-02:(标)界/谋/族/闪/SP 同名都算同一位武将。2026-10-02 审计:库里 族34/闪5/标1 全是前缀写法,无误伤。
+export function heroBaseName(name) { return (name || "").replace(/^(神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)/, ""); }
 // 坑的 key:神版独立(神关羽 ≠ 关羽),其余按基名合并
 export function groupKey(h) { return h.name.startsWith("神") ? h.name : heroBaseName(h.name); }
 export function hasLordSkill(h) { return (h.skills || []).some((s) => /^主公技/.test(s.effect || "")); }
