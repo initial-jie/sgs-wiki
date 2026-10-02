@@ -19,6 +19,7 @@ import DERIVED_EN from "./shared/derived-en.json"; // 衍生技/牌英文补丁 
 import EQUIPMENT_DATA from "./shared/equipment.json"; // 装备牌库(#2 距离层:坐骑/装备下拉数据源;build-equipment.mjs 生成)
 import BANNED_DATA from "./shared/banned-generals.json"; // ② 禁将池(全局默认;改文件+deploy 生效)
 import GENDER_DATA from "./shared/hero-gender.json"; // 女性武将 id(olwiki 性别);贴成 generals.json 的 gender 字段 + 喂 RoomCore(明忠〖明察〗判定)
+import SKINS_DATA from "./shared/hero-skins.json"; // OL 皮肤表(座位「立绘」:点开才拉 /hero-skins.json)
 import PINYIN_DATA from "./shared/hero-pinyin.json"; // 武将名→拼音音节(build-pinyin.mjs 生成),贴到 generals.json 的 py 字段供选将拼音搜索
 
 // 环境(池)划分:军争/身份 · 2v2 · 斗地主 · 1v1。每个环境一份白名单(可发将)+ 一份黑名单(禁将)。
@@ -79,6 +80,7 @@ for (const merged of [DERIVED_MERGED, DCARDS_MERGED]) {
 const DERIVED_JSON = JSON.stringify(DERIVED_MERGED); // 衍生技(小),同上
 const DCARDS_JSON = JSON.stringify(DCARDS_MERGED);   // 衍生牌(小),同上
 const EQUIPMENT_JSON = JSON.stringify(EQUIPMENT_DATA); // 装备牌库(静态,直接吐)
+const SKINS_JSON = JSON.stringify({ base: SKINS_DATA.base, alias: SKINS_DATA.alias, skins: SKINS_DATA.skins });
 const IDENT_MODES_JSON = JSON.stringify(identModesForClient());
 // 规则集:目录只给 id/title/sub(小);正文由 /rules/{id}.html 吐成自包含整页,供大厅弹层 iframe 加载
 const RULES_INDEX_JSON = JSON.stringify(RULES_DATA.map(({ id, title, sub }) => ({ id, title, sub })));
@@ -115,6 +117,7 @@ export function handleSgs(request, env, url) {
         pools: Object.fromEntries(POOL_KEYS.map((k) => [k, { ...POOL_META[k], ids: cfg.pools[k].ban }])) }),
         { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }));
     if (url.pathname === "/rules.json") return jsonResponse(RULES_INDEX_JSON, 300);
+    if (url.pathname === "/hero-skins.json") return jsonResponse(SKINS_JSON);
     if (url.pathname === "/ident-modes.json") return jsonResponse(IDENT_MODES_JSON, 300); // 身份模式表(各人数默认配比/胜利条件)
     if (url.pathname.startsWith("/rules/") && url.pathname.endsWith(".html")) { // 规则集正文整页(iframe)
       const page = RULE_PAGES.get(url.pathname.slice(7, -5));
@@ -196,6 +199,7 @@ export class RoomDO extends RoomDOBase {
     switch (msg.type) {
       case "setBanEnabled": return core.setBanEnabled(msg.on);                      // ② 禁将总开关(房内共享,任何玩家可切)
       case "setGeneral": return core.setGeneral(id, msg.seatNo, msg.generalId);      // 别静默吞错(否则"工具没变"却无提示)
+      case "setSkin": return core.setSkin(id, msg.seatNo, msg.skinId ?? null);          // 立绘皮肤(公开)
       case "setFaction": return core.setFaction(id, msg.seatNo, msg.faction);        // 神将自选势力
       // ── 线上发将 ──
       case "dealStart": return this.dealStart(id, msg, core);                        // async:先读全局将池白名单

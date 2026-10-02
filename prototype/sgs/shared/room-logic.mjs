@@ -446,7 +446,7 @@ export class RoomCore extends RoomBase {
   // 装备区5槽(weapon/armor/atkHorse(-1马)/defHorse(+1马)/treasure)=各 {name,suit,rank,type,range?} 或 null;
   // abolished={槽名:true} 废除的槽(张绣/刘宏等);lordBonus=主公/地主/主帅 +1 体力上限
   _newSeat(i) {
-    return { seatNo: i, general: null, chosenFaction: null, genLocked: false, holderDevices: [], toolState: {}, // genLocked:线上发将亮出的武将不可再手动改(新一局/重新发将才解)
+    return { seatNo: i, general: null, chosenFaction: null, skin: null, genLocked: false, holderDevices: [], toolState: {}, // genLocked:线上发将亮出的武将不可再手动改(新一局/重新发将才解)
       hp: null, hpMax: null, flipped: false, chained: false, dead: false, lordBonus: false,
       weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {},
       judgments: [] }; // 判定区:乐不思蜀/兵粮寸断/闪电 种类列表(同名不叠;只记种类不记花色点数)
@@ -471,6 +471,7 @@ export class RoomCore extends RoomBase {
   _applyGeneral(n, g, locked = false) {
     this.seats[n].general = g; this.seats[n].toolState = g ? initToolState(g) : {};
     this.seats[n].genLocked = !!locked;
+    this.seats[n].skin = null;          // 改武将→皮肤回默认立绘
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
@@ -494,13 +495,20 @@ export class RoomCore extends RoomBase {
     const players = this.seatNos().filter((n) => this.seats[n].holderDevices.length); // 已入座的座位才发
     if (!players.length) return { error: "NO_PLAYERS" };
     lordSeat = lordSeat == null || lordSeat === "" ? null : Number(lordSeat);
-    // 明忠(主公是暗的)/无间道:不发主公技候选(用户 2026-10-02)。明忠仍有「先选先亮」的人——亮明的明忠/储君本人,其余人随后暗选、一起亮出
-    let lordExtra = true, lordTitle = DEAL_MODES[mode].lordTitle;
+    // 明忠(主公是暗的)/无间道:不发主公技候选(用户 2026-10-02),但仍有「先选先亮」的人(firstSeats):
+    //   明忠 = 亮明的明忠/储君本人;无间道 = 两名主帅(各自暗选,都选定后一起亮出)。其余人随后暗选、一起亮出。
+    let lordExtra = true, lordTitle = DEAL_MODES[mode].lordTitle, firstSeats = null;
     if (this.ident && IDENT_MODES[this.ident.mode]?.noLord) {
       lordExtra = false;
-      const first = this.ident.mode === "mingzhong" ? players.find((n) => this.ident.roles[n]?.title) : undefined;
-      lordSeat = first ?? null;
-      if (first != null) lordTitle = this.ident.roles[first].title;
+      if (this.ident.mode === "mingzhong") {
+        const first = players.find((n) => this.ident.roles[n]?.title);
+        lordSeat = first ?? null;
+        if (first != null) lordTitle = this.ident.roles[first].title;
+      } else {
+        lordSeat = null;
+        firstSeats = players.filter((n) => this.ident.roles[n]?.shown && IDENT_MODES[this.ident.mode].lead.includes(this.ident.roles[n].role));
+        lordTitle = "主帅";
+      }
     }
     if (lordSeat != null && !players.includes(lordSeat)) return { error: "BAD_LORD" };
 
@@ -527,7 +535,9 @@ export class RoomCore extends RoomBase {
         hands[n].initKeys.push(g.key);
       }
     }
-    this.deal = { mode, lordSeat, lordTitle, lordPicked: false, hands, pool: normal, poolKey, poolLabel }; // lordSeat=先选先亮的座位(君主 / 明忠),lordTitle=其称谓; // poolKey/Label:用的是哪个环境的名单(仅展示)
+    if (!firstSeats) firstSeats = lordSeat != null ? [lordSeat] : [];
+    // lordSeat=拿主公技候选的君主座位(明忠模式=明忠座位,无额外候选);firstSeats=先选先亮的座位(君主 / 明忠 / 无间道两主帅),lordTitle=其称谓
+    this.deal = { mode, lordSeat, firstSeats, lordTitle, lordPicked: false, hands, pool: normal, poolKey, poolLabel }; // poolKey/Label:用的是哪个环境的名单(仅展示)
     return { ok: true, players: players.length };
   }
   // 换将:起手坑各可换一次 —— 原坑放回将池,重抽一个不与自己起手 6 坑重复的;换来的坑不可再换
@@ -553,12 +563,17 @@ export class RoomCore extends RoomBase {
     if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
     const hand = d.hands[seatNo]; if (!hand) return { error: "NOT_IN_DEAL" };
     if (hand.pick && hand.pick.final) return { error: "ALREADY_PICKED" };
-    const isLord = d.lordSeat === seatNo;
-    if (d.lordSeat != null && !isLord && !d.lordPicked) return { error: "LORD_FIRST" };
+    const firsts = (d.firstSeats ?? (d.lordSeat != null ? [d.lordSeat] : [])).filter((n) => this.seats[n] && d.hands[n]); // 老存档无 firstSeats
+    const isFirst = firsts.includes(seatNo);
+    if (firsts.length && !isFirst && !d.lordPicked) return { error: "LORD_FIRST" };
     const o = hand.slots[slot]?.opts.find((x) => x.id === heroId);
     if (!o) return { error: "BAD_PICK" };
-    hand.pick = { slot, heroId, gid: o.gid, name: o.name, final: isLord };
-    if (isLord) { d.lordPicked = true; this._applyGeneral(seatNo, o.gid, true); }
+    hand.pick = { slot, heroId, gid: o.gid, name: o.name, final: false };
+    // 先选的人都选定了 → 一起亮出落座、不可再改(只有一位时=选定即亮出;无间道两主帅=后选的那位选定时一起亮)
+    if (isFirst && firsts.every((n) => d.hands[n].pick)) {
+      for (const n of firsts) { d.hands[n].pick.final = true; this._applyGeneral(n, d.hands[n].pick.gid, true); }
+      d.lordPicked = true;
+    }
     return { ok: true };
   }
   // 亮出:全员选定后任何人可点 → 所有人落座,发将结束
@@ -757,9 +772,18 @@ export class RoomCore extends RoomBase {
       if (mine) { seats[n].slots = clone(hand.slots); seats[n].pick = hand.pick ? clone(hand.pick) : null; }
       else if (hand.pick && hand.pick.final) seats[n].pick = { heroId: hand.pick.heroId, name: hand.pick.name, final: true }; // 君主已亮出
     }
-    return { mode: d.mode, lordSeat: d.lordSeat, lordTitle: d.lordTitle ?? null, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length, poolKey: d.poolKey ?? null, poolLabel: d.poolLabel ?? null };
+    return { mode: d.mode, lordSeat: d.lordSeat, firstSeats: d.firstSeats ?? (d.lordSeat != null ? [d.lordSeat] : []), lordTitle: d.lordTitle ?? null, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length, poolKey: d.poolKey ?? null, poolLabel: d.poolLabel ?? null };
   }
 
+  // 立绘皮肤(公开:手机当武将牌用,全场看到的是同一张;只有持有者能换。skinId=OL 皮肤 id,null=默认立绘;合法性由客户端按 hero-skins.json 保证,服务端只收整数)
+  setSkin(id, n, skinId) {
+    n = Number(n);
+    if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
+    if (!this.seats[n].general) return { error: "NO_GENERAL" };
+    if (skinId != null && !(Number.isInteger(skinId) && skinId > 0 && skinId < 1e8)) return { error: "BAD_SKIN" };
+    this.seats[n].skin = skinId ?? null;
+    return { ok: true };
+  }
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
   setFaction(id, n, faction) {
     n = Number(n);
@@ -2301,7 +2325,7 @@ export class RoomCore extends RoomBase {
   }
 
   _seatView(s, holds) {
-    return { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, genLocked: !!s.genLocked, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
+    return { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, skin: s.skin ?? null, genLocked: !!s.genLocked, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
       // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
       hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
       weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},

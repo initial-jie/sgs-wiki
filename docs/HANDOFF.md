@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **702 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **711 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
@@ -24,7 +24,7 @@
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **702 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **711 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **709 将**(692 OL = 官网花名册全量 + 17 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -84,7 +84,7 @@
 
 ## ✅ 身份自动发放 + 发将武将锁定 + 新一局(2026-10-01,待 deploy)
 
-**基线**:room-sim **702**。
+**基线**:room-sim **711**。
 
 **发将亮出的武将锁定**:`seat.genLocked`(dealPick 君主 / dealReveal 落座时置 true)→ `setGeneral` 拒 `GENERAL_LOCKED`,座位卡不再给「选武将 ▾」。手动选将的座位不锁、下拉照旧。解锁 = 重新发将(参与座位)/ 发身份时清空武将 / 房间设置「🔄 新一局」(`newGame`:清全场武将+身份+进行中的发将,座位与持有者不动)。
 
@@ -100,7 +100,11 @@
   - **明忠技能**:明忠选定武将后「我的身份」显示获得的技能——男性且库里 hp ≤ 3 →〖明察〗(带查看按钮,`identPeek` 整局一次),其余 →〖舍身〗;没选将显示「选定武将后显示」。服务端判定,舍身/没选将调 identPeek → `NO_SKILL`。
   - **〖蔽众〗**(失心疯,教主的武将是教主张角才有):`identBizhong`(选一名非失心、未亮明的其他座位 → 变失心,全场可见,本人此后看不到自己的身份)→ `identSwapLost`(任意两名失心互换身份牌,可多次)→ `identBizhongDone`(关闭)。整局一次;教主在「只有你知道」里始终看得到各失心真身。
   - **大忠似奸变种规则提示**:`identity.mjs` dazhong.variant 按身份给几行提示(昏君=袒佞 + 两条分线 + 刘宏例外;其余身份=对自己的影响),「我的身份」里显示 +「看变种规则全文」。
-  - **明忠 / 无间道发将不发主公技候选**:`IDENT_MODES[mode].noLord` → `dealStart` 不发君主额外候选(`lordExtra=false`),发将设置里君主座位下拉置灰并说明。**明忠仍有「先选先亮」**(用户 2026-10-02 报 bug 后改):`deal.lordSeat` = 亮明的明忠/储君座位(忽略客户端传的君主座位)、`deal.lordTitle` = 明忠/储君(客户端 `dealLordTitle()` 优先用它),明忠选定即亮出落座,其余人随后暗选、一起亮出。无间道 lordSeat=null,全员一起暗选亮出(官方规则是两主帅先选先亮,未做)。
+  - **明忠 / 无间道发将不发主公技候选**:`IDENT_MODES[mode].noLord` → `dealStart` 不发君主额外候选(`lordExtra=false`),发将设置里君主座位下拉置灰并说明。**明忠仍有「先选先亮」**(用户 2026-10-02 报 bug 后改):`deal.lordSeat` = 亮明的明忠/储君座位(忽略客户端传的君主座位)、`deal.lordTitle` = 明忠/储君(客户端 `dealLordTitle()` 优先用它),明忠选定即亮出落座,其余人随后暗选、一起亮出。**无间道**:`deal.firstSeats` = 两名主帅(lordSeat=null),各自暗选(可改),**都选定时一起亮出落座**,其余人再暗选、一起亮出。`dealPick` 统一按 firstSeats 判(只有一位时=选定即亮出);客户端 `dealFirsts()`。
+- **座位立绘 + OL 皮肤(2026-10-02;手机当武将牌用,实体卡没到也能玩)**:座位卡标题行左侧头像(`.sava`)→ 全屏立绘 `openArt/renderArt`(顶部 名字/势力/体力 +「技能」切换;底部皮肤横条)。座位持有者点皮肤 = `setSkin`(`seat.skin` 公开,全场看到同一张,换将重置);非持有者点 = 仅本机预览。
+  - 皮肤表 `shared/hero-skins.json`(698 将 5660 张;`skins:{武将id:[[皮肤id,名,品质]…]}` + `alias` 手录/线下将借用的 olwiki 武将:graduate 候选指向自己的 olwiki id,不臣之君三将指向 张角/董卓/刘宏)→ worker `/hero-skins.json`,**点开立绘才拉**。图 = `…/pc/general/big/static/{皮肤id}.png`(大图 0.3~3MB)/ `skinShop/{皮肤id}.png`(缩略图)。
+  - **数据来源**:olwiki 各武将页 `a.general-skin-card`(同名武将各版本共用一组皮肤)。重抓方法:浏览器面板开 olwiki → JS 同源 fetch 772 页 → 结果塞 `window.name` → 导航到本地 `python3` 小接收服务(127.0.0.1)页面再同源 POST 落盘(olwiki 页面直接 fetch 本地会被拦;curl olwiki 403)。新录武将没有皮肤条目时只显示默认立绘。
+  - 座位行「查看技能」按钮缩成「技能」(给头像让位)。
 - 〖舍身〗的结算、明忠 +1 上限 +1 血、暴君 +2 上限等**不自动**,仍在面板手动改。
 - **疑似身份标记**:每个未亮明座位一个「疑?」小标,点开选身份。**只存本机 localStorage**(key=房间码+本局 ident.id)→ 每人各标各的、互相看不到,重发身份自动作废;失心本人可以标自己。
 - 发将设置弹层:本局发过身份 → 模式与君主座位(1 号位)自动带入(明忠/无间道没有先选的君主,不带)。

@@ -63,6 +63,27 @@ button:disabled{opacity:.4;cursor:default}
 .seat .st{font-family:var(--display);font-weight:800;font-size:15px;min-width:max-content} /* 标题不压缩:窄屏放不下时按钮整体换行,而不是把武将名标签挤折行 */
 .seat .st .lb,.seat .st .kb,.seat .st .fc{white-space:nowrap}
 .seat .lb{font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:4px;padding:0 5px;margin-left:6px}
+.seat .sava{width:38px;height:38px;border-radius:6px;object-fit:cover;object-position:top;border:1px solid var(--qi);cursor:pointer;flex:none;background:#e9e1cf}
+.artmask{position:fixed;inset:0;z-index:90;background:#14110d;color:#f3ead8;display:flex;flex-direction:column}
+.arttop{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:17px;font-family:var(--display)}
+.arttop .grow{flex:1;min-width:0}
+.arttop button,.artcell{background:rgba(255,255,255,.08);color:#f3ead8;border:1px solid rgba(255,255,255,.22)}
+.arttop button{padding:5px 12px;font-size:13px;min-height:0}
+.arttop .fc{background:rgba(255,255,255,.88)}
+.arthp .hp-dot{vertical-align:middle}
+.artbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto}
+.artimg{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.artskills{align-self:flex-start;width:100%;max-width:560px;margin:0 auto;padding:12px 14px;background:var(--paper2);color:var(--ink);border-radius:8px}
+.artfoot{padding:6px 10px 12px}
+.artcap{font-size:13px;margin-bottom:6px}
+.arthint{float:right;font-size:11px;opacity:.6}
+.artstrip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.artcell{flex:none;width:66px;padding:3px 3px 4px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:0;font-family:var(--body)}
+.artcell img{width:58px;height:58px;object-fit:cover;object-position:top;border-radius:4px;background:#2a241c}
+.artcell span{font-size:10px;line-height:1.2;max-width:60px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.artcell small{font-size:9px;opacity:.6;line-height:1}
+.artcell.pub{border-color:#e8c66a}
+.artcell.on{background:rgba(232,198,106,.22);border-color:#e8c66a}
 .seat .gz{font-size:11px;padding:0 6px;margin-left:5px;border:1px dashed var(--line);border-radius:4px;background:none;color:var(--ink-soft);font-family:var(--body);font-weight:400;min-height:0;line-height:1.6;white-space:nowrap}
 .seat .gz.on{border-style:solid;border-color:#2b6cb0;color:#2b6cb0}
 .seat .lb.idt{background:var(--seal);color:#f6ecd8}
@@ -342,7 +363,7 @@ function seatGeneralName(general){
 
 /* ---------- 弹层:选武将 / 查看技能 ---------- */
 let pickerSeat=null;
-function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;sheetSeat=null;dealSeat=null;dealOpen=null;identSeat=null;}
+function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;sheetSeat=null;dealSeat=null;dealOpen=null;identSeat=null;artSeat=null;artPreview=null;}
 function maskClose(){document.querySelectorAll("[data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b)closeModal();});}
 function openHeroPicker(seatNo){
   if(!HEROES.length){toast("武将库还在加载…稍等再试");return;}
@@ -540,10 +561,10 @@ const RC=RoomClient.create({
     POOL_EMPTY:"将池里没有可换的了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束",
     GENERAL_LOCKED:"线上发将选定的武将不能再改(要重来请重新发将,或在房间设置里点「新一局」)",
     COUNT_MISMATCH:"身份张数之和要等于入座人数",BAD_LEAD:"君主身份必须正好 1 张(明忠模式还要至少 1 名忠臣)",BAD_COUNTS:"身份张数填得不对",BAD_LOST:"失心张数不对",
-    NO_DEFAULT:"这个人数没有默认配比,请在发身份设置里手填",NO_IDENT:"本局没有发身份",ALREADY_PEEKED:"明察整局只能看一次",NO_SKILL:"当前武将没有这个技能(或已经用完)",ALREADY_USED:"蔽众整局只能发动一次",BAD_TARGET:"不能选这个座位"},
+    NO_DEFAULT:"这个人数没有默认配比,请在发身份设置里手填",NO_IDENT:"本局没有发身份",ALREADY_PEEKED:"明察整局只能看一次",NO_SKILL:"当前武将没有这个技能(或已经用完)",NO_GENERAL:"先选定武将",BAD_SKIN:"皮肤编号不对",ALREADY_USED:"蔽众整局只能发动一次",BAD_TARGET:"不能选这个座位"},
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
   beforeConnect(){ state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k]; },
-  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal();if(identSeat!=null)renderMyIdent();
+  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal();if(identSeat!=null)renderMyIdent();if(artSeat!=null)renderArt();
     if(banRev>=0&&(m.cfgRev||0)!==banRev){ banRev=m.cfgRev||0; loadBans(); } }, // 服务端名单变了 → 刷新禁将面板
   onMessage(m){ if(m.type==="actionResult"&&m.card!==undefined){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();} },
   onClosed(){ state=null;focus=null;render(); },
@@ -592,6 +613,7 @@ function viewFocusHeader(seat){
 // 模式表与 shared/deal.mjs DEAL_MODES 对应(这里只要展示名与君主称谓)
 const DEAL_MODE_UI={normal:["身份局","主公"],baonue:["暴虐无道","暴君"],shixin:["失心疯","教主"],dazhong:["大忠似奸","昏君"]};
 let dealSeat=null, dealOpen=null; // 打开的选将弹层座位 / 展开技能的武将 id;roomState 到达时若 dealSeat 非空则刷新弹层
+const dealFirsts=()=>{const d=state.deal;return d?(d.firstSeats||(d.lordSeat!=null?[d.lordSeat]:[])):[];}; // 先选先亮的座位:君主 / 明忠 / 无间道两主帅
 const dealLordTitle=()=>(state.deal&&state.deal.lordTitle)||(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI.normal)[1]; // 先选先亮的人的称谓:君主,或明忠模式的 明忠/储君
 // 座位卡顶部那一行:没在发将=「线上发将」入口;发将中=控制行(模式/将池/进度 + 亮出 + 中止)。各座位的选将入口与状态在 viewSeats 的座位行里(用户 2026-10-02:不另起状态卡)
 function viewDealRow(){
@@ -602,7 +624,7 @@ function viewDealRow(){
   let h=`<div class="row" style="margin-bottom:8px"><span class="grow" style="font-size:13px">🎴 <b>发将中</b> · ${mu[0]}${d.poolLabel?" · "+esc(d.poolLabel):""} · 已选 <b>${d.picked}/${d.total}</b></span>`;
   if(all) h+=`<button class="primary" data-dealreveal="1">亮出</button>`;
   h+=`<button class="ghost" data-dealcancel="1" style="font-size:12px">中止</button></div>`;
-  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:-2px 0 8px">等${dealLordTitle()}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
+  if(dealFirsts().length&&!d.lordPicked) h+=`<div class="hint" style="margin:-2px 0 8px">等${dealLordTitle()}(座位${dealFirsts().join("、")})先选定并${dealFirsts().length>1?"一起":""}亮出,其余人可以先看牌、换将。</div>`;
   else if(all) h+=`<div class="hint" style="margin:-2px 0 8px">全员已选定,任何人点「亮出」即全部落座。</div>`;
   return h;
 }
@@ -626,9 +648,9 @@ function openDealSetup(){
     if(dm){ $("#deal-mode").value=dm; if(held.some(s=>s.seatNo===1)) $("#deal-lord").value="1"; }
     if(im&&(IDENT_MODES[im]||{}).noLord){ // 明忠(主公是暗的)/无间道:不发主公技候选(服务端也会忽略君主座位)
       const ls=$("#deal-lord"); ls.value=""; ls.disabled=true;
-      const fs=im==="mingzhong"?Object.keys(state.ident.seats).find(n=>state.ident.seats[n].pub):null; // 明忠:亮明的明忠/储君先选先亮
+      const fs=Object.keys(state.ident.seats).filter(n=>state.ident.seats[n].pub&&state.ident.seats[n].pub!=="失心"); // 明忠:亮明的明忠/储君;无间道:两名主帅
       ls.closest(".row").insertAdjacentHTML("afterend",`<div class="hint" style="margin:-6px 0 12px">${esc(state.ident.label)}模式不发主公技候选,所有人各 6 将。`
-        +(fs?`${esc(state.ident.seats[fs].pub)}(座位${fs})先选定并亮出,其余人再暗选、一起亮出。`:"所有人一起暗选亮出。")+`</div>`);
+        +(fs.length>1?`两名主帅(座位${fs.join("、")})先各自暗选、都选定后一起亮出,其余人再暗选、一起亮出。`:fs.length?`${esc(state.ident.seats[fs[0]].pub)}(座位${fs[0]})先选定并亮出,其余人再暗选、一起亮出。`:"所有人一起暗选亮出。")+`</div>`);
     }
   }
   $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,lordSeat:lord===""?null:+lord});closeModal();};
@@ -638,13 +660,14 @@ function renderDeal(){
   if(dealSeat==null) return;
   const d=state&&state.deal, me=d&&d.seats[dealSeat];
   if(!d||!me||!me.slots){ closeModal(); return; } // 发将结束 / 座位已不归我 → 关弹层
-  const isLord=d.lordSeat===dealSeat, lt=dealLordTitle();
-  const waitLord=d.lordSeat!=null&&!isLord&&!d.lordPicked, locked=!!(me.pick&&me.pick.final);
+  const firsts=dealFirsts(), isLord=firsts.includes(dealSeat), lt=dealLordTitle(), multi=firsts.length>1;
+  const waitLord=firsts.length>0&&!isLord&&!d.lordPicked, locked=!!(me.pick&&me.pick.final);
   let st;
   if(locked) st=`已选定并亮出:<b style="color:var(--seal)">${esc(me.pick.name)}</b>`;
+  else if(isLord&&multi&&me.pick) st=`已暗选:<b style="color:var(--seal)">${esc(me.pick.name)}</b> <span class="hint" style="margin:0">(等另一名${lt}选定后一起亮出;此前可改)</span>`;
   else if(me.pick) st=`已暗选:<b style="color:var(--seal)">${esc(me.pick.name)}</b> <span class="hint" style="margin:0">(别人看不到;全员亮出前可改)</span>`;
-  else if(waitLord) st=`等${lt}(座位${d.lordSeat})先选定。你可以先看牌、换将。`;
-  else if(isLord) st=`你是${lt}:<b>选定后立即亮出、不可更改</b>。`;
+  else if(waitLord) st=`等${lt}(座位${firsts.join("、")})先选定。你可以先看牌、换将。`;
+  else if(isLord) st=multi?`你是${lt}:<b>${firsts.length} 名${lt}都选定后一起亮出,之后不可更改</b>。`:`你是${lt}:<b>选定后立即亮出、不可更改</b>。`;
   else st=`从下面任选一将。选定后暗置,全员选完一起亮出。`;
   const slotHtml=(s,i)=>{
     const on=me.pick&&me.pick.slot===i;
@@ -676,8 +699,59 @@ function renderDeal(){
   mq("[data-dskill]").forEach(b=>b.onclick=()=>{const id=+b.dataset.dskill;dealOpen=dealOpen===id?null:id;renderDeal();});
   mq("[data-dswap]").forEach(b=>b.onclick=()=>send({type:"dealSwap",seatNo:dealSeat,slot:+b.dataset.dswap})); // 不二次确认(用户 2026-10-02:连点两下费劲)
   mq("[data-dpick]").forEach(b=>b.onclick=()=>{
-    if(isLord&&!confirm("选定「"+b.dataset.dname+"」?\n"+lt+"选定后立即亮出,不能再改。"))return;
+    if(isLord&&!multi&&!confirm("选定「"+b.dataset.dname+"」?\n"+lt+"选定后立即亮出,不能再改。"))return;
     send({type:"dealPick",seatNo:dealSeat,slot:+b.dataset.dpick,heroId:+b.dataset.dhero});});
+}
+
+/* ---------- 立绘(手机当武将牌):点座位头像 → 全屏看插画;持有者可换 OL 皮肤(公开,全场看到同一张)---------- */
+// 皮肤表 /hero-skins.json(源 shared/hero-skins.json,olwiki 抓的)点开立绘时才拉:{base, alias:{手录将id:olwiki id}, skins:{武将id:[[皮肤id,名,品质],…]}}
+const SKIN_BASE="https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/";
+let SKINS=null, skinsLoading=false;
+let artSeat=null, artPreview=null, artSkills=false; // 打开着立绘的座位 / 本机预览中的皮肤 id(非持有者翻看用,不影响别人)/ 是否展开技能
+function loadSkins(){
+  if(SKINS||skinsLoading) return; skinsLoading=true;
+  fetch("/hero-skins.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{SKINS=d;skinsLoading=false;if(artSeat!=null)renderArt();}).catch(()=>{skinsLoading=false;SKINS={alias:{},skins:{}};if(artSeat!=null)renderArt();});
+}
+const skinBig=id=>SKIN_BASE+"big/static/"+id+".png", skinThumb=id=>SKIN_BASE+"skinShop/"+id+".png";
+function skinsOf(hero){ if(!SKINS||!hero) return []; return SKINS.skins[hero.id]||SKINS.skins[SKINS.alias[hero.id]]||[]; }
+const seatThumb=(s,hero)=>s.skin?skinThumb(s.skin):(hero.avatar||hero.cover||"");
+function openArt(sn){ artSeat=sn; artPreview=null; artSkills=false; loadSkins(); renderArt(); }
+function renderArt(){
+  if(artSeat==null) return;
+  const s=state&&state.seats[artSeat], hero=s&&heroForSeat(s.general);
+  if(!hero){ closeModal(); return; }
+  const mine=state.youHold.includes(artSeat), list=skinsOf(hero);
+  const cur=artPreview!=null?artPreview:(s.skin||0); // 0=默认立绘
+  const curSkin=list.find(x=>x[0]===cur);
+  const img=cur?skinBig(cur):(hero.cover||hero.avatar||"");
+  const chosen=s.chosenFaction||null;
+  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||"shen"):"shen"):(FCLS[hero.faction]||"");
+  const fname=hero.factionSelectable?(chosen||"神"):(hero.faction||"?");
+  const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
+  let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
+  const strip=$("#modal .artstrip"), keep=strip?strip.scrollLeft:0;
+  const cell=(id,nm,q,src)=>`<button class="artcell${id===cur?" on":""}${id===(s.skin||0)?" pub":""}" data-skin="${id}"><img loading="lazy" src="${esc(src)}" onerror="this.style.visibility='hidden'"/><span>${esc(nm)}</span>${q?`<small>${esc(q)}</small>`:""}</button>`;
+  $("#modal").innerHTML=`<div class="artmask">
+    <div class="arttop"><span class="grow"><b>${esc(hero.name)}</b><span class="fc ${fc}">${esc(fname)}</span> <span class="arthp">${dots}</span></span>
+      <button data-artskill="1">${artSkills?"看立绘":"技能"}</button><button data-artclose="1">×</button></div>
+    <div class="artbody">${artSkills
+      ?`<div class="artskills">${hero.characteristic?`<div class="hint" style="margin:0 0 6px">特点:${esc(hero.characteristic)}</div>`:""}${cardWarnHtml(hero)}${skillsHtml(hero.skills)}${derivedSkillsHtml(hero)}${derivedCardsHtml(hero)}</div>`
+      :`<img class="artimg" src="${esc(img)}" data-fallback="${esc(hero.cover||hero.avatar||"")}" alt="${esc(hero.name)}"/>`}</div>
+    <div class="artfoot"><div class="artcap">座位 ${artSeat}${curSkin?" · "+esc(curSkin[1].replace(/\*.*/,""))+(curSkin[2]?"("+esc(curSkin[2])+")":""):" · 默认立绘"}`
+      +(artPreview!=null&&artPreview!==(s.skin||0)?` · <span style="color:#e8c66a">仅你在预览</span>`:"")
+      +`<span class="arthint">${!SKINS?"皮肤加载中…":!list.length?"这位武将没有收录皮肤":mine?"点皮肤即换,全场都看到这张":"皮肤由座位持有者选;你可以点开预览"}</span></div>
+      ${list.length?`<div class="artstrip">${cell(0,"默认","",hero.avatar||hero.cover||"")}${list.map(x=>cell(x[0],x[1].replace(/\*.*/,""),x[2],skinThumb(x[0]))).join("")}</div>`:""}</div></div>`;
+  const ns=$("#modal .artstrip"); if(ns) ns.scrollLeft=keep;
+  const im=$("#modal .artimg"); if(im) im.onerror=()=>{ if(im.dataset.fallback&&im.src!==im.dataset.fallback){im.src=im.dataset.fallback;} else im.style.visibility="hidden"; };
+  $("#modal [data-artclose]").onclick=closeModal;
+  $("#modal [data-artskill]").onclick=()=>{artSkills=!artSkills;renderArt();};
+  const body=$("#modal .artbody"); if(body&&!artSkills) body.onclick=e=>{ if(e.target===body) closeModal(); };
+  document.querySelectorAll("#modal [data-skin]").forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.skin; artSkills=false;
+    if(mine){ artPreview=null; send({type:"setSkin",seatNo:artSeat,skinId:id||null}); s.skin=id||null; } // 乐观更新,服务端回包后以其为准
+    else artPreview=id;
+    renderArt();
+  });
 }
 
 /* ---------- 身份自动发放(逻辑在 RoomCore.ident*,模式表/配比在 shared/identity.mjs → /ident-modes.json)---------- */
@@ -903,12 +977,12 @@ function viewSeats(){
       label=t+label;
     }
     if(ds){
-      if(s.seatNo===deal.lordSeat&&!(iv&&iv.pub)) label=`<span class="lb">${dealLordTitle()}</span>`+label;
+      if(dealFirsts().includes(s.seatNo)&&!(iv&&iv.pub)) label=`<span class="lb">${dealLordTitle()}</span>`+label;
       if(!ds.final) label+=ds.picked?`<span class="kb">✓ 已选</span>`:`<span class="kb" style="opacity:.65">… 未选</span>`;
     }
-    h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
+    h+=`<div class="seat ${mine?'mine':''}"><div class="row">`+(hero?`<img class="sava" data-art="${s.seatNo}" src="${esc(seatThumb(s,hero))}" alt="立绘" title="看立绘" onerror="this.style.visibility='hidden'"/>`:"")+`<span class="st grow">座位 ${s.seatNo}`
       +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
-    if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
+    if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">技能</button>`; // 原「查看技能」:座位行加了立绘头像,缩短给它让位
     if(hasTool(s.general)) h+=`<button class="${mine?'primary':''}" data-enter="${s.seatNo}">工具 →</button>`; // 工具入口直接放座位卡(用户 2026-10-01;原座位卡「工具 →」卡已撤)
     const heldByOther=s.holderDevices.length&&!mine;
     if(iv&&!iv.pub&&s.dead&&!ident.over) h+=`<button class="ghost" data-identshow="${s.seatNo}" style="font-size:12px">亮身份</button>`; // 阵亡:任何人可代亮
@@ -1426,6 +1500,7 @@ function bindAll(){
   q("[data-banview]").forEach(b=>b.onclick=()=>previewHero(+b.dataset.banview));
   q("[data-newgame]").forEach(b=>b.onclick=()=>{if(confirm("开新一局?\n全场武将(含线上发将锁定的)、身份、进行中的发将都会清空;座位和持有者不动。"))send({type:"newGame"});});
   // 身份:发放设置 / 我的身份 / 疑似身份标记 / 全部亮明 / 清除
+  q("[data-art]").forEach(b=>b.onclick=()=>openArt(+b.dataset.art)); // 立绘:点座位头像
   q("[data-identopen]").forEach(b=>b.onclick=()=>openIdentSetup());
   q("[data-myident]").forEach(b=>b.onclick=()=>openMyIdent(+b.dataset.myident));
   q("[data-guess]").forEach(b=>b.onclick=()=>openGuess(+b.dataset.guess));

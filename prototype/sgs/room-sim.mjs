@@ -1560,7 +1560,35 @@ console.log("\n=== 场景 20:线上发将 ===");
     }
     const wj = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 3); wj.identStart("p1", { mode: "wujian" });
     wj.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
-    check("无间道发将:不发主公技候选,没有先选的人(全员一起暗选亮出)", wj.deal.lordSeat === null && wj.deal.hands[1].slots.length === 6);
+    check("无间道发将:不发主公技候选(每人 6 坑)", wj.deal.lordSeat === null && Object.values(wj.deal.hands).every((h) => h.slots.length === 6));
+    { // 两名主帅先各自暗选,都选定后一起亮出;其余人再选(用户 2026-10-02)
+      const d = wj.deal, R = wj.ident.roles, dev = (n) => wj.seats[n].holderDevices[0];
+      const [la, lb] = Object.keys(R).map(Number).filter((n) => R[n].role.endsWith("主帅")), other = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => n !== la && n !== lb);
+      const pick = (n, k = 0) => wj.dealPick(dev(n), { seatNo: n, slot: k, heroId: d.hands[n].slots[k].opts[0].id });
+      check("无间道发将:先选的是两名主帅,称谓「主帅」", JSON.stringify(d.firstSeats) === JSON.stringify([la, lb]) && d.lordTitle === "主帅" && wj.viewFor(dev(other)).deal.firstSeats.length === 2);
+      check("主帅没亮完,其余人不能选 → LORD_FIRST", pick(other).error === "LORD_FIRST");
+      check("⭐ 一名主帅先选:暗置、未落座、对方看不到内容、还能改", pick(la).ok && !d.lordPicked && !wj.seats[la].general && !d.hands[la].pick.final
+        && wj.viewFor(dev(lb)).deal.seats[la].picked && wj.viewFor(dev(lb)).deal.seats[la].pick === undefined && pick(la, 1).ok && pick(other).error === "LORD_FIRST");
+      const wantA = d.hands[la].slots[1].opts[0], wantB = d.hands[lb].slots[0].opts[0];
+      check("⭐ 另一名主帅选定 → 两人一起亮出落座并锁定", pick(lb).ok && d.lordPicked && wj.seats[la].general === wantA.gid && wj.seats[lb].general === wantB.gid
+        && wj.seats[la].genLocked && wj.seats[lb].genLocked && wj.viewFor(dev(other)).deal.seats[la].pick.name === wantA.name && pick(la).error === "ALREADY_PICKED");
+      check("主帅亮完后其余人暗选,全员选完一起亮出", pick(other).ok && !wj.seats[other].general && wj.dealReveal(dev(other)).error === "NOT_ALL_PICKED"
+        && [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => n !== la && n !== lb && n !== other).every((n) => pick(n).ok) && wj.dealReveal(dev(other)).ok && wj.seatNos().every((n) => wj.seats[n].general));
+    }
+    { // 立绘皮肤:公开、仅持有者可换、换将重置
+      const sk = mkRoom(4, [1, 2], 2);
+      check("没选将不能设皮肤 → NO_GENERAL", sk.setSkin("p1", 1, 2407).error === "NO_GENERAL");
+      sk.setGeneral("p1", 1, gid("貂蝉"));
+      check("皮肤:持有者可设,全场可见;别人不能设;非法 id 拒绝", sk.setSkin("p1", 1, 2407).ok && sk.viewFor("p2").seats[1].skin === 2407
+        && sk.setSkin("p2", 1, 2401).error === "NOT_HOLDER" && sk.setSkin("p1", 1, "x").error === "BAD_SKIN" && sk.setSkin("p1", 1, -3).error === "BAD_SKIN");
+      const back = RoomCore.hydrate(JSON.parse(JSON.stringify(sk.serialize())));
+      check("皮肤进 serialize;设 null 回默认;换将重置", back.seats[1].skin === 2407 && sk.setSkin("p1", 1, null).ok && sk.seats[1].skin === null
+        && sk.setSkin("p1", 1, 2401).ok && sk.setGeneral("p1", 1, gid("郭嘉")).ok && sk.seats[1].skin === null);
+      const SK = JSON.parse(readFileSync(new URL("./shared/hero-skins.json", import.meta.url), "utf8"));
+      const libIds = new Set(HEROES2.map((h) => h.id));
+      check("皮肤表:条目格式 [id,名,品质];alias 的源都在库里、目标都有皮肤", Object.values(SK.skins).every((l) => l.length && l.every((x) => Number.isInteger(x[0]) && x[1] && typeof x[2] === "string"))
+        && Object.entries(SK.alias).every(([a, b]) => libIds.has(+a) && SK.skins[b]) && SK.skins[24].some((x) => x[0] === 2407));
+    }
     const nm = mkRoom(4, [1, 2, 3, 4], 3); nm.identStart("p1", { mode: "normal" });
     nm.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
     check("普通身份局发将:君主照常多 6 个主公技候选,称谓「主公」", nm.deal.lordSeat === 1 && nm.deal.hands[1].slots.length === 12 && nm.deal.lordTitle === "主公");
