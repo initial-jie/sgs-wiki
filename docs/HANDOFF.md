@@ -71,6 +71,22 @@
 
 **《不臣之心》= OL 2026「不臣之君」身份新玩法的实体版(2026-09-24 录入)**:模式专属将 3 个已进库(9019 教主张角/9020 暴君董卓/9021 昏君刘宏,genre「不臣之君」,立绘沿用同名标准将官方图),各配一张模式规则说明卡在 `derived-skills-room.json`(查将带出):失心疯(教主/护法/官兵+失心,失心身份自己看不见教主可见)、暴虐无道(暴君/诤臣/逆乱/间者,暴君上限+2、杀人回血)、大忠似奸(昏君/奸臣/忠臣/义军,义军互知)。〖执笏〗作昏君刘宏衍生技。**大忠似奸房规「昏君二线」已进规则集(`rules.json` id=dazhong-variant,用户定稿格式:变种规则三条,奸臣首次濒死亮身份)**(2026-09-25 用户设计:奸臣濒死亮身份→昏君得锁定技〖袒佞〗护奸;奸臣阵亡按忠臣/义军人数分 昏庸无道线(昏君胜利条件改同奸臣)/幡然醒悟线(并入忠臣);刘宏一律昏庸无道)。实体规则卡照片(B站开箱)读到:奸臣固定 1 名;失心疯 6/7/8 人=教主1/护法2/官兵2·3·3/内奸1·1·2/失心1~2;暴虐无道 4/5/6 人=暴君1/诤臣1·1·2/间者1/逆乱1·2·2;无间道=8 人龙虎两阵营各有主帅/护卫/对方安插的内鬼,胜利=敌方内鬼死亡,主帅死不结束只令内鬼暴露(无专属将,未做说明卡)。盒内还见 蔡夫人 与另一版董卓(封赏/执柄)两张专属卡待用户核对后录。**数据源=萌娘百科 `三国杀:张角/董卓/刘宏` 页「不臣之君」节**(WebFetch 被 403,要用浏览器面板 JS 抓;体力数勾玉 img 个数)。萌百导航条确认该系列**只有这三将**;「无间道」在 OL 端未查到独立模式页,实体包若有请用户按说明书补。`heroBaseName` 前缀集加了 教主/暴君/昏君 → 与同名标准将互斥。这三将无 OL 独立 id,**不 graduate**(永久 offline)。
 
+## ⏭ 下个会话要做(用户 2026-10-02 定,方案已对齐,未动手)
+
+**把发将的操作入口并进座位卡,撤掉顶部「线上发将」状态卡**(用户:少做额外 UI;纯 room.html 改动,RoomCore/worker 不用动)。
+
+- 自己持有且参与发将的座位:座位卡里的「选武将 ▾」按钮在发将期间换成「选将 →」(调 `openDeal(seatNo)`,弹层 `renderDeal` 保留不变)。
+  已选状态写在按钮上:未选=主色「选将 →」/ 已暗选=「已暗选 · 可改」/ 君主已亮出=不再显示按钮(武将已落座)。
+- 所有参与座位的标题行加小状态标:未选 `…` / 已暗选 `✓ 已选` / 已亮出(直接显示武将名,已是现状);君主座位标 `主公/暴君/教主/昏君`。
+  数据都在 `state.deal.seats[n]`(picked/final/slotCount)与 `state.deal.lordSeat`。
+- 座位卡顶部那行「🎴 线上发将」按钮:发将中改成控制行 ——「发将中 · 模式 · 将池 · 已选 x/y」+ 全员选完时的「亮出」+「中止」。
+  等君主的提示(「等昏君先选定…」)也放这行下面。
+- 删除 `viewDealBar()` 及 render() 里的调用;`data-dealseat / data-dealreveal / data-dealcancel` 绑定保留(换了位置而已)。
+- 不参与发将的座位(发将时没人坐的)保持普通「选武将」;发将期间参与座位不再露手动选武将入口(防误点)。
+- 验证:本地 wrangler 双设备(`RC.deviceId='A'` 再 connect;面板缓存要带 `?v=x`),手机宽度截图看座位卡不挤;room-sim 应仍 648。
+
+**同时可顺手问用户的两件事**(上次留的口子):① 手动「选武将」要不要也拦模式专属君主(教主张角/暴君董卓/昏君刘宏 现在手动随时可选);② 手动选将的禁将拦截按座位数判环境,4 人身份局会按 2v2 黑名单——要不要给房间加「当前环境」手动切换。
+
 **常用流程速查**:
 - **官网已收录的将(新将 / graduate)**:`node prototype/sgs/scrape-generals.mjs --ids 744,763`(增量抓取合并,新 id 插在 9000+ 段前;graduate 时先删 OFFLINE_HEROES 条目,`applyOverrides` 会清掉库里残留孤儿)→ `node prototype/sgs/build-pinyin.mjs`。新将 API 给的是 `…/m/general/big/static/{id}00.png`,头像由 scraper 自动派生 `skinShop/{id}00.png`。
 - **录官网还没有的 OL 新将**:olwiki `https://olwiki.hmty.top/generals/index.html` 搜名拿 href 真 id → `general-game-{id}.html` 抓技能/特点,JS 数 `.hp-row .hp-icon` 得体力 → 写 `generals-overrides.mjs` OFFLINE_HEROES(9000+) → `node prototype/sgs/rebake-overrides.mjs` → 立绘用官方图床 `web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/{id}00.png` + `…/general/skinShop/{id}00.png`(先 curl 验 200)→ **`node prototype/sgs/build-pinyin.mjs`**(需 `cd prototype && npm i --no-save --no-package-lock pinyin-pro@3`)。
