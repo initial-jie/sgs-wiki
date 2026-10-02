@@ -1540,14 +1540,30 @@ console.log("\n=== 场景 20:线上发将 ===");
     const g = (k, id, lord = false) => ({ key: k, opts: [{ id, name: k, gid: String(id), lord }] });
     const pools = () => ({ normal: Array.from({ length: 60 }, (_, i) => g("将" + i, 100 + i)), lord: Array.from({ length: 8 }, (_, i) => g("主" + i, 300 + i, true)), forced: null });
     rm.dealStart(mz, { mode: "normal", lordSeat: 1, pools: pools() });
-    check("⭐ 明忠模式发将:传了君主座位也不发主公技候选", rm.deal.lordSeat === null && Object.values(rm.deal.hands).every((h) => h.slots.length === 6 && h.slots.every((q) => q.src === "init")));
+    check("⭐ 明忠模式发将:不发主公技候选(每人 6 坑全是起手)", Object.values(rm.deal.hands).every((h) => h.slots.length === 6 && h.slots.every((q) => q.src === "init")));
     rm.dealCancel(mz);
+    { // 明忠先选先亮,其余人随后暗选、一起亮出(用户 2026-10-02 报的 bug:原来全员一起亮)
+      rm.dealStart(t3, { mode: "normal", lordSeat: 4, pools: pools() }); // 传别的君主座位也以明忠为准
+      const d = rm.deal, pick = (dev, n) => rm.dealPick(dev, { seatNo: n, slot: 0, heroId: d.hands[n].slots[0].opts[0].id });
+      const v3 = () => rm.viewFor(t3).deal;
+      check("明忠模式发将:先选的是明忠(1 号位),称谓「明忠」", d.lordSeat === 1 && d.lordTitle === "明忠" && v3().lordTitle === "明忠" && !d.lordPicked);
+      check("明忠没选定前,其余人不能选 → LORD_FIRST", pick(t3, 3).error === "LORD_FIRST");
+      const want = d.hands[1].slots[0].opts[0];
+      check("⭐ 明忠选定即亮出落座、锁定、不可改;别人立刻看得到", pick(mz, 1).ok && d.lordPicked && rm.seats[1].general === want.gid && rm.seats[1].genLocked
+        && v3().seats[1].final && v3().seats[1].pick.name === want.name && rm.dealPick(mz, { seatNo: 1, slot: 1, heroId: d.hands[1].slots[1].opts[0].id }).error === "ALREADY_PICKED");
+      check("其余人随后暗选:选完前别人看不到,武将还没落座", pick(t3, 3).ok && !rm.seats[3].general && rm.viewFor(mz).deal.seats[3].pick === undefined && rm.viewFor(mz).deal.seats[3].picked);
+      for (const n of [2, 4, 5, 6]) pick(rm.seats[n].holderDevices[0], n);
+      check("全员选完一起亮出", rm.dealReveal(mz).ok && rm.deal === null && [2, 3, 4, 5, 6].every((n) => rm.seats[n].general && rm.seats[n].genLocked));
+      const r8 = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 5); r8.identStart("p1", { mode: "mingzhong" });
+      r8.dealStart("p1", { mode: "normal", lordSeat: null, pools: pools() });
+      check("明忠 8 人(2 忠):先选的是储君(1 号位),另一名暗忠臣与其他人一起", r8.deal.lordSeat === 1 && r8.deal.lordTitle === "储君");
+    }
     const wj = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 3); wj.identStart("p1", { mode: "wujian" });
     wj.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
-    check("无间道发将:同样不发主公技候选", wj.deal.lordSeat === null && wj.deal.hands[1].slots.length === 6);
+    check("无间道发将:不发主公技候选,没有先选的人(全员一起暗选亮出)", wj.deal.lordSeat === null && wj.deal.hands[1].slots.length === 6);
     const nm = mkRoom(4, [1, 2, 3, 4], 3); nm.identStart("p1", { mode: "normal" });
     nm.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
-    check("普通身份局发将:君主照常多 6 个主公技候选", nm.deal.lordSeat === 1 && nm.deal.hands[1].slots.length === 12);
+    check("普通身份局发将:君主照常多 6 个主公技候选,称谓「主公」", nm.deal.lordSeat === 1 && nm.deal.hands[1].slots.length === 12 && nm.deal.lordTitle === "主公");
 
     // 大忠似奸变种规则提示
     const dz = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 9); dz.identStart("p1", { mode: "dazhong" });

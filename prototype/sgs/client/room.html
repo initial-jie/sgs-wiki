@@ -592,7 +592,7 @@ function viewFocusHeader(seat){
 // 模式表与 shared/deal.mjs DEAL_MODES 对应(这里只要展示名与君主称谓)
 const DEAL_MODE_UI={normal:["身份局","主公"],baonue:["暴虐无道","暴君"],shixin:["失心疯","教主"],dazhong:["大忠似奸","昏君"]};
 let dealSeat=null, dealOpen=null; // 打开的选将弹层座位 / 展开技能的武将 id;roomState 到达时若 dealSeat 非空则刷新弹层
-const dealLordTitle=()=>(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI.normal)[1];
+const dealLordTitle=()=>(state.deal&&state.deal.lordTitle)||(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI.normal)[1]; // 先选先亮的人的称谓:君主,或明忠模式的 明忠/储君
 // 座位卡顶部那一行:没在发将=「线上发将」入口;发将中=控制行(模式/将池/进度 + 亮出 + 中止)。各座位的选将入口与状态在 viewSeats 的座位行里(用户 2026-10-02:不另起状态卡)
 function viewDealRow(){
   const d=state.deal;
@@ -602,7 +602,7 @@ function viewDealRow(){
   let h=`<div class="row" style="margin-bottom:8px"><span class="grow" style="font-size:13px">🎴 <b>发将中</b> · ${mu[0]}${d.poolLabel?" · "+esc(d.poolLabel):""} · 已选 <b>${d.picked}/${d.total}</b></span>`;
   if(all) h+=`<button class="primary" data-dealreveal="1">亮出</button>`;
   h+=`<button class="ghost" data-dealcancel="1" style="font-size:12px">中止</button></div>`;
-  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:-2px 0 8px">等${mu[1]}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
+  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:-2px 0 8px">等${dealLordTitle()}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
   else if(all) h+=`<div class="hint" style="margin:-2px 0 8px">全员已选定,任何人点「亮出」即全部落座。</div>`;
   return h;
 }
@@ -626,7 +626,9 @@ function openDealSetup(){
     if(dm){ $("#deal-mode").value=dm; if(held.some(s=>s.seatNo===1)) $("#deal-lord").value="1"; }
     if(im&&(IDENT_MODES[im]||{}).noLord){ // 明忠(主公是暗的)/无间道:不发主公技候选(服务端也会忽略君主座位)
       const ls=$("#deal-lord"); ls.value=""; ls.disabled=true;
-      ls.closest(".row").insertAdjacentHTML("afterend",`<div class="hint" style="margin:-6px 0 12px">${esc(state.ident.label)}模式不发主公技候选,所有人各 6 将、一起暗选亮出。</div>`);
+      const fs=im==="mingzhong"?Object.keys(state.ident.seats).find(n=>state.ident.seats[n].pub):null; // 明忠:亮明的明忠/储君先选先亮
+      ls.closest(".row").insertAdjacentHTML("afterend",`<div class="hint" style="margin:-6px 0 12px">${esc(state.ident.label)}模式不发主公技候选,所有人各 6 将。`
+        +(fs?`${esc(state.ident.seats[fs].pub)}(座位${fs})先选定并亮出,其余人再暗选、一起亮出。`:"所有人一起暗选亮出。")+`</div>`);
     }
   }
   $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,lordSeat:lord===""?null:+lord});closeModal();};

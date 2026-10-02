@@ -494,7 +494,14 @@ export class RoomCore extends RoomBase {
     const players = this.seatNos().filter((n) => this.seats[n].holderDevices.length); // 已入座的座位才发
     if (!players.length) return { error: "NO_PLAYERS" };
     lordSeat = lordSeat == null || lordSeat === "" ? null : Number(lordSeat);
-    if (this.ident && IDENT_MODES[this.ident.mode]?.noLord) lordSeat = null; // 明忠(主公是暗的)/无间道:不发主公技候选(用户 2026-10-02)
+    // 明忠(主公是暗的)/无间道:不发主公技候选(用户 2026-10-02)。明忠仍有「先选先亮」的人——亮明的明忠/储君本人,其余人随后暗选、一起亮出
+    let lordExtra = true, lordTitle = DEAL_MODES[mode].lordTitle;
+    if (this.ident && IDENT_MODES[this.ident.mode]?.noLord) {
+      lordExtra = false;
+      const first = this.ident.mode === "mingzhong" ? players.find((n) => this.ident.roles[n]?.title) : undefined;
+      lordSeat = first ?? null;
+      if (first != null) lordTitle = this.ident.roles[first].title;
+    }
     if (lordSeat != null && !players.includes(lordSeat)) return { error: "BAD_LORD" };
 
     const normal = (pools?.normal || []).map((g) => ({ key: g.key, opts: g.opts }));
@@ -503,7 +510,7 @@ export class RoomCore extends RoomBase {
     for (const n of players) { hands[n] = { slots: [], initKeys: [], pick: null }; this.seats[n].genLocked = false; } // 重新发将 → 解锁上一局发的武将
 
     // 1) 君主额外候选:模式专属君主必出,其余从主公技坑里抽满;抽中的坑从普通池剔除(全场一坑一人)
-    if (lordSeat != null) {
+    if (lordSeat != null && lordExtra) {
       const extras = [];
       if (pools?.forced) extras.push({ key: pools.forced.key, opts: pools.forced.opts });
       while (extras.length < DEAL_LORD_EXTRA) { const g = this._dealDraw(lordPool); if (!g) break; extras.push(g); }
@@ -520,7 +527,7 @@ export class RoomCore extends RoomBase {
         hands[n].initKeys.push(g.key);
       }
     }
-    this.deal = { mode, lordSeat, lordPicked: false, hands, pool: normal, poolKey, poolLabel }; // poolKey/Label:用的是哪个环境的名单(仅展示)
+    this.deal = { mode, lordSeat, lordTitle, lordPicked: false, hands, pool: normal, poolKey, poolLabel }; // lordSeat=先选先亮的座位(君主 / 明忠),lordTitle=其称谓; // poolKey/Label:用的是哪个环境的名单(仅展示)
     return { ok: true, players: players.length };
   }
   // 换将:起手坑各可换一次 —— 原坑放回将池,重抽一个不与自己起手 6 坑重复的;换来的坑不可再换
@@ -750,7 +757,7 @@ export class RoomCore extends RoomBase {
       if (mine) { seats[n].slots = clone(hand.slots); seats[n].pick = hand.pick ? clone(hand.pick) : null; }
       else if (hand.pick && hand.pick.final) seats[n].pick = { heroId: hand.pick.heroId, name: hand.pick.name, final: true }; // 君主已亮出
     }
-    return { mode: d.mode, lordSeat: d.lordSeat, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length, poolKey: d.poolKey ?? null, poolLabel: d.poolLabel ?? null };
+    return { mode: d.mode, lordSeat: d.lordSeat, lordTitle: d.lordTitle ?? null, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length, poolKey: d.poolKey ?? null, poolLabel: d.poolLabel ?? null };
   }
 
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
