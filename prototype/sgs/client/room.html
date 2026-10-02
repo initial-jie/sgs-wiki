@@ -559,7 +559,6 @@ function render(){
   }else{
     focus=null;
     h+=viewHeader();
-    h+=viewDealBar(); // 线上发将进行中的状态条(没在发则为空)
     h+=viewSeats();
     h+=viewPanel();
     h+=viewBannedPool();
@@ -585,21 +584,16 @@ function viewFocusHeader(seat){
 const DEAL_MODE_UI={normal:["身份局","主公"],baonue:["暴虐无道","暴君"],shixin:["失心疯","教主"],dazhong:["大忠似奸","昏君"]};
 let dealSeat=null, dealOpen=null; // 打开的选将弹层座位 / 展开技能的武将 id;roomState 到达时若 dealSeat 非空则刷新弹层
 const dealLordTitle=()=>(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI.normal)[1];
-// 大厅顶部状态条:发将进行中才显示
-function viewDealBar(){
-  const d=state.deal; if(!d) return "";
+// 座位卡顶部那一行:没在发将=「线上发将」入口;发将中=控制行(模式/将池/进度 + 亮出 + 中止)。各座位的选将入口与状态在 viewSeats 的座位行里(用户 2026-10-02:不另起状态卡)
+function viewDealRow(){
+  const d=state.deal;
+  if(!d) return `<div class="row" style="margin-bottom:8px"><button class="gold grow" data-dealopen="1">🎴 线上发将(代替手抽武将)</button></div>`;
   const mu=DEAL_MODE_UI[d.mode]||DEAL_MODE_UI.normal, all=d.picked===d.total;
-  let h=`<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.05)"><h2>🎴 线上发将<span class="tag">${mu[0]}${d.lordSeat!=null?" · "+mu[1]+" 座位"+d.lordSeat:" · 无君主"}${d.poolLabel?" · 将池:"+esc(d.poolLabel):""}</span></h2>`;
-  h+=`<div class="row" style="gap:5px;margin-bottom:8px">`+Object.entries(d.seats).map(([n,s])=>
-    `<span class="chip${s.picked?" on":""}">座位${n}${+n===d.lordSeat?"("+mu[1]+")":""} ${s.final?"✓ "+esc(s.pick&&s.pick.name||""):s.picked?"✓ 已选":"…"}</span>`).join("")+`</div>`;
-  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:0 0 8px">等${mu[1]}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
-  const mine=state.youHold.filter(n=>d.seats[n]).sort((a,b)=>a-b);
-  h+=`<div class="row">`+mine.map(n=>`<button class="${d.seats[n].picked?"":"primary"}" data-dealseat="${n}">座位${n} ${d.seats[n].final?"已亮出":d.seats[n].picked?"已暗选 · 可改":"选将"} →</button>`).join("");
-  if(!mine.length) h+=`<span class="hint" style="margin:0">你没有持有参与发将的座位,只能看进度。</span>`;
-  h+=`<span class="grow"></span>`;
-  if(all) h+=`<button class="primary" data-dealreveal="1">全员已选定 · 亮出</button>`;
-  else h+=`<span class="hint" style="margin:0">已选 ${d.picked}/${d.total}</span>`;
-  h+=`<button class="ghost" data-dealcancel="1" style="font-size:12px">中止</button></div></div>`;
+  let h=`<div class="row" style="margin-bottom:8px"><span class="grow" style="font-size:13px">🎴 <b>发将中</b> · ${mu[0]}${d.poolLabel?" · "+esc(d.poolLabel):""} · 已选 <b>${d.picked}/${d.total}</b></span>`;
+  if(all) h+=`<button class="primary" data-dealreveal="1">亮出</button>`;
+  h+=`<button class="ghost" data-dealcancel="1" style="font-size:12px">中止</button></div>`;
+  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:-2px 0 8px">等${mu[1]}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
+  else if(all) h+=`<div class="hint" style="margin:-2px 0 8px">全员已选定,任何人点「亮出」即全部落座。</div>`;
   return h;
 }
 // 发将设置:选模式 + 君主座位
@@ -736,8 +730,8 @@ function viewSeats(){
     +`<button class="ghost" data-seatminus="1"${N<=2?' disabled':''}>− 减座位</button>`
     +`<button class="ghost" data-seatplus="1"${N>=10?' disabled':''}>＋ 加座位</button>`
     +`<span class="grow"></span><span class="hint" style="margin:0">2–10,从末位增减</span></div>`;
-  if(!state.deal) h+=`<div class="row" style="margin-bottom:8px"><button class="gold grow" data-dealopen="1">🎴 线上发将(代替手抽武将)</button></div>`;
-  const hold=new Set(state.youHold);
+  h+=viewDealRow();
+  const hold=new Set(state.youHold), deal=state.deal;
   for(const s of Object.values(state.seats)){
     const mine=hold.has(s.seatNo);
     const hero=heroForSeat(s.general);
@@ -750,6 +744,12 @@ function viewSeats(){
       if(hero.factionSelectable) label+=`<span class="fc ${chosen?(FCLS[chosen]||'shen'):'shen'}">${chosen?"神→"+esc(chosen):"神·自选"}</span>`;
       else label+=`<span class="fc ${FCLS[hero.faction]||''}">${esc(hero.faction||"?")}</span>`;
     }
+    // 发将中:参与座位标 君主称谓 + 选将状态(已亮出的不标,武将名已在上面)
+    const ds=deal&&deal.seats[s.seatNo];
+    if(ds){
+      if(s.seatNo===deal.lordSeat) label=`<span class="lb">${dealLordTitle()}</span>`+label;
+      if(!ds.final) label+=ds.picked?`<span class="kb">✓ 已选</span>`:`<span class="kb" style="opacity:.65">… 未选</span>`;
+    }
     h+=`<div class="seat ${mine?'mine':''}"><div class="row"><span class="st grow">座位 ${s.seatNo}`
       +label+(mine?'<span class="lb" style="color:#2b6cb0;border-color:#2b6cb0">我</span>':"")+`</span>`;
     if(hero) h+=`<button class="gold btn-skill" data-skill="${s.seatNo}">查看技能</button>`;
@@ -761,7 +761,11 @@ function viewSeats(){
     h+=`</div>`;
     if(mine){
       const has=s.general&&s.general!=="none";
-      h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label>`
+      // 发将中的参与座位:手动选武将入口换成发将弹层入口(防误点);已亮出(君主)则不再给入口
+      if(ds){
+        if(!ds.final) h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">发将</label>`
+          +`<button class="${ds.picked?"":"primary"}" data-dealseat="${s.seatNo}" style="font-size:13px">${ds.picked?"已暗选 · 可改":"选将 →"}</button></div>`;
+      }else h+=`<div class="row" style="margin-top:6px"><label style="font-size:12px;color:var(--ink-soft)">武将</label>`
         +`<button data-pick="${s.seatNo}" style="font-size:13px">${has?esc(nm)+" ▾":"选武将 ▾"}</button>`
         +`</div>`;
       if(hero&&hero.factionSelectable){
