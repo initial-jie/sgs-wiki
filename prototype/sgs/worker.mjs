@@ -2,6 +2,7 @@
 // 复用 ./shared/room-logic.mjs 的 RoomCore(与 node 模拟 room-sim 同一份逻辑);DO 外壳见 common/room-do.mjs。
 
 import { RoomCore, setBannedPools, banPoolForSeats } from "./shared/room-logic.mjs";
+import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
 import { buildDealPools } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
@@ -73,6 +74,7 @@ for (const merged of [DERIVED_MERGED, DCARDS_MERGED]) {
 const DERIVED_JSON = JSON.stringify(DERIVED_MERGED); // 衍生技(小),同上
 const DCARDS_JSON = JSON.stringify(DCARDS_MERGED);   // 衍生牌(小),同上
 const EQUIPMENT_JSON = JSON.stringify(EQUIPMENT_DATA); // 装备牌库(静态,直接吐)
+const IDENT_MODES_JSON = JSON.stringify(identModesForClient());
 // 规则集:目录只给 id/title/sub(小);正文由 /rules/{id}.html 吐成自包含整页,供大厅弹层 iframe 加载
 const RULES_INDEX_JSON = JSON.stringify(RULES_DATA.map(({ id, title, sub }) => ({ id, title, sub })));
 const RULE_PAGES = new Map(RULES_DATA.map((r) => [r.id, `<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${r.title}</title>
@@ -108,6 +110,7 @@ export function handleSgs(request, env, url) {
         pools: Object.fromEntries(POOL_KEYS.map((k) => [k, { ...POOL_META[k], ids: cfg.pools[k].ban }])) }),
         { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }));
     if (url.pathname === "/rules.json") return jsonResponse(RULES_INDEX_JSON, 300);
+    if (url.pathname === "/ident-modes.json") return jsonResponse(IDENT_MODES_JSON, 300); // 身份模式表(各人数默认配比/胜利条件)
     if (url.pathname.startsWith("/rules/") && url.pathname.endsWith(".html")) { // 规则集正文整页(iframe)
       const page = RULE_PAGES.get(url.pathname.slice(7, -5));
       return page ? htmlResponse(page) : new Response("no such rule", { status: 404 });
@@ -195,6 +198,13 @@ export class RoomDO extends RoomDOBase {
       case "dealPick": return core.dealPick(id, msg);
       case "dealReveal": return core.dealReveal(id);
       case "dealCancel": return core.dealCancel(id);
+      // ── 身份自动发放 / 新一局 ──
+      case "identStart": return core.identStart(id, { mode: msg.mode, counts: msg.counts || null, lost: msg.lost, clearGenerals: msg.clearGenerals !== false });
+      case "identShow": return core.identShow(id, msg);
+      case "identPeek": return core.identPeek(id, msg);
+      case "identShowAll": return core.identShowAll(id);
+      case "identClear": return core.identClear(id);
+      case "newGame": return core.newGame(id);
       default: return undefined;
     }
   }

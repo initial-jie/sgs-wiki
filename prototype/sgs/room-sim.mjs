@@ -1368,5 +1368,170 @@ console.log("\n=== 场景 20:线上发将 ===");
   }
 }
 
+// ───────── 身份自动发放 / 转座 / 发将武将锁定 / 新一局 ─────────
+{
+  const { IDENT_MODES, identDefaults, identCheck } = await import("./shared/identity.mjs");
+  const mkRng = (seed) => { let x = seed * 104729; return () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648; };
+  const mkRoom = (seats, held, seed = 7) => { const rm = new RoomCore("t", seats, mkRng(seed)); for (const n of held) rm.claimSeat("p" + n, n); return rm; };
+  const seatOf = (rm, dev) => [...rm.holdsOf(dev)][0];
+
+  // 配比表:每个模式每个人数张数之和 = 人数,且过校验
+  let tblBad = 0;
+  for (const [k, m] of Object.entries(IDENT_MODES)) for (const n of Object.keys(m.table).map(Number)) {
+    const d = identDefaults(k, n); const c = identCheck(k, n, d.counts, d.lost);
+    if (c.error || Object.values(c.counts).reduce((a, b) => a + b, 0) !== n) tblBad++;
+  }
+  check("身份配比表:各模式各人数 张数之和=人数 且过校验", tblBad === 0);
+  check("明忠 6 人 = 1主1忠3反1内(用户给的配置)", JSON.stringify(identDefaults("mingzhong", 6).counts) === JSON.stringify({ 主公: 1, 忠臣: 1, 反贼: 3, 内奸: 1 }));
+  check("配比不等于人数 → COUNT_MISMATCH", identCheck("normal", 5, { 主公: 1, 忠臣: 1, 反贼: 1, 内奸: 1 }).error === "COUNT_MISMATCH");
+  check("没有主公 → BAD_LEAD", identCheck("normal", 4, { 主公: 0, 忠臣: 2, 反贼: 1, 内奸: 1 }).error === "BAD_LEAD");
+
+  // 普通身份局 8 人:主公亮明并成为 1 号位,其余按环形次序顺延
+  {
+    let ok = 0, runs = 0;
+    for (let s = 1; s <= 60; s++) {
+      const rm = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], s); runs++;
+      const r = rm.identStart("p1", { mode: "normal" });
+      const w = r.leadWas; // 抽到主公的原座位
+      const rot = (o) => ((o - w + 8) % 8) + 1;
+      const seatsOk = [1, 2, 3, 4, 5, 6, 7, 8].every((o) => seatOf(rm, "p" + o) === rot(o) && rm.seats[rot(o)].holderDevices[0] === "p" + o && rm.seats[rot(o)].seatNo === rot(o));
+      const roles = Object.values(rm.ident.roles).map((x) => x.role).sort().join("");
+      if (r.ok && seatsOk && rm.ident.roles[1].role === "主公" && rm.ident.roles[1].shown && Object.values(rm.ident.roles).filter((x) => x.shown).length === 1
+        && roles === ["主公", "忠臣", "忠臣", "反贼", "反贼", "反贼", "反贼", "内奸"].sort().join("")) ok++;
+    }
+    check("⭐ 身份局 8 人×60 种子:主公亮明且变 1 号位,其余人按原环形次序顺延(6变1 7变2 8变3 1变4…)", ok === runs);
+  }
+  // 有空座:入座的人压到 1..k,空座排末尾
+  {
+    const rm = mkRoom(8, [2, 3, 5, 6, 8], 3);
+    const r = rm.identStart("p2", { mode: "normal" });
+    const order = [2, 3, 5, 6, 8], k = order.indexOf(r.leadWas);
+    const exp = [...order.slice(k), ...order.slice(0, k)];
+    check("5 人坐 8 座:入座者按环形次序压到 1~5 号,6~8 号为空座", r.ok && exp.every((o, i) => seatOf(rm, "p" + o) === i + 1) && [6, 7, 8].every((n) => rm.seats[n].holderDevices.length === 0) && Object.keys(rm.ident.roles).join() === "1,2,3,4,5");
+    check("座位号仍是 1..8 连续", rm.seatNos().join() === "1,2,3,4,5,6,7,8");
+  }
+  // 保密
+  {
+    const rm = mkRoom(6, [1, 2, 3, 4, 5, 6], 11);
+    rm.identStart("p1", { mode: "normal" });
+    let leak = 0, mineOk = 0;
+    for (let o = 1; o <= 6; o++) {
+      const v = rm.viewFor("p" + o).ident, me = seatOf(rm, "p" + o);
+      for (const [n, sv] of Object.entries(v.seats)) {
+        if (+n === me) { if (sv.mine && sv.mine.role === rm.ident.roles[n].role && sv.mine.win) mineOk++; }
+        else { if (sv.mine) leak++; if (+n !== 1 && sv.pub !== null) leak++; }
+      }
+      if (v.seats[1].pub !== "主公") leak++;
+      if (JSON.stringify(v).includes('"roles"')) leak++;
+    }
+    check("⭐ 保密:别人座位只见 pub(仅主公亮明),看不到 mine", leak === 0);
+    check("本人座位可见自己的身份与胜利条件", mineOk === 6);
+    const spy = [2, 3, 4, 5, 6].find((n) => rm.ident.roles[n].role === "内奸"), dev = rm.seats[spy].holderDevices[0], other = rm.seats[spy === 2 ? 3 : 2].holderDevices[0];
+    check("别人不能替活人亮身份 → NOT_HOLDER", rm.identShow(other, { seatNo: spy }).error === "NOT_HOLDER");
+    rm.seats[spy].dead = true;
+    check("已阵亡的座位任何人可代亮", rm.identShow(other, { seatNo: spy }).ok && rm.viewFor(other).ident.seats[spy].pub === "内奸");
+    const reb = [2, 3, 4, 5, 6].find((n) => rm.ident.roles[n].role === "反贼");
+    check("本人亮明 → 全场可见", rm.identShow(rm.seats[reb].holderDevices[0], { seatNo: reb }).ok && rm.viewFor(dev).ident.seats[reb].pub === "反贼");
+    rm.identShowAll(dev);
+    check("本局结束全部亮明", Object.values(rm.viewFor(other).ident.seats).every((x) => x.pub));
+    const back = RoomCore.hydrate(JSON.parse(JSON.stringify(rm.serialize())));
+    check("身份进 serialize/hydrate", back.ident && back.ident.over && back.ident.roles[1].role === "主公");
+    check("identClear 清掉", rm.identClear(dev).ok && rm.viewFor(dev).ident === null);
+  }
+  // 明忠:主公暗、一名忠臣亮明坐 1 号位;忠臣>1 称储君
+  {
+    const rm = mkRoom(6, [1, 2, 3, 4, 5, 6], 5); rm.identStart("p1", { mode: "mingzhong" });
+    const pubs = Object.values(rm.viewFor("zz").ident.seats).map((x) => x.pub).filter(Boolean);
+    check("明忠 6 人:只亮明 1 号位的明忠,主公是暗的", rm.ident.roles[1].role === "忠臣" && rm.ident.roles[1].title === "明忠" && pubs.join() === "明忠");
+    const r8 = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 5); r8.identStart("p1", { mode: "mingzhong" });
+    check("明忠 8 人(2 忠):亮明的那位称储君,另一名忠臣仍暗", r8.ident.roles[1].title === "储君" && Object.values(r8.ident.roles).filter((x) => x.shown).length === 1);
+    const mz = rm.seats[1].holderDevices[0], t3 = rm.seats[3].holderDevices[0];
+    check("明察:别人不能替明忠看 / 不能看自己", rm.identPeek(t3, { seatNo: 1, targetSeat: 2 }).error === "NOT_HOLDER" && rm.identPeek(mz, { seatNo: 1, targetSeat: 1 }).error === "BAD_TARGET" && rm.identPeek(t3, { seatNo: 3, targetSeat: 2 }).error === "NO_IDENT");
+    check("⭐ 明察:明忠秘密看到目标身份,整局一次,别人看不到结果", rm.viewFor(mz).ident.seats[1].mine.canPeek && rm.identPeek(mz, { seatNo: 1, targetSeat: 3 }).ok
+      && rm.viewFor(mz).ident.seats[1].mine.knows.some((t) => t.includes("座位 3") && t.includes(rm.ident.roles[3].role))
+      && rm.identPeek(mz, { seatNo: 1, targetSeat: 4 }).error === "ALREADY_PEEKED" && !JSON.stringify(rm.viewFor(t3).ident).includes("明察") && rm.viewFor(t3).ident.seats[3].pub === null);
+    check("明忠没有忠臣 → BAD_LEAD", mkRoom(3, [1, 2, 3]).identStart("p1", { mode: "mingzhong", counts: { 主公: 1, 忠臣: 0, 反贼: 1, 内奸: 1 } }).error === "BAD_LEAD");
+  }
+  // 失心疯:失心不占位,全场见「失心」,本人看不到真身,教主看得到
+  {
+    let ok = 0, runs = 0;
+    for (let s = 1; s <= 40; s++) {
+      const rm = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], s); rm.identStart("p1", { mode: "shixin" }); runs++;
+      const lostSeats = Object.entries(rm.ident.roles).filter(([, r]) => r.lost).map(([n]) => +n);
+      const master = rm.viewFor(rm.seats[1].holderDevices[0]).ident;
+      const blindOk = lostSeats.every((n) => { const v = rm.viewFor(rm.seats[n].holderDevices[0]).ident.seats[n]; return v.pub === "失心" && v.mine.role === null && v.mine.win === null && !JSON.stringify(v).includes(rm.ident.roles[n].role); });
+      const masterOk = lostSeats.every((n) => master.seats[1].mine.knows.some((t) => t.includes("座位 " + n) && t.includes(rm.ident.roles[n].role)));
+      const othersBlind = [2, 3, 4, 5, 6, 7, 8].every((n) => lostSeats.every((l) => l === n || !rm.viewFor(rm.seats[n].holderDevices[0]).ident.seats[l].mine));
+      if (rm.ident.roles[1].role === "教主" && lostSeats.length === 2 && !lostSeats.includes(1) && blindOk && masterOk && othersBlind) ok++;
+    }
+    check("⭐ 失心疯 8 人×40 种子:2 张失心、教主不会失心;失心本人看不到真身、教主看得到", ok === runs);
+  }
+  // 大忠似奸:义军互知
+  {
+    const rm = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 9); rm.identStart("p1", { mode: "dazhong" });
+    const yi = Object.entries(rm.ident.roles).filter(([, r]) => r.role === "义军").map(([n]) => +n);
+    const v = rm.viewFor(rm.seats[yi[0]].holderDevices[0]).ident.seats[yi[0]].mine.knows.join();
+    const zhong = +Object.entries(rm.ident.roles).find(([, r]) => r.role === "忠臣")[0];
+    check("大忠似奸:义军看得到其他义军的座位,忠臣看不到", yi.length === 4 && yi.slice(1).every((n) => v.includes(String(n))) && rm.viewFor(rm.seats[zhong].holderDevices[0]).ident.seats[zhong].mine.knows.length === 0);
+    check("大忠似奸:昏君亮明坐 1 号位,奸臣固定 1 名", rm.ident.roles[1].role === "昏君" && rm.ident.counts["奸臣"] === 1);
+  }
+  // 无间道:两主帅亮明,其一为 1 号位;牌背公开;主帅知道己方安插的内鬼
+  {
+    let ok = 0, runs = 0; const first = new Set();
+    for (let s = 1; s <= 40; s++) {
+      const rm = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], s); rm.identStart("p1", { mode: "wujian" }); runs++;
+      const R = rm.ident.roles, find = (role) => +Object.entries(R).find(([, r]) => r.role === role)[0];
+      first.add(R[1].role);
+      const shown = Object.values(R).filter((r) => r.shown).map((r) => r.role).sort().join();
+      const anyView = rm.viewFor("zz").ident.seats;
+      const campOk = Object.entries(R).every(([n, r]) => anyView[n].camp === r.role[0]);
+      const longV = rm.viewFor(rm.seats[find("龙主帅")].holderDevices[0]).ident.seats[find("龙主帅")].mine.knows.join("|");
+      const knowOk = longV.includes(`座位 ${find("虎内鬼")}:虎内鬼(你方安插的自己人)`) && !longV.includes("龙内鬼") && !longV.includes("龙护卫");
+      if (R[1].role.endsWith("主帅") && shown === "虎主帅,龙主帅" && campOk && knowOk) ok++;
+    }
+    check("⭐ 无间道 8 人×40 种子:两主帅亮明、1 号位是主帅、牌背公开、龙主帅只看到虎牌背(含己方安插的虎内鬼)", ok === runs);
+    check("无间道:1 号位在龙/虎主帅之间随机", first.size === 2);
+    check("无间道 7 人没有默认配比 → NO_DEFAULT", mkRoom(8, [1, 2, 3, 4, 5, 6, 7]).identStart("p1", { mode: "wujian" }).error === "NO_DEFAULT");
+  }
+  // 暴虐无道 5 人 + 自定义配比
+  {
+    const rm = mkRoom(5, [1, 2, 3, 4, 5], 2); rm.identStart("p1", { mode: "baonue" });
+    check("暴虐无道 5 人 = 暴君1 诤臣1 间者1 逆乱2,暴君 1 号位", rm.ident.roles[1].role === "暴君" && Object.values(rm.ident.roles).filter((r) => r.role === "逆乱").length === 2);
+    const c = mkRoom(5, [1, 2, 3, 4, 5], 2); c.identStart("p1", { mode: "normal", counts: { 主公: 1, 忠臣: 0, 反贼: 3, 内奸: 1 } });
+    check("自定义配比生效", Object.values(c.ident.roles).filter((r) => r.role === "反贼").length === 3);
+  }
+  // 发身份与武将 / 发将的联动
+  {
+    const rm = mkRoom(4, [1, 2, 3, 4], 4);
+    rm.setGeneral("p2", 2, "lvbu");
+    rm.identStart("p1", { mode: "normal", clearGenerals: false });
+    const ns = seatOf(rm, "p2");
+    check("不清武将时,武将跟着人转座", rm.seats[ns].general === "lvbu" && rm.seatNos().filter((n) => rm.seats[n].general).length === 1);
+    rm.identStart("p1", { mode: "normal" });
+    check("默认发身份=新一局,清空全场武将", rm.seatNos().every((n) => !rm.seats[n].general));
+    rm.deal = { mode: "normal", hands: {}, pool: [] };
+    check("发将进行中不能发身份 → DEAL_ACTIVE", rm.identStart("p1", { mode: "normal" }).error === "DEAL_ACTIVE");
+    rm.deal = null;
+    check("只有 1 人入座 → NO_PLAYERS", mkRoom(4, [1]).identStart("p1", { mode: "normal" }).error === "NO_PLAYERS");
+  }
+  // 线上发将亮出的武将锁定,不可再手动改;新一局 / 重新发将才解
+  {
+    const g = (k, id) => ({ key: k, opts: [{ id, name: k, gid: String(id), lord: false }] });
+    const pools = { normal: Array.from({ length: 30 }, (_, i) => g("将" + i, 100 + i)), lord: [], forced: null };
+    const rm = mkRoom(4, [1, 2], 6);
+    rm.dealStart("p1", { mode: "normal", lordSeat: null, pools });
+    for (const n of [1, 2]) rm.dealPick("p" + n, { seatNo: n, slot: 0, heroId: rm.deal.hands[n].slots[0].opts[0].id });
+    rm.dealReveal("p1");
+    const g1 = rm.seats[1].general;
+    check("⭐ 发将亮出后武将锁定:手动改 → GENERAL_LOCKED,武将不变", rm.seats[1].genLocked && rm.setGeneral("p1", 1, "lvbu").error === "GENERAL_LOCKED" && rm.seats[1].general === g1 && rm.viewFor("p1").seats[1].genLocked === true);
+    rm.claimSeat("p3", 3);
+    check("没参与发将的座位照常手动选", rm.setGeneral("p3", 3, "lvbu").ok && !rm.seats[3].genLocked);
+    check("重新发将 → 参与座位解锁", rm.dealStart("p1", { mode: "normal", lordSeat: null, pools }).ok && !rm.seats[1].genLocked);
+    rm.dealCancel("p1"); rm.seats[2].genLocked = true;
+    rm.identStart("p1", { mode: "normal" });
+    check("新一局:清空武将/身份/锁定,座位持有不动", rm.newGame("p2").ok && rm.ident === null && rm.seatNos().every((n) => !rm.seats[n].general && !rm.seats[n].genLocked) && rm.holdsOf("p1").size === 1 && rm.holdsOf("p3").size === 1);
+  }
+}
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

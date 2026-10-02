@@ -16,6 +16,7 @@
 import { RoomBase, clone } from "../../common/room-base.mjs";
 import { DEAL_MODES, DEAL_HAND, DEAL_LORD_EXTRA } from "./deal.mjs"; // 线上发将:模式表/手牌数(组池纯函数也在那)
 import { applyVisibility } from "../../common/visibility.mjs";
+import { IDENT_MODES, identDefaults, identCheck, identCamp } from "./identity.mjs"; // 身份自动发放:模式表/默认配比/校验
 
 const GLYPH = { S: "♠", H: "♥", C: "♣", D: "♦" };
 export function cardLabel(c) { return GLYPH[c.s] + c.r + (c.n ? " " + c.n : ""); }
@@ -432,13 +433,14 @@ export class RoomCore extends RoomBase {
     super(roomCode, seatCount, rng);
     this.banEnabled = true; // ② 禁将总开关(房内共享,任何玩家可切;默认开)
     this.deal = null;       // 线上发将进行中的状态(null=没在发);见 dealStart
+    this.ident = null;      // 本局身份(null=没发过);见 identStart
   }
 
   // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)。连环=铁索连环,物理表现即横置,合二为一只保留 chained
   // 装备区5槽(weapon/armor/atkHorse(-1马)/defHorse(+1马)/treasure)=各 {name,suit,rank,type,range?} 或 null;
   // abolished={槽名:true} 废除的槽(张绣/刘宏等);lordBonus=主公/地主/主帅 +1 体力上限
   _newSeat(i) {
-    return { seatNo: i, general: null, chosenFaction: null, holderDevices: [], toolState: {},
+    return { seatNo: i, general: null, chosenFaction: null, genLocked: false, holderDevices: [], toolState: {}, // genLocked:线上发将亮出的武将不可再手动改(新一局/重新发将才解)
       hp: null, hpMax: null, flipped: false, chained: false, dead: false, lordBonus: false,
       weapon: null, armor: null, atkHorse: null, defHorse: null, treasure: null, abolished: {},
       judgments: [] }; // 判定区:乐不思蜀/兵粮寸断/闪电 种类列表(同名不叠;只记种类不记花色点数)
@@ -450,6 +452,7 @@ export class RoomCore extends RoomBase {
   setGeneral(id, n, g) {
     n = Number(n);
     if (!this.devices[id]?.holds.has(n)) return { error: "NOT_HOLDER" };
+    if (this.seats[n].genLocked) return { error: "GENERAL_LOCKED" }; // 线上发将选定的武将:亮出后不可改(用户 2026-10-01)
     if (g && g !== "none" && this.banEnabled !== false) { // ② 禁将:按座位数选池;房内总开关关掉则不拦。查将始终不拦
       const pool = BANNED_POOLS[banPoolForSeats(Object.keys(this.seats).length)];
       if (pool && pool.has(String(g))) return { error: "BANNED" };
@@ -459,8 +462,9 @@ export class RoomCore extends RoomBase {
     return { ok: true };
   }
   // 落座的实际动作(setGeneral 校验通过后 / 线上发将亮出时调用;不做持有者与禁将校验)
-  _applyGeneral(n, g) {
-    this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
+  _applyGeneral(n, g, locked = false) {
+    this.seats[n].general = g; this.seats[n].toolState = g ? initToolState(g) : {};
+    this.seats[n].genLocked = !!locked;
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
@@ -489,7 +493,7 @@ export class RoomCore extends RoomBase {
     const normal = (pools?.normal || []).map((g) => ({ key: g.key, opts: g.opts }));
     const lordPool = (pools?.lord || []).map((g) => ({ key: g.key, opts: g.opts }));
     const hands = {};
-    for (const n of players) hands[n] = { slots: [], initKeys: [], pick: null };
+    for (const n of players) { hands[n] = { slots: [], initKeys: [], pick: null }; this.seats[n].genLocked = false; } // 重新发将 → 解锁上一局发的武将
 
     // 1) 君主额外候选:模式专属君主必出,其余从主公技坑里抽满;抽中的坑从普通池剔除(全场一坑一人)
     if (lordSeat != null) {
@@ -540,7 +544,7 @@ export class RoomCore extends RoomBase {
     const o = hand.slots[slot]?.opts.find((x) => x.id === heroId);
     if (!o) return { error: "BAD_PICK" };
     hand.pick = { slot, heroId, gid: o.gid, name: o.name, final: isLord };
-    if (isLord) { d.lordPicked = true; this._applyGeneral(seatNo, o.gid); }
+    if (isLord) { d.lordPicked = true; this._applyGeneral(seatNo, o.gid, true); }
     return { ok: true };
   }
   // 亮出:全员选定后任何人可点 → 所有人落座,发将结束
@@ -549,7 +553,7 @@ export class RoomCore extends RoomBase {
     if (!this.devices[id]) return { error: "NO_DEVICE" };
     const seats = Object.keys(d.hands).map(Number).filter((n) => this.seats[n]); // 发将途中被减掉的座位跳过
     if (seats.some((n) => !d.hands[n].pick)) return { error: "NOT_ALL_PICKED" };
-    for (const n of seats) if (!d.hands[n].pick.final) this._applyGeneral(n, d.hands[n].pick.gid);
+    for (const n of seats) if (!d.hands[n].pick.final) this._applyGeneral(n, d.hands[n].pick.gid, true);
     this.deal = null;
     return { ok: true };
   }
@@ -559,6 +563,127 @@ export class RoomCore extends RoomBase {
     this.deal = null;
     return { ok: true };
   }
+  // ───────── 身份自动发放(模式表/配比见 shared/identity.mjs)─────────
+  // ident = { id, mode, counts, lost, over, roles:{座位:{role, shown, lost?, title?}} }
+  //   发放:给已入座的座位洗牌发身份 → 亮明君主(明忠=一名忠臣;无间道=两名主帅)→ 转座:君主变 1 号位,其余人按原来的环形次序顺延,
+  //         没人坐的座位排到末尾(例:6 号抽到主公 → 6变1 7变2 8变3 1变4 …)。
+  //   保密:身份只给该座位持有者(_identView);亮明的(shown / 整局 over)全场可见;失心=全场只见「失心」,本人也看不到真身,教主可见。
+  //   转座会搬整个座位对象(持有者/武将/面板/工具状态)。默认同时清空上一局武将(clearGenerals);不清的话,工具状态里引用别的座位号的字段不会跟着改。
+  _reseat(order) { // order = 旧座位号按新次序排好;返回 旧→新 映射
+    const old = this.seats, next = {}, map = {};
+    order.forEach((o, i) => { const s = old[o]; s.seatNo = i + 1; next[i + 1] = s; map[o] = i + 1; });
+    this.seats = next;
+    for (const d of Object.values(this.devices)) d.holds = new Set([...d.holds].filter((o) => map[o]).map((o) => map[o]));
+    return map;
+  }
+  _pickOne(list) { return list[Math.floor(this.rng() * list.length)]; }
+  identStart(id, { mode = "normal", counts = null, lost = null, clearGenerals = true } = {}) {
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    if (this.deal) return { error: "DEAL_ACTIVE" };
+    const m = IDENT_MODES[mode]; if (!m) return { error: "BAD_MODE" };
+    const all = this.seatNos(), players = all.filter((n) => this.seats[n].holderDevices.length); // 已入座的座位才发
+    if (players.length < 2) return { error: "NO_PLAYERS" };
+    let cfg = counts;
+    if (!cfg) { const d = identDefaults(mode, players.length); if (!d) return { error: "NO_DEFAULT", players: players.length }; cfg = d.counts; lost = d.lost; }
+    const chk = identCheck(mode, players.length, cfg, lost ?? 0);
+    if (chk.error) return chk;
+
+    // 1) 洗牌发身份
+    const deck = [];
+    for (const r of m.roles) for (let i = 0; i < chk.counts[r]; i++) deck.push(r);
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    const roles = {};
+    players.forEach((n, i) => { roles[n] = { role: deck[i], shown: false }; });
+    // 2) 失心:教主以外随机盖住 lost 张
+    if (chk.lost) {
+      const cand = players.filter((n) => !m.lead.includes(roles[n].role));
+      for (let k = 0; k < chk.lost && cand.length; k++) roles[cand.splice(Math.floor(this.rng() * cand.length), 1)[0]].lost = true;
+    }
+    // 3) 亮明 + 定 1 号位
+    let leadSeat;
+    if (mode === "mingzhong") { // 主公暗置;随机一名忠臣亮明(忠臣不止一名时称「储君」)
+      leadSeat = this._pickOne(players.filter((n) => roles[n].role === "忠臣"));
+      roles[leadSeat].shown = true; roles[leadSeat].title = chk.counts["忠臣"] > 1 ? "储君" : "明忠";
+    } else {
+      const leads = players.filter((n) => m.lead.includes(roles[n].role));
+      for (const n of leads) roles[n].shown = true;
+      leadSeat = this._pickOne(leads); // 无间道:两名主帅随机其一
+    }
+    // 4) 转座
+    const k = players.indexOf(leadSeat);
+    const map = this._reseat([...players.slice(k), ...players.slice(0, k), ...all.filter((n) => !players.includes(n))]);
+    const moved = {};
+    for (const [n, r] of Object.entries(roles)) moved[map[n]] = r;
+    if (clearGenerals) for (const n of this.seatNos()) this._applyGeneral(n, null);
+    this.ident = { id: 1 + Math.floor(this.rng() * 1e9), mode, counts: chk.counts, lost: chk.lost, over: false, roles: moved };
+    return { ok: true, players: players.length, leadWas: leadSeat };
+  }
+  // 亮明某座位身份:本人(持有者)随时可亮;已阵亡的座位任何人可代亮
+  identShow(id, { seatNo }) {
+    seatNo = Number(seatNo);
+    const r = this.ident?.roles[seatNo]; if (!r || !this.seats[seatNo]) return { error: "NO_IDENT" };
+    if (!this.isHolder(id, seatNo) && !this.seats[seatNo].dead) return { error: "NOT_HOLDER" };
+    r.shown = true;
+    return { ok: true };
+  }
+  // 明察(明忠模式,男性且体力上限≤3 的明忠才有;武将条件服务端不判):游戏开始时秘密查看一名其他玩家的身份,整局一次
+  identPeek(id, { seatNo, targetSeat }) {
+    seatNo = Number(seatNo); targetSeat = Number(targetSeat);
+    const d = this.ident, r = d?.roles[seatNo];
+    if (!r || d.mode !== "mingzhong" || !r.title) return { error: "NO_IDENT" };
+    if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
+    if (r.peek != null) return { error: "ALREADY_PEEKED" };
+    if (targetSeat === seatNo || !d.roles[targetSeat] || !this.seats[targetSeat]) return { error: "BAD_TARGET" };
+    r.peek = targetSeat;
+    return { ok: true };
+  }
+  identShowAll(id) { // 本局结束:全部亮明(任何人可点)
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    if (!this.ident) return { error: "NO_IDENT" };
+    this.ident.over = true;
+    return { ok: true };
+  }
+  identClear(id) {
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    this.ident = null;
+    return { ok: true };
+  }
+  // 新一局:清空全场武将(含发将锁定)、身份、进行中的发将;座位与持有者不动
+  newGame(id) {
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    for (const n of this.seatNos()) this._applyGeneral(n, null);
+    this.deal = null; this.ident = null;
+    return { ok: true };
+  }
+  // 该设备看到的身份视图:pub=全场可见的身份(未亮明为 null;失心未亮明为「失心」);mine=仅持有者可见(真身/已知信息/胜利条件)
+  _identView(holds) {
+    const d = this.ident; if (!d) return null;
+    const m = IDENT_MODES[d.mode], seats = {};
+    const ent = Object.entries(d.roles).map(([n, r]) => [Number(n), r]).filter(([n]) => this.seats[n]);
+    const at = (pred) => ent.filter(([, r]) => pred(r)).map(([n]) => n);
+    for (const [n, r] of ent) {
+      const open = r.shown || d.over, blind = !!r.lost && !open; // blind:失心且未亮明 → 本人也看不到
+      const v = { pub: open ? (r.title || r.role) : (r.lost ? "失心" : null), lost: !!r.lost, camp: identCamp(d.mode, r.role) };
+      if (holds.has(n)) {
+        const knows = [];
+        if (blind) knows.push("你是【失心】:不知道自己的真实身份(教主知道),要从别人的行为里推出来。");
+        else {
+          if (d.mode === "dazhong" && r.role === "义军") { const o = at((x) => x.role === "义军").filter((x) => x !== n); knows.push(o.length ? "义军同伴:座位 " + o.join("、") : "场上只有你一名义军。"); }
+          if (d.mode === "shixin" && r.role === "教主") for (const [ln, lr] of ent) if (lr.lost) knows.push(`座位 ${ln} 的失心,真实身份是【${lr.role}】`);
+          if (d.mode === "wujian" && r.role.endsWith("主帅")) { // 主帅查看对方牌背的所有身份牌 → 找到己方安插的内鬼
+            const foe = r.role[0] === "龙" ? "虎" : "龙";
+            for (const [fn, fr] of ent) if (fr.role[0] === foe && !fr.role.endsWith("主帅")) knows.push(`座位 ${fn}:${fr.role}` + (fr.role.endsWith("内鬼") ? "(你方安插的自己人)" : ""));
+          }
+          if (r.title) knows.push(`你是${r.title}:身份已亮明,坐 1 号位。`);
+          if (r.peek != null && d.roles[r.peek]) knows.push(`明察:座位 ${r.peek} 的身份是【${d.roles[r.peek].role}】`);
+        }
+        v.mine = { role: blind ? null : r.role, title: r.title || null, shown: !!r.shown, canPeek: !!r.title && d.mode === "mingzhong" && r.peek == null && !d.over, knows, win: blind ? null : (m.win[r.role] || null) };
+      }
+      seats[n] = v;
+    }
+    return { id: d.id, mode: d.mode, label: m.label, counts: d.counts, lost: d.lost, over: !!d.over, seats };
+  }
+
   // 该设备看到的发将视图:自己持有的座位给全量候选;别人只见"几个坑 / 选没选"(君主选定后公开)
   _dealView(holds) {
     const d = this.deal; if (!d) return null;
@@ -2115,16 +2240,16 @@ export class RoomCore extends RoomBase {
   }
 
   _seatView(s, holds) {
-    return { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
+    return { seatNo: s.seatNo, general: s.general, chosenFaction: s.chosenFaction ?? null, genLocked: !!s.genLocked, holderDevices: s.holderDevices.slice(), toolState: filterState(s, holds),
       // 全场状态面板字段(全公开;老房间 hydrate 无这些字段→?? 兜底为 null/false)
       hp: s.hp ?? null, hpMax: s.hpMax ?? null, flipped: !!s.flipped, chained: !!s.chained, dead: !!s.dead, lordBonus: !!s.lordBonus,
       weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
       judgments: s.judgments ?? [] };
   }
   // cfgRev:服务端名单(/pool)版本号,由 RoomDO.syncConfig 设置;客户端见它变了就重拉禁将面板数据(不持久化)
-  _roomView(holds) { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length), deal: this._dealView(holds), cfgRev: this.cfgRev || 0 }; }
+  _roomView(holds) { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length), deal: this._dealView(holds), ident: this._identView(holds), cfgRev: this.cfgRev || 0 }; }
   // ---- 持久化:通用部分见 RoomBase.serialize/hydrate ----
-  _serializeExtra() { return { banEnabled: this.banEnabled, deal: this.deal }; }
-  _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; this.deal = data.deal || null; } // 老房间无此字段→默认开/无发将
+  _serializeExtra() { return { banEnabled: this.banEnabled, deal: this.deal, ident: this.ident }; }
+  _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; this.deal = data.deal || null; this.ident = data.ident || null; } // 老房间无此字段→默认开/无发将
 }
 
