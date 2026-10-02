@@ -161,6 +161,16 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .skl .sn{font-family:var(--display);font-weight:800;font-size:15px;color:var(--seal);margin-bottom:3px}
 .skl .se{font-size:13px;line-height:1.7}
 .btn-skill{font-size:12px;padding:5px 10px}
+/* 线上发将:选将弹层 */
+.dsec{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.05em;color:var(--seal);margin:12px 0 6px;border-bottom:1px dashed var(--line);padding-bottom:3px}
+.dslot{border:1px solid var(--line);border-radius:8px;padding:7px 9px;margin-bottom:7px;background:rgba(255,252,244,.6)}
+.dslot.on{border-color:var(--seal);background:rgba(163,46,34,.05)}
+.dopt{display:flex;align-items:center;gap:7px;padding:4px 0;flex-wrap:wrap}
+.dopt+.dopt{border-top:1px dotted var(--line)}
+.dopt.picked b{color:var(--seal)}
+.dopt .grow{min-width:120px}
+.dava{width:34px;height:34px;border-radius:6px;object-fit:cover;background:var(--paper3);flex:none;border:1px solid var(--line)}
+.dskills{margin:4px 0 8px;padding:8px;border-radius:6px;background:rgba(0,0,0,.03)}
 </style>
 </head>
 <body>
@@ -323,7 +333,7 @@ function seatGeneralName(general){
 
 /* ---------- 弹层:选武将 / 查看技能 ---------- */
 let pickerSeat=null;
-function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;sheetSeat=null;}
+function closeModal(){const m=$("#modal");if(m)m.innerHTML="";pickerSeat=null;sheetSeat=null;dealSeat=null;dealOpen=null;}
 function maskClose(){document.querySelectorAll("[data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b)closeModal();});}
 function openHeroPicker(seatNo){
   if(!HEROES.length){toast("武将库还在加载…稍等再试");return;}
@@ -515,10 +525,13 @@ function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80
 // 连接生命周期(断线重连/写阻断/改名/解散)在公共库 common/client/room-client.js;这里只接三国杀自己的消息与客户端态
 const RC=RoomClient.create({
   wsPath: code=>"/api/room/"+code+"/ws",
-  errorText: {BANNED:"该武将在禁将池,不能落座"},
+  errorText: {BANNED:"该武将在禁将池,不能落座",
+    DEAL_ACTIVE:"已有发将在进行中",POOL_NOT_SET:"将池白名单还没设置(房间设置 → 将池编辑)",POOL_TOO_SMALL:"将池不够发:可发的坑数少于 人数×6",POOL_UNAVAILABLE:"读取将池失败,稍后再试",
+    BAD_LORD:"君主座位必须是已入座的座位",NO_PLAYERS:"还没有人入座",LORD_FIRST:"等君主先选定并亮出",ALREADY_PICKED:"已选定并亮出,不能再改",CANT_SWAP:"这个坑不能换(已换过,或是君主候选)",
+    POOL_EMPTY:"将池里没有可换的了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束"},
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
   beforeConnect(){ state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k]; },
-  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet(); },
+  onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal(); },
   onMessage(m){ if(m.type==="actionResult"&&m.card!==undefined){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();} },
   onClosed(){ state=null;focus=null;render(); },
   onRenamed(){ render(); },
@@ -542,6 +555,7 @@ function render(){
   }else{
     focus=null;
     h+=viewHeader();
+    h+=viewDealBar(); // 线上发将进行中的状态条(没在发则为空)
     h+=viewSeats();
     h+=viewPanel();
     h+=viewBannedPool();
@@ -562,6 +576,90 @@ function viewFocusHeader(seat){
 }
 
 // ② 禁将池展示:任何玩家可看/可切总开关。按座位数自动选池(≥5军争/4 2v2/3斗地主/2 1v1);拼音序+缩略图,点开=查看技能(选定被禁)。当前池为空则不显示
+/* ---------- 线上发将(代替线下手抽;逻辑在 RoomCore.deal*,组池规则在 shared/deal.mjs)---------- */
+// 模式表与 shared/deal.mjs DEAL_MODES 对应(这里只要展示名与君主称谓)
+const DEAL_MODE_UI={normal:["身份局","主公"],baonue:["暴虐无道","暴君"],shixin:["失心疯","教主"],dazhong:["大忠似奸","昏君"]};
+let dealSeat=null, dealOpen=null; // 打开的选将弹层座位 / 展开技能的武将 id;roomState 到达时若 dealSeat 非空则刷新弹层
+const dealLordTitle=()=>(DEAL_MODE_UI[state.deal&&state.deal.mode]||DEAL_MODE_UI.normal)[1];
+// 大厅顶部状态条:发将进行中才显示
+function viewDealBar(){
+  const d=state.deal; if(!d) return "";
+  const mu=DEAL_MODE_UI[d.mode]||DEAL_MODE_UI.normal, all=d.picked===d.total;
+  let h=`<div class="card" style="border-color:var(--seal);background:rgba(163,46,34,.05)"><h2>🎴 线上发将<span class="tag">${mu[0]}${d.lordSeat!=null?" · "+mu[1]+" 座位"+d.lordSeat:" · 无君主"}</span></h2>`;
+  h+=`<div class="row" style="gap:5px;margin-bottom:8px">`+Object.entries(d.seats).map(([n,s])=>
+    `<span class="chip${s.picked?" on":""}">座位${n}${+n===d.lordSeat?"("+mu[1]+")":""} ${s.final?"✓ "+esc(s.pick&&s.pick.name||""):s.picked?"✓ 已选":"…"}</span>`).join("")+`</div>`;
+  if(d.lordSeat!=null&&!d.lordPicked) h+=`<div class="hint" style="margin:0 0 8px">等${mu[1]}(座位${d.lordSeat})先选定并亮出,其余人可以先看牌、换将。</div>`;
+  const mine=state.youHold.filter(n=>d.seats[n]).sort((a,b)=>a-b);
+  h+=`<div class="row">`+mine.map(n=>`<button class="${d.seats[n].picked?"":"primary"}" data-dealseat="${n}">座位${n} ${d.seats[n].final?"已亮出":d.seats[n].picked?"已暗选 · 可改":"选将"} →</button>`).join("");
+  if(!mine.length) h+=`<span class="hint" style="margin:0">你没有持有参与发将的座位,只能看进度。</span>`;
+  h+=`<span class="grow"></span>`;
+  if(all) h+=`<button class="primary" data-dealreveal="1">全员已选定 · 亮出</button>`;
+  else h+=`<span class="hint" style="margin:0">已选 ${d.picked}/${d.total}</span>`;
+  h+=`<button class="ghost" data-dealcancel="1" style="font-size:12px">中止</button></div></div>`;
+  return h;
+}
+// 发将设置:选模式 + 君主座位
+function openDealSetup(){
+  const held=Object.values(state.seats).filter(s=>s.holderDevices.length);
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
+    <h2>线上发将<span class="x" data-mclose="1">×</span></h2>
+    <div class="hint" style="margin:0 0 10px">给<b>已入座</b>的 ${held.length} 个座位各发 6 将(只有本人看得到),每将可换一次、换来的不能再换;同名武将(如黄盖/界黄盖)算一个坑,任选其一登场。君主位另得 6 个带主公技的候选,先选先亮,其余人再暗选、一起亮出。将池=白名单(房间设置里的「将池编辑」),禁将按当前开关。</div>
+    <div class="row" style="margin-bottom:8px"><label style="flex:none;width:64px">模式</label><select id="deal-mode" class="grow">`
+      +Object.entries(DEAL_MODE_UI).map(([k,v])=>`<option value="${k}">${v[0]}${k!=="normal"?"("+v[1]+"专属将必出)":""}</option>`).join("")+`</select></div>
+    <div class="row" style="margin-bottom:12px"><label style="flex:none;width:64px">君主座位</label><select id="deal-lord" class="grow"><option value="">无君主(不发主公技候选)</option>`
+      +held.map(s=>`<option value="${s.seatNo}">座位${s.seatNo} · ${esc(s.holderDevices[0])}</option>`).join("")+`</select></div>
+    <div class="row"><button class="primary grow" id="deal-go"${held.length?"":" disabled"}>开始发将</button></div>
+    ${held.length?"":'<div class="hint">还没有人入座,先认领座位。</div>'}</div></div>`;
+  maskClose();
+  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,lordSeat:lord===""?null:+lord});closeModal();};
+}
+function openDeal(sn){ dealSeat=sn; dealOpen=null; renderDeal(); }
+function renderDeal(){
+  if(dealSeat==null) return;
+  const d=state&&state.deal, me=d&&d.seats[dealSeat];
+  if(!d||!me||!me.slots){ closeModal(); return; } // 发将结束 / 座位已不归我 → 关弹层
+  const isLord=d.lordSeat===dealSeat, lt=dealLordTitle();
+  const waitLord=d.lordSeat!=null&&!isLord&&!d.lordPicked, locked=!!(me.pick&&me.pick.final);
+  let st;
+  if(locked) st=`已选定并亮出:<b style="color:var(--seal)">${esc(me.pick.name)}</b>`;
+  else if(me.pick) st=`已暗选:<b style="color:var(--seal)">${esc(me.pick.name)}</b> <span class="hint" style="margin:0">(别人看不到;全员亮出前可改)</span>`;
+  else if(waitLord) st=`等${lt}(座位${d.lordSeat})先选定。你可以先看牌、换将。`;
+  else if(isLord) st=`你是${lt}:<b>选定后立即亮出、不可更改</b>。`;
+  else st=`从下面任选一将。选定后暗置,全员选完一起亮出。`;
+  const slotHtml=(s,i)=>{
+    const on=me.pick&&me.pick.slot===i;
+    let h=`<div class="dslot${on?" on":""}"><div class="row" style="margin-bottom:4px"><span class="grow" style="font-size:12px;color:var(--ink-soft)">`
+      +(s.src==="lord"?"主公技候选":s.src==="swap"?"换来的(不可再换)":"起手")+(s.opts.length>1?" · 同名 "+s.opts.length+" 版任选":"")+`</span>`
+      +(s.src==="init"&&!locked?`<button class="ghost" data-dswap="${i}" data-dkey="${esc(s.key)}" style="font-size:12px;padding:3px 10px">换一张</button>`:"")+`</div>`;
+    for(const o of s.opts){
+      const hero=HERO_BY_ID.get(o.id), picked=on&&me.pick.heroId===o.id, open=dealOpen===o.id;
+      const fc=hero?(hero.factionSelectable?"shen":(FCLS[hero.faction]||"")):"";
+      h+=`<div class="dopt${picked?" picked":""}"><img class="dava" src="${esc(hero&&hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
+        +`<span class="grow"><b>${esc(o.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血${o.lord?" · 主公技":""}${hero.tool?" · 有工具":""}</span>`:""}</span>`
+        +`<button class="gold btn-skill" data-dskill="${o.id}">${open?"收起":"技能"}</button>`
+        +(locked?"":`<button class="${picked?"":"primary"}" data-dpick="${i}" data-dhero="${o.id}" data-dname="${esc(o.name)}"${waitLord?" disabled":""} style="padding:5px 12px">${picked?"已选":"选定"}</button>`)+`</div>`;
+      if(open&&hero) h+=`<div class="dskills">${hero.characteristic?`<div class="hint" style="margin:0 0 6px">特点:${esc(hero.characteristic)}</div>`:""}${cardWarnHtml(hero)}${skillsHtml(hero.skills)}${derivedSkillsHtml(hero)}${derivedCardsHtml(hero)}</div>`;
+    }
+    return h+`</div>`;
+  };
+  const idx=me.slots.map((s,i)=>i), lordIdx=idx.filter(i=>me.slots[i].src==="lord"), handIdx=idx.filter(i=>me.slots[i].src!=="lord");
+  const sc=$("#modal .sheet"), keep=sc?sc.scrollTop:0; // 刷新不跳回顶部
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet" style="max-height:92vh;overflow:auto">
+    <h2>选将 · 座位 ${dealSeat}${isLord?`<span class="lb" style="font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:4px;padding:0 5px">${lt}</span>`:""}<span class="x" data-mclose="1">×</span></h2>
+    <div style="margin-bottom:10px">${st}</div>
+    ${lordIdx.length?`<div class="dsec">${lt}专属 · 主公技候选 ${lordIdx.length} 个(不可换)</div>`+lordIdx.map(i=>slotHtml(me.slots[i],i)).join(""):""}
+    <div class="dsec">${lordIdx.length?"普通候选":"你的候选"} ${handIdx.length} 个(起手的各可换一次)</div>
+    ${handIdx.map(i=>slotHtml(me.slots[i],i)).join("")}</div></div>`;
+  const ns=$("#modal .sheet"); if(ns) ns.scrollTop=keep;
+  document.querySelectorAll("#modal [data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b){closeModal();}});
+  const mq=s=>document.querySelectorAll("#modal "+s);
+  mq("[data-dskill]").forEach(b=>b.onclick=()=>{const id=+b.dataset.dskill;dealOpen=dealOpen===id?null:id;renderDeal();});
+  mq("[data-dswap]").forEach(b=>b.onclick=()=>{if(confirm("把「"+b.dataset.dkey+"」放回将池,重抽一个?\n换来的不能再换。"))send({type:"dealSwap",seatNo:dealSeat,slot:+b.dataset.dswap});});
+  mq("[data-dpick]").forEach(b=>b.onclick=()=>{
+    if(isLord&&!confirm("选定「"+b.dataset.dname+"」?\n"+lt+"选定后立即亮出,不能再改。"))return;
+    send({type:"dealPick",seatNo:dealSeat,slot:+b.dataset.dpick,heroId:+b.dataset.dhero});});
+}
+
 // 规则集:身份模式规则/房规 目录卡(只列标题;点开弹层 iframe 加载 /rules/{id}.html 整页)。目录为空则不显示
 function viewRulesIndex(){
   if(!RULES.length) return "";
@@ -632,6 +730,7 @@ function viewSeats(){
     +`<button class="ghost" data-seatminus="1"${N<=2?' disabled':''}>− 减座位</button>`
     +`<button class="ghost" data-seatplus="1"${N>=10?' disabled':''}>＋ 加座位</button>`
     +`<span class="grow"></span><span class="hint" style="margin:0">2–10,从末位增减</span></div>`;
+  if(!state.deal) h+=`<div class="row" style="margin-bottom:8px"><button class="gold grow" data-dealopen="1">🎴 线上发将(代替手抽武将)</button></div>`;
   const hold=new Set(state.youHold);
   for(const s of Object.values(state.seats)){
     const mine=hold.has(s.seatNo);
@@ -1157,6 +1256,11 @@ function bindAll(){
   q("[data-pick]").forEach(b=>b.onclick=()=>openHeroPicker(+b.dataset.pick));
   q("[data-banview]").forEach(b=>b.onclick=()=>previewHero(+b.dataset.banview));
   q("[data-rule]").forEach(b=>b.onclick=()=>openRule(b.dataset.rule)); // 规则集:标题→iframe 弹层
+  // 线上发将:设置 / 进我的选将弹层 / 亮出 / 中止
+  q("[data-dealopen]").forEach(b=>b.onclick=()=>openDealSetup());
+  q("[data-dealseat]").forEach(b=>b.onclick=()=>openDeal(+b.dataset.dealseat));
+  q("[data-dealreveal]").forEach(b=>b.onclick=()=>{if(confirm("全员亮出所选武将并落座?"))send({type:"dealReveal"});});
+  q("[data-dealcancel]").forEach(b=>b.onclick=()=>{if(confirm("中止本次发将?所有人的候选作废(已亮出的君主武将保留)。"))send({type:"dealCancel"});});
   q("[data-bantoggle]").forEach(b=>b.onclick=()=>send({type:"setBanEnabled",on:b.dataset.bantoggle==="1"})); // ② 禁将总开关(房内共享) // ② 禁将池点头像→查看技能(选定被禁)
   q("[data-skill]").forEach(b=>b.onclick=()=>openSkillView(state.seats[+b.dataset.skill].general,+b.dataset.skill));
   q("[data-fac]").forEach(b=>b.onclick=()=>{const[sn,f]=b.dataset.fac.split(":");send({type:"setFaction",seatNo:+sn,faction:f||null});});

@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **589 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **640 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
@@ -24,7 +24,7 @@
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **589 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **640 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **709 将**(692 OL = 官网花名册全量 + 17 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -37,6 +37,11 @@
 - 查将:衍生技/衍生牌、彩色技能标签、中英切换、**技能修正⚠提示**(仅"房间≠实体卡"时标,一律以房间为准,现 3 将:曹婴/鲍三娘/界郭皇后)、**同名可替换提示**(剥 神/界/谋/魔/SP/梦 前缀,神版独立)
 - **禁将四池**:按座位数自动选池(≥5 军争 / 4 2v2 / 3 斗地主 / 2 1v1),军争池 15 将、其余空;房内共享**总开关**
 - 房内改名(原子改键);神将自选势力含**晋**;**选将拼音/首字母搜索**
+- **线上发将(2026-10-02,代替线下手抽武将)**:座位卡顶部「🎴 线上发将」→ 选模式(身份局/暴虐无道/失心疯/大忠似奸)+ 君主座位(可无)。只发给**已入座**的座位;每人 6 个「坑」(仅本人可见),起手坑各可换一次(原坑回池、重抽不与自己起手 6 坑重复的,换来的不可再换);君主位另得 6 个带主公技的坑(模式专属君主必出且排第一,不可换)。君主先选、选定即亮出落座且不可改;其余人随后暗选(亮出前可改),全员选完任何人点「亮出」→ 全部落座,发将结束;任何人可中止。
+  - **坑 = 同名可替换组**(`shared/deal.mjs` groupKey:剥 神以外的 界/谋/魔/SP/梦/教主/暴君/昏君 前缀;神版独立)。坑里只要有一个「白名单勾选且当前可用」的版本就整坑入池,同名其它版本也可选;**被禁版本剔除**(当前座位数的禁将池,房内禁将开关关着则不禁)。全场一坑一人。
+  - **特殊规则**(deal.mjs 顶部常量):曹丕只进君主池(LORD_ONLY);董昭 355 只在身份局可选(IDENTITY_ONLY,其它模式该坑只剩谋董昭);genre=不臣之君 的专属君主只在对应模式作必出坑。
+  - **实现**:组池纯函数 `buildDealPools`(deal.mjs)→ `RoomCore.dealStart/dealSwap/dealPick/dealReveal/dealCancel`(room-logic.mjs,`this.deal` 进 serialize);保密在 `_dealView`(自己座位给全量,别人只给坑数/是否已选,剩余池只给数量)。worker `dealStart` 是 async:先从 `SgsConfigDO` 读白名单,所以 `RoomDOBase.onMessage` 改成 `await this.onGameMessage(...)`。客户端 `viewDealBar/openDealSetup/openDeal/renderDeal`(room.html)。
+  - **待做(用户已提)**:① `/pool` 编辑页加「黑名单」页签(现在禁将仍是改 banned-generals.json+deploy);② 按模式分将池(如斗地主专属池)。⚠ 浏览器双设备测试:设备名现在在公共库里,用 `RC.deviceId='xx'` 再 connect(直接改 `deviceId` 变量无效,两个标签页会被当成同一台)。
 - **将池(发将白名单)编辑页 `/pool`**(2026-10-01,发将功能的地基):全部武将按「包」分组(`shared/hero-packs.json`,olwiki 各武将页「将灯」全量爬取 772 页;worker 贴成 generals.json 的 `pack` 字段,缺则回退 genre),点武将入池/出池,包级与大类级全选/清空(只作用于当前可见项,配合搜索/筛选),拼音搜索,已选/未选/新录入筛选。**保存直接写服务端**:新 DO `SgsConfigDO`(单例 `idFromName("global")`,绑定 `SGS_CONFIG`,迁移 v3;不继承 RoomDOBase,无 TTL),接口 `GET/PUT /api/pool` → `{ids,seen,updatedAt}`;**无鉴权(用户定)**,改完不用 deploy。`seen`=上次保存时的全量 id,之后新录的武将在编辑页标「新」。`shared/hero-pool-seed.json` 是服务端没存过时的回退 + 仓库备份(页面「导出」→ 覆盖该文件)。**与禁将表互不影响**:禁将=池内但当前环境不让用的强将;没进池的将不出现在禁将面板。大厅「房间设置」有入口链接。⚠ 新录武将后在 hero-packs.json 补一行包名(否则落到 genre 组)。**下一步=发将功能**(每人私密 6 将、每张可换一次、君主位额外 6 张主公技将、选模式则专属君主必进候选、选定自动落座;需求已与用户对齐,见记忆 product-ideas 末节)。
 - **规则集**(2026-09-25):大厅禁将池下方目录卡,数据 `shared/rules.json` [{id,title,sub,html}];worker `/rules.json`(目录)+`/rules/{id}.html`(自包含整页,弹层 iframe 加载)。现 5 条:暴虐无道/失心疯/大忠似奸(官方)+大忠似奸·变种规则(房规)+无间道。**加规则=往 rules.json 追加一条+deploy**;武将衍生技里只留一行指引,正文只在规则集维护。**2026-10-01:「登场工具」卡已撤,工具入口直接放座位卡标题行(`工具 →`,所有人可见,本人为主色)**;大厅顺序 座位→全场状态→禁将池→规则集→房间设置。窄屏下 `.seat .st{min-width:max-content}` 让按钮整体换行而不是挤折武将名标签
 

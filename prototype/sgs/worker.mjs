@@ -1,7 +1,8 @@
 // 三国杀房间 —— worker 侧:数据路由 + RoomDO(Durable Object)。由 prototype/sgs/worker.mjs 路由进来。
 // 复用 ./shared/room-logic.mjs 的 RoomCore(与 node 模拟 room-sim 同一份逻辑);DO 外壳见 common/room-do.mjs。
 
-import { RoomCore, setBannedPools } from "./shared/room-logic.mjs";
+import { RoomCore, setBannedPools, banPoolForSeats } from "./shared/room-logic.mjs";
+import { buildDealPools } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
 import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
@@ -135,7 +136,25 @@ export class RoomDO extends RoomDOBase {
       case "setBanEnabled": return core.setBanEnabled(msg.on);                      // ② 禁将总开关(房内共享,任何玩家可切)
       case "setGeneral": return core.setGeneral(id, msg.seatNo, msg.generalId);      // 别静默吞错(否则"工具没变"却无提示)
       case "setFaction": return core.setFaction(id, msg.seatNo, msg.faction);        // 神将自选势力
+      // ── 线上发将 ──
+      case "dealStart": return this.dealStart(id, msg, core);                        // async:先读全局将池白名单
+      case "dealSwap": return core.dealSwap(id, msg);
+      case "dealPick": return core.dealPick(id, msg);
+      case "dealReveal": return core.dealReveal(id);
+      case "dealCancel": return core.dealCancel(id);
       default: return undefined;
     }
+  }
+  // 发将开局:白名单从 SgsConfigDO 读(/pool 页保存的那份);禁将取当前座位数对应的池(房内禁将开关关着则不禁)
+  async dealStart(id, msg, core) {
+    let wl = [];
+    try {
+      const r = await this.env.SGS_CONFIG.get(this.env.SGS_CONFIG.idFromName("global")).fetch("https://config/api/pool");
+      wl = (await r.json()).ids || [];
+    } catch { return { error: "POOL_UNAVAILABLE" }; }
+    if (!wl.length) return { error: "POOL_NOT_SET" };
+    const banned = core.banEnabled !== false ? ((BANNED_DATA.pools || {})[banPoolForSeats(core.seatNos().length)]?.ids || []) : [];
+    const pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode });
+    return core.dealStart(id, { mode: msg.mode, lordSeat: msg.lordSeat, pools });
   }
 }

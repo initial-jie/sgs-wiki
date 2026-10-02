@@ -113,7 +113,7 @@ export class RoomDOBase {
         break;
       }
       default: {
-        const r = this.onGameMessage(ws, msg, core);
+        const r = await this.onGameMessage(ws, msg, core); // 可返回 Promise(如三国杀发将要先读全局将池)
         if (r === undefined) return; // 不认识的消息:忽略
         this.replyErr(ws, r);
       }

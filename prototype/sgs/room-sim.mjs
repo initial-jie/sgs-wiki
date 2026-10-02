@@ -1221,5 +1221,119 @@ const seatSnap2 = JSON.parse(JSON.stringify(roomSeat.serialize()));
 const hy2 = RoomCore.hydrate(seatSnap2);
 check("序列化含动态座位数(2→再加→3)", !!hy2.seats[3] && Object.keys(hy2.seats).length === 3);
 
+// ============ 场景 20:线上发将(组池规则 + 发/换/选/亮 全流程 + 保密)============
+console.log("\n=== 场景 20:线上发将 ===");
+{
+  const { readFileSync } = await import("node:fs");
+  const { buildDealPools, DEAL_HAND, DEAL_LORD_EXTRA, groupKey } = await import("./shared/deal.mjs");
+  const HEROES = JSON.parse(readFileSync(new URL("./shared/generals.json", import.meta.url), "utf8"));
+  const SEED = JSON.parse(readFileSync(new URL("./shared/hero-pool-seed.json", import.meta.url), "utf8")).ids;
+  const byName = (n) => HEROES.find((h) => h.name === n);
+  const idOf = (n) => byName(n).id;
+  const P = (o) => buildDealPools({ heroes: HEROES, ...o });
+  const grp = (pools, key, which = "normal") => pools[which].find((g) => g.key === key);
+  const names = (g) => (g ? g.opts.map((o) => o.name) : []);
+
+  // —— 组池规则 ——
+  let p = P({ whitelist: [idOf("黄盖")] });
+  check("同名成坑:只勾标黄盖,界黄盖也可选", names(grp(p, "黄盖")).includes("黄盖") && names(grp(p, "黄盖")).includes("界黄盖") && p.normal.length === 1);
+  p = P({ whitelist: [idOf("黄盖")], banned: [idOf("界黄盖")] });
+  check("被禁版本从坑里剔除(界黄盖被禁→只剩标黄盖)", names(grp(p, "黄盖")).join() === "黄盖");
+  p = P({ whitelist: [idOf("界黄盖")], banned: [idOf("界黄盖")] });
+  check("唯一勾选的版本被禁 → 整坑不入池", !grp(p, "黄盖"));
+  p = P({ whitelist: [idOf("神关羽")] });
+  check("神版独立成坑(勾神关羽不带出关羽)", !!grp(p, "神关羽") && !grp(p, "关羽") && names(grp(p, "神关羽")).join() === "神关羽");
+  p = P({ whitelist: [idOf("曹丕"), idOf("黄盖")] });
+  check("曹丕只进君主池,不进普通池", !grp(p, "曹丕") && !!grp(p, "曹丕", "lord") && !grp(p, "黄盖", "lord"));
+  p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")] });
+  check("身份局:董昭/谋董昭 都可选", names(grp(p, "董昭")).includes("董昭") && names(grp(p, "董昭")).includes("谋董昭"));
+  p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")], mode: "dazhong" });
+  check("非身份局:董昭坑只剩谋董昭", names(grp(p, "董昭")).join() === "谋董昭");
+  p = P({ whitelist: [idOf("董昭")], mode: "baonue" });
+  check("非身份局且只勾了董昭 → 该坑不入池", !grp(p, "董昭"));
+  p = P({ whitelist: [idOf("昏君刘宏"), idOf("暴君董卓"), idOf("黄盖")] });
+  check("身份局:模式专属君主不出现、无必出坑", p.forced === null && p.normal.length === 1);
+  p = P({ whitelist: [idOf("黄盖")], mode: "dazhong" });
+  check("大忠似奸:必出坑=昏君刘宏(未勾也出)", p.forced && p.forced.opts[0].name === "昏君刘宏" && p.forced.opts.length === 1);
+  p = P({ whitelist: [idOf("刘宏")], mode: "dazhong" });
+  check("大忠似奸:刘宏已入池 → 并入必出坑,普通池不再重复", names(p.forced).join() === "昏君刘宏,刘宏" && !grp(p, "刘宏"));
+  check("暴虐无道必出暴君董卓 / 失心疯必出教主张角", P({ whitelist: [], mode: "baonue" }).forced.opts[0].name === "暴君董卓" && P({ whitelist: [], mode: "shixin" }).forced.opts[0].name === "教主张角");
+  p = P({ whitelist: [idOf("魔曹操")] });
+  check("带工具的将 gid=工具名(落座后工具可用)", grp(p, "曹操").opts.find((o) => o.name === "魔曹操").gid === "caocao");
+
+  // —— 全流程:线上真实白名单快照,4 人,大忠似奸,座位1为昏君 ——
+  let seed = 7; const lcg = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const room = new RoomCore("9020", 5, lcg);
+  const dv = {}; for (let i = 1; i <= 4; i++) { dv[i] = `dl${i}`; room.claimSeat(dv[i], i); } // 座位5 无人
+  const pools = () => P({ whitelist: SEED, banned: [], mode: "dazhong" });
+  check("未入房设备不能发将", room.dealStart("ghost", { mode: "dazhong", lordSeat: 1, pools: pools() }).error === "NO_DEVICE");
+  check("君主座位须是已入座的座位", room.dealStart(dv[1], { mode: "dazhong", lordSeat: 5, pools: pools() }).error === "BAD_LORD");
+  check("非法模式被拒", room.dealStart(dv[1], { mode: "xx", lordSeat: 1, pools: pools() }).error === "BAD_MODE");
+  check("将池太小被拒(带 need/have)", (() => { const r = room.dealStart(dv[1], { mode: "normal", lordSeat: null, pools: P({ whitelist: [idOf("黄盖")] }) }); return r.error === "POOL_TOO_SMALL" && r.need === 24 && r.have === 1; })());
+  check("发将成功(只发已入座的 4 人)", room.dealStart(dv[1], { mode: "dazhong", lordSeat: 1, pools: pools() }).players === 4);
+  check("重复发将被拒", room.dealStart(dv[2], { mode: "normal", lordSeat: null, pools: pools() }).error === "DEAL_ACTIVE");
+  const D = () => room.deal, H = (n) => room.deal.hands[n];
+  check("君主 = 额外主公技坑 + 6 起手;其余人 6 坑;空座位不发", H(1).slots.filter((s) => s.src === "lord").length === Math.min(DEAL_LORD_EXTRA, 1 + pools().lord.length) && H(1).slots.filter((s) => s.src === "init").length === DEAL_HAND && H(2).slots.length === DEAL_HAND && !D().hands[5]);
+  check("君主额外候选第一坑=昏君刘宏", H(1).slots[0].opts[0].name === "昏君刘宏" && H(1).slots[0].src === "lord");
+  check("君主额外坑都带主公技版本(专属君主除外)", H(1).slots.filter((s) => s.src === "lord").slice(1).every((s) => s.opts.some((o) => o.lord)));
+  const allKeys = () => Object.values(D().hands).flatMap((h) => h.slots.map((s) => s.key));
+  check("⭐ 全场一坑一人(无重复),且已发的坑不在剩余池里", new Set(allKeys()).size === allKeys().length && !D().pool.some((g) => allKeys().includes(g.key)));
+  check("⭐ 曹丕不出现在任何人的普通坑里", !Object.values(D().hands).some((h) => h.slots.some((s) => s.src !== "lord" && s.key === "曹丕")));
+  // 保密
+  const V = (d) => room.viewFor(d).deal;
+  check("⭐ 本人看得到自己的候选明细", V(dv[2]).seats[2].slots.length === 6 && V(dv[2]).seats[2].slots[0].opts.length >= 1);
+  check("⭐ 别人只见坑数,看不到明细", V(dv[2]).seats[3].slots === undefined && V(dv[2]).seats[3].slotCount === 6 && V(dv[2]).seats[3].picked === false);
+  check("未入座设备看不到任何明细", Object.values(V("ghost2").seats).every((s) => s.slots === undefined));
+  check("剩余将池内容不下发(只给数量)", V(dv[2]).pool === undefined && typeof V(dv[2]).poolLeft === "number");
+  // 选将顺序
+  const first = (n, i = 0) => H(n).slots[i].opts[0];
+  check("君主未选,其余人不能选(LORD_FIRST)", room.dealPick(dv[2], { seatNo: 2, slot: 0, heroId: first(2).id }).error === "LORD_FIRST");
+  check("不是持有者不能替别人选/换", room.dealPick(dv[2], { seatNo: 1, slot: 0, heroId: first(1).id }).error === "NOT_HOLDER" && room.dealSwap(dv[2], { seatNo: 3, slot: 0 }).error === "NOT_HOLDER");
+  check("选了不在该坑里的将被拒", room.dealPick(dv[1], { seatNo: 1, slot: 0, heroId: 999999 }).error === "BAD_PICK");
+  // 换将(君主)
+  const lordInitIdx = H(1).slots.findIndex((s) => s.src === "init");
+  const oldKey = H(1).slots[lordInitIdx].key, poolBefore = D().pool.length;
+  check("君主额外坑不可换", room.dealSwap(dv[1], { seatNo: 1, slot: 0 }).error === "CANT_SWAP");
+  check("起手坑可换一次", room.dealSwap(dv[1], { seatNo: 1, slot: lordInitIdx }).ok === true);
+  check("换来的坑:不与起手 6 坑重复、标记 swap、原坑回池、池子大小不变", H(1).slots[lordInitIdx].src === "swap" && !H(1).initKeys.includes(H(1).slots[lordInitIdx].key) && D().pool.some((g) => g.key === oldKey) && D().pool.length === poolBefore);
+  check("换来的坑不可再换", room.dealSwap(dv[1], { seatNo: 1, slot: lordInitIdx }).error === "CANT_SWAP");
+  check("换将后仍然全场一坑一人", new Set(allKeys()).size === allKeys().length);
+  // 君主选定 → 立即亮出落座
+  check("君主选昏君刘宏", room.dealPick(dv[1], { seatNo: 1, slot: 0, heroId: idOf("昏君刘宏") }).ok === true);
+  check("⭐ 君主选定即落座(公开),且对别人可见是谁", room.seats[1].general === String(idOf("昏君刘宏")) && V(dv[3]).seats[1].pick.name === "昏君刘宏" && V(dv[3]).lordPicked === true);
+  check("君主选定后不可再改/再换", room.dealPick(dv[1], { seatNo: 1, slot: 1, heroId: first(1, 1).id }).error === "ALREADY_PICKED" && room.dealSwap(dv[1], { seatNo: 1, slot: 7 }).error === "ALREADY_PICKED");
+  // 其余人暗选
+  check("座位2 暗选", room.dealPick(dv[2], { seatNo: 2, slot: 0, heroId: first(2).id }).ok === true);
+  check("⭐ 暗选内容别人看不到(只见已选定),座位未落座", V(dv[3]).seats[2].picked === true && V(dv[3]).seats[2].pick === undefined && room.seats[2].general === null);
+  check("亮出前可改选", room.dealPick(dv[2], { seatNo: 2, slot: 1, heroId: first(2, 1).id }).ok === true && H(2).pick.slot === 1);
+  check("换掉已暗选的坑 → 选择被清空", room.dealSwap(dv[2], { seatNo: 2, slot: 1 }).ok === true && H(2).pick === null);
+  check("未全员选定不能亮出", room.dealReveal(dv[1]).error === "NOT_ALL_PICKED");
+  const picks = {};
+  for (const n of [2, 3, 4]) { const o = first(n, 2); picks[n] = o; room.dealPick(dv[n], { seatNo: n, slot: 2, heroId: o.id }); }
+  check("进度:4/4 已选", V(dv[1]).picked === 4 && V(dv[1]).total === 4);
+  // 持久化往返(发将中途 DO 被回收也不丢)
+  check("序列化/hydrate 保住发将状态", (() => { const h = RoomCore.hydrate(JSON.parse(JSON.stringify(room.serialize()))); return h.deal && h.deal.hands[3].pick.heroId === picks[3].id && h.deal.pool.length === D().pool.length; })());
+  check("亮出:全员落座,发将结束", room.dealReveal(dv[4]).ok === true && room.deal === null && [2, 3, 4].every((n) => room.seats[n].general === picks[n].gid) && room.viewFor(dv[1]).deal === null);
+  check("君主武将保持不变", room.seats[1].general === String(idOf("昏君刘宏")));
+  // 无君主局 + 中止
+  check("无君主:可直接选,不卡 LORD_FIRST", room.dealStart(dv[1], { mode: "normal", lordSeat: null, pools: P({ whitelist: SEED }) }).ok === true && room.dealPick(dv[3], { seatNo: 3, slot: 0, heroId: room.deal.hands[3].slots[0].opts[0].id }).ok === true && room.deal.hands[1].slots.length === 6);
+  check("任何人可中止发将", room.dealCancel(dv[2]).ok === true && room.deal === null && room.dealCancel(dv[2]).error === "NO_DEAL");
+  // 多种子:规则不变量
+  let bad = 0;
+  for (let s = 1; s <= 200; s++) {
+    let x = s * 7919; const r = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const rm = new RoomCore("t", 8, r); for (let i = 1; i <= 8; i++) rm.claimSeat("p" + i, i);
+    if (!rm.dealStart("p1", { mode: "normal", lordSeat: 3, pools: P({ whitelist: SEED }) }).ok) { bad++; continue; }
+    for (let k = 0; k < 6; k++) rm.dealSwap("p5", { seatNo: 5, slot: k });
+    const ks = Object.values(rm.deal.hands).flatMap((h) => h.slots.map((q) => q.key));
+    if (new Set(ks).size !== ks.length) bad++;
+    if (Object.entries(rm.deal.hands).some(([n, h]) => h.slots.some((q) => q.src !== "lord" && q.key === "曹丕"))) bad++;
+    if (rm.deal.hands[5].slots.some((q) => q.src !== "swap")) bad++;                          // 6 坑全换成功
+    if (rm.deal.hands[5].slots.some((q) => rm.deal.hands[5].initKeys.includes(q.key))) bad++; // 换来的不与起手重复
+    if (rm.deal.hands[3].slots.length !== 6 + Math.min(DEAL_LORD_EXTRA, P({ whitelist: SEED }).lord.length)) bad++;
+  }
+  check("200 个随机种子 × 8 人局:一坑一人/曹丕仅君主/换将不重复 全部成立", bad === 0);
+}
+
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

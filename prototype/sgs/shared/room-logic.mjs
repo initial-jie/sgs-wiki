@@ -14,6 +14,7 @@
 // 可见性:夺到的那张 —— 吕布(gained)可见、失去方(自己 mine 的 taken)可见、其他人仅见数量。
 
 import { RoomBase, clone } from "../../common/room-base.mjs";
+import { DEAL_MODES, DEAL_HAND, DEAL_LORD_EXTRA } from "./deal.mjs"; // 线上发将:模式表/手牌数(组池纯函数也在那)
 import { applyVisibility } from "../../common/visibility.mjs";
 
 const GLYPH = { S: "♠", H: "♥", C: "♣", D: "♦" };
@@ -430,6 +431,7 @@ export class RoomCore extends RoomBase {
   constructor(roomCode, seatCount, rng = Math.random) {
     super(roomCode, seatCount, rng);
     this.banEnabled = true; // ② 禁将总开关(房内共享,任何玩家可切;默认开)
+    this.deal = null;       // 线上发将进行中的状态(null=没在发);见 dealStart
   }
 
   // 新座位模板。全场状态面板字段(全公开,任意设备可改):血量/翻面/连环/阵亡;hp/hpMax=null 表示未播种(登记武将后由客户端按体力上限播种)。连环=铁索连环,物理表现即横置,合二为一只保留 chained
@@ -453,14 +455,125 @@ export class RoomCore extends RoomBase {
       if (pool && pool.has(String(g))) return { error: "BANNED" };
     }
 
+    this._applyGeneral(n, g);
+    return { ok: true };
+  }
+  // 落座的实际动作(setGeneral 校验通过后 / 线上发将亮出时调用;不做持有者与禁将校验)
+  _applyGeneral(n, g) {
     this.seats[n].general = g; this.seats[n].toolState = initToolState(g);
     this.seats[n].chosenFaction = null; // 改武将→清掉旧的自选势力(神将换将或换成非神将都该重置)
     // 换武将→重置全场面板状态。血量置 null,由客户端按新武将体力上限重新播种(panelSetHpMax)
     const ps = this.seats[n];
     ps.hp = null; ps.hpMax = null; ps.flipped = false; ps.chained = false; ps.dead = false; ps.lordBonus = false;
     ps.weapon = null; ps.armor = null; ps.atkHorse = null; ps.defHorse = null; ps.treasure = null; ps.abolished = {}; ps.judgments = [];
+  }
+
+  // ───────── 线上发将(代替线下手抽;组池规则见 shared/deal.mjs)─────────
+  // deal = { mode, lordSeat|null, lordPicked, hands:{座位:{slots:[{key,opts,src,swapped}], initKeys, pick}}, pool:[剩余坑] }
+  //   src: "init" 起手 6 坑(各可换一次) / "swap" 换来的(不可再换) / "lord" 君主额外主公技坑(不可换)
+  //   保密:hands 明细仅该座位持有者可见(见 _roomView);君主选定即亮出并落座,其余人选定后暗置,全员选完再一起亮出。
+  _dealDraw(list, pred = () => true) { // 从 list 里按 rng 抽走一个满足 pred 的坑;没有则 null
+    const idx = []; for (let i = 0; i < list.length; i++) if (pred(list[i])) idx.push(i);
+    if (!idx.length) return null;
+    return list.splice(idx[Math.floor(this.rng() * idx.length)], 1)[0];
+  }
+  dealStart(id, { mode = "normal", lordSeat = null, pools }) {
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    if (this.deal) return { error: "DEAL_ACTIVE" };
+    if (!DEAL_MODES[mode]) return { error: "BAD_MODE" };
+    const players = this.seatNos().filter((n) => this.seats[n].holderDevices.length); // 已入座的座位才发
+    if (!players.length) return { error: "NO_PLAYERS" };
+    lordSeat = lordSeat == null || lordSeat === "" ? null : Number(lordSeat);
+    if (lordSeat != null && !players.includes(lordSeat)) return { error: "BAD_LORD" };
+
+    const normal = (pools?.normal || []).map((g) => ({ key: g.key, opts: g.opts }));
+    const lordPool = (pools?.lord || []).map((g) => ({ key: g.key, opts: g.opts }));
+    const hands = {};
+    for (const n of players) hands[n] = { slots: [], initKeys: [], pick: null };
+
+    // 1) 君主额外候选:模式专属君主必出,其余从主公技坑里抽满;抽中的坑从普通池剔除(全场一坑一人)
+    if (lordSeat != null) {
+      const extras = [];
+      if (pools?.forced) extras.push({ key: pools.forced.key, opts: pools.forced.opts });
+      while (extras.length < DEAL_LORD_EXTRA) { const g = this._dealDraw(lordPool); if (!g) break; extras.push(g); }
+      const taken = new Set(extras.map((g) => g.key));
+      for (let i = normal.length - 1; i >= 0; i--) if (taken.has(normal[i].key)) normal.splice(i, 1);
+      for (const g of extras) hands[lordSeat].slots.push({ key: g.key, opts: g.opts, src: "lord", swapped: false });
+    }
+    // 2) 每人起手 DEAL_HAND 坑
+    if (normal.length < players.length * DEAL_HAND) return { error: "POOL_TOO_SMALL", need: players.length * DEAL_HAND, have: normal.length };
+    for (const n of players) {
+      for (let k = 0; k < DEAL_HAND; k++) {
+        const g = this._dealDraw(normal);
+        hands[n].slots.push({ key: g.key, opts: g.opts, src: "init", swapped: false });
+        hands[n].initKeys.push(g.key);
+      }
+    }
+    this.deal = { mode, lordSeat, lordPicked: false, hands, pool: normal };
+    return { ok: true, players: players.length };
+  }
+  // 换将:起手坑各可换一次 —— 原坑放回将池,重抽一个不与自己起手 6 坑重复的;换来的坑不可再换
+  dealSwap(id, { seatNo, slot }) {
+    seatNo = Number(seatNo); slot = Number(slot);
+    if (!this.deal) return { error: "NO_DEAL" };
+    if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
+    const hand = this.deal.hands[seatNo]; if (!hand) return { error: "NOT_IN_DEAL" };
+    if (hand.pick && hand.pick.final) return { error: "ALREADY_PICKED" };
+    const cur = hand.slots[slot];
+    if (!cur || cur.src !== "init") return { error: "CANT_SWAP" };
+    const g = this._dealDraw(this.deal.pool, (x) => !hand.initKeys.includes(x.key));
+    if (!g) return { error: "POOL_EMPTY" };
+    this.deal.pool.push({ key: cur.key, opts: cur.opts }); // 放回将池(别人之后换将可能抽到)
+    hand.slots[slot] = { key: g.key, opts: g.opts, src: "swap", swapped: true };
+    if (hand.pick && hand.pick.slot === slot) hand.pick = null; // 换掉了已暗选的坑 → 取消选择
     return { ok: true };
   }
+  // 选定:君主先选(选定即亮出落座、不可改);其余人在君主亮出后暗选(亮出前可改)
+  dealPick(id, { seatNo, slot, heroId }) {
+    seatNo = Number(seatNo); slot = Number(slot); heroId = Number(heroId);
+    const d = this.deal; if (!d) return { error: "NO_DEAL" };
+    if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
+    const hand = d.hands[seatNo]; if (!hand) return { error: "NOT_IN_DEAL" };
+    if (hand.pick && hand.pick.final) return { error: "ALREADY_PICKED" };
+    const isLord = d.lordSeat === seatNo;
+    if (d.lordSeat != null && !isLord && !d.lordPicked) return { error: "LORD_FIRST" };
+    const o = hand.slots[slot]?.opts.find((x) => x.id === heroId);
+    if (!o) return { error: "BAD_PICK" };
+    hand.pick = { slot, heroId, gid: o.gid, name: o.name, final: isLord };
+    if (isLord) { d.lordPicked = true; this._applyGeneral(seatNo, o.gid); }
+    return { ok: true };
+  }
+  // 亮出:全员选定后任何人可点 → 所有人落座,发将结束
+  dealReveal(id) {
+    const d = this.deal; if (!d) return { error: "NO_DEAL" };
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    const seats = Object.keys(d.hands).map(Number).filter((n) => this.seats[n]); // 发将途中被减掉的座位跳过
+    if (seats.some((n) => !d.hands[n].pick)) return { error: "NOT_ALL_PICKED" };
+    for (const n of seats) if (!d.hands[n].pick.final) this._applyGeneral(n, d.hands[n].pick.gid);
+    this.deal = null;
+    return { ok: true };
+  }
+  dealCancel(id) { // 任何人可中止(已落座的君主武将保留)
+    if (!this.devices[id]) return { error: "NO_DEVICE" };
+    if (!this.deal) return { error: "NO_DEAL" };
+    this.deal = null;
+    return { ok: true };
+  }
+  // 该设备看到的发将视图:自己持有的座位给全量候选;别人只见"几个坑 / 选没选"(君主选定后公开)
+  _dealView(holds) {
+    const d = this.deal; if (!d) return null;
+    const seats = {}; let picked = 0, total = 0;
+    for (const [n, hand] of Object.entries(d.hands)) {
+      if (!this.seats[n]) continue;
+      total++; if (hand.pick) picked++;
+      const mine = holds.has(Number(n));
+      seats[n] = { picked: !!hand.pick, final: !!(hand.pick && hand.pick.final), slotCount: hand.slots.length };
+      if (mine) { seats[n].slots = clone(hand.slots); seats[n].pick = hand.pick ? clone(hand.pick) : null; }
+      else if (hand.pick && hand.pick.final) seats[n].pick = { heroId: hand.pick.heroId, name: hand.pick.name, final: true }; // 君主已亮出
+    }
+    return { mode: d.mode, lordSeat: d.lordSeat, lordPicked: d.lordPicked, seats, picked, total, poolLeft: d.pool.length };
+  }
+
   // 神将自选势力(公开;RoomCore 不判是否神将,客户端只对 factionSelectable 的武将露出选择器)
   setFaction(id, n, faction) {
     n = Number(n);
@@ -2008,9 +2121,9 @@ export class RoomCore extends RoomBase {
       weapon: s.weapon ?? null, armor: s.armor ?? null, atkHorse: s.atkHorse ?? null, defHorse: s.defHorse ?? null, treasure: s.treasure ?? null, abolished: s.abolished ?? {},
       judgments: s.judgments ?? [] };
   }
-  _roomView() { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length) }; }
+  _roomView(holds) { return { banEnabled: this.banEnabled !== false, banPool: banPoolForSeats(Object.keys(this.seats).length), deal: this._dealView(holds) }; }
   // ---- 持久化:通用部分见 RoomBase.serialize/hydrate ----
-  _serializeExtra() { return { banEnabled: this.banEnabled }; }
-  _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; } // 老房间无此字段→默认开
+  _serializeExtra() { return { banEnabled: this.banEnabled, deal: this.deal }; }
+  _hydrateExtra(data) { this.banEnabled = data.banEnabled !== false; this.deal = data.deal || null; } // 老房间无此字段→默认开/无发将
 }
 
