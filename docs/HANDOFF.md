@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **684 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **696 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
@@ -24,7 +24,7 @@
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **684 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **696 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **709 将**(692 OL = 官网花名册全量 + 17 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -84,7 +84,7 @@
 
 ## ✅ 身份自动发放 + 发将武将锁定 + 新一局(2026-10-01,待 deploy)
 
-**基线**:room-sim **684**。
+**基线**:room-sim **696**。
 
 **发将亮出的武将锁定**:`seat.genLocked`(dealPick 君主 / dealReveal 落座时置 true)→ `setGeneral` 拒 `GENERAL_LOCKED`,座位卡不再给「选武将 ▾」。手动选将的座位不锁、下拉照旧。解锁 = 重新发将(参与座位)/ 发身份时清空武将 / 房间设置「🔄 新一局」(`newGame`:清全场武将+身份+进行中的发将,座位与持有者不动)。
 
@@ -95,7 +95,13 @@
 - 配比来源:身份局=标准;暴虐无道 4~6 人、失心疯 6~8 人、无间道 8 人=盒内规则卡;**其余人数与大忠似奸整张表是按比例推的**(设置弹层会标「按比例推的」),待用户对规则卡订正 → 改 `identity.mjs` 的 `table`。
 - 保密在 `_identView(holds)`:别人座位只给 `pub`(亮明的身份 / 「失心」/ null)+ `camp`;自己持有的座位多给 `mine`{role,knows[],win,canPeek}。sim 有保密断言(别人拿不到 mine、失心本人 JSON 里没有真身)。
 - 座位卡:亮明的身份红底标;自己座位「🪪 我的身份」弹层(身份大字 + 胜利条件 +「只有你知道」:义军同伴 / 主帅看到的内鬼 / 教主看到的失心真身 / 明察结果 +「亮明身份」);阵亡座位任何人可点「亮身份」;顶部一行 模式·配比 + 规则/全部亮明/重发/清除。
-- **〖明察〗**(明忠房规):明忠在「我的身份」里选一个座位秘密查看身份,整局一次(`identPeek`;男性且上限≤3 的条件服务端不判,弹层有提示)。〖舍身〗、明忠 +1 上限 +1 血、暴君 +2 上限等**不自动**,仍在面板手动改。
+- **身份技能按所选武将给(2026-10-02,基线 room-sim 696)**:RoomCore 自己不带武将库,由 worker/sim 用 `setHeroInfo({generalId:{name,hp,female}})` 灌入(key 同 setGeneral 的 generalId:有工具→工具名,否则 String(id))。
+  - **性别表 `shared/hero-gender.json`**(`female:[id…]`,其余按男):olwiki 各武将页 `.gender-attribute strong` 全量抓 772 页(浏览器面板里同源 fetch,curl 被 403)+ 7 个手录/线下女将人工标;worker 贴成 generals.json 的 `gender` 字段。**⚠ 新录女将要往这里加 id**(不加=按男性)。
+  - **明忠技能**:明忠选定武将后「我的身份」显示获得的技能——男性且库里 hp ≤ 3 →〖明察〗(带查看按钮,`identPeek` 整局一次),其余 →〖舍身〗;没选将显示「选定武将后显示」。服务端判定,舍身/没选将调 identPeek → `NO_SKILL`。
+  - **〖蔽众〗**(失心疯,教主的武将是教主张角才有):`identBizhong`(选一名非失心、未亮明的其他座位 → 变失心,全场可见,本人此后看不到自己的身份)→ `identSwapLost`(任意两名失心互换身份牌,可多次)→ `identBizhongDone`(关闭)。整局一次;教主在「只有你知道」里始终看得到各失心真身。
+  - **大忠似奸变种规则提示**:`identity.mjs` dazhong.variant 按身份给几行提示(昏君=袒佞 + 两条分线 + 刘宏例外;其余身份=对自己的影响),「我的身份」里显示 +「看变种规则全文」。
+  - **明忠 / 无间道发将不发主公技候选**:`IDENT_MODES[mode].noLord` → `dealStart` 强制 lordSeat=null;发将设置里君主座位下拉置灰并说明。
+- 〖舍身〗的结算、明忠 +1 上限 +1 血、暴君 +2 上限等**不自动**,仍在面板手动改。
 - **疑似身份标记**:每个未亮明座位一个「疑?」小标,点开选身份。**只存本机 localStorage**(key=房间码+本局 ident.id)→ 每人各标各的、互相看不到,重发身份自动作废;失心本人可以标自己。
 - 发将设置弹层:本局发过身份 → 模式与君主座位(1 号位)自动带入(明忠/无间道没有先选的君主,不带)。
 - 规则集新增「明忠」(`rules.json` id=mingzhong,用户口述的房规)。

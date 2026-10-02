@@ -1,7 +1,7 @@
 // 三国杀房间 —— worker 侧:数据路由 + RoomDO(Durable Object)。由 prototype/sgs/worker.mjs 路由进来。
 // 复用 ./shared/room-logic.mjs 的 RoomCore(与 node 模拟 room-sim 同一份逻辑);DO 外壳见 common/room-do.mjs。
 
-import { RoomCore, setBannedPools, banPoolForSeats } from "./shared/room-logic.mjs";
+import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo } from "./shared/room-logic.mjs";
 import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
 import { buildDealPools } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
@@ -18,6 +18,7 @@ import DCARDS_ROOM from "./shared/derived-cards-room.json"; // 房间专属衍�
 import DERIVED_EN from "./shared/derived-en.json"; // 衍生技/牌英文补丁 {武将→{名称→英文}};独立文件,重抽 derived-* 不丢 EN
 import EQUIPMENT_DATA from "./shared/equipment.json"; // 装备牌库(#2 距离层:坐骑/装备下拉数据源;build-equipment.mjs 生成)
 import BANNED_DATA from "./shared/banned-generals.json"; // ② 禁将池(全局默认;改文件+deploy 生效)
+import GENDER_DATA from "./shared/hero-gender.json"; // 女性武将 id(olwiki 性别);贴成 generals.json 的 gender 字段 + 喂 RoomCore(明忠〖明察〗判定)
 import PINYIN_DATA from "./shared/hero-pinyin.json"; // 武将名→拼音音节(build-pinyin.mjs 生成),贴到 generals.json 的 py 字段供选将拼音搜索
 
 // 环境(池)划分:军争/身份 · 2v2 · 斗地主 · 1v1。每个环境一份白名单(可发将)+ 一份黑名单(禁将)。
@@ -45,10 +46,14 @@ async function getConfig(env) {
   return r.json();
 }
 
+// 武将基本信息喂给 RoomCore(key 同 setGeneral 的 generalId:有工具→工具名,否则 String(id))
+const FEMALE_IDS = new Set(GENDER_DATA.female);
+setHeroInfo(Object.fromEntries(GENERALS_DATA.map((h) => [h.tool || String(h.id), { name: h.name, hp: h.hp, female: FEMALE_IDS.has(h.id) }])));
+
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 // 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)
 // pack:所属包(缺则回退 genre)—— 新录武将没补 hero-packs.json 也能在编辑页出现
-const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => ({ ...h, pack: PACKS_DATA.packs[h.id] || h.genre || "其他", ...(PINYIN_DATA[h.name] ? { py: PINYIN_DATA[h.name] } : {}) })));
+const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => ({ ...h, pack: PACKS_DATA.packs[h.id] || h.genre || "其他", gender: FEMALE_IDS.has(h.id) ? "女" : "男", ...(PINYIN_DATA[h.name] ? { py: PINYIN_DATA[h.name] } : {}) })));
 // 合并 wiki 抽取的衍生技 + 房间专属补充(同名武将则数组拼接;房间补充仅房间可见)。map 浅拷贝每条,便于下面贴 text_en 不污染 import 源
 const DERIVED_MERGED = (() => {
   const out = {};
@@ -202,6 +207,9 @@ export class RoomDO extends RoomDOBase {
       case "identStart": return core.identStart(id, { mode: msg.mode, counts: msg.counts || null, lost: msg.lost, clearGenerals: msg.clearGenerals !== false });
       case "identShow": return core.identShow(id, msg);
       case "identPeek": return core.identPeek(id, msg);
+      case "identBizhong": return core.identBizhong(id, msg);
+      case "identSwapLost": return core.identSwapLost(id, msg);
+      case "identBizhongDone": return core.identBizhongDone(id, msg);
       case "identShowAll": return core.identShowAll(id);
       case "identClear": return core.identClear(id);
       case "newGame": return core.newGame(id);

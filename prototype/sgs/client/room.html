@@ -540,7 +540,7 @@ const RC=RoomClient.create({
     POOL_EMPTY:"将池里没有可换的了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束",
     GENERAL_LOCKED:"线上发将选定的武将不能再改(要重来请重新发将,或在房间设置里点「新一局」)",
     COUNT_MISMATCH:"身份张数之和要等于入座人数",BAD_LEAD:"君主身份必须正好 1 张(明忠模式还要至少 1 名忠臣)",BAD_COUNTS:"身份张数填得不对",BAD_LOST:"失心张数不对",
-    NO_DEFAULT:"这个人数没有默认配比,请在发身份设置里手填",NO_IDENT:"本局没有发身份",ALREADY_PEEKED:"明察整局只能看一次",BAD_TARGET:"不能选这个座位"},
+    NO_DEFAULT:"这个人数没有默认配比,请在发身份设置里手填",NO_IDENT:"本局没有发身份",ALREADY_PEEKED:"明察整局只能看一次",NO_SKILL:"当前武将没有这个技能(或已经用完)",ALREADY_USED:"蔽众整局只能发动一次",BAD_TARGET:"不能选这个座位"},
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
   beforeConnect(){ state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k]; },
   onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal();if(identSeat!=null)renderMyIdent();
@@ -622,8 +622,12 @@ function openDealSetup(){
     ${held.length?"":'<div class="hint">还没有人入座,先认领座位。</div>'}</div></div>`;
   maskClose();
   { // 本局发过身份 → 模式与君主座位直接带过来(君主=1 号位;明忠/无间道没有先选的君主)
-    const dm={normal:"normal",baonue:"baonue",shixin:"shixin",dazhong:"dazhong"}[state.ident&&state.ident.mode];
+    const im=state.ident&&state.ident.mode, dm={normal:"normal",baonue:"baonue",shixin:"shixin",dazhong:"dazhong"}[im];
     if(dm){ $("#deal-mode").value=dm; if(held.some(s=>s.seatNo===1)) $("#deal-lord").value="1"; }
+    if(im&&(IDENT_MODES[im]||{}).noLord){ // 明忠(主公是暗的)/无间道:不发主公技候选(服务端也会忽略君主座位)
+      const ls=$("#deal-lord"); ls.value=""; ls.disabled=true;
+      ls.closest(".row").insertAdjacentHTML("afterend",`<div class="hint" style="margin:-6px 0 12px">${esc(state.ident.label)}模式不发主公技候选,所有人各 6 将、一起暗选亮出。</div>`);
+    }
   }
   $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value;send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,lordSeat:lord===""?null:+lord});closeModal();};
 }
@@ -754,9 +758,31 @@ function renderMyIdent(){
     <div class="idbig">${me.role?esc(me.title?me.title+"("+me.role+")":me.role):"失心"}</div>`;
   if(me.win) h+=`<div style="margin-bottom:10px"><b>胜利条件</b>:${esc(me.win)}</div>`;
   if(me.knows.length) h+=`<div style="margin-bottom:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:rgba(163,46,34,.04)"><b>只有你知道</b>`+me.knows.map(t=>`<div style="margin-top:4px">· ${esc(t)}</div>`).join("")+`</div>`;
-  if(me.canPeek) h+=`<div class="row" style="margin-bottom:10px"><label style="font-size:12px;color:var(--ink-soft);flex:none">〖明察〗</label><select id="id-peek" class="grow"><option value="">查看一名其他玩家的身份(整局一次)</option>`
-    +others.map(n=>`<option value="${n}">座位 ${n}${state.seats[n]&&state.seats[n].general?" · "+esc(seatGeneralName(state.seats[n].general)):""}</option>`).join("")+`</select><button id="id-peekgo">查看</button></div>
-    <div class="hint" style="margin:-4px 0 10px">男性武将且加成前体力上限 ≤ 3 的明忠才有〖明察〗;其他武将是〖舍身〗,不要点。</div>`;
+  const seatOpt=n=>`<option value="${n}">座位 ${n}${state.seats[n]&&state.seats[n].general?" · "+esc(seatGeneralName(state.seats[n].general)):""}</option>`;
+  const box=inner=>`<div style="margin-bottom:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px">${inner}</div>`;
+  // 明忠技能:按所选武将给(男性且加成前体力上限 ≤ 3 → 明察;其余 → 舍身),服务端判定
+  if(me.skill){
+    if(me.skill.needHero) h+=box(`<b>明忠技能</b>:选定武将后显示。<div class="hint" style="margin:4px 0 0">男性武将且加成前体力上限 ≤ 3 →〖明察〗;其他武将 →〖舍身〗。另:你加 1 点体力上限和 1 点体力(在全场状态面板里手动改)。</div>`);
+    else h+=box(`<b>你获得〖${esc(me.skill.name)}〗</b><span class="hint" style="margin:0"> · 按所选武将 ${esc(me.skill.hero)}</span><div style="margin-top:4px">${esc(me.skill.text)}</div>`
+      +(me.canPeek?`<div class="row" style="margin-top:8px"><select id="id-peek" class="grow"><option value="">查看一名其他玩家的身份(整局一次)</option>`+others.map(seatOpt).join("")+`</select><button id="id-peekgo">查看</button></div>`:"")
+      +`<div class="hint" style="margin:6px 0 0">另:你加 1 点体力上限和 1 点体力(在全场状态面板里手动改)。</div>`);
+  }
+  // 蔽众(教主选了教主张角才有):令一名非失心的其他角色成为失心 → 任意交换失心的身份牌 → 完成
+  if(me.bz){
+    const b=me.bz, ls=b.lost.map(x=>x.seat);
+    let t=`<b>〖蔽众〗</b><span class="hint" style="margin:0"> · 教主技(教主张角)</span>`;
+    if(b.stage==="can") t+=`<div style="margin-top:4px">游戏开始时,可以选一名不为失心的其他角色:观看其身份牌并令其成为失心,然后任意交换所有失心的身份牌。</div>
+      <div class="row" style="margin-top:8px"><select id="bz-t" class="grow"><option value="">选一名不是失心的其他角色</option>`+others.filter(n=>!d.seats[n].lost&&!d.seats[n].pub).map(seatOpt).join("")+`</select><button id="bz-go">发动</button></div>`;
+    else if(b.stage==="swap") t+=`<div style="margin-top:4px">座位 ${b.target} 已成为失心。现在可以任意交换失心的身份牌(可换多次),换完点「完成」。</div>`
+      +b.lost.map(x=>`<div style="margin-top:4px">· 座位 ${x.seat}:<b>${esc(x.role)}</b></div>`).join("")
+      +`<div class="row" style="margin-top:8px"><select id="bz-a" style="flex:1;width:auto;min-width:0">`+ls.map(n=>`<option value="${n}">座位 ${n}</option>`).join("")+`</select><span>⇄</span><select id="bz-b" style="flex:1;width:auto;min-width:0">`+ls.map((n,i)=>`<option value="${n}"${i===1?" selected":""}>座位 ${n}</option>`).join("")
+      +`</select><button id="bz-swap">交换</button></div><div class="row" style="margin-top:8px;justify-content:flex-end"><button class="primary" id="bz-done">换好了 · 完成</button></div>`;
+    else t+=`<div class="hint" style="margin:4px 0 0">已发动(座位 ${b.target} 成为失心),交换已完成。失心的真实身份见上面「只有你知道」。</div>`;
+    h+=box(t);
+  }
+  // 大忠似奸变种规则(本桌房规;主要给昏君——只有他的胜利条件会变)
+  if(me.variant) h+=box(`<b>变种规则 · 昏君二线</b><span class="hint" style="margin:0"> · 开局约定采用时生效</span>`+me.variant.lines.map(t=>`<div style="margin-top:4px">· ${esc(t)}</div>`).join("")
+    +(RULES.some(r=>r.id===me.variant.rule)?`<div class="row" style="margin-top:6px"><button class="ghost" id="id-vrule" style="font-size:12px">看变种规则全文</button></div>`:""));
   h+=`<div class="hint" style="margin:0 0 10px">${iv.pub&&iv.pub!=="失心"?"你的身份已亮明,全场可见。":d.over?"本局已全部亮明。":"别人看不到。阵亡或规则要求时再亮明。"}</div><div class="row">`;
   if(m.rule&&RULES.some(r=>r.id===m.rule)) h+=`<button class="ghost" id="id-rule">看规则</button>`;
   h+=`<span class="grow"></span>`;
@@ -766,6 +792,11 @@ function renderMyIdent(){
   document.querySelectorAll("#modal [data-mclose]").forEach(b=>b.onclick=e=>{if(e.target===b)closeModal();});
   const rb=$("#id-rule"); if(rb) rb.onclick=()=>{identSeat=null;openRule(m.rule);};
   const sb=$("#id-show"); if(sb) sb.onclick=()=>{if(confirm("亮明座位 "+sn+" 的身份?全场都会看到,不能撤回。"))send({type:"identShow",seatNo:sn});};
+  const vb=$("#id-vrule"); if(vb) vb.onclick=()=>{identSeat=null;openRule(me.variant.rule);};
+  const bg=$("#bz-go"); if(bg) bg.onclick=()=>{const t=$("#bz-t").value;if(!t){toast("先选目标座位");return;}
+    if(confirm("对座位 "+t+" 发动〖蔽众〗?其成为失心(全场可见),整局只能发动一次。"))send({type:"identBizhong",seatNo:sn,targetSeat:+t});};
+  const bs=$("#bz-swap"); if(bs) bs.onclick=()=>{const a=+$("#bz-a").value,b=+$("#bz-b").value;if(a===b){toast("选两个不同的失心座位");return;}send({type:"identSwapLost",seatNo:sn,a,b});};
+  const bd=$("#bz-done"); if(bd) bd.onclick=()=>{if(confirm("交换完成?之后不能再换。"))send({type:"identBizhongDone",seatNo:sn});};
   const pb=$("#id-peekgo"); if(pb) pb.onclick=()=>{const t=$("#id-peek").value;if(!t){toast("先选要查看的座位");return;}
     if(confirm("发动〖明察〗查看座位 "+t+" 的身份?整局只能看一次。"))send({type:"identPeek",seatNo:sn,targetSeat:+t});};
 }

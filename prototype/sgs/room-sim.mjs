@@ -1445,11 +1445,6 @@ console.log("\n=== 场景 20:线上发将 ===");
     check("明忠 6 人:只亮明 1 号位的明忠,主公是暗的", rm.ident.roles[1].role === "忠臣" && rm.ident.roles[1].title === "明忠" && pubs.join() === "明忠");
     const r8 = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 5); r8.identStart("p1", { mode: "mingzhong" });
     check("明忠 8 人(2 忠):亮明的那位称储君,另一名忠臣仍暗", r8.ident.roles[1].title === "储君" && Object.values(r8.ident.roles).filter((x) => x.shown).length === 1);
-    const mz = rm.seats[1].holderDevices[0], t3 = rm.seats[3].holderDevices[0];
-    check("明察:别人不能替明忠看 / 不能看自己", rm.identPeek(t3, { seatNo: 1, targetSeat: 2 }).error === "NOT_HOLDER" && rm.identPeek(mz, { seatNo: 1, targetSeat: 1 }).error === "BAD_TARGET" && rm.identPeek(t3, { seatNo: 3, targetSeat: 2 }).error === "NO_IDENT");
-    check("⭐ 明察:明忠秘密看到目标身份,整局一次,别人看不到结果", rm.viewFor(mz).ident.seats[1].mine.canPeek && rm.identPeek(mz, { seatNo: 1, targetSeat: 3 }).ok
-      && rm.viewFor(mz).ident.seats[1].mine.knows.some((t) => t.includes("座位 3") && t.includes(rm.ident.roles[3].role))
-      && rm.identPeek(mz, { seatNo: 1, targetSeat: 4 }).error === "ALREADY_PEEKED" && !JSON.stringify(rm.viewFor(t3).ident).includes("明察") && rm.viewFor(t3).ident.seats[3].pub === null);
     check("明忠没有忠臣 → BAD_LEAD", mkRoom(3, [1, 2, 3]).identStart("p1", { mode: "mingzhong", counts: { 主公: 1, 忠臣: 0, 反贼: 1, 内奸: 1 } }).error === "BAD_LEAD");
   }
   // 失心疯:失心不占位,全场见「失心」,本人看不到真身,教主看得到
@@ -1513,6 +1508,87 @@ console.log("\n=== 场景 20:线上发将 ===");
     check("发将进行中不能发身份 → DEAL_ACTIVE", rm.identStart("p1", { mode: "normal" }).error === "DEAL_ACTIVE");
     rm.deal = null;
     check("只有 1 人入座 → NO_PLAYERS", mkRoom(4, [1]).identStart("p1", { mode: "normal" }).error === "NO_PLAYERS");
+  }
+  // 身份技能按所选武将给:明忠〖明察/舍身〗、教主张角〖蔽众〗、大忠似奸变种规则提示、明忠/无间道不发主公技候选
+  {
+    const { setHeroInfo } = await import("./shared/room-logic.mjs");
+    const { readFileSync } = await import("node:fs");
+    const HEROES2 = JSON.parse(readFileSync(new URL("./shared/generals.json", import.meta.url), "utf8"));
+    const FEMALE = new Set(JSON.parse(readFileSync(new URL("./shared/hero-gender.json", import.meta.url), "utf8")).female);
+    setHeroInfo(Object.fromEntries(HEROES2.map((h) => [h.tool || String(h.id), { name: h.name, hp: h.hp, female: FEMALE.has(h.id) }])));
+    const gid = (name) => { const h = HEROES2.find((x) => x.name === name); return h.tool || String(h.id); };
+    check("性别表:貂蝉/孙尚香/族荀采 女,关羽/郭嘉 男;女将 id 都是数字", ["貂蝉", "孙尚香", "族荀采"].every((n) => FEMALE.has(HEROES2.find((x) => x.name === n).id)) && ["关羽", "郭嘉"].every((n) => !FEMALE.has(HEROES2.find((x) => x.name === n).id)) && [...FEMALE].every(Number.isInteger));
+
+    // 明忠技能
+    const rm = mkRoom(6, [1, 2, 3, 4, 5, 6], 5); rm.identStart("p1", { mode: "mingzhong" });
+    const mz = rm.seats[1].holderDevices[0], t3 = rm.seats[3].holderDevices[0];
+    const mine = () => rm.viewFor(mz).ident.seats[1].mine;
+    check("明忠没选将:技能待定,不能明察 → NO_SKILL", mine().skill.needHero && !mine().canPeek && rm.identPeek(mz, { seatNo: 1, targetSeat: 3 }).error === "NO_SKILL");
+    rm.setGeneral(mz, 1, gid("关羽"));
+    check("明忠选 4 血男将(关羽)→ 舍身,不能明察", mine().skill.name === "舍身" && !mine().canPeek && rm.identPeek(mz, { seatNo: 1, targetSeat: 3 }).error === "NO_SKILL");
+    rm.setGeneral(mz, 1, gid("貂蝉"));
+    check("明忠选 3 血女将(貂蝉)→ 舍身", mine().skill.name === "舍身" && !mine().canPeek);
+    rm.setGeneral(mz, 1, gid("郭嘉"));
+    check("明忠选 3 血男将(郭嘉)→ 明察", mine().skill.name === "明察" && mine().skill.hero === "郭嘉" && mine().canPeek);
+    check("明察:别人不能替明忠看 / 不能看自己 / 非明忠没有", rm.identPeek(t3, { seatNo: 1, targetSeat: 2 }).error === "NOT_HOLDER" && rm.identPeek(mz, { seatNo: 1, targetSeat: 1 }).error === "BAD_TARGET" && rm.identPeek(t3, { seatNo: 3, targetSeat: 2 }).error === "NO_IDENT");
+    check("⭐ 明察:明忠秘密看到目标身份,整局一次,别人看不到结果", rm.identPeek(mz, { seatNo: 1, targetSeat: 3 }).ok
+      && mine().knows.some((t) => t.includes("座位 3") && t.includes(rm.ident.roles[3].role)) && !mine().canPeek
+      && rm.identPeek(mz, { seatNo: 1, targetSeat: 4 }).error === "ALREADY_PEEKED" && !JSON.stringify(rm.viewFor(t3).ident).includes("明察") && rm.viewFor(t3).ident.seats[3].pub === null);
+    check("非明忠座位没有 skill 字段", rm.viewFor(t3).ident.seats[3].mine.skill === undefined);
+
+    // 明忠 / 无间道:发将不给主公技候选
+    const g = (k, id, lord = false) => ({ key: k, opts: [{ id, name: k, gid: String(id), lord }] });
+    const pools = () => ({ normal: Array.from({ length: 60 }, (_, i) => g("将" + i, 100 + i)), lord: Array.from({ length: 8 }, (_, i) => g("主" + i, 300 + i, true)), forced: null });
+    rm.dealStart(mz, { mode: "normal", lordSeat: 1, pools: pools() });
+    check("⭐ 明忠模式发将:传了君主座位也不发主公技候选", rm.deal.lordSeat === null && Object.values(rm.deal.hands).every((h) => h.slots.length === 6 && h.slots.every((q) => q.src === "init")));
+    rm.dealCancel(mz);
+    const wj = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 3); wj.identStart("p1", { mode: "wujian" });
+    wj.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
+    check("无间道发将:同样不发主公技候选", wj.deal.lordSeat === null && wj.deal.hands[1].slots.length === 6);
+    const nm = mkRoom(4, [1, 2, 3, 4], 3); nm.identStart("p1", { mode: "normal" });
+    nm.dealStart("p1", { mode: "normal", lordSeat: 1, pools: pools() });
+    check("普通身份局发将:君主照常多 6 个主公技候选", nm.deal.lordSeat === 1 && nm.deal.hands[1].slots.length === 12);
+
+    // 大忠似奸变种规则提示
+    const dz = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], 9); dz.identStart("p1", { mode: "dazhong" });
+    const dzMine = (n) => dz.viewFor(dz.seats[n].holderDevices[0]).ident.seats[n].mine;
+    check("大忠似奸:昏君的「我的身份」带变种规则(袒佞 + 两条分线 + 刘宏例外)", dzMine(1).variant.rule === "dazhong-variant" && ["袒佞", "昏庸无道", "幡然醒悟", "昏君刘宏"].every((k) => dzMine(1).variant.lines.join().includes(k)));
+    check("大忠似奸:其余身份也有各自的变种提示;别的模式没有", [2, 3, 4, 5, 6, 7, 8].every((n) => dzMine(n).variant.lines.length) && nm.viewFor("p1").ident.seats[[...nm.holdsOf("p1")][0]].mine.variant === undefined);
+
+    // 蔽众
+    let ok = 0, runs = 0;
+    for (let s = 1; s <= 30; s++) {
+      const sx = mkRoom(8, [1, 2, 3, 4, 5, 6, 7, 8], s); sx.identStart("p1", { mode: "shixin" }); runs++;
+      const jz = sx.seats[1].holderDevices[0], R = sx.ident.roles, jm = () => sx.viewFor(jz).ident.seats[1].mine;
+      const lost0 = Object.keys(R).filter((n) => R[n].lost).map(Number), tgt = [2, 3, 4, 5, 6, 7, 8].find((n) => !R[n].lost), tdev = sx.seats[tgt].holderDevices[0];
+      let good = jm().bz === undefined && sx.identBizhong(jz, { seatNo: 1, targetSeat: tgt }).error === "NO_SKILL"; // 没选教主张角 → 没有蔽众
+      sx.setGeneral(jz, 1, gid("教主张角"));
+      good = good && jm().bz.stage === "can"
+        && sx.identBizhong(tdev, { seatNo: 1, targetSeat: tgt }).error === "NOT_HOLDER"
+        && sx.identBizhong(jz, { seatNo: 1, targetSeat: lost0[0] }).error === "BAD_TARGET"   // 已是失心
+        && sx.identBizhong(jz, { seatNo: 1, targetSeat: 1 }).error === "BAD_TARGET"
+        && sx.identSwapLost(jz, { seatNo: 1, a: lost0[0], b: lost0[1] }).error === "NO_SKILL"; // 还没发动不能换
+      const before = sx.viewFor(tdev).ident.seats[tgt].mine.role, tRole = R[tgt].role;
+      good = good && before === tRole && sx.identBizhong(jz, { seatNo: 1, targetSeat: tgt }).ok;
+      const tv = sx.viewFor(tdev).ident.seats[tgt];
+      good = good && tv.pub === "失心" && tv.mine.role === null && tv.mine.win === null                       // 目标变失心:自己看不到了
+        && sx.viewFor("zz").ident.lost === 3 && sx.viewFor("zz").ident.seats[tgt].pub === "失心"
+        && jm().bz.stage === "swap" && jm().bz.lost.length === 3 && jm().bz.lost.find((x) => x.seat === tgt).role === tRole // 教主看到其身份
+        && sx.identBizhong(jz, { seatNo: 1, targetSeat: [2, 3, 4, 5, 6, 7, 8].find((n) => !R[n].lost) }).error === "ALREADY_USED";
+      const a = lost0[0], ra = R[a].role;
+      good = good && sx.identSwapLost(jz, { seatNo: 1, a, b: tgt }).ok && R[a].role === tRole && R[tgt].role === ra
+        && sx.identSwapLost(jz, { seatNo: 1, a, b: a }).error === "BAD_TARGET"
+        && sx.identSwapLost(jz, { seatNo: 1, a, b: [2, 3, 4, 5, 6, 7, 8].find((n) => !R[n].lost) }).error === "BAD_TARGET" // 非失心不能换
+        && sx.identSwapLost(jz, { seatNo: 1, a: lost0[1], b: tgt }).ok                                                    // 可多次
+        && jm().knows.filter((t) => t.includes("失心")).length === 3
+        && Object.values(R).map((x) => x.role).sort().join() === ["教主", "护法", "护法", "官兵", "官兵", "官兵", "内奸", "内奸"].sort().join() // 身份牌总数不变
+        && sx.identBizhongDone(jz, { seatNo: 1 }).ok && jm().bz.stage === "done"
+        && sx.identSwapLost(jz, { seatNo: 1, a, b: tgt }).error === "NO_SKILL";
+      for (const n of [2, 3, 4, 5, 6, 7, 8]) if (JSON.stringify(sx.viewFor(sx.seats[n].holderDevices[0]).ident).includes('"bz"')) good = false; // 别人看不到蔽众面板
+      if (good) ok++;
+    }
+    check("⭐ 蔽众 8 人×30 种子:仅教主张角可发动、目标变失心且自己看不到、教主可任意交换失心身份(多次)、完成后关闭、别人看不到", ok === runs);
+    setHeroInfo({});
   }
   // 线上发将亮出的武将锁定,不可再手动改;新一局 / 重新发将才解
   {

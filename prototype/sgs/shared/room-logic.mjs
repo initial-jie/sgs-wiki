@@ -16,7 +16,7 @@
 import { RoomBase, clone } from "../../common/room-base.mjs";
 import { DEAL_MODES, DEAL_HAND, DEAL_LORD_EXTRA } from "./deal.mjs"; // 线上发将:模式表/手牌数(组池纯函数也在那)
 import { applyVisibility } from "../../common/visibility.mjs";
-import { IDENT_MODES, identDefaults, identCheck, identCamp } from "./identity.mjs"; // 身份自动发放:模式表/默认配比/校验
+import { IDENT_MODES, identDefaults, identCheck, identCamp, MINGZHONG_SKILLS, mingzhongSkill, BIZHONG_HERO } from "./identity.mjs"; // 身份自动发放:模式表/默认配比/校验
 
 const GLYPH = { S: "♠", H: "♥", C: "♣", D: "♦" };
 export function cardLabel(c) { return GLYPH[c.s] + c.r + (c.n ? " " + c.n : ""); }
@@ -424,6 +424,12 @@ export function setBannedPools(map) {
   BANNED_POOLS = {};
   for (const k of Object.keys(map || {})) BANNED_POOLS[k] = new Set((map[k] || []).map(String));
 }
+// 武将基本信息(身份技能判定用:明忠〖明察/舍身〗看性别与体力上限,〖蔽众〗看是不是教主张角)。
+// key = setGeneral 收到的 generalId(有工具→工具名,否则 String(id));由 worker / sim 灌入,RoomCore 自己不带武将库
+let HERO_INFO = {};
+export function setHeroInfo(map) { HERO_INFO = map || {}; }
+const heroInfo = (g) => (g && HERO_INFO[g]) || null;
+
 // 座位数 → 池:≥5 军争场 / 4 2v2 / 3 斗地主 / 2 1v1(与 banned-generals.json 各池 seats 字段一致)
 export function banPoolForSeats(n) { n = Number(n); return n >= 5 ? "junzheng" : n === 4 ? "2v2" : n === 3 ? "douzhu" : "1v1"; }
 
@@ -488,6 +494,7 @@ export class RoomCore extends RoomBase {
     const players = this.seatNos().filter((n) => this.seats[n].holderDevices.length); // 已入座的座位才发
     if (!players.length) return { error: "NO_PLAYERS" };
     lordSeat = lordSeat == null || lordSeat === "" ? null : Number(lordSeat);
+    if (this.ident && IDENT_MODES[this.ident.mode]?.noLord) lordSeat = null; // 明忠(主公是暗的)/无间道:不发主公技候选(用户 2026-10-02)
     if (lordSeat != null && !players.includes(lordSeat)) return { error: "BAD_LORD" };
 
     const normal = (pools?.normal || []).map((g) => ({ key: g.key, opts: g.opts }));
@@ -626,15 +633,52 @@ export class RoomCore extends RoomBase {
     r.shown = true;
     return { ok: true };
   }
-  // 明察(明忠模式,男性且体力上限≤3 的明忠才有;武将条件服务端不判):游戏开始时秘密查看一名其他玩家的身份,整局一次
+  // 明察(明忠模式):游戏开始时秘密查看一名其他玩家的身份,整局一次。
+  // 技能按所选武将给:男性且加成前体力上限 ≤ 3 → 明察,其余 → 舍身(mingzhongSkill);没选将/是舍身 → NO_SKILL
   identPeek(id, { seatNo, targetSeat }) {
     seatNo = Number(seatNo); targetSeat = Number(targetSeat);
     const d = this.ident, r = d?.roles[seatNo];
     if (!r || d.mode !== "mingzhong" || !r.title) return { error: "NO_IDENT" };
     if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
+    if (mingzhongSkill(heroInfo(this.seats[seatNo]?.general)) !== "明察") return { error: "NO_SKILL" };
     if (r.peek != null) return { error: "ALREADY_PEEKED" };
     if (targetSeat === seatNo || !d.roles[targetSeat] || !this.seats[targetSeat]) return { error: "BAD_TARGET" };
     r.peek = targetSeat;
+    return { ok: true };
+  }
+  // 蔽众(失心疯,教主选了教主张角才有):游戏开始时选一名不为失心的其他角色 → 其成为失心(本人此后看不到自己的身份);
+  // 然后教主可以任意交换所有失心的身份牌(identSwapLost,可多次),点「完成」(identBizhongDone)后关闭。整局一次。
+  _bzSeat(id, seatNo) {
+    const d = this.ident, r = d?.roles[seatNo];
+    if (!r || d.mode !== "shixin" || r.role !== "教主") return { error: "NO_IDENT" };
+    if (!this.isHolder(id, seatNo)) return { error: "NOT_HOLDER" };
+    if (heroInfo(this.seats[seatNo]?.general)?.name !== BIZHONG_HERO) return { error: "NO_SKILL" };
+    return { r };
+  }
+  identBizhong(id, { seatNo, targetSeat }) {
+    seatNo = Number(seatNo); targetSeat = Number(targetSeat);
+    const c = this._bzSeat(id, seatNo); if (c.error) return c;
+    if (c.r.bz) return { error: "ALREADY_USED" };
+    const t = this.ident.roles[targetSeat];
+    if (!t || !this.seats[targetSeat] || targetSeat === seatNo || t.lost || t.shown) return { error: "BAD_TARGET" };
+    t.lost = true;
+    c.r.bz = { target: targetSeat, done: false };
+    return { ok: true };
+  }
+  identSwapLost(id, { seatNo, a, b }) {
+    seatNo = Number(seatNo); a = Number(a); b = Number(b);
+    const c = this._bzSeat(id, seatNo); if (c.error) return c;
+    if (!c.r.bz || c.r.bz.done) return { error: "NO_SKILL" };
+    const ra = this.ident.roles[a], rb = this.ident.roles[b];
+    if (a === b || !ra || !rb || !ra.lost || !rb.lost || ra.shown || rb.shown) return { error: "BAD_TARGET" };
+    [ra.role, rb.role] = [rb.role, ra.role];
+    return { ok: true };
+  }
+  identBizhongDone(id, { seatNo }) {
+    seatNo = Number(seatNo);
+    const c = this._bzSeat(id, seatNo); if (c.error) return c;
+    if (!c.r.bz) return { error: "NO_SKILL" };
+    c.r.bz.done = true;
     return { ok: true };
   }
   identShowAll(id) { // 本局结束:全部亮明(任何人可点)
@@ -677,11 +721,21 @@ export class RoomCore extends RoomBase {
           if (r.title) knows.push(`你是${r.title}:身份已亮明,坐 1 号位。`);
           if (r.peek != null && d.roles[r.peek]) knows.push(`明察:座位 ${r.peek} 的身份是【${d.roles[r.peek].role}】`);
         }
-        v.mine = { role: blind ? null : r.role, title: r.title || null, shown: !!r.shown, canPeek: !!r.title && d.mode === "mingzhong" && r.peek == null && !d.over, knows, win: blind ? null : (m.win[r.role] || null) };
+        v.mine = { role: blind ? null : r.role, title: r.title || null, shown: !!r.shown, knows, win: blind ? null : (m.win[r.role] || null) };
+        const hero = heroInfo(this.seats[n].general);
+        if (r.title && d.mode === "mingzhong") { // 明忠技能:选定武将后才给(needHero=还没选将)
+          const sk = mingzhongSkill(hero);
+          v.mine.skill = sk ? { name: sk, text: MINGZHONG_SKILLS[sk], hero: hero.name } : { needHero: true };
+          v.mine.canPeek = sk === "明察" && r.peek == null && !d.over;
+        }
+        if (!blind && m.variant?.[r.role]) v.mine.variant = { rule: m.variantRule, lines: m.variant[r.role] }; // 大忠似奸变种规则提示
+        if (d.mode === "shixin" && r.role === "教主" && hero?.name === BIZHONG_HERO && !d.over) // 蔽众:can=可发动 / swap=可交换失心身份 / done
+          v.mine.bz = { stage: !r.bz ? "can" : r.bz.done ? "done" : "swap", target: r.bz?.target ?? null,
+            lost: ent.filter(([, x]) => x.lost && !x.shown).map(([ln, x]) => ({ seat: ln, role: x.role })) };
       }
       seats[n] = v;
     }
-    return { id: d.id, mode: d.mode, label: m.label, counts: d.counts, lost: d.lost, over: !!d.over, seats };
+    return { id: d.id, mode: d.mode, label: m.label, counts: d.counts, lost: ent.filter(([, r]) => r.lost).length, over: !!d.over, seats };
   }
 
   // 该设备看到的发将视图:自己持有的座位给全量候选;别人只见"几个坑 / 选没选"(君主选定后公开)

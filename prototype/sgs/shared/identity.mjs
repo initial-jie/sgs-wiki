@@ -21,7 +21,7 @@ export const IDENT_MODES = {
     win: { 主公: "所有反贼和内奸死亡。", 忠臣: "所有反贼和内奸死亡(保护主公)。", 反贼: "主公死亡。", 内奸: "除自己外所有人死亡(最后单挑胜过主公)。" },
   },
   mingzhong: {
-    label: "明忠", roles: ["主公", "忠臣", "反贼", "内奸"], lead: ["忠臣"], official: [6, 6], rule: "mingzhong",
+    label: "明忠", roles: ["主公", "忠臣", "反贼", "内奸"], lead: ["忠臣"], official: [6, 6], rule: "mingzhong", noLord: true,
     table: T([[4, 1, 1, 1, 1], [5, 1, 1, 2, 1], [6, 1, 1, 3, 1], [7, 1, 2, 3, 1], [8, 1, 2, 4, 1], [9, 1, 3, 4, 1], [10, 1, 3, 4, 2]]),
     win: { 主公: "所有反贼和内奸死亡。你的身份是暗的:明忠(1 号位)替你挡在明面上。", 忠臣: "所有反贼和内奸死亡(保护主公)。", 反贼: "主公死亡。", 内奸: "除自己外所有人死亡。" },
   },
@@ -40,9 +40,23 @@ export const IDENT_MODES = {
     label: "大忠似奸", roles: ["昏君", "奸臣", "忠臣", "义军"], lead: ["昏君"], official: null, rule: "dazhong",
     table: T([[4, 1, 1, 1, 1], [5, 1, 1, 1, 2], [6, 1, 1, 1, 3], [7, 1, 1, 2, 3], [8, 1, 1, 2, 4], [9, 1, 1, 3, 4], [10, 1, 1, 3, 5]]),
     win: { 昏君: "所有忠臣和义军死亡。", 奸臣: "所有忠臣死亡且昏君存活。", 忠臣: "所有奸臣和义军死亡且昏君存活。", 义军: "昏君死亡。义军彼此知晓身份。" },
+    // 本桌变种规则「昏君二线」(rules.json dazhong-variant)在「我的身份」里的提示:主要给昏君(只有他的胜利条件会变)
+    variantRule: "dazhong-variant",
+    variant: {
+      昏君: [
+        "奸臣首次濒死时亮明身份,你随即获得〖袒佞〗:锁定技。防止你对已明置身份的奸臣造成的伤害;不能选其为延时锦囊的目标;你的【过河拆桥】【顺手牵羊】只能对其判定区的牌生效;其濒死时你若不对其用【桃】,须展示手牌。",
+        "奸臣阵亡时分线一次(之后不再变):",
+        "忠臣数 ≥ 义军数 →【昏庸无道】你的胜利条件改为与奸臣一致:所有忠臣死亡且你存活(不必再杀义军)。",
+        "忠臣数 < 义军数 →【幡然醒悟】你减 1 点体力上限,并入忠臣阵营:所有奸臣和义军死亡且你存活;此后你杀死忠臣须弃置所有牌。",
+        "你若选的是昏君刘宏:不触发〖袒佞〗(障目令非义军阵亡不亮身份),奸臣阵亡后一律进入昏庸无道线。",
+      ],
+      奸臣: ["你首次濒死时须亮明身份,昏君随即获得〖袒佞〗(不能伤害你、不能对你用延时锦囊)。", "你的胜利条件不变。你阵亡时昏君按 忠臣数/义军数 分线(≥ 昏庸无道 / < 幡然醒悟)。"],
+      忠臣: ["你的胜利条件不变。", "奸臣阵亡时:忠臣数 ≥ 义军数 → 昏君转入【昏庸无道】,要杀光忠臣才赢(与你为敌);忠臣数 < 义军数 → 昏君【幡然醒悟】并入你方阵营。"],
+      义军: ["你的胜利条件不变(昏君死亡)。", "奸臣阵亡时:忠臣数 ≥ 义军数 → 昏君只需杀光忠臣即胜;忠臣数 < 义军数 → 昏君并入忠臣阵营,与你为敌。"],
+    },
   },
   wujian: {
-    label: "无间道", roles: ["龙主帅", "龙护卫", "龙内鬼", "虎主帅", "虎护卫", "虎内鬼"], lead: ["龙主帅", "虎主帅"], official: [8, 8], rule: "wujiandao", camps: true,
+    label: "无间道", roles: ["龙主帅", "龙护卫", "龙内鬼", "虎主帅", "虎护卫", "虎内鬼"], lead: ["龙主帅", "虎主帅"], official: [8, 8], rule: "wujiandao", camps: true, noLord: true,
     table: T([[4, 1, 0, 1, 1, 0, 1], [6, 1, 1, 1, 1, 1, 1], [8, 1, 2, 1, 1, 2, 1], [10, 1, 3, 1, 1, 3, 1]]),
     win: {
       龙主帅: "龙军:消灭潜伏在龙军里的内鬼(龙内鬼)。体力上限与体力各 +1。", 龙护卫: "龙军:消灭潜伏在龙军里的内鬼(龙内鬼)。",
@@ -78,6 +92,17 @@ export function identCheck(mode, n, counts, lost = 0) {
   return { counts: out, lost };
 }
 
+// 明忠(1 号位亮明的忠臣)按所选武将获得的技能:男性且加成前体力上限 ≤ 3 → 明察;其余 → 舍身
+export const MINGZHONG_SKILLS = {
+  明察: "游戏开始时,你可以查看一名其他玩家的身份牌。准备阶段,你可以弃置场上的一张牌。",
+  舍身: "锁定技,当主公即将死亡时,其亮明身份,并加 1 点体力上限,回复体力至 X 点并获得你手牌区和装备区的所有牌,然后你死亡(X 为你的体力值)。",
+};
+export function mingzhongSkill(hero) { // hero = {name,hp,female} | null(还没选将/查不到)
+  if (!hero) return null;
+  return !hero.female && Number(hero.hp) <= 3 ? "明察" : "舍身";
+}
+export const BIZHONG_HERO = "教主张角"; // 〖蔽众〗(教主技):游戏开始时令一名非失心的其他角色成为失心,然后任意交换所有失心的身份牌
+
 // 牌背阵营(无间道):身份名首字
 export const identCamp = (mode, role) => (IDENT_MODES[mode]?.camps ? role[0] : null);
 
@@ -87,7 +112,7 @@ export function identModesForClient() {
   for (const [k, m] of Object.entries(IDENT_MODES)) {
     const defaults = {};
     for (const n of Object.keys(m.table)) defaults[n] = identDefaults(k, Number(n));
-    out[k] = { label: m.label, roles: m.roles, lead: m.lead, official: m.official, rule: m.rule || null, lost: !!m.lost, camps: !!m.camps, win: m.win, defaults };
+    out[k] = { label: m.label, roles: m.roles, lead: m.lead, official: m.official, rule: m.rule || null, lost: !!m.lost, camps: !!m.camps, noLord: !!m.noLord, win: m.win, defaults };
   }
   return out;
 }
