@@ -84,6 +84,22 @@ button:disabled{opacity:.4;cursor:default}
 .artcell small{font-size:9px;opacity:.6;line-height:1}
 .artcell.pub{border-color:#e8c66a}
 .artcell.on{background:rgba(232,198,106,.22);border-color:#e8c66a}
+.wk-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.wk-tabs.sub{margin-top:2px}
+.wk-tab{flex:none;font-size:12px;padding:4px 10px;min-height:0;border-radius:14px;background:transparent;color:var(--ink-soft)}
+.wk-tab.on{background:var(--plate);border-color:var(--plate);color:#f0e6d0}
+.wk-tabs.sub .wk-tab.on{background:var(--seal);border-color:var(--seal)}
+.wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.wk-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;border:1px solid var(--line);border-radius:7px;cursor:pointer;background:rgba(255,252,244,.5)}
+.wk-cell img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#e9e1cf}
+.wk-cell .wk-nm{font-size:11px;line-height:1.2;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wk-cell .fc{margin:0;font-size:10px;padding:0 4px}
+.wk-cell.in{border-color:#2f7d4f}
+.wk-cell.ban{border-color:var(--seal);background:rgba(163,46,34,.05)}
+.wk-cell.ban img{filter:grayscale(.7);opacity:.75}
+.wk-mark{position:absolute;top:2px;left:2px;font-size:10px;line-height:1;padding:2px 3px;border-radius:3px;color:#fff;font-weight:700}
+.wk-cell.in .wk-mark{background:#2f7d4f}.wk-cell.ban .wk-mark{background:var(--seal)}
+.wk-in{color:#2f7d4f}.wk-ban{color:var(--seal)}
 .seat .gz{font-size:11px;padding:0 6px;margin-left:5px;border:1px dashed var(--line);border-radius:4px;background:none;color:var(--ink-soft);font-family:var(--body);font-weight:400;min-height:0;line-height:1.6;white-space:nowrap}
 .seat .gz.on{border-style:solid;border-color:#2b6cb0;color:#2b6cb0}
 .seat .lb.idt{background:var(--seal);color:#f6ecd8}
@@ -299,6 +315,7 @@ function loadHeroes(){
   fetch("/derived-cards.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{DCARDS=d;}).catch(()=>{}); // 衍生牌同上
   fetch("/equipment.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ EQUIP=d; if(state)render(); }).catch(()=>{}); // 装备牌库→装备槽下拉
   loadBans(); // ② 禁将四池(服务端名单,/pool 页可改)
+  if(wikiOpen) loadWhite(); // 武将图鉴展开着 → 拉白名单标「池」
   fetch("/rules.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ RULES=Array.isArray(d)?d:[]; if(state)render(); }).catch(()=>{}); // 规则集目录
   fetch("/ident-modes.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ IDENT_MODES=d||{}; if(state)render(); }).catch(()=>{}); // 身份模式表(发身份)
 }
@@ -468,8 +485,9 @@ function openSkillView(general,seatNo){
   const lt=$("#modal [data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");openSkillView(general,seatNo);};
 }
 // 选将弹层里「查看技能」:叠加在列表之上预览某版本技能(不选定),看完可「返回列表」比较别的版本,或「选定此武将」提交
-function previewHero(id){
+function previewHero(id,opt){ // opt.viewOnly:图鉴/禁将池里只看不选(不给「选定」)
   const hero=HERO_BY_ID.get(id); if(!hero){toast("该武将暂无技能资料");return;}
+  const viewOnly=!!(opt&&opt.viewOnly);
   const banned=isBanned(id); // ② 禁将:可查看技能,但「选定」禁用
   const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
   const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
@@ -492,12 +510,12 @@ function previewHero(id){
     ${derivedCardsHtml(hero)}
     ${hero.tool?`<div class="hint">${T("此武将有专属线下工具,选定后在座位卡上点「工具 →」进入。","This hero has a dedicated offline tool — after selecting, tap “工具 →” on the seat card.")}</div>`:""}
     ${banned?`<div style="margin-top:10px;padding:7px 10px;background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;font-size:12px;color:var(--seal)">🚫 ${T("此武将在禁将池,不能落座(仅可查看技能)","This hero is banned — viewing only, cannot be seated")}</div>`:""}
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${T("返回列表","Back")}</button><button class="primary" data-pvpick="1"${banned?' disabled style="opacity:.45;cursor:not-allowed"':''}>${banned?T("已禁用","Banned"):T("选定此武将","Select")}</button></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-pvclose="1">${viewOnly?T("关闭","Close"):T("返回列表","Back")}</button>${viewOnly?"":`<button class="primary" data-pvpick="1"${banned?' disabled style="opacity:.45;cursor:not-allowed"':''}>${banned?T("已禁用","Banned"):T("选定此武将","Select")}</button>`}</div>
   </div>`;
   $("#modal").appendChild(ov);
   ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest("[data-pvclose]")) ov.remove(); }); // 背景/×/返回:只关预览,列表还在
-  const lt=ov.querySelector("[data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");ov.remove();previewHero(id);}; // 语言切换:重渲染本预览
-  ov.querySelector("[data-pvpick]").onclick=()=>choosePick(id); // 选定→ choosePick(内部 setGeneral + closeModal 关掉整个弹层)
+  const lt=ov.querySelector("[data-langtoggle]"); if(lt) lt.onclick=()=>{setLang(LANG==="en"?"zh":"en");ov.remove();previewHero(id,opt);}; // 语言切换:重渲染本预览
+  const pk=ov.querySelector("[data-pvpick]"); if(pk) pk.onclick=()=>choosePick(id); // 选定→ choosePick(内部 setGeneral + closeModal 关掉整个弹层)
 }
 
 const $=(s,el=document)=>el.querySelector(s);
@@ -565,7 +583,7 @@ const RC=RoomClient.create({
   // 换房=干净重来:清掉上一局的客户端残留(否则新房会闪现旧桌/旧夺炁/旧登记草稿)
   beforeConnect(){ state=null;lastReveal=null;focus=null;nhFlow=null;nhGive=null;xyPick=null;caoHpSel=null;yjPrompt=null;yjEdit=null;yjManual.clear();zyRolled=null;smRolled=null;lbManual.clear();for(const k in draft)delete draft[k]; },
   onState(m){ state=m;maybeSeedPanel();render();if(sheetSeat!=null)renderSheet();if(dealSeat!=null)renderDeal();if(identSeat!=null)renderMyIdent();if(artSeat!=null)renderArt();
-    if(banRev>=0&&(m.cfgRev||0)!==banRev){ banRev=m.cfgRev||0; loadBans(); } }, // 服务端名单变了 → 刷新禁将面板
+    if(banRev>=0&&(m.cfgRev||0)!==banRev){ banRev=m.cfgRev||0; loadBans(); if(wikiOpen)loadWhite(); } }, // 服务端名单变了 → 刷新禁将面板
   onMessage(m){ if(m.type==="actionResult"&&m.card!==undefined){lastReveal={card:m.card};toast("夺得炁:"+m.card);render();} },
   onClosed(){ state=null;focus=null;render(); },
   onRenamed(){ render(); },
@@ -593,6 +611,7 @@ function render(){
     h+=viewPanel();
     h+=viewBannedPool();
     h+=viewRulesIndex();
+    h+=viewHeroWiki();
     h+=viewRoomAdmin();
   }
   h+='<footer>三国杀线下化工具 · 房间版原型</footer>';
@@ -875,6 +894,67 @@ function renderMyIdent(){
   const bd=$("#bz-done"); if(bd) bd.onclick=()=>{if(confirm("交换完成?之后不能再换。"))send({type:"identBizhongDone",seatNo:sn});};
   const pb=$("#id-peekgo"); if(pb) pb.onclick=()=>{const t=$("#id-peek").value;if(!t){toast("先选要查看的座位");return;}
     if(confirm("发动〖明察〗查看座位 "+t+" 的身份?整局只能看一次。"))send({type:"identPeek",seatNo:sn,targetSeat:+t});};
+}
+
+/* ---------- 武将图鉴(规则集下方):按 系列 → 扩展包 两级页签,搜索只搜当前页签;每将标 池(在当前环境白名单)/ 禁(当前禁将池);点开看技能 ---------- */
+// pack 字段来自 generals.json(worker 贴的 hero-packs.json);系列 = 包名「-」前的部分,顺序与 /pool 页一致
+const WIKI_FAM_ORDER=["标准","神话再临","界限突破","一将成名","界一将","SP","璀璨星河","门阀士族","谋","魔","祈福","文德武备","闪","限定","不臣之君","线下","移动版","其他","国战"];
+const famOf=p=>String(p||"其他").split("-")[0];
+let POOL_CFG=null;                // /api/pool:{pools:{key:{white,ban}}}(白名单;空则沿用军争)
+let wikiOpen=localStorage.getItem("sgs_wikiOpen")==="1", wikiFam="", wikiPack="", wikiQ=""; // 展开/当前系列/当前包/搜索词(本机)
+function loadWhite(){ fetch("/api/pool",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ POOL_CFG=d&&d.pools?d:null; if(state&&wikiOpen)renderWikiGrid(); }).catch(()=>{}); }
+function whiteSet(){ // 当前环境生效的白名单(与发将/将池页同一规则:该环境为空 → 沿用军争)
+  if(!POOL_CFG) return null;
+  const p=POOL_CFG.pools[banPoolKey()], w=(p&&p.white&&p.white.length)?p.white:((POOL_CFG.pools.junzheng||{}).white||[]);
+  return new Set(w.map(Number));
+}
+function wikiHeroes(){ // 当前页签下的武将(未搜索)
+  let list=HEROES;
+  if(wikiFam) list=list.filter(h=>famOf(h.pack||h.genre)===wikiFam);
+  if(wikiPack) list=list.filter(h=>(h.pack||h.genre||"其他")===wikiPack);
+  return list;
+}
+function viewHeroWiki(){
+  if(!Array.isArray(HEROES)||!HEROES.length) return "";
+  let h=`<div class="card"><h2>武将图鉴<span class="tag">${HEROES.length} 将 · 按扩展包</span></h2>`;
+  h+=`<div class="row" style="margin-bottom:${wikiOpen?8:0}px"><span class="hint" style="margin:0;flex:1 1 0">${wikiOpen?"点武将看技能(禁将也能看)。标记:<b class='wk-in'>池</b>=在当前将池 · <b class='wk-ban'>禁</b>=当前禁将池 · 无标=未入池":"按系列 / 扩展包翻武将,搜索只搜当前包;标出哪些在将池、哪些被禁。"}</span>`
+    +`<button class="ghost" data-wikitoggle="1" style="font-size:12px">${wikiOpen?"收起":"展开"}</button></div>`;
+  if(!wikiOpen) return h+`</div>`;
+  const fams=[...new Set(HEROES.map(h=>famOf(h.pack||h.genre)))].sort((a,b)=>{const i=WIKI_FAM_ORDER.indexOf(a),j=WIKI_FAM_ORDER.indexOf(b);return (i<0?99:i)-(j<0?99:j)||a.localeCompare(b,"zh");});
+  if(wikiFam&&!fams.includes(wikiFam)){wikiFam="";wikiPack="";}
+  h+=`<div class="wk-tabs">`+[["","全部"],...fams.map(f=>[f,f])].map(([k,n])=>`<button class="wk-tab${wikiFam===k?" on":""}" data-wikifam="${esc(k)}">${esc(n)}</button>`).join("")+`</div>`;
+  if(wikiFam){
+    const packs=[...new Set(HEROES.filter(h=>famOf(h.pack||h.genre)===wikiFam).map(h=>h.pack||h.genre||"其他"))].sort((a,b)=>a.localeCompare(b,"zh",{numeric:true}));
+    if(wikiPack&&!packs.includes(wikiPack)) wikiPack="";
+    if(packs.length>1) h+=`<div class="wk-tabs sub">`+[["",wikiFam+" 全部"],...packs.map(p=>[p,p.slice(wikiFam.length).replace(/^-/,"")||p])].map(([k,n])=>`<button class="wk-tab${wikiPack===k?" on":""}" data-wikipack="${esc(k)}">${esc(n)}</button>`).join("")+`</div>`;
+  }
+  h+=`<div class="row" style="margin:6px 0"><input id="wiki-q" type="text" value="${esc(wikiQ)}" placeholder="搜本页签:名字 / 拼音 / 首字母" style="flex:1 1 0;min-width:0;padding:7px 10px"/>`
+    +(wikiQ?`<button class="ghost" data-wikiclear="1" style="font-size:12px">清除</button>`:"")+`</div>`;
+  h+=`<div class="hint" id="wiki-cnt" style="margin:0 0 6px"></div><div class="wk-grid" id="wiki-grid"></div></div>`;
+  return h;
+}
+function renderWikiGrid(){ // 只刷网格与计数(搜索打字时不整页 render,输入框不丢焦点)
+  const g=$("#wiki-grid"); if(!g) return;
+  const base=wikiHeroes(), list=wikiQ?RoomClient.searchList(base,wikiQ):base, W=whiteSet();
+  let nin=0,nban=0;
+  g.innerHTML=list.map(hero=>{
+    const ban=isBanned(hero.id), inp=W&&W.has(hero.id);
+    if(ban)nban++; else if(inp)nin++;
+    const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
+    return `<div class="wk-cell${ban?" ban":inp?" in":""}" data-wikiview="${hero.id}"><img loading="lazy" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
+      +`<span class="wk-mark">${ban?"禁":inp?"池":""}</span><span class="wk-nm">${esc(hero.name)}</span><span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span></div>`;
+  }).join("")||`<div class="hint">没有匹配的武将</div>`;
+  const c=$("#wiki-cnt"); if(c) c.innerHTML=`${wikiQ?"搜到 ":""}<b>${list.length}</b> 将${W?` · 在池 <b class="wk-in">${nin}</b> · 禁 <b class="wk-ban">${nban}</b>`:" · 将池读取中…"}${banOn()?"":" · <span style='color:var(--seal)'>房内禁将已关,禁标仅供参考</span>"}`;
+  g.querySelectorAll("[data-wikiview]").forEach(el=>el.onclick=()=>previewHero(+el.dataset.wikiview,{viewOnly:true}));
+}
+function bindWiki(){
+  const q=(sel)=>document.querySelectorAll(sel);
+  q("[data-wikitoggle]").forEach(b=>b.onclick=()=>{wikiOpen=!wikiOpen;localStorage.setItem("sgs_wikiOpen",wikiOpen?"1":"0");if(wikiOpen)loadWhite();render();});
+  q("[data-wikifam]").forEach(b=>b.onclick=()=>{wikiFam=b.dataset.wikifam;wikiPack="";wikiQ="";render();});
+  q("[data-wikipack]").forEach(b=>b.onclick=()=>{wikiPack=b.dataset.wikipack;wikiQ="";render();});
+  q("[data-wikiclear]").forEach(b=>b.onclick=()=>{wikiQ="";render();});
+  const inp=$("#wiki-q"); if(inp){ let t; inp.oninput=()=>{wikiQ=inp.value.trim();clearTimeout(t);t=setTimeout(renderWikiGrid,120);}; }
+  renderWikiGrid();
 }
 
 // 规则集:身份模式规则/房规 目录卡(只列标题;点开弹层 iframe 加载 /rules/{id}.html 整页)。目录为空则不显示
@@ -1507,6 +1587,7 @@ function bindAll(){
   q("[data-identall]").forEach(b=>b.onclick=()=>{if(confirm("本局结束,亮明所有人的身份?"))send({type:"identShowAll"});});
   q("[data-identclear]").forEach(b=>b.onclick=()=>{if(confirm("清除本局身份?(座位和武将不动)"))send({type:"identClear"});});
   q("[data-identshow]").forEach(b=>b.onclick=()=>{if(confirm("亮明座位 "+b.dataset.identshow+" 的身份?(已阵亡,全场可见)"))send({type:"identShow",seatNo:+b.dataset.identshow});});
+  bindWiki();
   q("[data-rule]").forEach(b=>b.onclick=()=>openRule(b.dataset.rule)); // 规则集:标题→iframe 弹层
   // 线上发将:设置 / 进我的选将弹层 / 亮出 / 中止
   q("[data-dealopen]").forEach(b=>b.onclick=()=>openDealSetup());

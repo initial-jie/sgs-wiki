@@ -105,6 +105,7 @@
   - 皮肤表 `shared/hero-skins.json`(698 将 5660 张;`skins:{武将id:[[皮肤id,名,品质]…]}` + `alias` 手录/线下将借用的 olwiki 武将:graduate 候选指向自己的 olwiki id,不臣之君三将指向 张角/董卓/刘宏)→ worker `/hero-skins.json`,**点开立绘才拉**。图 = `…/pc/general/big/static/{皮肤id}.png`(大图 0.3~3MB)/ `skinShop/{皮肤id}.png`(缩略图)。
   - **数据来源**:olwiki 各武将页 `a.general-skin-card`(同名武将各版本共用一组皮肤)。重抓方法:浏览器面板开 olwiki → JS 同源 fetch 772 页 → 结果塞 `window.name` → 导航到本地 `python3` 小接收服务(127.0.0.1)页面再同源 POST 落盘(olwiki 页面直接 fetch 本地会被拦;curl olwiki 403)。新录武将没有皮肤条目时只显示默认立绘。
   - 座位行「查看技能」按钮缩成「技能」(给头像让位)。
+- **武将图鉴**(2026-10-05,小伙伴提的;大厅规则集下方,纯 room.html):`viewHeroWiki/renderWikiGrid/bindWiki`。默认收起(展开状态存本机 `sgs_wikiOpen`);两级页签 **系列**(包名「-」前,顺序 `WIKI_FAM_ORDER` 与 /pool 页一致,国战最后)→ **扩展包**(系列内多包时才出第二行,含「系列全部」);「全部」页签 = 全库。搜索框只搜当前页签(`RoomClient.searchList`,中文/拼音/首字母),打字只刷网格不整页 render(输入框不丢焦点)。每将标 **池**(当前环境白名单,空则沿用军争;拉 `/api/pool` no-store,cfgRev 变了重拉)/ **禁**(当前禁将池 `isBanned`,禁优先)/ 无标=未入池;房内禁将开关关着时注明「禁标仅供参考」。点武将 → `previewHero(id,{viewOnly:true})`(只看不选,按钮为「关闭」)。
 - 〖舍身〗的结算、明忠 +1 上限 +1 血、暴君 +2 上限等**不自动**,仍在面板手动改。
 - **疑似身份标记**:每个未亮明座位一个「疑?」小标,点开选身份。**只存本机 localStorage**(key=房间码+本局 ident.id)→ 每人各标各的、互相看不到,重发身份自动作废;失心本人可以标自己。
 - 发将设置弹层:本局发过身份 → 模式与君主座位(1 号位)自动带入(明忠/无间道没有先选的君主,不带)。
