@@ -113,6 +113,17 @@
 - 已验:sim +36(转座 60 种子、保密、失心 40 种子、无间道 40 种子、明察、锁定、新一局);浏览器双设备走过 大忠似奸(发身份→转座→发将带入→亮出锁定→手动改被拒)、明忠明察、无间道、失心疯全部亮明;375 宽无溢出。
 - 顺手修:`maybeSeedPanel` 的 panelSeeded 以前不清,同一座位 A→B→A(或新一局后同座同将)不再播种血量;现在座位换将/清空时忘掉旧记录。
 
+**⭐ 新录武将 checklist(2026-10-05 固化;用户要求每次都过一遍——一个武将不只在 generals.json,配套数据散在 6 处)**。跑 `node prototype/sgs/check-hero-data.mjs [--ids 9026,…]` 自动体检(rebake/scrape 跑完也会提醒):
+1. **武将本体** `shared/generals.json`:官网有 → `scrape-generals.mjs --ids`;官网没有 → `generals-overrides.mjs` OFFLINE_HEROES(9000+)+ `rebake-overrides.mjs`。有工具的还要 `scrape-generals.mjs` TOOL_NAMES。
+2. **拼音** `shared/hero-pinyin.json`:`node prototype/sgs/build-pinyin.mjs`(多音姓氏往 `FIX` 表加)。不跑=只能中文搜到。
+3. **扩展包** `shared/hero-packs.json` `packs[id]`:包名照 olwiki 将灯(如 `璀璨星河-天极`)。不加=图鉴/将池页落到 genre 组。
+4. **性别** `shared/hero-gender.json`:核过的 id 进 `reviewed`,女将再进 `female`。不加=按男(影响明忠〖明察/舍身〗判定)。
+5. **皮肤** `shared/hero-skins.json`:OL 将 → 从 olwiki 武将页抓 `[皮肤id,名,品质]` 进 `skins[id]`(抓法见 memory skin-art);手录将 → `alias[id]`=借用的 olwiki 武将 id;确认没皮肤 → 进 `none`。不加=只显示默认立绘。
+6. **将池**:`/pool` 页会标「新」,**勾不勾由用户定**;定完「导出」覆盖 `shared/hero-pool-seed.json` 备份。禁将同页黑名单。
+7. **同名可替换前缀**:新前缀类型(如「教主」「移动版」)要同时加 `shared/deal.mjs` 与 `room.html` 的 `heroBaseName`。
+8. 按需:`cardWarn`(手录将直接写在 OFFLINE_HEROES 条目)、`derived-skills-room.json` / `derived-cards-room.json`、线下立绘 `assets/heroes/`、graduate 候选记录。
+9. **deploy**:`cd prototype/worker && npx wrangler deploy`(所有 shared/*.json 都是 worker import,改完必须 deploy;老浏览器 generals.json 还有 1h 缓存)。
+
 **常用流程速查**:
 - **官网已收录的将(新将 / graduate)**:`node prototype/sgs/scrape-generals.mjs --ids 744,763`(增量抓取合并,新 id 插在 9000+ 段前;graduate 时先删 OFFLINE_HEROES 条目,`applyOverrides` 会清掉库里残留孤儿)→ `node prototype/sgs/build-pinyin.mjs`。新将 API 给的是 `…/m/general/big/static/{id}00.png`,头像由 scraper 自动派生 `skinShop/{id}00.png`。
 - **录官网还没有的 OL 新将**:olwiki `https://olwiki.hmty.top/generals/index.html` 搜名拿 href 真 id → `general-game-{id}.html` 抓技能/特点,JS 数 `.hp-row .hp-icon` 得体力 → 写 `generals-overrides.mjs` OFFLINE_HEROES(9000+) → `node prototype/sgs/rebake-overrides.mjs` → 立绘用官方图床 `web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/{id}00.png` + `…/general/skinShop/{id}00.png`(先 curl 验 200)→ **`node prototype/sgs/build-pinyin.mjs`**(需 `cd prototype && npm i --no-save --no-package-lock pinyin-pro@3`)。

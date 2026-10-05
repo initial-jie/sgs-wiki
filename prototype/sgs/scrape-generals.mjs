@@ -208,4 +208,5 @@ if (isMain && idsArg >= 0) {
   console.log(`无HP: ${noHp.length}`, noHp.slice(0, 10).join(" ") || "");
   console.log(`失败: ${errs.length}`, errs.slice(0, 10).map((e) => `${e.id}:${e.name}(${e.msg})`).join(" ") || "");
   console.log("\n--- 12 工具映射 ---\n" + toolReport.join("\n"));
+  console.log("\n→ 新将入库后再跑 node prototype/sgs/build-pinyin.mjs 和 node prototype/sgs/check-hero-data.mjs(配套数据体检;清单见 docs/HANDOFF.md「新录武将 checklist」)");
 })();

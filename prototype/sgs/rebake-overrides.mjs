@@ -24,3 +24,4 @@ if (warns.length) {
   for (const w of warns) console.log("  " + w);
   process.exitCode = 1; // 有警告则非零退出,CI/人都能注意到
 }
+console.log("→ 新录武将后再跑 node prototype/sgs/check-hero-data.mjs(拼音/扩展包/性别/皮肤 配套数据体检;清单见 docs/HANDOFF.md「新录武将 checklist」)");
