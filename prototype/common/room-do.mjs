@@ -1,4 +1,10 @@
 // Durable Object 房间外壳(游戏无关):WebSocket 会话 / DO storage 持久化 / 闲置 TTL / 解散 / 按设备过滤广播。
+//
+// ⚠ WebSocket 用 Hibernation API(state.acceptWebSocket + webSocketMessage/Close/Error 回调),不是 ws.accept()+addEventListener:
+//   非休眠模式下只要有一个连接挂着(手机后台留着页面、客户端自动重连),DO 就一直驻留内存按 duration(GB·s)计费,
+//   几间房各挂一台手机就能把免费额度(13,000 GB·s/天 ≈ 一个 DO 活 29 小时)吃光(2026-10-06 收到 90% 告警)。
+//   休眠模式下连接保持、DO 空闲即被驱逐,只在处理消息时计时。代价:DO 内存态会丢 —— core 从 storage 回灌(ensureCore),
+//   连接↔设备的对应关系存在 ws attachment 里(serializeAttachment),不能存在 this 上。
 // 各游戏:class XxxRoomDO extends RoomDOBase { createCore(){…} hydrateCore(saved){…} onGameMessage(ws,msg,core){…} }
 //
 // 通用消息(所有游戏都有):
@@ -13,9 +19,13 @@ export class RoomDOBase {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.core = null;
-    this.sessions = new Map(); // ws -> deviceId
+    this.core = null; // 休眠被驱逐后为 null,ensureCore 从 storage 回灌
   }
+  // 当前所有连接(含休眠中的);连接↔deviceId 存在 attachment 里,休眠醒来仍在
+  sockets() { try { return this.state.getWebSockets(); } catch { return []; } }
+  dev(ws) { try { const a = ws.deserializeAttachment(); return a ? a.d : undefined; } catch { return undefined; } }
+  setDev(ws, d) { try { ws.serializeAttachment({ d }); } catch { /* ignore */ } }
+  get sessions() { return new Map(this.sockets().map((ws) => [ws, this.dev(ws)])); } // 兼容旧用法(只读快照)
 
   // ── 子类实现 ──
   createCore() { throw new Error("createCore not implemented"); }
@@ -52,10 +62,9 @@ export class RoomDOBase {
   }
 
   _closeAll(reason) {
-    for (const [ws] of this.sessions) {
+    for (const ws of this.sockets()) {
       try { ws.send(JSON.stringify({ type: "roomClosed", reason })); ws.close(1000, reason); } catch { /* ignore */ }
     }
-    this.sessions.clear();
     this.core = null;
   }
 
@@ -66,27 +75,28 @@ export class RoomDOBase {
     await this.ensureCore();
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
-    server.accept();
-    server.addEventListener("message", (e) => this.onMessage(server, e.data));
-    server.addEventListener("close", () => this.onClose(server));
-    server.addEventListener("error", () => this.onClose(server));
+    this.state.acceptWebSocket(server); // 休眠模式:消息/关闭走下面的 webSocketMessage/webSocketClose/webSocketError
+    this.setDev(server, null);          // hello 之前没有设备身份
     return new Response(null, { status: 101, webSocket: client });
   }
+  // Hibernation API 回调(平台在 DO 可能已被驱逐后重新实例化再调用,所以每次都走 ensureCore)
+  async webSocketMessage(ws, data) { await this.onMessage(ws, data); }
+  async webSocketClose(ws) { await this.onClose(ws); }
+  async webSocketError(ws) { await this.onClose(ws); }
 
-  dev(ws) { return this.sessions.get(ws); }
   sendTo(ws, obj) { try { ws.send(JSON.stringify(obj)); } catch { /* ignore */ } }
   replyErr(ws, r) { if (r && r.error) this.sendTo(ws, { type: "error", code: r.error }); }
 
   async onMessage(ws, data) {
     let msg;
-    try { msg = JSON.parse(data); } catch { return; }
+    try { msg = JSON.parse(typeof data === "string" ? data : new TextDecoder().decode(data)); } catch { return; }
     await this.ensureCore(); // 解散后同一连接又发消息的兜底
     const core = this.core;
     const id = this.dev(ws);
 
     switch (msg.type) {
       case "hello": // { deviceId } —— 首次连接/重连,恢复该设备已认领的座位
-        this.sessions.set(ws, msg.deviceId);
+        this.setDev(ws, msg.deviceId);
         core.connect(msg.deviceId);
         break;
       case "claimSeat": this.replyErr(ws, core.claimSeat(id, msg.seatNo)); break;   // 座位被占 → 提示需替换
@@ -95,7 +105,7 @@ export class RoomDOBase {
       case "rename": { // 房内改名:原子改键(搬 holds+座位归属),回执让发起端更新本地 deviceId
         const r = core.renameDevice(id, msg.newId);
         if (r && r.error) { this.replyErr(ws, r); break; }
-        for (const [s, d] of this.sessions) if (d === id) this.sessions.set(s, r.newId); // 同设备多标签一并改
+        for (const s of this.sockets()) if (this.dev(s) === id) this.setDev(s, r.newId); // 同设备多标签一并改
         this.sendTo(ws, { type: "renamed", newId: r.newId });
         break;
       }
@@ -122,16 +132,18 @@ export class RoomDOBase {
     await this.persist(); // 落盘 + 续期 TTL
   }
 
-  onClose(ws) {
-    // 只移除连接,保留该设备的座位认领(deviceId 重连后仍是同一身份)
-    this.sessions.delete(ws);
-    if (this.core) this.broadcast();
+  async onClose(ws) {
+    // 连接断开只是不再收到广播,保留该设备的座位认领(deviceId 重连后仍是同一身份)
+    try { ws.close(1000, "bye"); } catch { /* 已关 */ }
+    if (!this.sockets().length) return; // 没人在线了:不必回灌 core 去广播(让 DO 尽快空闲休眠)
+    await this.ensureCore();
+    this.broadcast();
   }
 
   broadcast() {
-    for (const [ws, deviceId] of this.sessions) {
+    for (const ws of this.sockets()) {
       try {
-        ws.send(JSON.stringify({ type: "roomState", ...this.core.viewFor(deviceId) }));
+        ws.send(JSON.stringify({ type: "roomState", ...this.core.viewFor(this.dev(ws)) }));
       } catch { /* 连接已断,忽略 */ }
     }
   }

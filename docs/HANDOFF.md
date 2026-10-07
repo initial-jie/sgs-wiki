@@ -113,6 +113,8 @@
 - 已验:sim +36(转座 60 种子、保密、失心 40 种子、无间道 40 种子、明察、锁定、新一局);浏览器双设备走过 大忠似奸(发身份→转座→发将带入→亮出锁定→手动改被拒)、明忠明察、无间道、失心疯全部亮明;375 宽无溢出。
 - 顺手修:`maybeSeedPanel` 的 panelSeeded 以前不清,同一座位 A→B→A(或新一局后同座同将)不再播种血量;现在座位换将/清空时忘掉旧记录。
 
+**⚠ Cloudflare 免费额度告警(2026-10-06)→ DO WebSocket 改休眠模式(`common/room-do.mjs`,待 deploy)**:邮件「Durable Objects daily operation limit 90%」超的是 **duration(GB·s)** 不是请求数。原因:原先 `ws.accept()+addEventListener` 是非休眠 WebSocket,只要有一个连接挂着(手机后台留着页面、客户端自动重连)DO 就常驻内存按时长计费;免费额度 13,000 GB·s/天 ≈ 一个 128MB DO 活 29 小时,几间房各挂一台手机就超。现改为 **Hibernation API**:`state.acceptWebSocket(ws)` + `webSocketMessage/webSocketClose/webSocketError` 回调;连接↔deviceId 存 `ws.serializeAttachment({d})`(不能存 this 上,休眠会丢);`sockets()=state.getWebSockets()`;`this.core` 休眠后为 null 由 ensureCore 回灌;没人在线时 onClose 不回灌 core(让 DO 尽快空闲)。三国杀/风声共用同一基类,行为不变(本地双标签验过 认领/改名/广播/断线重连/解散/风声)。⚠ 本地 wrangler dev 里客户端直接关页面会打一行 `Uncaught Error: Network connection lost`——是运行时对异常断开的日志,无害。**deploy 后用量看**:dash.cloudflare.com → Workers & Pages → Durable Objects → 看 Duration 曲线应明显掉下来;若还高,再查 alarm/其它。
+
 **⭐ 新录武将 checklist(2026-10-05 固化;用户要求每次都过一遍——一个武将不只在 generals.json,配套数据散在 6 处)**。跑 `node prototype/sgs/check-hero-data.mjs [--ids 9026,…]` 自动体检(rebake/scrape 跑完也会提醒):
 1. **武将本体** `shared/generals.json`:官网有 → `scrape-generals.mjs --ids`;官网没有 → `generals-overrides.mjs` OFFLINE_HEROES(9000+)+ `rebake-overrides.mjs`。有工具的还要 `scrape-generals.mjs` TOOL_NAMES。
 2. **拼音** `shared/hero-pinyin.json`:`node prototype/sgs/build-pinyin.mjs`(多音姓氏往 `FIX` 表加)。不跑=只能中文搜到。
