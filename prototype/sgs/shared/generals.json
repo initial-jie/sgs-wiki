@@ -11020,7 +11020,7 @@
       {
         "name": "洗墨",
         "effect": "锁定技，当你发动“笔心”后，移除其描述的前五个字符，若为第三次发动，交换其描述中的两个数字，你失去本技能并获得“飞白”。",
-        "effect_en": "Mandatory Skill. After you use 【笔心】, remove the first three words after \"During\" in its description. (On the third use, remove the entire phrase \"During End phase,\" instead — so 【笔心】 becomes usable at any time.) On the third use, also swap the two numbers in its description; then, lose this skill and gain 【飞白】."
+        "effect_en": "Mandatory Skill. After you use 【笔心】, remove the first three words after \"During\" in its description. On the third use, remove the entire phrase \"During End phase,\" instead, i.e. 【笔心】 becomes usable at any time, and additionally swap the two numbers in its description. Then, lose this skill and gain 【飞白】."
       }
     ],
     "characteristic": "通过不断删减描述将触发技能变为主动技能，转化使用无色牌是打出进阶收益的关键。",
@@ -11278,17 +11278,17 @@
       {
         "name": "蹈节",
         "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。",
-        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills; then, select a character from the same clan to gain that card."
+        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card."
       },
       {
         "name": "烈誓",
         "effect": "出牌阶段，你可以选择一项：1.废除判定区并受到你的1点火焰伤害；2.弃置所有【闪】；3.弃置所有【杀】。然后令一名角色选择另一项。",
-        "effect_en": "During your Play phase, you may choose one of the following: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options."
+        "effect_en": "During your Play phase, you may choose one of the following effects: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options."
       },
       {
         "name": "点盏",
         "effect": "锁定技，当你每轮首次使用一种花色的牌后，你令此牌唯一目标进入连环状态并重铸此花色所有手牌，若皆如此做，你摸一张牌。",
-        "effect_en": "Mandatory Skill. The first time you use a card of a given suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card."
+        "effect_en": "Mandatory Skill. The first time you use a card of a unique suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card."
       },
       {
         "name": "还阴",
@@ -11875,12 +11875,12 @@
       {
         "name": "弼昏",
         "effect": "锁定技，当你使用牌指定其他角色为目标时，若你的手牌数大于手牌上限，你取消之并令唯一目标获得此牌。",
-        "effect_en": "Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card."
+        "effect_en": "Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card instead."
       },
       {
         "name": "剑合",
         "effect": "出牌阶段，每名角色限一次，你可以重铸至少两张同名牌或装备牌，令一名角色选择一项：1.重铸等量张与之类型相同的牌；2.受到你的1点雷电伤害。",
-        "effect_en": "During your Play phase, once per character: you may recast at least two cards of the same name, or equipment cards; then, select a character who must choose one of the following: 1. recast an equal number of cards of the same type; 2. take 1 thunder damage from you."
+        "effect_en": "During your Play phase, once per character: you may recast at least two cards of the same name, or at least two equipment cards; then, select a character who must choose one of the following: 1. recast an equal number of cards of the same type; 2. take 1 thunder damage from you."
       },
       {
         "name": "穿屋",
@@ -14414,7 +14414,7 @@
       {
         "name": "鸿图",
         "effect": "每阶段结束时，若你于此阶段获得过至少两张牌，你可摸三张牌，展示三张手牌令一名其他角色选择一张使用，随机弃置另一张牌。若使用牌点数于三张牌中：最大，其获得“飞军”至其下个回合结束；不为最大和最小，其获得“潜袭”至其下个回合结束；最小，其手牌上限+2至其下个回合结束。若其未以此法使用牌，你对其与你造成1点火焰伤害。",
-        "effect_en": "At the end of each phase, if you gained at least two cards during that phase, you may draw 3 cards, then reveal 3 hand cards: select another character to pick one of them to use, then discard one of the remaining two cards at random. If the rank of the used card among the three is the highest: they gain 【飞军】 until the end of their next turn; neither highest nor lowest: they gain 【潜袭】 until the end of their next turn; lowest: their hand limit +2 until the end of their next turn. If they do not use a card this way, you deal 1 fire damage to both them and yourself."
+        "effect_en": "At the end of each phase, if you gained at least two cards during that phase, you may draw 3 cards, then reveal 3 hand cards. Select another character to pick one of them to use, then discard one of the remaining two cards at random. If the rank of the used card among the three is the highest: they gain 【飞军】 until the end of their next turn; neither highest nor lowest: they gain 【潜袭】 until the end of their next turn; lowest: their hand limit +2 until the end of their next turn. If they do not use a card this way, you deal 1 fire damage to both them and yourself."
       },
       {
         "name": "栖梧",

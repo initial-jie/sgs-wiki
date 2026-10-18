@@ -64,17 +64,17 @@ export const SKILL_ORDER = {
 export const SKILL_EN = {
   516: { // 张芝
     "笔心": `During each character's own Preparation phase and End phase, you may declare a card type and draw 3 card(s) (each type may only be declared 1 time(s)). Then, use all hand cards of that type as one kind of basic card that you have not used this round.`,
-    "洗墨": `Mandatory Skill. After you use 【笔心】, remove the first three words after "During" in its description. (On the third use, remove the entire phrase "During End phase," instead — so 【笔心】 becomes usable at any time.) On the third use, also swap the two numbers in its description; then, lose this skill and gain 【飞白】.`,
+    "洗墨": `Mandatory Skill. After you use 【笔心】, remove the first three words after "During" in its description. On the third use, remove the entire phrase "During End phase," instead, i.e. 【笔心】 becomes usable at any time, and additionally swap the two numbers in its description. Then, lose this skill and gain 【飞白】.`,
   },
   524: { // 族荀采
-    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills; then, select a character from the same clan to gain that card.`,
-    "烈誓": `During your Play phase, you may choose one of the following: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options.`,
-    "点盏": `Mandatory Skill. The first time you use a card of a given suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card.`,
+    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
+    "烈誓": `During your Play phase, you may choose one of the following effects: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options.`,
+    "点盏": `Mandatory Skill. The first time you use a card of a unique suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card.`,
     "还阴": `Mandatory Skill. When you enter the dying state, draw until you have 4 hand cards.`,
   },
   544: { // 张华
-    "弼昏": `Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card.`,
-    "剑合": `During your Play phase, once per character: you may recast at least two cards of the same name, or equipment cards; then, select a character who must choose one of the following: 1. recast an equal number of cards of the same type; 2. take 1 thunder damage from you.`,
+    "弼昏": `Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card instead.`,
+    "剑合": `During your Play phase, once per character: you may recast at least two cards of the same name, or at least two equipment cards; then, select a character who must choose one of the following: 1. recast an equal number of cards of the same type; 2. take 1 thunder damage from you.`,
     "穿屋": `Mandatory Skill. After you deal or take damage, you lose the first X skills on your character card until the end of the turn (where X = your attack range), then draw cards equal to the number of skills lost.`,
   },
   635: { // 谋庞统
