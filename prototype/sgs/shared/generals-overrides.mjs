@@ -67,7 +67,7 @@ export const SKILL_EN = {
     "洗墨": `Mandatory Skill. After you use 【笔心】, remove the first three words after "During" in its description. On the third use, remove the entire phrase "During End phase," instead, i.e. 【笔心】 becomes usable at any time, and additionally swap the two numbers in its description. Then, lose this skill and gain 【飞白】.`,
   },
   524: { // 族荀采
-    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
+    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
     "烈誓": `During your Play phase, you may choose one of the following effects: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options.`,
     "点盏": `Mandatory Skill. The first time you use a card of a unique suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card.`,
     "还阴": `Mandatory Skill. When you enter the dying state, draw until you have 4 hand cards.`,

@@ -59,7 +59,7 @@ Use these house translations so every hero reads as one voice. If you hit a term
 | 重铸 | recast | 连环状态 | chained |
 | 火焰伤害 / 雷电伤害 | fire damage / thunder damage | 属性伤害 | elemental damage |
 | 横置 / 重置 | turn sideways / turn upright | 翻面 | flip |
-| 非伤害 | non-damaging | | |
+| 非伤害 | non-attacking | | |
 
 **Conventions:**
 - Keep the **skill name in Chinese** (the friend sees the Chinese name on the physical card). Only the effect text becomes English.
