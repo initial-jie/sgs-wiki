@@ -11020,7 +11020,7 @@
       {
         "name": "洗墨",
         "effect": "锁定技，当你发动“笔心”后，移除其描述的前五个字符，若为第三次发动，交换其描述中的两个数字，你失去本技能并获得“飞白”。",
-        "effect_en": "Compulsory Skill. After you use 【笔心】, remove the first three words after \"During\" in its description. (On the third use, remove the entire phrase \"During End phase,\" instead — so 【笔心】 becomes usable at any time.) On the third use, also swap the two numbers in its description; then, lose this skill and gain 【飞白】."
+        "effect_en": "Mandatory Skill. After you use 【笔心】, remove the first three words after \"During\" in its description. (On the third use, remove the entire phrase \"During End phase,\" instead — so 【笔心】 becomes usable at any time.) On the third use, also swap the two numbers in its description; then, lose this skill and gain 【飞白】."
       }
     ],
     "characteristic": "通过不断删减描述将触发技能变为主动技能，转化使用无色牌是打出进阶收益的关键。",
@@ -11278,7 +11278,7 @@
       {
         "name": "蹈节",
         "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。",
-        "effect_en": "Clan Skill, Compulsory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Compulsory Skills; then, select a character from the same clan to gain that card."
+        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills; then, select a character from the same clan to gain that card."
       },
       {
         "name": "烈誓",
@@ -11288,12 +11288,12 @@
       {
         "name": "点盏",
         "effect": "锁定技，当你每轮首次使用一种花色的牌后，你令此牌唯一目标进入连环状态并重铸此花色所有手牌，若皆如此做，你摸一张牌。",
-        "effect_en": "Compulsory Skill. The first time you use a card of a given suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card."
+        "effect_en": "Mandatory Skill. The first time you use a card of a given suit each round, the sole target of that card becomes chained, and you recast all your hand cards of that suit. If both of the above take effect, draw a card."
       },
       {
         "name": "还阴",
         "effect": "锁定技，当你进入濒死状态时，你将手牌摸至四张。",
-        "effect_en": "Compulsory Skill. When you enter the dying state, draw until you have 4 hand cards."
+        "effect_en": "Mandatory Skill. When you enter the dying state, draw until you have 4 hand cards."
       }
     ],
     "characteristic": "通过横置自身和敌人然后燃烧自己的方式，或多次汰换出少量杀和闪的方式制造伤害，需要频繁规划牌序。",
@@ -11875,7 +11875,7 @@
       {
         "name": "弼昏",
         "effect": "锁定技，当你使用牌指定其他角色为目标时，若你的手牌数大于手牌上限，你取消之并令唯一目标获得此牌。",
-        "effect_en": "Compulsory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card."
+        "effect_en": "Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card."
       },
       {
         "name": "剑合",
@@ -11885,7 +11885,7 @@
       {
         "name": "穿屋",
         "effect": "锁定技，当你造成或受到伤害后，你失去武将牌上前X个技能直到回合结束（X为你的攻击范围），然后摸与失去技能数等量张牌。",
-        "effect_en": "Compulsory Skill. After you deal or take damage, you lose the first X skills on your character card until the end of the turn (where X = your attack range), then draw cards equal to the number of skills lost."
+        "effect_en": "Mandatory Skill. After you deal or take damage, you lose the first X skills on your character card until the end of the turn (where X = your attack range), then draw cards equal to the number of skills lost."
       }
     ],
     "characteristic": "通过不断重铸牌造成伤害，需注意在牌多时不能正常用牌。",

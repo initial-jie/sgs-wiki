@@ -49,7 +49,7 @@ Use these house translations so every hero reads as one voice. If you hit a term
 | 出牌阶段 | Play phase | 摸牌阶段 | Draw phase |
 | 准备阶段 | Preparation phase | 结束阶段 | End phase |
 | 判定 / 判定区 | judgement / judgement zone | 濒死状态 | dying state |
-| 锁定技 | Compulsory Skill | 限定技 | Limited Skill |
+| 锁定技 | Mandatory Skill | 限定技 | One-Time Skill |
 | 觉醒技 | Awakening Skill | 转换技 (阳/阴) | Alternating Skill (Yang/Yin) |
 | 主公技 | Lord Skill | 宗族技 | Clan Skill |
 | 势力 | faction | 距离 | distance |
