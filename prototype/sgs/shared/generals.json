@@ -11278,7 +11278,7 @@
       {
         "name": "蹈节",
         "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。",
-        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-damaging trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card."
+        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card."
       },
       {
         "name": "烈誓",
