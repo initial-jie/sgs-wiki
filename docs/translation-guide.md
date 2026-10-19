@@ -59,7 +59,8 @@ Use these house translations so every hero reads as one voice. If you hit a term
 | 重铸 | recast | 连环状态 | chained |
 | 火焰伤害 / 雷电伤害 | fire damage / thunder damage | 属性伤害 | elemental damage |
 | 横置 / 重置 | turn sideways / turn upright | 翻面 | flip |
-| 非伤害 | non-attacking | | |
+| 非伤害 | non-attacking | 手牌数 | hand size |
+| 弃牌阶段 | Discard phase | |
 
 **Conventions:**
 - Keep the **skill name in Chinese** (the friend sees the Chinese name on the physical card). Only the effect text becomes English.
@@ -93,7 +94,7 @@ Find `export const SKILL_EN = { ... }` and add one block. Use backtick strings (
 ```js
 export const SKILL_EN = {
   544: { // 张华   ← id + a comment with the hero name
-    "弼昏": `Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card.`,
+    "弼昏": `Mandatory Skill. When you use a card that targets another character, if your hand size exceeds your hand limit, cancel that use, and the sole target gains that card instead.`,
     "剑合": `During your Play phase, once per character: ...`,
     "穿屋": `Mandatory Skill. After you deal or take damage, ...`,
   },
@@ -143,10 +144,10 @@ Shape: `{ "<heroKey>": { "<entryName>": "<English>" } }`. Example (already in th
 ```json
 {
   "张芝": {
-    "飞白": "Transform Skill, Mandatory Skill. Yang: when a non-black card of yours deals damage, that damage is increased by 1. Yin: when a non-red card of yours restores HP, that recovery is increased by 1."
+    "飞白": "Alternating Skill, Mandatory Skill. Yang: when a non-black card of yours deals damage, that damage is increased by 1. Yin: when a non-red card of yours restores HP, that recovery is increased by 1."
   },
   "谋庞统": {
-    "飞军": "Once per Play phase, you may discard a card, then choose one: ...",
+    "飞军": "Once per Play phase, you may discard a card, then choose one ...",
     "潜袭": "During your Preparation phase, ..."
   }
 }

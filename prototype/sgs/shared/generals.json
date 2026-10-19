@@ -11048,11 +11048,13 @@
     "skills": [
       {
         "name": "膂力",
-        "effect": "每回合限一次，当你造成伤害后，你可以将手牌摸至与体力值相同或将体力回复至与手牌数相同。"
+        "effect": "每回合限一次，当你造成伤害后，你可以将手牌摸至与体力值相同或将体力回复至与手牌数相同。",
+        "effect_en": "Once per turn, after you deal damage, you may choose to either draw cards until your hand size is equal to your current health, or recover health until it equals the number of cards in your hand."
       },
       {
         "name": "仇决",
-        "effect": "觉醒技，每个回合结束时，若你手牌数与体力值之差不小于3，你减少1点体力上限并获得“背水”，将“膂力”改为“你的回合限两次”。"
+        "effect": "觉醒技，每个回合结束时，若你手牌数与体力值之差不小于3，你减少1点体力上限并获得“背水”，将“膂力”改为“你的回合限两次”。",
+        "effect_en": "Awakening Skill. Every time a turn ends, if the difference between your HP and hand size is no less than 3: lose 1 max HP, obtain “背水”, and increase the activation limit of “膂力” to twice during your own turn."
       }
     ],
     "characteristic": "二段觉醒后大开大合的猛将。",
@@ -11079,11 +11081,13 @@
     "skills": [
       {
         "name": "善断",
-        "effect": "锁定技，摸牌/出牌/弃牌阶段开始时，你将本回合摸牌阶段摸牌数/攻击范围、使用【杀】的限制次数/手牌上限的默认值分配数值1、2、3、4。当你于回合外受到伤害后，你下回合以此法分配数值中的最小值+1。"
+        "effect": "锁定技，摸牌/出牌/弃牌阶段开始时，你将本回合摸牌阶段摸牌数/攻击范围、使用【杀】的限制次数/手牌上限的默认值分配数值1、2、3、4。当你于回合外受到伤害后，你下回合以此法分配数值中的最小值+1。",
+        "effect_en": "Mandatory Skill. When your Draw/Play/Discard phase begins, you may freely allocate 1, 2, 3, and 4 as the default values for number of cards drawn/attack range/【杀】(Slash) use limit/max hand size. When you take damage outside your turn, +1 to the smallest number you can allocate next turn."
       },
       {
         "name": "义烈",
-        "effect": "你可以将两张颜色相同的手牌当与本轮以此法使用过的牌牌名不同的基本牌使用。"
+        "effect": "你可以将两张颜色相同的手牌当与本轮以此法使用过的牌牌名不同的基本牌使用。",
+        "effect_en": "You may use two cards of the same color as a basic card of a different name that you have already used this turn."
       }
     ],
     "characteristic": "通过分配能力值来打出爆发收益或蓄爆。",
@@ -11110,15 +11114,18 @@
     "skills": [
       {
         "name": "宦浮",
-        "effect": "当你使用【杀】指定目标或成为【杀】的目标后，你可以弃置任意张牌（至多为你的体力上限），若此【杀】结算后对目标角色造成的伤害值为弃牌数，你摸弃牌数两倍的牌。"
+        "effect": "当你使用【杀】指定目标或成为【杀】的目标后，你可以弃置任意张牌（至多为你的体力上限），若此【杀】结算后对目标角色造成的伤害值为弃牌数，你摸弃牌数两倍的牌。",
+        "effect_en": "When you target someone with 【杀】(Slash) or become the target of 【杀】, you may discard any number of cards (up to your max HP). Once 【杀】 resolves, if the total damage dealt is equal to the number of cards discarded, then draw twice the number of cards."
       },
       {
         "name": "清议",
-        "effect": "出牌阶段限一次，你可以与至多两名其他有牌的角色同时弃置一张牌，若类型相同，你可以重复此流程。结束阶段，你可以获得其中颜色不同的牌各一张。"
+        "effect": "出牌阶段限一次，你可以与至多两名其他有牌的角色同时弃置一张牌，若类型相同，你可以重复此流程。结束阶段，你可以获得其中颜色不同的牌各一张。",
+        "effect_en": "Once during each of your Play phases, you may select up to two other characters with hand cards to discard a card with you at the same time. If the card type is the same, then you may repeat the process. During your End phase, you may obtain one card of each color from the discarded cards."
       },
       {
         "name": "迮阅",
-        "effect": "限定技，准备阶段，你可以令一名你上个回合结束后(首轮为游戏开始后)对你造成过伤害的其他角色失去武将牌上一个技能（锁定技、觉醒技、限定技除外）。每轮开始时，其视为对你使用X张【杀】（X为其已失去此技能的轮数），若此【杀】造成伤害，其获得以此法失去的技能。"
+        "effect": "限定技，准备阶段，你可以令一名你上个回合结束后(首轮为游戏开始后)对你造成过伤害的其他角色失去武将牌上一个技能（锁定技、觉醒技、限定技除外）。每轮开始时，其视为对你使用X张【杀】（X为其已失去此技能的轮数），若此【杀】造成伤害，其获得以此法失去的技能。",
+        "effect_en": "One-Time Skill. During your Preparation phase, you may select another character that has dealt damage to you since your last turn (if this is your first turn, then after the game began) and remove one of the skills on their character card (excluding Mandatory, Awakening, and One-Time Skills). At the start of each round, that character is considered as using X number of 【杀】(Slash) against you (where X is the number of rounds since they lost their skill). If this 【杀】 deals damage, then they recover the skill they lost from this ability."
       }
     ],
     "characteristic": "可以以被攻击为代价禁用敌方技能。",
@@ -11145,11 +11152,13 @@
     "skills": [
       {
         "name": "秉节",
-        "effect": "出牌阶段开始时，你可以减少1点体力上限，然后当你本回合使用【杀】或普通锦囊牌指定目标后，除你以外的每名目标角色各弃置一张牌。"
+        "effect": "出牌阶段开始时，你可以减少1点体力上限，然后当你本回合使用【杀】或普通锦囊牌指定目标后，除你以外的每名目标角色各弃置一张牌。",
+        "effect_en": "When your Play phase begins, you may choose to lose 1 max HP. If you do so, then during your turn, after you select the target(s) of 【杀】(Slash) or basic trick cards, all target characters excluding yourself must each discard one card."
       },
       {
         "name": "正订",
-        "effect": "锁定技，当你于回合外使用或打出牌响应其他角色的牌时，若两者颜色相同，你增加1点体力上限。"
+        "effect": "锁定技，当你于回合外使用或打出牌响应其他角色的牌时，若两者颜色相同，你增加1点体力上限。",
+        "effect_en": "Mandatory Skill. When you use or play a card in response to another character's card outside of your turn, if both cards share the same color, then increase your max HP by 1."
       }
     ],
     "characteristic": "可用体力上限换取全场性的控制能力。",
@@ -11176,11 +11185,13 @@
     "skills": [
       {
         "name": "仇讨",
-        "effect": "当你使用【杀】指定目标后或成为【杀】的目标后，你可以弃置使用者一张牌令此【杀】不能被抵消，若你是使用者，此【杀】无次数限制。"
+        "effect": "当你使用【杀】指定目标后或成为【杀】的目标后，你可以弃置使用者一张牌令此【杀】不能被抵消，若你是使用者，此【杀】无次数限制。",
+        "effect_en": "When you target someone with 【杀】(Slash) or become the target of 【杀】, you may discard a card from the user to cause this 【杀】 to be unblockable. If you are the user, then this 【杀】 does not count towards your play limit this turn."
       },
       {
         "name": "襄戍",
-        "effect": "限定技，结束阶段，你可以令一名已受伤角色回复X点体力并摸X张牌（X为你本回合造成的伤害值且至多为5）。"
+        "effect": "限定技，结束阶段，你可以令一名已受伤角色回复X点体力并摸X张牌（X为你本回合造成的伤害值且至多为5）。",
+        "effect_en": "Mandatory Skill. During your End phase, select a character who has less than their max HP to recover X HP and draw X cards (where X is the amount of damage you dealt this turn, up to 5)."
       }
     ],
     "characteristic": "可强命多刀，并通过造成的伤害值带来一次性的辅助效果。",
@@ -11207,15 +11218,18 @@
     "skills": [
       {
         "name": "蹈节",
-        "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。"
+        "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。",
+        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card."
       },
       {
         "name": "神君",
-        "effect": "当一名角色使用【杀】或普通锦囊牌时，你展示所有同名手牌记为“神君”，本阶段结束时，你可以将X张牌当任意“神君”牌使用（X为“神君”牌数）。"
+        "effect": "当一名角色使用【杀】或普通锦囊牌时，你展示所有同名手牌记为“神君”，本阶段结束时，你可以将X张牌当任意“神君”牌使用（X为“神君”牌数）。",
+        "effect_en": "When a character uses 【杀】(Slash) or a normal trick card, you may reveal all your hand cards of the same name and record them as “神君”. When the current phase ends, you may use X number of cards as any “神君” card (where X is the number of “神君” cards)."
       },
       {
         "name": "八龙",
-        "effect": "锁定技，当你每回合体力值首次变化后，若你手牌中锦囊牌为唯一最多的类型，你展示手牌并摸至8张。（测试版：原为摸至与存活角色数相同）"
+        "effect": "锁定技，当你每回合体力值首次变化后，若你手牌中锦囊牌为唯一最多的类型，你展示手牌并摸至8张。（测试版：原为摸至与存活角色数相同）",
+        "effect_en": "Mandatory Skill. The first time your HP changes each turn, if the number of trick cards in your hand is strictly greater than all other card types, then reveal your hand and draw until you have 8 cards. (Test version - originally it was draw up to the number of surviving characters)"
       }
     ],
     "characteristic": "可以跟随全场出牌而转化牌，并在锦囊牌多时卖血过牌。敌人和队友可以利用其频繁暴露手牌信息的特点。",
@@ -11243,15 +11257,18 @@
     "skills": [
       {
         "name": "蹈节",
-        "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。"
+        "effect": "宗族技，锁定技，当你每回合首次使用非伤害锦囊牌后，你失去1点体力或一个锁定技令一名同族角色获得此牌。",
+        "effect_en": "Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card."
       },
       {
         "name": "三恇",
-        "effect": "锁定技，当你每轮首次使用一种类型的牌后，你令一名其他角色交给你至少X张牌，然后获得你使用的牌（X为其满足的项数：1.场上有牌；2.已受伤；3.体力值小于手牌数）。"
+        "effect": "锁定技，当你每轮首次使用一种类型的牌后，你令一名其他角色交给你至少X张牌，然后获得你使用的牌（X为其满足的项数：1.场上有牌；2.已受伤；3.体力值小于手牌数）。",
+        "effect_en": "Mandatory Skill. The first time you use a card of a unique type each round, select another character to give you at least X cards, then obtain the card you used (where X is the number of the following conditions that character satisfies: 1. has cards on the table; 2. has less than their max HP; 3. has less HP than the number of cards in their hand)"
       },
       {
         "name": "卑势",
-        "effect": "锁定技，当首次被“三恇”的角色失去所有手牌后，你回复1点体力。"
+        "effect": "锁定技，当首次被“三恇”的角色失去所有手牌后，你回复1点体力。",
+        "effect_en": "Mandatory Skill. The first time each character affected by “三恇” loses all their hand cards, you recover 1 HP."
       }
     ],
     "characteristic": "前期以辅助为主，残局时可以更稳定地夺取牌差。以容易打空手牌的队友为卑势角色能提高生存能力。",

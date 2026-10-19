@@ -2,6 +2,10 @@
   "张芝": {
     "飞白": "Alternating Skill, Mandatory Skill. Yang: when a non-black card of yours deals damage, that damage is increased by 1. Yin: when a non-red card of yours restores HP, that recovery is increased by 1."
   },
+  "文鸯": {
+    "背水": "During your Preparation phase, if your hand size or HP is less than 2: lose 1 max HP, obtain “清剿”, and upgrade “膂力” to additionally include when you receive damage.",
+    "清剿": "When your Play phase begins, you may discard all your hand cards, then randomly obtain 8 cards with different names and sub-types from either the draw or discard pile. If you use this ability, during your End phase, discard all your cards."
+  },
   "谋庞统": {
     "飞军": "Once per Play phase, you may discard a card, then choose one of the following effects: 1. select a character with more hand cards than you to give you a card; 2. select a character with more cards in their equipment zone than you to discard one card from their equipment zone.",
     "潜袭": "During your Preparation phase, you may draw a card and discard a card, then select a character 1 distance away from you to prohibit from using or playing hand cards of the same color as your discarded card this turn."

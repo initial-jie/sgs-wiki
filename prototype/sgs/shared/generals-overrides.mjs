@@ -83,6 +83,37 @@ export const SKILL_EN = {
     "笔心": `During each character's own Preparation phase and End phase, you may declare a card type and draw 3 card(s) (each type may only be declared 1 time(s)). Then, use all hand cards of that type as one kind of basic card that you have not used this round.`,
     "洗墨": `Mandatory Skill. After you use 【笔心】, remove the first three words after "During" in its description. On the third use, remove the entire phrase "During End phase," instead, i.e. 【笔心】 becomes usable at any time, and additionally swap the two numbers in its description. Then, lose this skill and gain 【飞白】.`,
   },
+  517: { // 文鸯
+    "膂力": `Once per turn, after you deal damage, you may choose to either draw cards until your hand size is equal to your current health, or recover health until it equals the number of cards in your hand.`,
+    "仇决": `Awakening Skill. Every time a turn ends, if the difference between your HP and hand size is no less than 3: lose 1 max HP, obtain “背水”, and increase the activation limit of “膂力” to twice during your own turn.`
+  },
+  518: { // 周处
+    "善断": `Mandatory Skill. When your Draw/Play/Discard phase begins, you may freely allocate 1, 2, 3, and 4 as the default values for number of cards drawn/attack range/【杀】(Slash) use limit/max hand size. When you take damage outside your turn, +1 to the smallest number you can allocate next turn.`,
+    "义烈": `You may use two cards of the same color as a basic card of a different name that you have already used this turn.`
+  },
+  519: { // 夏侯玄
+    "宦浮": `When you target someone with 【杀】(Slash) or become the target of 【杀】, you may discard any number of cards (up to your max HP). Once 【杀】 resolves, if the total damage dealt is equal to the number of cards discarded, then draw twice the number of cards.`,
+    "清议": `Once during each of your Play phases, you may select up to two other characters with hand cards to discard a card with you at the same time. If the card type is the same, then you may repeat the process. During your End phase, you may obtain one card of each color from the discarded cards.`,
+    "迮阅": `One-Time Skill. During your Preparation phase, you may select another character that has dealt damage to you since your last turn (if this is your first turn, then after the game began) and remove one of the skills on their character card (excluding Mandatory, Awakening, and One-Time Skills). At the start of each round, that character is considered as using X number of 【杀】(Slash) against you (where X is the number of rounds since they lost their skill). If this 【杀】 deals damage, then they recover the skill they lost from this ability.`
+  },
+  520: { // 马日磾
+    "秉节": `When your Play phase begins, you may choose to lose 1 max HP. If you do so, then during your turn, after you select the target(s) of 【杀】(Slash) or basic trick cards, all target characters excluding yourself must each discard one card.`,
+    "正订": `Mandatory Skill. When you use or play a card in response to another character's card outside of your turn, if both cards share the same color, then increase your max HP by 1.`,
+  },
+  521: { // 阎柔
+    "仇讨": `When you target someone with 【杀】(Slash) or become the target of 【杀】, you may discard a card from the user to cause this 【杀】 to be unblockable. If you are the user, then this 【杀】 does not count towards your play limit this turn.`,
+    "襄戍": `Mandatory Skill. During your End phase, select a character who has less than their max HP to recover X HP and draw X cards (where X is the amount of damage you dealt this turn, up to 5).`
+  },
+  522: { // 族荀淑
+    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
+    "神君": `When a character uses 【杀】(Slash) or a normal trick card, you may reveal all your hand cards of the same name and record them as “神君”. When the current phase ends, you may use X number of cards as any “神君” card (where X is the number of “神君” cards).`,
+    "八龙": `Mandatory Skill. The first time your HP changes each turn, if the number of trick cards in your hand is strictly greater than all other card types, then reveal your hand and draw until you have 8 cards. (Test version - originally it was draw up to the number of surviving characters)`
+  },
+  523: { // 族荀谌
+    "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
+    "三恇": `Mandatory Skill. The first time you use a card of a unique type each round, select another character to give you at least X cards, then obtain the card you used (where X is the number of the following conditions that character satisfies: 1. has cards on the table; 2. has less than their max HP; 3. has less HP than the number of cards in their hand)`,
+    "卑势": `Mandatory Skill. The first time each character affected by “三恇” loses all their hand cards, you recover 1 HP.`
+  },
   524: { // 族荀采
     "蹈节": `Clan Skill, Mandatory Skill. The first time you use a non-attacking trick card each turn, lose 1 HP or one of your Mandatory Skills. Then, select a character from the same clan to gain that card.`,
     "烈誓": `During your Play phase, you may choose one of the following effects: 1. disable your judgement zone and take 1 fire damage from you; 2. discard all your 【闪】(Dodge); 3. discard all your 【杀】(Slash). Then, select a character who must carry out one of the other two options.`,
