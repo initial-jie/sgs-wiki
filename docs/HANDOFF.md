@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **857 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
@@ -24,7 +24,7 @@
 
 ## ⭐ 最新状态(2026-09-22,graduate + 3 新将 + 谋程昱工具 + 神典韦池扩到 33,全部 push 到 main)—— 新会话先读这段
 
-**基线**:`node prototype/sgs/room-sim.mjs` → **857 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
+**基线**:`node prototype/sgs/room-sim.mjs` → **863 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
 **规模**:武将库 **711 将**(696 OL = 官网花名册全量 + 15 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
@@ -84,7 +84,7 @@
 
 ## ✅ 身份自动发放 + 发将武将锁定 + 新一局(2026-10-01,待 deploy)
 
-**基线**:room-sim **857**。
+**基线**:room-sim **863**。
 
 **发将亮出的武将锁定**:`seat.genLocked`(dealPick 君主 / dealReveal 落座时置 true)→ `setGeneral` 拒 `GENERAL_LOCKED`,座位卡不再给「选武将 ▾」。手动选将的座位不锁、下拉照旧。解锁 = 重新发将(参与座位)/ 发身份时清空武将 / 房间设置「🔄 新一局」(`newGame`:清全场武将+身份+进行中的发将,座位与持有者不动)。
 
@@ -114,6 +114,13 @@
 - 顺手修:`maybeSeedPanel` 的 panelSeeded 以前不清,同一座位 A→B→A(或新一局后同座同将)不再播种血量;现在座位换将/清空时忘掉旧记录。
 
 **⚠ Cloudflare 免费额度告警(2026-10-06)→ DO WebSocket 改休眠模式(`common/room-do.mjs`,待 deploy)**:邮件「Durable Objects daily operation limit 90%」超的是 **duration(GB·s)** 不是请求数。原因:原先 `ws.accept()+addEventListener` 是非休眠 WebSocket,只要有一个连接挂着(手机后台留着页面、客户端自动重连)DO 就常驻内存按时长计费;免费额度 13,000 GB·s/天 ≈ 一个 128MB DO 活 29 小时,几间房各挂一台手机就超。现改为 **Hibernation API**:`state.acceptWebSocket(ws)` + `webSocketMessage/webSocketClose/webSocketError` 回调;连接↔deviceId 存 `ws.serializeAttachment({d})`(不能存 this 上,休眠会丢);`sockets()=state.getWebSockets()`;`this.core` 休眠后为 null 由 ensureCore 回灌;没人在线时 onClose 不回灌 core(让 DO 尽快空闲)。三国杀/风声共用同一基类,行为不变(本地双标签验过 认领/改名/广播/断线重连/解散/风声)。⚠ 本地 wrangler dev 里客户端直接关页面会打一行 `Uncaught Error: Network connection lost`——是运行时对异常断开的日志,无害。**deploy 后用量看**:dash.cloudflare.com → Workers & Pages → Durable Objects → 看 Duration 曲线应明显掉下来;若还高,再查 alarm/其它。
+
+**⭐ 2026-10-21 武将数据页 `/stats`(出框率 / 选取率 / ban率,待 deploy;room-sim **863**)**:
+`RoomCore.game` 多三个数组 `offered`(出现在候选框的武将 id,含同名各版本/换来的/地主加的)/ `banCands` / `banned`,
+由 `_gameAdd` 在 `_dealHands`、`dealSwap`、`_becomeLandlord`、临时 ban 阶段、`dealBan` 里累加,随 `gameRecord()` 进历史(config DO `history` 同名字段,id 数组,最多 300)。
+页面 `client/stats.html`(worker `/stats`,房间设置里有链接):读 `/api/history` + `/generals.json`,按入座人数分 **5 人以上 / 4 人 / 3 人(斗地主)** 三组。
+口径:出框率=出框局数÷该组局数、选取率=选定局数÷出框局数(手动选将无候选框只计「选定」次数)、ban率=被 ban 次数÷进 ban 候选次数;同名各版本分开算;可按列排序、搜名字、筛「只看选过/被 ban 过/全部」。
+⚠ 只统计上线这个功能之后的局(老记录没有 offered 字段 → 只有选定数);历史上限 300 局。
 
 **⭐ 2026-10-18 隐匿登场 + 周群天候工具 + 秦朗技能(**35 工具**,room-sim **857**,待 deploy)**:
 - **隐匿武将**(晋势力 9 将:宣公主/夏侯徽/司马师/晋司马懿/司马昭/王元姬/晋张春华/羊徽瑜/司马炎;判定=技能文本以「隐匿」开头,worker `setHeroInfo` 贴 `yinni`;曹爽托孤只是提到隐匿不算):`_applyGeneral` 时 `seat.hidden=true`、hp/hpMax=1(服务端直接设,客户端不播种)。`_seatView` 对非持有者返回 `general:"hidden"`(势力/皮肤/工具/toolState 全藏),持有者见真名 + `hidden:true`;发将「已亮出」里别人只见「隐匿武将」;历史记录也写「隐匿武将」直到登场。`revealHidden{seatNo}`(持有者):hidden=false、hpMax/hp 回到武将数值(**受伤登场的那 1 点伤害之后手动扣**,隐匿技线下发动)。客户端:别人座位标「🙈 隐匿 · 未登场」,自己座位标「隐匿中(仅你可见)」+「登场」按钮。手动选将/发将/君主亮出 三条路都走 `_applyGeneral`,行为一致。

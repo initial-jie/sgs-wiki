@@ -7,6 +7,7 @@ import { buildDealPools, dropIdsFromPools, opt as dealOpt } from "./shared/deal.
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
 import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
+import STATS_HTML from "./client/stats.html"; // 武将数据页 /stats(出框率/选取率/ban率,读 /api/history)
 import PACKS_DATA from "./shared/hero-packs.json"; // 武将→所属包(olwiki 将灯),贴到 generals.json 的 pack 字段供将池编辑页分组
 import POOL_SEED from "./shared/hero-pool-seed.json"; // 将池种子/备份(服务端没存过时回退)
 import GENERALS_DATA from "./shared/generals.json"; // OL 全量武将库(点座位看技能 / 神典韦roll池的数据源)
@@ -128,6 +129,7 @@ export function handleSgs(request, env, url) {
       return page ? htmlResponse(page) : new Response("no such rule", { status: 404 });
     }
     if (url.pathname === "/pool" || url.pathname === "/pool/") return htmlResponse(POOL_HTML); // 将池编辑页
+    if (url.pathname === "/stats" || url.pathname === "/stats/") return htmlResponse(STATS_HTML); // 武将数据页
     // 三国杀房间页:根路径(历史入口,手机收藏的链接不变)+ /sgs
     if (url.pathname === "/" || url.pathname === "/sgs" || url.pathname === "/sgs/" || url.pathname === "/index.html") return htmlResponse(ROOM_HTML);
   }
@@ -157,12 +159,15 @@ export class SgsConfigDO {
   static HISTORY_KEEP = 300; static HISTORY_DAYS = 180;
   async history(request) {
     const noStore = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+    const ids = (a) => (Array.isArray(a) ? a.map(Number).filter((x) => Number.isInteger(x) && x > 0).slice(0, 300) : []);
     let list = (await this.state.storage.get("history")) || [];
     if (request.method === "POST") {
       let rec; try { rec = await request.json(); } catch { return new Response("bad", { status: 400 }); }
       if (!rec || typeof rec.id !== "string" || !Array.isArray(rec.seats)) return new Response("bad", { status: 400 });
       rec = { id: rec.id.slice(0, 32), t0: Number(rec.t0) || Date.now(), t: Date.now(), room: String(rec.room || "").slice(0, 8), mode: rec.mode ? String(rec.mode).slice(0, 12) : null,
-        seats: rec.seats.slice(0, 10).map((s) => ({ n: Number(s.n) || 0, player: s.player ? String(s.player).slice(0, 12) : null, general: s.general ? String(s.general).slice(0, 12) : null, role: s.role ? String(s.role).slice(0, 6) : null })) };
+        seats: rec.seats.slice(0, 10).map((s) => ({ n: Number(s.n) || 0, player: s.player ? String(s.player).slice(0, 12) : null, general: s.general ? String(s.general).slice(0, 12) : null, role: s.role ? String(s.role).slice(0, 6) : null })),
+        // 发将统计字段(武将 id;/stats 页算 出框率/选取率/ban率)
+        offered: ids(rec.offered), banCands: ids(rec.banCands), banned: ids(rec.banned) };
       list = list.filter((x) => x.id !== rec.id); list.unshift(rec);
       const cutoff = Date.now() - SgsConfigDO.HISTORY_DAYS * 86400000;
       list = list.filter((x) => (x.t || x.t0) >= cutoff).slice(0, SgsConfigDO.HISTORY_KEEP);

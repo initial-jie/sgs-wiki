@@ -833,6 +833,30 @@ console.log("\n=== 场景 15c4:周群 天候 / 隐匿登场 ===");
   setHeroInfo({});
 }
 
+// ============ 场景 15c5:发将统计进历史记录(出框/ban 候选/被 ban)============
+console.log("\n=== 场景 15c5:发将统计 ===");
+{
+  let x = 11; const rng = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const rm = new RoomCore("5588", 4, rng); for (let i = 1; i <= 4; i++) rm.claimSeat("st" + i, i);
+  const g = (k, ids) => ({ key: k, opts: ids.map((id) => ({ id, name: k + id, gid: String(id), lord: false })) });
+  const pools = { normal: [g("刘备", [1, 299]), ...Array.from({ length: 40 }, (_, i) => g("将" + i, [100 + i]))], lord: [], forced: null };
+  rm.dealStart("st1", { mode: "normal", lordSeat: null, pools, tempBan: Array.from({ length: 12 }, (_, i) => ({ id: 100 + i, name: "T" + i, gid: String(100 + i) })) });
+  const bc = Object.values(rm.deal.ban.cands).flat().map((o) => o.id);
+  check("ban 候选进 game.banCands(12 个)", rm.game.banCands.length === 12 && bc.every((id) => rm.game.banCands.includes(id)));
+  for (const n of [1, 2, 3, 4]) for (const i of [0, 1]) rm.dealBan("st" + n, { seatNo: n, heroId: rm.deal.ban.cands[n][i].id });
+  const bannedIds = rm.deal.banned.map((b) => b.heroId);
+  check("被 ban 进 game.banned(8 个)", rm.game.banned.length === 8 && bannedIds.every((id) => rm.game.banned.includes(id)));
+  const offered0 = Object.values(rm.deal.hands).flatMap((h) => h.slots.flatMap((s) => s.opts.map((o) => o.id)));
+  check("⭐ 发出的候选(含同名各版本)进 game.offered,被 ban 的不在里面", offered0.every((id) => rm.game.offered.includes(id)) && rm.game.offered.length === new Set(offered0).size && bannedIds.every((id) => !rm.game.offered.includes(id)));
+  const before = rm.game.offered.length; rm.dealSwap("st2", { seatNo: 2, slot: 0 });
+  check("换来的坑也进 offered", rm.game.offered.length >= before && rm.deal.hands[2].slots[0].opts.every((o) => rm.game.offered.includes(o.id)));
+  for (const n of [1, 2, 3, 4]) rm.dealPick("st" + n, { seatNo: n, slot: 0, heroId: rm.deal.hands[n].slots[0].opts[0].id });
+  rm.dealReveal("st1");
+  const rec = rm.gameRecord();
+  check("历史记录带 offered/banCands/banned,选定武将在 seats 里", Array.isArray(rec.offered) && rec.offered.length === rm.game.offered.length && rec.banned.length === 8 && rec.banCands.length === 12 && rec.seats.filter((s) => s.general).length === 4);
+  check("新一局清空统计", rm.newGame("st1").ok && rm.game.offered.length === 0 && rm.game.banned.length === 0);
+}
+
 // ============ 场景 15d:贾充 凶竖(秘密猜测 + 保密投影 + 揭晓)============
 console.log("\n=== 场景 15d:贾充 凶竖 ===");
 const roomJ = new RoomCore("6420", 4, () => 0);

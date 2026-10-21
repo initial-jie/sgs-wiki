@@ -498,7 +498,9 @@ export class RoomCore extends RoomBase {
     return { ok: true };
   }
   // 落座的实际动作(setGeneral 校验通过后 / 线上发将亮出时调用;不做持有者与禁将校验)
-  _newGame() { this.game = { id: Date.now().toString(36) + Math.floor(this.rng() * 1e6).toString(36), t0: Date.now() }; }
+  _newGame() { this.game = { id: Date.now().toString(36) + Math.floor(this.rng() * 1e6).toString(36), t0: Date.now(), offered: [], banCands: [], banned: [] }; }
+  // 发将统计(进历史记录,供 /stats 算 出框率/选取率/ban率):offered=出现在候选框的武将 id(含同名各版本、换来的、地主加的),banCands=临时 ban 候选,banned=被 ban
+  _gameAdd(key, ids) { if (!this.game) this._newGame(); const a = this.game[key] || (this.game[key] = []); for (const id of ids) if (Number.isInteger(id) && !a.includes(id)) a.push(id); }
   // 历史对局记录(存 SgsConfigDO,由 RoomDO 在每次变更后 upsert):只记 时间/房间/模式/每座位 玩家名+武将(+全部亮明后的身份)。没人选将 → null
   gameRecord() {
     const seats = this.seatNos().map((n) => this.seats[n]).filter((s) => s.general || s.holderDevices.length);
@@ -507,6 +509,7 @@ export class RoomCore extends RoomBase {
     const over = this.ident && this.ident.over;
     return { id: this.game.id, t0: this.game.t0, t: Date.now(), room: this.roomCode,
       mode: this.ident ? (IDENT_MODES[this.ident.mode]?.label || this.ident.mode) : null,
+      offered: this.game.offered || [], banCands: this.game.banCands || [], banned: this.game.banned || [],
       seats: seats.map((s) => ({ n: s.seatNo, player: s.holderDevices[0] || null, general: s.general ? (s.hidden ? "隐匿武将" : (heroInfo(s.general)?.name || s.general)) : null, // 隐匿未登场不进历史(历史实时可读)
         role: over && this.ident.roles[s.seatNo] ? (this.ident.roles[s.seatNo].title || this.ident.roles[s.seatNo].role) : null })) };
   }
@@ -583,6 +586,7 @@ export class RoomCore extends RoomBase {
       const n = players.length <= DEAL_TEMPBAN_SMALL ? 2 : 1;
       this.deal = { phase: "ban", mode, lordSeat, firstSeats, lordTitle, lordPicked: false, hands: {}, pool: [], poolKey, poolLabel, excluded: prep.excluded,
         ban: { k, n, cands, picked: {} }, prep };
+      this._gameAdd("banCands", Object.values(cands).flat().map((o) => o.id));
       return { ok: true, players: players.length, phase: "ban" };
     }
     return this._dealHands(prep, []);
@@ -599,6 +603,7 @@ export class RoomCore extends RoomBase {
     const o = c.find((x) => x.id === heroId); if (!o) return { error: "BAD_PICK" };
     if (mine.some((b) => b.heroId === o.id)) return { error: "ALREADY_BANNED" };
     d.ban.picked[seatNo] = [...mine, { heroId: o.id, name: o.name }];
+    this._gameAdd("banned", [o.id]);
     const players = d.prep.players.filter((x) => this.seats[x]); // 途中被减掉的座位不等
     if (players.every((x) => (d.ban.picked[x] || []).length >= n)) {
       const banned = players.flatMap((x) => d.ban.picked[x]);
@@ -624,7 +629,7 @@ export class RoomCore extends RoomBase {
   }
   _becomeLandlord(seatNo, forced) {
     const d = this.deal, extra = DEAL_MODES[d.mode].lordExtraHand || 0, hand = d.hands[seatNo];
-    for (let k = 0; k < extra; k++) { const g = this._dealDraw(d.pool); if (!g) break; hand.slots.push({ key: g.key, opts: g.opts, src: "init", swapped: false }); hand.initKeys.push(g.key); }
+    for (let k = 0; k < extra; k++) { const g = this._dealDraw(d.pool); if (!g) break; hand.slots.push({ key: g.key, opts: g.opts, src: "init", swapped: false }); hand.initKeys.push(g.key); this._gameAdd("offered", g.opts.map((o) => o.id)); }
     d.lordSeat = seatNo; d.call = { ...d.call, done: true, landlord: seatNo, forced: !!forced }; d.phase = "pick";
     if (this.ident && this.ident.roles[seatNo]) { // 身份跟着走:地主换人
       for (const r of Object.values(this.ident.roles)) if (r.role === "地主") r.role = "农民";
@@ -663,6 +668,7 @@ export class RoomCore extends RoomBase {
     }
     // lordSeat=拿主公技候选的君主座位(明忠模式=明忠座位,无额外候选);firstSeats=先选先亮的座位(君主 / 明忠 / 无间道两主帅),lordTitle=其称谓
     // banned=本局临时 ban 掉的(公开);excluded=按「今日已登场」剔掉的武将名(公开,仅展示)
+    this._gameAdd("offered", Object.values(hands).flatMap((h) => h.slots.flatMap((s) => s.opts.map((o) => o.id))));
     // call(斗地主叫地主阶段):{cand,order,passed,done?,landlord?,forced?};叫地主期间 phase="call",不能选将/换将
     const call = prep.call ? { cand: prep.call.cand, order: prep.call.order, passed: [] } : null;
     this.deal = { phase: call ? "call" : "pick", mode, lordSeat, firstSeats, lordTitle, lordPicked: false, hands, pool: normal, poolKey, poolLabel, banned, excluded, call }; // poolKey/Label:用的是哪个环境的名单(仅展示)
@@ -683,6 +689,7 @@ export class RoomCore extends RoomBase {
     if (!g) return { error: "POOL_EMPTY" };
     this.deal.pool.push({ key: cur.key, opts: cur.opts }); // 放回将池(别人之后换将可能抽到)
     hand.slots[slot] = { key: g.key, opts: g.opts, src: "swap", swapped: true };
+    this._gameAdd("offered", g.opts.map((o) => o.id));
     if (hand.pick && hand.pick.slot === slot) hand.pick = null; // 换掉了已暗选的坑 → 取消选择
     return { ok: true };
   }
