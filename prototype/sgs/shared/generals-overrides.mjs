@@ -342,6 +342,20 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77400.png",
     tool: null, offline: true,
   },
+  // 界刘封 —— olwiki 真 id 776(官网花名册 2026-10-23 仍未收录),用户报 OL 新上线;graduate 候选。技能抄自 olwiki
+  {
+    id: 9028, name: "界刘封", genre: "界限突破", series: "界", faction: "蜀",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["控制", "进攻"],
+    skills: [
+      { name: "陷嗣", effect: "准备阶段，你可以将至多两名角色共计至多两张牌置于你的武将牌上，称为“逆”。其他角色可以移去两张“逆”视为对你使用一张【杀】。" },
+      { name: "侵凌", effect: "每回合限一次，你可以弃置一张牌，视为使用一张【杀】。若此【杀】造成了伤害，你摸一张牌，否则将你弃置的牌置为“逆”。" },
+    ],
+    characteristic: "可灵活的对敌方角色手牌进行破坏并印杀。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77600.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77600.png",
+    tool: null, offline: true,
+  },
   // 谋田丰 —— olwiki 真 id 659(官网花名册 2026-10-16 仍未收录),用户报 OL 当日上线;graduate 候选。技能文本抄自 olwiki(去掉"爆发/卖血"定位角标)
   {
     id: 9026, name: "谋田丰", genre: "谋", series: "谋", faction: "群",

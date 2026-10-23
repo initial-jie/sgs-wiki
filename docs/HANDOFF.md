@@ -26,7 +26,7 @@
 
 **基线**:`node prototype/sgs/room-sim.mjs` → **863 passed**;`node prototype/sgs/deck-test.mjs` → **26 passed**。
 
-**规模**:武将库 **711 将**(696 OL = 官网花名册全量 + 15 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
+**规模**:武将库 **712 将**(696 OL = 官网花名册全量 + 16 手录/线下,含《不臣之君》3 模式将)· 房间工具 **24 个** · 装备库 **58 张** · 选将支持拼音。
 
 **35 个工具**:魔吕布 / 南华老仙 / 族荀攸 / 谋黄月英 / 魔曹操 / 袁姬 / 钟琰 / 魔司马懿 / 谋董昭 / 神孙权 / 魔貂蝉 / 魔孙权 / 神典韦 / 李傕 / 徐荣 / SP徐氏 / 郭照 / 裴秀 / 蒲元 / 曹婴(伏间随机目标) / 族王明山(剩墨台账+弹雀点数) / 贾充(凶竖秘密猜测,保密) / 族陆郁生(拾昔四花色台账) / 谋程昱(胆持跨座位秘密选类型,保密)/ 神张角(异兆「黄」计数)/ 谢灵毓(元嫡牌名组台账,技能描述随之改写)/ 谋小乔·族荀采·谋董卓·晋司马懿·司马昭·界吕蒙(花色台账,共用一套)/ 戏志才(先辅秘密目标,保密)/ 孟达(苟得变更势力)/ 周群(天候当前天气)。
 
@@ -115,6 +115,8 @@
 
 **⚠ Cloudflare 免费额度告警(2026-10-06)→ DO WebSocket 改休眠模式(`common/room-do.mjs`,待 deploy)**:邮件「Durable Objects daily operation limit 90%」超的是 **duration(GB·s)** 不是请求数。原因:原先 `ws.accept()+addEventListener` 是非休眠 WebSocket,只要有一个连接挂着(手机后台留着页面、客户端自动重连)DO 就常驻内存按时长计费;免费额度 13,000 GB·s/天 ≈ 一个 128MB DO 活 29 小时,几间房各挂一台手机就超。现改为 **Hibernation API**:`state.acceptWebSocket(ws)` + `webSocketMessage/webSocketClose/webSocketError` 回调;连接↔deviceId 存 `ws.serializeAttachment({d})`(不能存 this 上,休眠会丢);`sockets()=state.getWebSockets()`;`this.core` 休眠后为 null 由 ensureCore 回灌;没人在线时 onClose 不回灌 core(让 DO 尽快空闲)。三国杀/风声共用同一基类,行为不变(本地双标签验过 认领/改名/广播/断线重连/解散/风声)。⚠ 本地 wrangler dev 里客户端直接关页面会打一行 `Uncaught Error: Network connection lost`——是运行时对异常断开的日志,无害。**deploy 后用量看**:dash.cloudflare.com → Workers & Pages → Durable Objects → 看 Duration 曲线应明显掉下来;若还高,再查 alarm/其它。
 
+**2026-10-23 录 界刘封 = 9028**(olwiki 776,官网未收录;蜀/4 血/界一将-3,陷嗣+侵凌;皮肤 alias→776 共 9 张;已加进军争白名单(线上 /api/pool + seed);与 刘封 179 同坑)。graduate 候选现 5 个:9009→766 / 9018→758 / 9026→659 / 9027→774 / **9028→776**。
+
 **⭐ 2026-10-21 武将数据页 `/stats`(出框率 / 选取率 / ban率,待 deploy;room-sim **863**)**:
 `RoomCore.game` 多三个数组 `offered`(出现在候选框的武将 id,含同名各版本/换来的/地主加的)/ `banCands` / `banned`,
 由 `_gameAdd` 在 `_dealHands`、`dealSwap`、`_becomeLandlord`、临时 ban 阶段、`dealBan` 里累加,随 `gameRecord()` 进历史(config DO `history` 同名字段,id 数组,最多 300)。
@@ -155,7 +157,7 @@
 - **测试版房规(2026-10-17,用户说后续可能改回)**:族荀淑「八龙」摸至与存活角色数相同 → **固定摸至 8 张**(`SKILL_OVERRIDES[522]` + cardWarn 标「测试版房规」;改回=删那条再 rebake)。`_dealView` 现带 `phase/banK/banned/excluded`;老存档无 phase 当 pick。
 - 评估(给用户的):临时 ban 合理;「今日已登场」作为可选开关可以,但多局之后池子会明显缩水(军争池 ~190 将,8 人局每局用掉 8 个,第 4 局后 6 坑×8 人=48 坑仍够,但同名坑合并后可能吃紧),所以做成默认关 + 不够发时报错而不是悄悄放宽。
 
-**⭐ 2026-10-16 新将核对 + graduate 四将 + 录 谋田丰(库 **710**,待 deploy)**:官网花名册 692→**696**,新增的正是手录的 679逢纪/769谢灵毓/770谋周瑜/748族荀灌 → 已 graduate(删 OFFLINE_HEROES 9022-9025 + `scrape-generals.mjs --ids 679,769,770,748`;`xielingyu` 工具由 TOOL_NAMES 接到 769;官网「元嫡」{0} 占位 → `SKILL_OVERRIDES[769]` 补成【杀】【闪】【桃】;hero-packs/hero-skins(删 alias)/hero-gender/hero-pool-seed/room.html `GRADUATED` 全部换成新 id;**线上 /api/pool 白名单里的旧 id 已用 PUT 换成新 id**)。**谋田丰** = olwiki 659(传说/群/3血/谋-计出万全,执谏+效竭),官网未收录 → 手录 **9026**(皮肤 alias→659 已抓 6 张,性别男已核,拼音已建);graduate 候选现 **4 个**:9009界关平→766 / 9018界钟会→758 / 9026谋田丰→659 / **9027孙寒华→774**(9001 线下孙寒华永久 offline)。olwiki 其余库里没有的(杨奉/谋郭嘉/族荀爽/界朱桓/谋孟获/谋李傕…)品质仍「未标注」=未上线,不录。**核对口径**:olwiki 条目带品质(非"未标注")且库里没有 = 新上线将。
+**⭐ 2026-10-16 新将核对 + graduate 四将 + 录 谋田丰(库 **710**,待 deploy)**:官网花名册 692→**696**,新增的正是手录的 679逢纪/769谢灵毓/770谋周瑜/748族荀灌 → 已 graduate(删 OFFLINE_HEROES 9022-9025 + `scrape-generals.mjs --ids 679,769,770,748`;`xielingyu` 工具由 TOOL_NAMES 接到 769;官网「元嫡」{0} 占位 → `SKILL_OVERRIDES[769]` 补成【杀】【闪】【桃】;hero-packs/hero-skins(删 alias)/hero-gender/hero-pool-seed/room.html `GRADUATED` 全部换成新 id;**线上 /api/pool 白名单里的旧 id 已用 PUT 换成新 id**)。**谋田丰** = olwiki 659(传说/群/3血/谋-计出万全,执谏+效竭),官网未收录 → 手录 **9026**(皮肤 alias→659 已抓 6 张,性别男已核,拼音已建);graduate 候选现 **5 个**:9009界关平→766 / 9018界钟会→758 / 9026谋田丰→659 / 9027孙寒华→774 / **9028界刘封→776**(9001 线下孙寒华永久 offline)。olwiki 其余库里没有的(杨奉/谋郭嘉/族荀爽/界朱桓/谋孟获/谋李傕…)品质仍「未标注」=未上线,不录。**核对口径**:olwiki 条目带品质(非"未标注")且库里没有 = 新上线将。
 
 **⭐ 2026-10-10 小伙伴四需求(全部做完,待 deploy;room-sim **747**,现 **26 工具**)**:
 - **神张角「异兆」计数器**(tool `shenzhangjiao`,227 直写 generals.json + TOOL_NAMES;全公开生成器范式,worker 零改):toolState `{huang,lastDraw,hist,log}`;`yzAdd{rank 1..13}` 加「黄」并判十位数是否改变(改变=摸一张,`lastDraw`)/ `yzUndo` 撤销上一张 / `yzSet{n}` 手动校正 / `sjClear` 肆军弃置所有黄 / `resetGame`。UI 13 个点数键 + 大字计数 + 「再加 N 点就进位」。
