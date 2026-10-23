@@ -20,7 +20,7 @@
 连接元数据存 ws attachment、房间表存 storage("rooms"),休眠醒来不丢;约战 events 仅内存。封禁逻辑没移植(朋友圈私用)。
 **已验证**:① node 脚本(内置 WebSocket)走完 建房/进房/双向转发/定向 send/房主退出通知;② 两个无名杀客户端(vite dev)把「联机大厅」填 `ws://localhost:8787/noname/` → 建房 → 大厅列表可见 → 加入 → 房主开始 → 双方进入选将(身份不同、AI 补位)。
 客户端 `apps/core/noname/library/index.js` 的 `hallURL` 默认值已改成 `wss://sgs-room.dujie1995.workers.dev/noname/`(只改了本地 clone,随 dist 一起上 Pages),玩家打开即连我们的大厅、不用填地址。
-**部署步骤**:1) `cd prototype/worker && npx wrangler deploy`(带 v4 迁移);2) 本体 → Cloudflare Pages:`npx wrangler pages deploy <noname>/dist --project-name <name>`(15,810 文件 / 1.6G,首次上传慢;用户决定项目名=子域);3) 朋友打开 `https://<name>.pages.dev`,选项 → 联机 → 「联机大厅」(默认已指向我们的 DO)→ 建房/进房。
+**部署**:1) `cd prototype/worker && npx wrangler deploy`(带 v4 迁移,用户跑);2) 本体 → Cloudflare Pages 项目 **`private-sgs-initial-j`**(2026-10-24 用户定名、授权我上传:`npx wrangler pages project create private-sgs-initial-j --production-branch main` + `npx wrangler pages deploy dist --project-name private-sgs-initial-j --branch main --commit-dirty=true`;以后更新本体=重新 build 后再跑 deploy 这一句);3) 朋友打开 **`https://private-sgs-initial-j.pages.dev`**,选项 → 联机 → 「联机大厅」(默认已指向我们的 DO)→ 建房/进房。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
