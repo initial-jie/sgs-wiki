@@ -15,7 +15,15 @@
   两个标签页各填 `ws://127.0.0.1:8082/` →「连接」→ 一个创建房间(八人身份)、另一个在大厅列表里点进 → 房主「开始游戏」→ 双方各自选将、身份不同、AI 补位。截图已发用户。
   ⚠ 预览面板坑:原生 confirm/alert 被禁 → GPL 确认返回 false → `game.exit()=window.close()` 关掉标签页;先在同源任一页面 `localStorage.setItem("gplv3_noname_alerted","true")` 再进 index。真实浏览器没这问题。
 **生产包**:`pnpm build` → `dist/` 15,810 文件 / 1.6G(audio 798M、image 630M),单文件无 >25MB。
-**零成本部署方案(下一步,未做)**:
+**✅ 2026-10-24 大厅中转已移植成 DO(`prototype/noname/hall-do.mjs`,绑定 `NONAME_HALL`,迁移 v4,路由 `/noname/`;待 deploy)**:
+协议与官方 `packages/server` 完全一致(create/enter/changeAvatar/key/events/config/status/send/close;房内玩家消息原样转房主 `["onmessage",wsid,raw]`;房主 `send` 定向回传;房主断开 → 房内 `selfclose`;心跳 alarm 每 60s,无人在线即停)。
+连接元数据存 ws attachment、房间表存 storage("rooms"),休眠醒来不丢;约战 events 仅内存。封禁逻辑没移植(朋友圈私用)。
+**已验证**:① node 脚本(内置 WebSocket)走完 建房/进房/双向转发/定向 send/房主退出通知;② 两个无名杀客户端(vite dev)把「联机大厅」填 `ws://localhost:8787/noname/` → 建房 → 大厅列表可见 → 加入 → 房主开始 → 双方进入选将(身份不同、AI 补位)。
+客户端 `apps/core/noname/library/index.js` 的 `hallURL` 默认值已改成 `wss://sgs-room.dujie1995.workers.dev/noname/`(只改了本地 clone,随 dist 一起上 Pages),玩家打开即连我们的大厅、不用填地址。
+**部署步骤**:1) `cd prototype/worker && npx wrangler deploy`(带 v4 迁移);2) 本体 → Cloudflare Pages:`npx wrangler pages deploy <noname>/dist --project-name <name>`(15,810 文件 / 1.6G,首次上传慢;用户决定项目名=子域);3) 朋友打开 `https://<name>.pages.dev`,选项 → 联机 → 「联机大厅」(默认已指向我们的 DO)→ 建房/进房。
+⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
+
+**零成本部署方案(原计划,①大厅已做)**:
   1. 本体 → Cloudflare Pages(免费:≤20,000 文件、单文件 ≤25MiB、带宽不计费)——15.8k 文件刚好够;想瘦身可去掉 audio。
   2. 大厅 → **移植到我们现有 Worker 的一个 Durable Object**(中转协议就那 430 行:client/room 表 + 转发 + 心跳;用 Hibernation API)→ 不用 VPS、不用付费;客户端填 `wss://sgs-room.dujie1995.workers.dev/noname/`。备选:Oracle Always Free VM 跑官方 server(需信用卡,配额 2026 年起缩水)、Koyeb 免费档(是否休眠待核);Render 免费档 15 分钟休眠不适合。
   3. 之后再做「扩展」桥接:将池/临时 ban 灌进它的禁将、线下将写成扩展武将、战绩回传 /api/history。

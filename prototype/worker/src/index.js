@@ -8,15 +8,18 @@
 import { handleSgs, RoomDO, SgsConfigDO } from "../../sgs/worker.mjs";
 import { handleFengsheng, FsRoomDO } from "../../fengsheng/worker.mjs";
 import { jsResponse } from "../../common/room-do.mjs";
+import { NonameHallDO } from "../../noname/hall-do.mjs"; // 无名杀联机大厅中转(DO 单例,绑定 NONAME_HALL)
 import ROOM_CLIENT_JS from "../../common/client/room-client.js"; // Text 模块(见 wrangler.toml [[rules]])
 
-export { RoomDO, FsRoomDO, SgsConfigDO }; // 三国杀 DO(类名固定,绑定 ROOM)/ 风声 DO(绑定 FS_ROOM)/ 三国杀全局配置 DO(绑定 SGS_CONFIG,存将池)
+export { RoomDO, FsRoomDO, SgsConfigDO, NonameHallDO }; // 三国杀 DO(类名固定,绑定 ROOM)/ 风声 DO(绑定 FS_ROOM)/ 三国杀全局配置 DO(绑定 SGS_CONFIG,存将池)
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/common/room-client.js") return jsResponse(ROOM_CLIENT_JS);
+    // 无名杀联机大厅:客户端「联机大厅」填 wss://<worker>/noname/(末尾斜杠可有可无)
+    if (url.pathname === "/noname" || url.pathname === "/noname/") return env.NONAME_HALL.get(env.NONAME_HALL.idFromName("hall")).fetch(request);
 
     const r = handleFengsheng(request, env, url) || handleSgs(request, env, url);
     if (r) return r;

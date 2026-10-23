@@ -24,6 +24,30 @@
         "--local"
       ],
       "port": 8787
+    },
+    {
+      "name": "noname-dev",
+      "runtimeExecutable": "/opt/homebrew/bin/pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname/apps/core",
+        "dev"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "noname-fs",
+      "runtimeExecutable": "/opt/homebrew/bin/pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname",
+        "-F",
+        "@noname/fs",
+        "dev",
+        "--debug",
+        "--dirname=../../apps/core"
+      ],
+      "port": 8089
     }
   ]
 }

@@ -17,6 +17,11 @@ class_name = "FsRoomDO"
 name = "SGS_CONFIG"
 class_name = "SgsConfigDO"
 
+# 无名杀联机大厅中转(prototype/noname/hall-do.mjs):单例,零成本替代官方 packages/server
+[[durable_objects.bindings]]
+name = "NONAME_HALL"
+class_name = "NonameHallDO"
+
 # 用 SQLite-backed Durable Object —— Workers 免费计划即可使用
 [[migrations]]
 tag = "v1"
@@ -29,6 +34,10 @@ new_sqlite_classes = ["FsRoomDO"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["SgsConfigDO"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["NonameHallDO"]
 
 # 注:各游戏的 *.html 以文本模块打进 worker(.html 默认即 Text),worker 直接吐客户端页(手机可直接开)。
 # 公共客户端脚本 common/client/*.js 也按文本打包,由 worker 在 /common/ 下发(否则会被当成 ES 模块)。
