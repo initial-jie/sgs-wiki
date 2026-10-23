@@ -48,6 +48,16 @@
         "--dirname=../../apps/core"
       ],
       "port": 8089
+    },
+    {
+      "name": "noname-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/static-nocache.py",
+        "8096",
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname/dist"
+      ],
+      "port": 8096
     }
   ]
 }

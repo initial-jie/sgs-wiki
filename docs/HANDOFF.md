@@ -2,7 +2,7 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
-## 🧪 线上牌桌方向:引入无名杀(noname)—— 2026-10-24 试跑结论(未动仓库代码)
+## 🧪 线上牌桌方向:引入无名杀(noname)—— 2026-10-24 试跑结论 + 大厅 DO + Pages 部署(含白屏修复)
 
 **背景**:朋友陆续离开西雅图,线下凑不齐 → 想要一个只给朋友圈用的线上真牌桌。自研规则引擎不现实(712 将 ≈ 1800 技能),决定探索开源的无名杀。
 **事实**(仓库 `libnoname/noname`,GPL-3.0 + 不得商用,朋友圈私用 OK):纯浏览器程序(Chrome 内核 ≥91);monorepo:`apps/core` 本体、`packages/server` 联机大厅(≈430 行纯 WebSocket 中转,只依赖 `ws`,自带 Dockerfile)、`packages/fs` 本地文件后端(dev 用)。
@@ -21,6 +21,13 @@
 **已验证**:① node 脚本(内置 WebSocket)走完 建房/进房/双向转发/定向 send/房主退出通知;② 两个无名杀客户端(vite dev)把「联机大厅」填 `ws://localhost:8787/noname/` → 建房 → 大厅列表可见 → 加入 → 房主开始 → 双方进入选将(身份不同、AI 补位)。
 客户端 `apps/core/noname/library/index.js` 的 `hallURL` 默认值已改成 `wss://sgs-room.dujie1995.workers.dev/noname/`(只改了本地 clone,随 dist 一起上 Pages),玩家打开即连我们的大厅、不用填地址。
 **部署**:1) `cd prototype/worker && npx wrangler deploy`(带 v4 迁移,用户跑);2) 本体 → Cloudflare Pages 项目 **`private-sgs-initial-j`**(2026-10-24 用户定名、授权我上传:`npx wrangler pages project create private-sgs-initial-j --production-branch main` + `npx wrangler pages deploy dist --project-name private-sgs-initial-j --branch main --commit-dirty=true`;以后更新本体=重新 build 后再跑 deploy 这一句);3) 朋友打开 **`https://private-sgs-initial-j.pages.dev`**,选项 → 联机 → 「联机大厅」(默认已指向我们的 DO)→ 建房/进房。
+**✅ 2026-10-24 Pages 白屏已修(用户反馈「我这边貌似也是白屏」)**——根因两个,都是「纯静态托管 vs 原版假设有 dev 后端」:
+  1. **`wrangler pages deploy` 会忽略任意深度的 `node_modules/` 目录**(内置 ignore `**/node_modules`),而 vite `preserveModules` 产物把 vue/core-js/crypto-js 等依赖原样放在 `dist/node_modules/.pnpm/…` → 线上全部 404 → 入口模块图加载失败 → 白屏。修法:**`prototype/noname/postbuild.sh dist`**(幂等):所有 `node_modules` 目录改名 `nm` + 改写代码里的路径引用(`service-worker.js` 里打包了 typescript,只改路径形态的字符串)。
+  2. **本体 boot 无条件调 `game.checkFile("noname.config.txt")`**,而 `init/browser.js` 在探测不到 `/checkFile` 文件后端时直接 return,不装 `game.checkFile/exit/…` → TypeError → 白屏(本地 python 静态服务器复现)。修法:**补丁 `prototype/noname/patches/static-hosting.patch`**(基于 noname `1a548c9`):`browser.js` 探测失败时退化为 **只读静态适配器 StaticReadOnlyAdapter**(stat=HEAD、read=GET、list=[]、写一律报错;把 `text/html` 的 200 视为不存在以防 SPA 回退),`game.exit/export/open` 照装;同补丁含 `library/index.js` 的 hallURL 默认值。
+  配套:`404.html`(关闭 Pages 的 SPA 回退,否则缺失路径 200+HTML 会让只读适配器误判「文件存在」)+ `_headers`(`.ts` 以 JS MIME 返回)。另:**jit service worker 原版只拦 localhost**(`packages/jit/src/service-worker/index.ts` 的 hostname 白名单),线上 `.ts` 扩展不会即时编译 → 已加同源判断(补丁同目录),否则控制台 `serviceWorker加载失败: SyntaxError`(不致命,只影响 TS 扩展)。
+  **重建+发布完整流程**:`git clone --depth 1 https://github.com/libnoname/noname && cd noname && git apply <repo>/prototype/noname/patches/static-hosting.patch && pnpm install && pnpm build`(根目录 build 会合并 audio/image/extension,出 `dist/` 15.8k 文件)→ `<repo>/prototype/noname/postbuild.sh dist` → `npx wrangler pages deploy dist --project-name private-sgs-initial-j --branch main --commit-dirty=true`(约 4 分钟,未变文件自动跳过)。
+  **验证法**:本地 `python3 static-nocache.py 8096 dist`(`.claude/launch.json` 的 `noname-static`,带 `Cache-Control: no-store`;⚠ 浏览器会把无缓存头的模块脚本启发式缓存,换端口=换 origin 最省事)→ 控制台应出现 `文件读写后端不可用,改用只读静态适配器` + `#arena .player` 8 个;线上 `curl -o /dev/null -w '%{http_code}' https://private-sgs-initial-j.pages.dev/noname.config.txt` 必须 404、`/nm/.pnpm/vue@…/nm/vue/dist/vue.esm-browser.js` 200。线上实测(预览面板):`#window` 下 17 个 menubutton、8 个 player,只剩预期 404(`/preload.js`、`/checkFile`、`/vue` 裸标识)。
+  已知无伤:控制台 `Refused to apply style … /theme/style/card`(原版 link 少了文件名,本地同样)、`development build of Vue`。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:

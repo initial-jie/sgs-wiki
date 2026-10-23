@@ -1,0 +1,14 @@
+diff --git a/packages/jit/src/service-worker/index.ts b/packages/jit/src/service-worker/index.ts
+index 2b834d0..4c24f01 100644
+--- a/packages/jit/src/service-worker/index.ts
++++ b/packages/jit/src/service-worker/index.ts
+@@ -61,7 +61,8 @@ worker.addEventListener("fetch", (event: FetchEvent) => {
+ 
+ 	const url = new URL(request.url);
+ 	// 非相关请求
+-	if (!["localhost", "127.0.0.1", "10.0.2.2"].includes(url.hostname)) return;
++	// 【私用静态部署补丁】原版只拦 localhost;部署到 Pages 后同源请求也要拦,否则 .ts 扩展无法即时编译
++	if (!["localhost", "127.0.0.1", "10.0.2.2"].includes(url.hostname) && url.origin !== worker.location.origin) return;
+ 	if (!proxyedPath.some(i => url.pathname.startsWith(i))) return;
+ 
+ 	const strategy = strategies.find(s => s.match({ event, request, url }));

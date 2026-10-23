@@ -1,0 +1,130 @@
+diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
+index 10da4f2..0864b56 100644
+--- a/apps/core/noname/init/browser.js
++++ b/apps/core/noname/init/browser.js
+@@ -10,15 +10,17 @@ import { FileSystem, FileSystemError, FileSystemErrorCode, installLegacyFileSyst
+ 
+ export default async function browserReady({ lib, game }) {
+ 	lib.path = (await import("path-browserify-esm")).default;
+-	const adpt = new BrowserAdapter();
+-	const fs = new FileSystem(adpt);
++	let fs = new FileSystem(new BrowserAdapter());
+ 
+ 	try {
+ 		// 这里只探测 dev server 的连通性和响应格式；文件不存在会返回 null。
+ 		await fs.stat("noname.js");
+ 	} catch (e) {
+-		console.error("文件读写函数初始化失败:", e);
+-		return;
++		// 【私用静态部署补丁】没有 fs 后端（如 Cloudflare Pages 纯静态托管）时，
++		// 退化为只读的 fetch 适配器：读文件走 GET、探测走 HEAD、写入一律报错。
++		// 否则 game.checkFile 不存在，boot() 里 checkFile("noname.config.txt") 直接崩成白屏。
++		console.warn("文件读写后端不可用，改用只读静态适配器:", e?.message || e);
++		fs = new FileSystem(new StaticReadOnlyAdapter());
+ 	}
+ 	lib.fs = fs;
+ 	installLegacyFileSystemAPI(game, fs);
+@@ -47,6 +49,90 @@ export default async function browserReady({ lib, game }) {
+ 	};
+ }
+ 
++/**
++ * 只读静态适配器：面向纯静态托管（无 /checkFile 等后端）。
++ * @implements { FileSystemAdapter }
++ */
++class StaticReadOnlyAdapter {
++	async open(path, options = {}) {
++		assertValidPath(path);
++		if (options.write || options.append || options.create || options.createNew || options.truncate) {
++			throw this.readOnlyError(path);
++		}
++		const info = await this.stat(path);
++		if (info === null) {
++			throw createFileSystemError(FileSystemErrorCode.NotFound, path, "File does not exist");
++		}
++		if (info.type !== "file") {
++			throw createFileSystemError(FileSystemErrorCode.NotFile, path, "Path is not a file");
++		}
++		return new BrowserFileHandle(this, path, true, false, false);
++	}
++
++	async read(path) {
++		assertValidPath(path);
++		let response;
++		try {
++			response = await fetch(this.toURL(path), { cache: "no-cache" });
++		} catch (error) {
++			throw toFileSystemError(error, path);
++		}
++		if (!response.ok || this.looksLikeFallbackHtml(path, response)) {
++			throw createFileSystemError(FileSystemErrorCode.NotFound, path, `HTTP ${response.status}`);
++		}
++		return new Uint8Array(await response.arrayBuffer());
++	}
++
++	async write(path) {
++		throw this.readOnlyError(path);
++	}
++
++	async stat(path) {
++		assertValidPath(path);
++		let response;
++		try {
++			response = await fetch(this.toURL(path), { method: "HEAD", cache: "no-cache" });
++			if (response.status === 405 || response.status === 501) {
++				response = await fetch(this.toURL(path), { cache: "no-cache" });
++			}
++		} catch (error) {
++			throw toFileSystemError(error, path);
++		}
++		if (!response.ok || this.looksLikeFallbackHtml(path, response)) {
++			return null;
++		}
++		return { type: path.endsWith("/") ? "directory" : "file" };
++	}
++
++	async list(path) {
++		assertValidPath(path);
++		// 静态托管无法列目录；返回空列表让“自动导入扩展”等逻辑静默跳过。
++		return [];
++	}
++
++	async createDir(path) {
++		throw this.readOnlyError(path);
++	}
++
++	async remove(path) {
++		throw this.readOnlyError(path);
++	}
++
++	toURL(path) {
++		return new URL(path, document.baseURI).href;
++	}
++
++	/** 静态托管常见的 SPA 回退：缺失路径返回 index.html（200, text/html），需视为不存在。 */
++	looksLikeFallbackHtml(path, response) {
++		const type = (response.headers.get("content-type") || "").toLowerCase();
++		return type.includes("text/html") && !/\.html?$/i.test(path);
++	}
++
++	readOnlyError(path) {
++		return createFileSystemError(FileSystemErrorCode.IoError, path, "Static hosting is read-only");
++	}
++}
++
+ /**
+  * @implements { FileSystemAdapter }
+  */
+diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
+index 08f9718..7f0c344 100644
+--- a/apps/core/noname/library/index.js
++++ b/apps/core/noname/library/index.js
+@@ -34,7 +34,7 @@ export class Library {
+ 	updateURLS = updateURLs;
+ 	updateURL = updateURLs.github;
+ 	mirrorURL = updateURLs.coding;
+-	hallURL = "";
++	hallURL = "wss://sgs-room.dujie1995.workers.dev/noname/"; // 朋友圈私用:默认大厅 = 我们 worker 里的 DO 中转(prototype/noname/hall-do.mjs)
+ 	assetURL = assetURL;
+ 	userAgent = userAgentLowerCase;
+ 	characterDefaultPicturePath = characterDefaultPicturePath;
