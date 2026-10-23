@@ -2,6 +2,25 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)确认基线,即可继续。
 
+## 🧪 线上牌桌方向:引入无名杀(noname)—— 2026-10-24 试跑结论(未动仓库代码)
+
+**背景**:朋友陆续离开西雅图,线下凑不齐 → 想要一个只给朋友圈用的线上真牌桌。自研规则引擎不现实(712 将 ≈ 1800 技能),决定探索开源的无名杀。
+**事实**(仓库 `libnoname/noname`,GPL-3.0 + 不得商用,朋友圈私用 OK):纯浏览器程序(Chrome 内核 ≥91);monorepo:`apps/core` 本体、`packages/server` 联机大厅(≈430 行纯 WebSocket 中转,只依赖 `ws`,自带 Dockerfile)、`packages/fs` 本地文件后端(dev 用)。
+武将包 `apps/core/character/` 含 onlyOL/standard/shenhua/refresh(界)/yijiang/huicui(璀璨)/clan(门阀)/sb(谋攻)/mobile/xianding/sp… OL 系基本全有可执行实现(含 OL 界刘封)。
+**联机模型**:房主浏览器跑整局,大厅只中转(非服务端权威)→ 房主必须全程在线;服务器零负载。客户端「联机大厅」地址可填完整 `ws://…/`、`wss://…/`(`game.connect` 里 `URL.canParse` 分支)。
+**本地试跑(已跑通)**:`git clone --depth 1`(2.4G)→ `npm i -g pnpm@9` → `pnpm install`(41s)→ 三个进程:
+  - 本体 `pnpm --dir apps/core dev`(vite,8080 被占会用 8081)
+  - 文件后端 `pnpm -F @noname/fs dev --debug --dirname=../../apps/core`(8089;没有它 dev 模式白屏)
+  - 大厅 `pnpm -F packages/server dev`(8082)
+  两个标签页各填 `ws://127.0.0.1:8082/` →「连接」→ 一个创建房间(八人身份)、另一个在大厅列表里点进 → 房主「开始游戏」→ 双方各自选将、身份不同、AI 补位。截图已发用户。
+  ⚠ 预览面板坑:原生 confirm/alert 被禁 → GPL 确认返回 false → `game.exit()=window.close()` 关掉标签页;先在同源任一页面 `localStorage.setItem("gplv3_noname_alerted","true")` 再进 index。真实浏览器没这问题。
+**生产包**:`pnpm build` → `dist/` 15,810 文件 / 1.6G(audio 798M、image 630M),单文件无 >25MB。
+**零成本部署方案(下一步,未做)**:
+  1. 本体 → Cloudflare Pages(免费:≤20,000 文件、单文件 ≤25MiB、带宽不计费)——15.8k 文件刚好够;想瘦身可去掉 audio。
+  2. 大厅 → **移植到我们现有 Worker 的一个 Durable Object**(中转协议就那 430 行:client/room 表 + 转发 + 心跳;用 Hibernation API)→ 不用 VPS、不用付费;客户端填 `wss://sgs-room.dujie1995.workers.dev/noname/`。备选:Oracle Always Free VM 跑官方 server(需信用卡,配额 2026 年起缩水)、Koyeb 免费档(是否休眠待核);Render 免费档 15 分钟休眠不适合。
+  3. 之后再做「扩展」桥接:将池/临时 ban 灌进它的禁将、线下将写成扩展武将、战绩回传 /api/history。
+**IP/合规**:只给朋友圈、不公开、不商用;GPL 要求分发时保留出处并开源改动(我们的扩展本来就在 repo 里)。
+
 ## ⭐⭐ 2026-09-24:多游戏架构 + 风声(游卡典藏版)房间 v1 —— 新会话先读这段,再读下面三国杀状态
 
 **基线**:`node prototype/sgs/room-sim.mjs` → **589** · `node prototype/sgs/deck-test.mjs` → **26** · `node prototype/fengsheng/fs-sim.mjs` → **72**。
