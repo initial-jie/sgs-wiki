@@ -1,3 +1,77 @@
+diff --git a/apps/core/game/config.json b/apps/core/game/config.json
+index 99aaa79..523b52b 100644
+--- a/apps/core/game/config.json
++++ b/apps/core/game/config.json
+@@ -83,7 +83,7 @@
+ 	"auto_popped_config": true,
+ 	"auto_popped_history": false,
+ 	"auto_skill": true,
+-	"auto_confirm": true,
++	"auto_confirm": false,
+ 	"enable_drag": true,
+ 	"enable_pressure": false,
+ 	"pressure_taptic": true,
+@@ -136,7 +136,8 @@
+ 	"show_cardpile": true,
+ 	"only_fullskin": true,
+ 	"show_connect": true,
+-	"show_wuxie": false,
++	"show_wuxie": true,
++	"wuxie_self": false,
+ 	"show_wuxie_self": true,
+ 	"show_stat": true,
+ 	"show_playerids": true,
+diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
+index 943d3f9..b628bd1 100644
+--- a/apps/core/mode/connect.js
++++ b/apps/core/mode/connect.js
+@@ -85,6 +85,7 @@ export default {
+ 					if (event.textnode) {
+ 						alert(invitationText ? "邀请链接解析失败" : "连接失败");
+ 						event.textnode.textContent = "输入联机地址";
++						showAddressUI();
+ 					}
+ 				});
+ 			};
+@@ -120,6 +121,38 @@ export default {
+ 			ui.window.appendChild(button);
+ 			ui.ipbutton = button;
+ 
++			// 【私用静态部署补丁】朋友圈只有一个大厅:进联机先取名(首次),然后直接连大厅;地址输入框只在连接失败/被拒时露出
++			const showAddressUI = () => {
++				node.style.display = "";
++				button.style.display = "";
++			};
++			if (!_status.hallAutoTried) {
++				_status.hallAutoTried = true;
++				node.style.display = "none";
++				button.style.display = "none";
++				text.textContent = "正在连接大厅...";
++				const askName = async () => {
++					const current = lib.config.connect_nickname;
++					if (typeof current === "string" && current.trim() && current !== "无名玩家") {
++						return;
++					}
++					const name = await game.promises.prompt("给自己取个名字(联机时大家看到的昵称,之后可在 选项→联机 里改)", true);
++					const nick = typeof name === "string" ? name.trim().slice(0, 12) : "";
++					if (nick) {
++						game.saveConfig("connect_nickname", nick);
++						game.saveConfig("connect_nickname", nick, "connect");
++					}
++				};
++				askName()
++					.catch(e => console.error(e))
++					.then(() => {
++						node.textContent = get.config("hall_ip") || lib.hallURL;
++						connect();
++					});
++			} else {
++				text.textContent = "输入联机地址";
++			}
++
+ 			ui.hall_button = ui.create.system(
+ 				"联机大厅",
+ 				() => {
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
 index 10da4f2..0864b56 100644
 --- a/apps/core/noname/init/browser.js
@@ -116,7 +190,7 @@ index 10da4f2..0864b56 100644
   * @implements { FileSystemAdapter }
   */
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..7f0c344 100644
+index 08f9718..74b382b 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -128,3 +202,30 @@ index 08f9718..7f0c344 100644
  	assetURL = assetURL;
  	userAgent = userAgentLowerCase;
  	characterDefaultPicturePath = characterDefaultPicturePath;
+@@ -1066,7 +1066,7 @@ export class Library {
+ 				},
+ 				auto_confirm: {
+ 					name: "自动确认",
+-					init: true,
++					init: false,
+ 					unfrequent: true,
+ 					intro: "当候选目标只有1个时，点击目标后无需再点击确认",
+ 				},
+@@ -1084,7 +1084,7 @@ export class Library {
+ 				},
+ 				wuxie_self: {
+ 					name: "不无懈自己",
+-					init: true,
++					init: false,
+ 					unfrequent: true,
+ 					intro: "自己使用的单目标普通锦囊即将生效时，不询问无懈",
+ 				},
+@@ -4814,7 +4814,7 @@ export class Library {
+ 				show_wuxie: {
+ 					name: "显示无懈按钮",
+ 					intro: "在右上角显示不询问无懈",
+-					init: false,
++					init: true,
+ 					unfrequent: true,
+ 					onclick(bool) {
+ 						game.saveConfig("show_wuxie", bool);

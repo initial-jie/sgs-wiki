@@ -28,6 +28,12 @@
   **重建+发布完整流程**:`git clone --depth 1 https://github.com/libnoname/noname && cd noname && git apply <repo>/prototype/noname/patches/static-hosting.patch && pnpm install && pnpm build`(根目录 build 会合并 audio/image/extension,出 `dist/` 15.8k 文件)→ `<repo>/prototype/noname/postbuild.sh dist` → `npx wrangler pages deploy dist --project-name private-sgs-initial-j --branch main --commit-dirty=true`(约 4 分钟,未变文件自动跳过)。
   **验证法**:本地 `python3 static-nocache.py 8096 dist`(`.claude/launch.json` 的 `noname-static`,带 `Cache-Control: no-store`;⚠ 浏览器会把无缓存头的模块脚本启发式缓存,换端口=换 origin 最省事)→ 控制台应出现 `文件读写后端不可用,改用只读静态适配器` + `#arena .player` 8 个;线上 `curl -o /dev/null -w '%{http_code}' https://private-sgs-initial-j.pages.dev/noname.config.txt` 必须 404、`/nm/.pnpm/vue@…/nm/vue/dist/vue.esm-browser.js` 200。线上实测(预览面板):`#window` 下 17 个 menubutton、8 个 player,只剩预期 404(`/preload.js`、`/checkFile`、`/vue` 裸标识)。
   已知无伤:控制台 `Refused to apply style … /theme/style/card`(原版 link 少了文件名,本地同样)、`development build of Vue`。
+**✅ 2026-10-24 第一批体验修整(用户反馈 1/2/4;3 横屏、5 技能常驻栏 待做)**——都在 `patches/static-hosting.patch` 里:
+  - `mode/connect.js`:进「联机」**首次弹窗取昵称**(`game.promises.prompt`,存 `connect_nickname` 两处作用域;已有非默认昵称则不问)→ **直接连我们的大厅**(`hall_ip || lib.hallURL`),地址输入框/「连接」按钮隐藏,只在连接失败或被拒(`_status.connectDenied` 重建 UI)时露出;`_status.hallAutoTried` 保证每次加载只自动连一次。大厅里建房=「创建房间」、加入=点列表里的房间,没有邀请码概念(无名杀的「邀请链接」功能默认关,不用)。
+  - 默认值(`game/config.json` + `library/index.js` 菜单 `init`):`auto_confirm` 自动确认 **false**(每次出牌都有确定/取消)、`wuxie_self` 不无懈自己 **false**(打到自己头上的锦囊也询问无懈)、`show_wuxie` 右上角「不询问无懈」按钮 **true**。⚠ 只对没在 IndexedDB 存过该键的玩家生效;老玩家在 选项→选项 里手动改。
+  - 出牌时限:无名杀联机房本来就有 `connect_choose_timeout`(建房设置,默认 30 秒,可选 10/15/30/60/90),读条=`ui.timer`+`player.showTimer`;用户反馈「没读条」待复现(可能是单机 AI 局或房主视角)。
+  - wiki `index.html` 房间 section 下加了「线上牌桌(朋友圈内测)」链接。
+  未做:**3 手机横屏**——浏览器不能强制横屏(iOS 不支持方向锁;Android 仅全屏可锁),方案=PWA manifest `orientation: landscape`(添加到主屏幕后生效,仅 Android)+ 竖屏时盖「请旋转手机」提示 + 默认手机横版布局;**5 技能常驻在头像下方(可发动变绿/被封锁显示锁)**——无名杀无此选项,要写 UI 扩展(读 `player.getSkills()`、`skill_blocker`、`_status.event` 可用判定)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
