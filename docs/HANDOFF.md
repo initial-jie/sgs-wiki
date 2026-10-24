@@ -32,7 +32,9 @@
   - `mode/connect.js`:进「联机」**首次弹窗取昵称**(`game.promises.prompt`,存 `connect_nickname` 两处作用域;已有非默认昵称则不问)→ **直接连我们的大厅**(`hall_ip || lib.hallURL`),地址输入框/「连接」按钮隐藏,只在连接失败或被拒(`_status.connectDenied` 重建 UI)时露出;`_status.hallAutoTried` 保证每次加载只自动连一次。大厅里建房=「创建房间」、加入=点列表里的房间,没有邀请码概念(无名杀的「邀请链接」功能默认关,不用)。
   - 默认值(`game/config.json` + `library/index.js` 菜单 `init`):`auto_confirm` 自动确认 **false**(每次出牌都有确定/取消)、`wuxie_self` 不无懈自己 **false**(打到自己头上的锦囊也询问无懈)、`show_wuxie` 右上角「不询问无懈」按钮 **true**。⚠ 只对没在 IndexedDB 存过该键的玩家生效;老玩家在 选项→选项 里手动改。
   - 出牌时限:无名杀联机房本来就有 `connect_choose_timeout`(建房设置,默认 30 秒,可选 10/15/30/60/90),读条=`ui.timer`+`player.showTimer`;用户反馈「没读条」待复现(可能是单机 AI 局或房主视角)。
+  - 两个莫名其妙的首次弹窗也去掉:`new_tutorial` 默认 **true**(不再问「是否进入新手向导」);`init/index.ts` 手机 UA(iphone/android/mobile)首次触屏不再 confirm「是否切换到触屏模式」,直接启用 touchscreen+phonelayout 并 reload(iPad/桌面触屏仍走原 confirm)。
   - wiki `index.html` 房间 section 下加了「线上牌桌(朋友圈内测)」链接。
+  - 线上实测(预览面板):进「联机」→ 取名弹窗 → 确定 → ws 直连 `wss://sgs-room…/noname/` → 大厅出现「创建房间 / 在线 / 约战」,地址输入框全程隐藏;`lib.config.auto_confirm=false / wuxie_self=false / show_wuxie=true` 生效。
   未做:**3 手机横屏**——浏览器不能强制横屏(iOS 不支持方向锁;Android 仅全屏可锁),方案=PWA manifest `orientation: landscape`(添加到主屏幕后生效,仅 Android)+ 竖屏时盖「请旋转手机」提示 + 默认手机横版布局;**5 技能常驻在头像下方(可发动变绿/被封锁显示锁)**——无名杀无此选项,要写 UI 扩展(读 `player.getSkills()`、`skill_blocker`、`_status.event` 可用判定)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 

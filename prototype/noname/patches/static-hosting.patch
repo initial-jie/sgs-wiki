@@ -1,5 +1,5 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..523b52b 100644
+index 99aaa79..fcc06cd 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -83,7 +83,7 @@
@@ -11,13 +11,14 @@ index 99aaa79..523b52b 100644
  	"enable_drag": true,
  	"enable_pressure": false,
  	"pressure_taptic": true,
-@@ -136,7 +136,8 @@
+@@ -136,7 +136,9 @@
  	"show_cardpile": true,
  	"only_fullskin": true,
  	"show_connect": true,
 -	"show_wuxie": false,
 +	"show_wuxie": true,
 +	"wuxie_self": false,
++	"new_tutorial": true,
  	"show_wuxie_self": true,
  	"show_stat": true,
  	"show_playerids": true,
@@ -189,6 +190,22 @@ index 10da4f2..0864b56 100644
  /**
   * @implements { FileSystemAdapter }
   */
+diff --git a/apps/core/noname/init/index.ts b/apps/core/noname/init/index.ts
+index 1519c5e..36d71cc 100644
+--- a/apps/core/noname/init/index.ts
++++ b/apps/core/noname/init/index.ts
+@@ -84,6 +84,11 @@ export async function boot() {
+ 				} else if (lib.device === "ios") {
+ 					game.saveConfig("show_statusbar_ios", "overlay");
+ 				}
++			} else if (ua.includes("iphone") || ua.includes("android") || ua.includes("mobile")) {
++				// 【私用静态部署补丁】手机浏览器不再弹「是否切换到触屏模式」确认,直接启用触屏 + 手机布局
++				game.saveConfig("touchscreen", true);
++				game.saveConfig("phonelayout", true);
++				game.reload();
+ 			} else if (confirm("是否切换到触屏模式？（触屏模式可提高触屏设备的响应速度，但无法使用鼠标）")) {
+ 				game.saveConfig("touchscreen", true);
+ 				if (ua.includes("iphone") || ua.includes("android")) {
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
 index 08f9718..74b382b 100644
 --- a/apps/core/noname/library/index.js
