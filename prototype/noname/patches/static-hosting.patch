@@ -1,5 +1,5 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..7740455 100644
+index 99aaa79..f52d32e 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -31,7 +31,7 @@ index 99aaa79..7740455 100644
  	"background_speak": true,
  	"glow_phase": "yellow",
  	"die_move": "flip",
-@@ -136,7 +136,9 @@
+@@ -136,7 +136,10 @@
  	"show_cardpile": true,
  	"only_fullskin": true,
  	"show_connect": true,
@@ -39,6 +39,7 @@ index 99aaa79..7740455 100644
 +	"show_wuxie": true,
 +	"wuxie_self": false,
 +	"new_tutorial": true,
++	"show_splash": "always",
  	"show_wuxie_self": true,
  	"show_stat": true,
  	"show_playerids": true,
@@ -187,7 +188,7 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..9b808d9 100644
+index 67fb1b5..e1edd6c 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
 @@ -3,6 +3,171 @@ import html from "dedent";
@@ -362,7 +363,18 @@ index 67fb1b5..9b808d9 100644
  /** @type { importModeConfig } */
  export default {
  	name: "identity",
-@@ -205,6 +370,27 @@ export default {
+@@ -75,9 +240,7 @@ export default {
+ 		},
+ 		async (event, trigger, player) => {
+ 			if (lib.config.new_tutorial) {
+-				if (!_status.connectMode) {
+-					game.showChangeLog();
+-				}
++				// 【私用补丁】不弹无名杀的「x.x.x 更新内容」(我们自己发版,玩家看不懂也用不上)
+ 				return;
+ 			}
+ 
+@@ -205,6 +368,27 @@ export default {
  			};
  			if (_status.connectMode) {
  				_status.mode = lib.configOL.identity_mode;
@@ -390,7 +402,7 @@ index 67fb1b5..9b808d9 100644
  				if (_status.mode == "zhong") {
  					lib.configOL.number = 8;
  					if (lib.configOL.zhong_card) {
-@@ -233,11 +419,24 @@ export default {
+@@ -233,11 +417,24 @@ export default {
  				if (lib.configOL.number < 2) {
  					lib.configOL.number = 2;
  				}
@@ -416,7 +428,7 @@ index 67fb1b5..9b808d9 100644
  				if (_status.mode == "normal" && (get.config("enable_commoner") || get.config("double_nei"))) {
  					const identity = get.config("enable_commoner") ? "commoner" : "nei";
  					for (const list of lib.config.mode_config.identity.identity.slice(1)) {
-@@ -253,7 +452,7 @@ export default {
+@@ -253,7 +450,7 @@ export default {
  						list.push(identity);
  					}
  				}
@@ -425,7 +437,7 @@ index 67fb1b5..9b808d9 100644
  					lib.onwash.push(yearLimitCheck);
  				}
  				for (const current of game.players) {
-@@ -335,7 +534,55 @@ export default {
+@@ -335,7 +532,55 @@ export default {
  						game.zhong.addSkill("sheshen");
  					}
  				}
@@ -482,7 +494,7 @@ index 67fb1b5..9b808d9 100644
  					skill;
  				if (enhance_zhu) {
  					if (_status.connectMode) {
-@@ -542,7 +789,7 @@ export default {
+@@ -542,7 +787,7 @@ export default {
  		 * 给“房间信息”界面填充身份模式的联机房间配置
  		 */
  		getRoomInfo(uiintro) {
@@ -491,7 +503,7 @@ index 67fb1b5..9b808d9 100644
  			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
  			if (lib.configOL.identity_mode != "zhong") {
  				if (lib.configOL.identity_mode == "stratagem") {
-@@ -649,6 +896,36 @@ export default {
+@@ -649,6 +894,36 @@ export default {
  						cai: "猜",
  					};
  				}
@@ -528,7 +540,7 @@ index 67fb1b5..9b808d9 100644
  			} else {
  				if (get.config("enable_commoner")) {
  					return {
-@@ -678,10 +955,10 @@ export default {
+@@ -678,10 +953,10 @@ export default {
  			for (var i in list) {
  				switch (i) {
  					case "fan":
@@ -541,7 +553,7 @@ index 67fb1b5..9b808d9 100644
  						break;
  					case "nei":
  						list[i] = "内奸";
-@@ -689,6 +966,27 @@ export default {
+@@ -689,6 +964,27 @@ export default {
  					case "commoner":
  						list[i] = "平民";
  						break;
@@ -569,7 +581,7 @@ index 67fb1b5..9b808d9 100644
  					case "zhu":
  						list[i] = "主公";
  						break;
-@@ -741,6 +1039,18 @@ export default {
+@@ -741,6 +1037,18 @@ export default {
  					case "stratagem":
  						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
  						break;
@@ -588,7 +600,7 @@ index 67fb1b5..9b808d9 100644
  					default:
  						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
  				}
-@@ -789,6 +1099,12 @@ export default {
+@@ -789,6 +1097,12 @@ export default {
  		 * @param {boolean} [me] - 兼容旧逻辑的保留参数，目前不会影响显示范围。
  		 */
  		showIdentity(me) {
@@ -601,7 +613,7 @@ index 67fb1b5..9b808d9 100644
  			for (const player of game.players) {
  				// if(me===false&&player==game.me) continue;
  				player.node.identity.classList.remove("guessing");
-@@ -911,6 +1227,104 @@ export default {
+@@ -911,6 +1225,104 @@ export default {
  				}
  				return;
  			}
@@ -706,7 +718,7 @@ index 67fb1b5..9b808d9 100644
  			if (!game.zhu) {
  				if (get.population("fan") == 0) {
  					switch (me.identity) {
-@@ -1853,8 +2267,8 @@ export default {
+@@ -1853,8 +2265,8 @@ export default {
  						if (event.zhongmode) {
  							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
  						} else {
@@ -717,7 +729,7 @@ index 67fb1b5..9b808d9 100644
  								identityChoices.push("commoner");
  							}
  						}
-@@ -2109,7 +2523,13 @@ export default {
+@@ -2109,7 +2521,13 @@ export default {
  						currentPlayer.identityShown = false;
  					}
  
@@ -732,7 +744,7 @@ index 67fb1b5..9b808d9 100644
  						for (const currentPlayer of game.players) {
  							delete currentPlayer.special_identity;
  						}
-@@ -2552,7 +2972,13 @@ export default {
+@@ -2552,7 +2970,13 @@ export default {
  						}
  						currentPlayer.identityShown = false;
  					}
@@ -747,7 +759,7 @@ index 67fb1b5..9b808d9 100644
  						const map = {};
  						const zhongs = game.filterPlayer(current => current.identity === "zhong");
  						const fans = game.filterPlayer(current => current.identity === "fan");
-@@ -2957,6 +3383,22 @@ export default {
+@@ -2957,6 +3381,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -770,7 +782,7 @@ index 67fb1b5..9b808d9 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3422,20 @@ export default {
+@@ -2980,6 +3420,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -791,7 +803,7 @@ index 67fb1b5..9b808d9 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3454,16 @@ export default {
+@@ -2998,6 +3452,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -808,7 +820,7 @@ index 67fb1b5..9b808d9 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3568,40 @@ export default {
+@@ -3102,6 +3566,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -849,7 +861,7 @@ index 67fb1b5..9b808d9 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +3633,29 @@ export default {
+@@ -3133,6 +3631,29 @@ export default {
  						});
  					}
  				}
@@ -879,7 +891,7 @@ index 67fb1b5..9b808d9 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +3923,33 @@ export default {
+@@ -3400,6 +3921,33 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -913,7 +925,7 @@ index 67fb1b5..9b808d9 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4463,65 @@ export default {
+@@ -3913,6 +4461,65 @@ export default {
  				}
  				return -7;
  			}
@@ -979,7 +991,7 @@ index 67fb1b5..9b808d9 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5200,88 @@ export default {
+@@ -4591,6 +5198,88 @@ export default {
  		},
  	},
  	skill: {

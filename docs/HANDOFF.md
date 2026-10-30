@@ -73,7 +73,8 @@
 **✅ 2026-10-30 体验优化:声音默认关 + 「名字即账号」**
   - `game/config.json`:`background_music: "music_off"`、`background_audio: false`(只影响没存过这两个键的新玩家;老玩家在 选项→音效 自己关)。
   - **名字即账号(无密码)**:扩展 `sgs-friends` 把昵称哈希(djb2+fnv)成联机 key `nm…` 写进 `localStorage[configprefix+"key"]` 与 `game.onlineKey`——大厅按 key 认人,同名跨设备就是同一人。资料存 worker **`/api/noname-profile`**(`SgsConfigDO.profiles`,storage `nonameProfiles` = {昵称:{avatar,updatedAt,seen}},上限 500 人淘汰最久未来者;GET ?name= / PUT {name,avatar};CORS 含 OPTIONS 预检;**待用户 deploy worker**)。扩展钩住 `game.saveConfig`:昵称变 → 换 key + `pullProfile`(有资料就套头像,没有就把当前头像登记上去);头像变 → 400ms 防抖 PUT。启动时老玩家也拉一次(别处改过头像同步过来)。`connect.js` 取名后最多等 1.5s(`_status.sgsFriendsProfileReady`)再连大厅,进大厅头像就对。⚠ 拉到的头像不能用 `lib.character` 校验(splash 阶段武将表还没装,会误判成「没有」然后反向覆盖服务端)。
-  - 本地验证(dev + wrangler dev):PUT/GET/OPTIONS 通;改名 → key 变、拉头像;改头像 → 服务端更新;换回旧名 → 头像恢复。
+  - 本地验证(dev + wrangler dev):PUT/GET/OPTIONS 通;改名 → key 变、拉头像;改头像 → 服务端更新;换回旧名 → 头像恢复。worker 已由用户 deploy(2026-10-30)。
+  - **首次进站直奔模式选择页**(用户反馈首次进来被直接拉进人机局 + 弹「1.11.7 更新内容」):`config.json` 加 `show_splash: "always"`(原默认 "init"=只首次,且 `directstart` 标记会跳过);`identity.js` 去掉 `game.showChangeLog()`(我们把 `new_tutorial` 默认 true 后它就改弹更新日志)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
