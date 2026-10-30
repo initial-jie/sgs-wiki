@@ -23,7 +23,7 @@ index 99aaa79..fcc06cd 100644
  	"show_stat": true,
  	"show_playerids": true,
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
-index 943d3f9..b628bd1 100644
+index 943d3f9..8bf326a 100644
 --- a/apps/core/mode/connect.js
 +++ b/apps/core/mode/connect.js
 @@ -85,6 +85,7 @@ export default {
@@ -73,6 +73,16 @@ index 943d3f9..b628bd1 100644
  			ui.hall_button = ui.create.system(
  				"联机大厅",
  				() => {
+@@ -163,7 +196,8 @@ export default {
+ 				},
+ 				220
+ 			);
+-			if (get.config("read_clipboard", "connect")) {
++			// 【私用静态部署补丁】朋友圈只有一个大厅,不用邀请链接;原版这里会弹原生 confirm「是否输入邀请链接」
++			if (get.config("read_clipboard", "connect") && !lib.hallURL) {
+ 				let ced = false;
+ 				const read = text => {
+ 					if (connectionStarted) {
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
 index 10da4f2..0864b56 100644
 --- a/apps/core/noname/init/browser.js
@@ -206,8 +216,30 @@ index 1519c5e..36d71cc 100644
  			} else if (confirm("是否切换到触屏模式？（触屏模式可提高触屏设备的响应速度，但无法使用鼠标）")) {
  				game.saveConfig("touchscreen", true);
  				if (ua.includes("iphone") || ua.includes("android")) {
+diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
+index bbc3353..dc07928 100644
+--- a/apps/core/noname/library/element/content.ts
++++ b/apps/core/noname/library/element/content.ts
+@@ -1669,7 +1669,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
+ 						ui.roundmenu.style.display = "";
+ 					}
+ 					if (ui.backgroundMusic && !isNaN(ui.backgroundMusic.duration)) {
+-						ui.backgroundMusic.play();
++						Promise.resolve(ui.backgroundMusic.play()).catch(() => void 0); // 【私用补丁】iOS 无手势播放会 NotAllowedError
+ 					}
+ 					hitsound_audio.remove();
+ 					resolve({
+@@ -1904,7 +1904,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
+ 					dialog.close();
+ 				}
+ 				if (ui.backgroundMusic && !isNaN(ui.backgroundMusic.duration)) {
+-					ui.backgroundMusic.play();
++					Promise.resolve(ui.backgroundMusic.play()).catch(() => void 0); // 【私用补丁】iOS 无手势播放会 NotAllowedError
+ 				}
+ 			},
+ 			event.videoId,
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..74b382b 100644
+index 08f9718..6728502 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -246,3 +278,25 @@ index 08f9718..74b382b 100644
  					unfrequent: true,
  					onclick(bool) {
  						game.saveConfig("show_wuxie", bool);
+@@ -7491,7 +7491,7 @@ export class Library {
+ 				},
+ 				read_clipboard: {
+ 					name: "读取邀请链接",
+-					init: true,
++					init: false,
+ 					frequent: true,
+ 					intro: "读取剪贴板以解析邀请链接自动加入联机房间",
+ 				},
+diff --git a/apps/core/noname/ui/create/index.js b/apps/core/noname/ui/create/index.js
+index 6af9480..cd63704 100644
+--- a/apps/core/noname/ui/create/index.js
++++ b/apps/core/noname/ui/create/index.js
+@@ -2435,7 +2435,7 @@ export class Create {
+ 			lib.config.touchscreen ? "touchend" : "click",
+ 			() => {
+ 				if (!ui.backgroundMusic.played.length && lib.config.background_music != "music_off" && !isNaN(ui.backgroundMusic.duration)) {
+-					ui.backgroundMusic.play();
++					Promise.resolve(ui.backgroundMusic.play()).catch(() => void 0); // 【私用补丁】iOS 无手势播放会 NotAllowedError
+ 				}
+ 			},
+ 			{ once: true }

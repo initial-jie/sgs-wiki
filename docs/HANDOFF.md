@@ -36,6 +36,11 @@
   - wiki `index.html` 房间 section 下加了「线上牌桌(朋友圈内测)」链接。
   - 线上实测(预览面板):进「联机」→ 取名弹窗 → 确定 → ws 直连 `wss://sgs-room…/noname/` → 大厅出现「创建房间 / 在线 / 约战」,地址输入框全程隐藏;`lib.config.auto_confirm=false / wuxie_self=false / show_wuxie=true` 生效。
   未做:**3 手机横屏**——浏览器不能强制横屏(iOS 不支持方向锁;Android 仅全屏可锁),方案=PWA manifest `orientation: landscape`(添加到主屏幕后生效,仅 Android)+ 竖屏时盖「请旋转手机」提示 + 默认手机横版布局;**5 技能常驻在头像下方(可发动变绿/被封锁显示锁)**——无名杀无此选项,要写 UI 扩展(读 `player.getSkills()`、`skill_blocker`、`_status.event` 可用判定)。
+**✅ 2026-10-30 第二批(用户反馈:弹窗太重 / 手机报错)**——补丁基线已升到 noname `b481b17`(scratchpad 清空后按 README 流程重 clone,两份 patch 干净套用):
+  - 「是否输入邀请链接以进入联机地址和房间?」原生 confirm:来自 `mode/connect.js` 的 `read_clipboard`(「读取邀请链接」,原版默认 **开**)→ 菜单 `init` 改 false,且 `lib.hallURL` 存在时整段跳过。
+  - iPhone 进房后弹「NotAllowedError: The request is not allowed by the user agent…」:是 iOS Safari 拒绝无用户手势的 `ui.backgroundMusic.play()`(`content.ts` 两处 + `ui/create/index.js` 一处),返回的 rejected promise 被 `window.onunhandledrejection` 捕获成错误框 → 三处包成 `Promise.resolve(...).catch(()=>{})`。
+  - 未改(待讨论/待复现):①房间码——我们的大厅本来就列出所有房间、点即加入,人少时就一个房间,暂不做;②「三选一技能第三项被确定行挡住」需要截图/具体技能+设备复现(控制条 `#control` 与 `.dialog` 叠放的 CSS);③铁索连环「先点牌再出重铸」:现为内置技能 `_recasting`(`library/skill.js`,phaseUse 常驻按钮),改成选牌后出现要改 chooseToUse 交互,归入下一批 UI 扩展(和技能常驻栏一起)。
+  - 下一步方向(用户 2026-10-30):统一将池 + 把我们的身份模式变体(大忠似奸/失心疯/暴君/昏君/无间道)做进身份局的游戏模式选项 → 写无名杀扩展 `extension/sgs-friends/`:读 /pool 白名单灌 `identity_banned`、线下将、模式变体。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
