@@ -70,6 +70,10 @@
   - 规则:击杀真实同阵营 → `modedDiscard` 全部牌;主帅 +1 血上限(占 zhu 位的那位在联机 >4 人路径会先吃标准主公 +1,单将时按 `maxHp > get.infoMaxHp(原上限)` 判断已加过);`checkResult`:龙内鬼死=龙军胜,虎内鬼死=虎军胜(主帅死不结束);`realAttitude` 按真实阵营。顺手修:`special_identity`(8 人特殊身份)在 baonue/dazhong/wujian 下跳过,否则 `fans.randomRemove()` 取空会崩。
   - 本地验证(8 人):配比 1/2/1 ×2、我(龙内鬼)看别人只有龙/虎、主帅视角看对方牌背真身、护卫杀本方主帅弃牌且虎内鬼暴露、虎内鬼死 → 虎军四人胜(含我这个龙内鬼)。**联机未实战**。
   - 至此四个变体(暴虐无道/大忠似奸/失心疯/无间道)+ 将池都在「游戏模式」下拉里。后续可做:线下将作扩展武将(线下孙寒华/SP徐氏/教主张角〖蔽众〗/暴君董卓〖肆虐〗/昏君刘宏〖障目〗〖鬻爵〗)、战绩回传 /api/history、技能常驻栏/重铸交互、手机横屏 PWA。
+**✅ 2026-10-30 体验优化:声音默认关 + 「名字即账号」**
+  - `game/config.json`:`background_music: "music_off"`、`background_audio: false`(只影响没存过这两个键的新玩家;老玩家在 选项→音效 自己关)。
+  - **名字即账号(无密码)**:扩展 `sgs-friends` 把昵称哈希(djb2+fnv)成联机 key `nm…` 写进 `localStorage[configprefix+"key"]` 与 `game.onlineKey`——大厅按 key 认人,同名跨设备就是同一人。资料存 worker **`/api/noname-profile`**(`SgsConfigDO.profiles`,storage `nonameProfiles` = {昵称:{avatar,updatedAt,seen}},上限 500 人淘汰最久未来者;GET ?name= / PUT {name,avatar};CORS 含 OPTIONS 预检;**待用户 deploy worker**)。扩展钩住 `game.saveConfig`:昵称变 → 换 key + `pullProfile`(有资料就套头像,没有就把当前头像登记上去);头像变 → 400ms 防抖 PUT。启动时老玩家也拉一次(别处改过头像同步过来)。`connect.js` 取名后最多等 1.5s(`_status.sgsFriendsProfileReady`)再连大厅,进大厅头像就对。⚠ 拉到的头像不能用 `lib.character` 校验(splash 阶段武将表还没装,会误判成「没有」然后反向覆盖服务端)。
+  - 本地验证(dev + wrangler dev):PUT/GET/OPTIONS 通;改名 → key 变、拉头像;改头像 → 服务端更新;换回旧名 → 头像恢复。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:

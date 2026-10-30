@@ -149,6 +149,94 @@ _status.sgsFriendsReady = new Promise(resolve => {
 if (!Array.isArray(lib.onprepare)) lib.onprepare = [];
 lib.onprepare.push(() => Promise.race([_status.sgsFriendsReady, _status.sgsFriendsTimeout]));
 
+// ---------------------------------------------------------------------------------------------
+// ② 玩家资料(无密码的「名字即账号」):同名即同一人——昵称哈希成联机 key(大厅据此认人、跨设备一致),
+//    头像等资料存在我们 worker(/api/noname-profile),改昵称时拉取该名字的资料,改头像时回写。
+// ---------------------------------------------------------------------------------------------
+const PROFILE_API = POOL_API.replace(/\/api\/noname-pool$/, "/api/noname-profile");
+const DEFAULT_NICK = "无名玩家";
+function nameKey(name) {
+	let h = 5381;
+	for (let i = 0; i < name.length; i++) h = ((h << 5) + h + name.charCodeAt(i)) >>> 0;
+	let h2 = 2166136261;
+	for (let i = 0; i < name.length; i++) h2 = Math.imul(h2 ^ name.charCodeAt(i), 16777619) >>> 0;
+	return `nm${h.toString(16)}${h2.toString(16)}`;
+}
+function currentNick() {
+	const n = lib.config.connect_nickname;
+	return typeof n === "string" && n.trim() && n !== DEFAULT_NICK ? n.trim() : null;
+}
+function applyNameKey(name) {
+	const key = nameKey(name);
+	try { localStorage.setItem(`${lib.configprefix}key`, key); } catch (e) { /* ignore */ }
+	game.onlineKey = key;
+}
+let profileSyncing = false;
+let pushTimer = null;
+async function pullProfile(name) {
+	try {
+		const res = await fetch(`${PROFILE_API}?name=${encodeURIComponent(name)}`, { cache: "no-store" });
+		if (!res.ok) return null;
+		const data = await res.json();
+		const profile = data && data.profile;
+		profileSyncing = true;
+		try {
+			// 不用 lib.character 校验:splash 阶段武将表还没装;服务端已限制为 [\w-]+
+			if (profile && typeof profile.avatar === "string" && /^[\w-]{1,40}$/.test(profile.avatar)) {
+				game.saveConfig("connect_avatar", profile.avatar);
+				game.saveConfig("connect_avatar", profile.avatar, "connect");
+			} else {
+				pushProfile(); // 新名字:把当前头像登记上去
+			}
+		} finally {
+			profileSyncing = false;
+		}
+		return profile;
+	} catch (e) {
+		console.warn("[sgs-friends] 拉取玩家资料失败:", e?.message || e);
+		return null;
+	}
+}
+function pushProfile() {
+	const name = currentNick();
+	if (!name) return;
+	clearTimeout(pushTimer);
+	pushTimer = setTimeout(() => {
+		fetch(PROFILE_API, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ name, avatar: lib.config.connect_avatar || "caocao" }),
+		}).catch(e => console.warn("[sgs-friends] 保存玩家资料失败:", e?.message || e));
+	}, 400);
+}
+// 挂钩 game.saveConfig:昵称变了 → 换 key 并拉资料;头像变了 → 回写
+{
+	const origSaveConfig = game.saveConfig;
+	game.saveConfig = function (key, value, local, ...rest) {
+		const prevNick = key === "connect_nickname" ? currentNick() : null;
+		const r = origSaveConfig.call(this, key, value, local, ...rest);
+		if (profileSyncing) return r;
+		if (key === "connect_nickname") {
+			const nick = currentNick();
+			if (nick && nick !== prevNick) {
+				applyNameKey(nick);
+				_status.sgsFriendsProfileReady = pullProfile(nick);
+			}
+		} else if (key === "connect_avatar" && currentNick()) {
+			pushProfile();
+		}
+		return r;
+	};
+}
+// 启动:已有昵称的老玩家也按名字对齐 key、拉一次资料(别的设备上改过头像会同步过来)
+{
+	const nick = currentNick();
+	if (nick) {
+		applyNameKey(nick);
+		_status.sgsFriendsProfileReady = pullProfile(nick);
+	}
+}
+
 game.import("play", function () {
 	return {
 		name: "sgs-friends",
@@ -180,7 +268,7 @@ game.import("play", function () {
 			},
 		},
 		help: {
-			"朋友圈牌桌": "<ul><li>将池:每局开始前从 sgs-wiki 房间的将池读白/黑名单,不在池里的武将自动禁用(联机房也一样,以房主为准)。</li><li>后续:暴虐无道 / 大忠似奸 / 失心疯 / 无间道 等身份局变体。</li></ul>",
+			"朋友圈牌桌": "<ul><li>将池:每局开始前从 sgs-wiki 房间的将池读白/黑名单,不在池里的武将自动禁用(联机房也一样,以房主为准)。</li><li>身份局变体:暴虐无道 / 大忠似奸 / 失心疯 / 无间道(选项→身份→游戏模式)。</li><li>名字即账号:同一个昵称在任何设备进来都是同一人,头像等资料跟着名字走(存在 sgs-wiki 房间服务器,无需密码)。</li></ul>",
 		},
 	};
 });

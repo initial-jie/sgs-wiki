@@ -121,6 +121,17 @@ export function handleSgs(request, env, url) {
     res.headers.set("access-control-allow-origin", "*");
     return res;
   })();
+  // 无名杀玩家资料(名字即账号,无密码):GET ?name= / PUT {name, avatar};跨域给 Pages 用
+  if (url.pathname === "/api/noname-profile") {
+    const cors = { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, PUT, OPTIONS", "access-control-allow-headers": "content-type", "access-control-max-age": "86400" };
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    if (request.method === "GET" || request.method === "PUT") return (async () => {
+      const res = await env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
+      const out = new Response(res.body, res);
+      for (const [k, v] of Object.entries(cors)) out.headers.set(k, v);
+      return out;
+    })();
+  }
   // 历史对局(只读;写入只走房间 DO 内部调用,外面不开 POST)
   if (url.pathname === "/api/history" && request.method === "GET")
     return env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
@@ -190,8 +201,32 @@ export class SgsConfigDO {
     }
     return new Response(JSON.stringify({ list, keep: SgsConfigDO.HISTORY_KEEP, days: SgsConfigDO.HISTORY_DAYS }), { headers: noStore });
   }
+  // 无名杀玩家资料:storage key "nonameProfiles" = { [昵称]: { avatar, updatedAt, seen } };无鉴权(朋友圈),上限 500 人
+  async profiles(request) {
+    const noStore = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+    const url = new URL(request.url);
+    const all = (await this.state.storage.get("nonameProfiles")) || {};
+    const cleanName = (n) => (typeof n === "string" ? n.trim().slice(0, 12) : "");
+    if (request.method === "PUT") {
+      let body; try { body = await request.json(); } catch { return new Response("bad", { status: 400 }); }
+      const name = cleanName(body && body.name);
+      if (!name) return new Response("bad", { status: 400 });
+      const prev = all[name] || {};
+      const avatar = typeof body.avatar === "string" && /^[\w-]{1,40}$/.test(body.avatar) ? body.avatar : prev.avatar || null;
+      all[name] = { avatar, updatedAt: Date.now(), seen: (prev.seen || 0) + 1 };
+      // 超量时淘汰最久没来的
+      const names = Object.keys(all);
+      if (names.length > 500) for (const n of names.sort((a, b) => all[a].updatedAt - all[b].updatedAt).slice(0, names.length - 500)) delete all[n];
+      await this.state.storage.put("nonameProfiles", all);
+      return new Response(JSON.stringify({ ok: true, profile: { name, ...all[name] } }), { headers: noStore });
+    }
+    const name = cleanName(url.searchParams.get("name"));
+    const p = name && all[name];
+    return new Response(JSON.stringify({ profile: p ? { name, ...p } : null }), { headers: noStore });
+  }
   async fetch(request) {
     if (new URL(request.url).pathname === "/api/history") return this.history(request);
+    if (new URL(request.url).pathname === "/api/noname-profile") return this.profiles(request);
     const noStore = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
     const norm = (a) => [...new Set((Array.isArray(a) ? a : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 5000);
     if (request.method === "PUT") {

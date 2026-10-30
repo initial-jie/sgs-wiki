@@ -1,5 +1,5 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..d73969c 100644
+index 99aaa79..7740455 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -20,6 +20,17 @@ index 99aaa79..d73969c 100644
  	"enable_drag": true,
  	"enable_pressure": false,
  	"pressure_taptic": true,
+@@ -92,8 +92,8 @@
+ 	"right_info": true,
+ 	"longpress_info": true,
+ 	"long_info": true,
+-	"background_music": "music_default",
+-	"background_audio": true,
++	"background_music": "music_off",
++	"background_audio": false,
+ 	"background_speak": true,
+ 	"glow_phase": "yellow",
+ 	"die_move": "flip",
 @@ -136,7 +136,9 @@
  	"show_cardpile": true,
  	"only_fullskin": true,
@@ -111,7 +122,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="bZhong"],
  .player .identity[data-color="bNei"],
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
-index 943d3f9..8bf326a 100644
+index 943d3f9..80fd87b 100644
 --- a/apps/core/mode/connect.js
 +++ b/apps/core/mode/connect.js
 @@ -85,6 +85,7 @@ export default {
@@ -122,7 +133,7 @@ index 943d3f9..8bf326a 100644
  					}
  				});
  			};
-@@ -120,6 +121,38 @@ export default {
+@@ -120,6 +121,42 @@ export default {
  			ui.window.appendChild(button);
  			ui.ipbutton = button;
  
@@ -150,7 +161,11 @@ index 943d3f9..8bf326a 100644
 +				};
 +				askName()
 +					.catch(e => console.error(e))
-+					.then(() => {
++					.then(async () => {
++						// sgs-friends 扩展按昵称拉云端资料(头像等),最多等 1.5 秒再连,头像才能一进大厅就对
++						if (_status.sgsFriendsProfileReady) {
++							await Promise.race([_status.sgsFriendsProfileReady, new Promise(r => setTimeout(r, 1500))]);
++						}
 +						node.textContent = get.config("hall_ip") || lib.hallURL;
 +						connect();
 +					});
@@ -161,7 +176,7 @@ index 943d3f9..8bf326a 100644
  			ui.hall_button = ui.create.system(
  				"联机大厅",
  				() => {
-@@ -163,7 +196,8 @@ export default {
+@@ -163,7 +200,8 @@ export default {
  				},
  				220
  			);
