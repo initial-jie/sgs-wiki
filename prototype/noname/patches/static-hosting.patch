@@ -32,7 +32,7 @@ index 99aaa79..d73969c 100644
  	"show_stat": true,
  	"show_playerids": true,
 diff --git a/apps/core/game/package.js b/apps/core/game/package.js
-index 753d0a0..cc172ee 100644
+index 753d0a0..6e8750a 100644
 --- a/apps/core/game/package.js
 +++ b/apps/core/game/package.js
 @@ -49,6 +49,7 @@ window.noname_package = {
@@ -43,6 +43,42 @@ index 753d0a0..cc172ee 100644
  		boss: "诸神降临",
  		cardpile: "牌堆补充",
  		coin: "富甲天下",
+@@ -71,6 +72,7 @@ window.noname_package = {
+ 			normal: "身份模式",
+ 			zhong: "忠胆英杰",
+ 			purple: "3v3v2",
++			baonue: "暴虐无道",
+ 		},
+ 		guozhan: {
+ 			normal: "国战模式",
+diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
+index f67cd1d..373881e 100644
+--- a/apps/core/layout/default/layout.css
++++ b/apps/core/layout/default/layout.css
+@@ -4045,6 +4045,7 @@ span[data-nature="firemx"] {
+ }
+ 
+ .player .identity[data-color="zhong"],
++.player .identity[data-color="zheng"],
+ .player .identity[data-color="qun"],
+ .player .identity[data-color="neutral"],
+ .player .identity[data-color="friend2"],
+@@ -4115,6 +4116,7 @@ span[data-nature="qunmm"] {
+ }
+ 
+ .player .identity[data-color="nei"],
++.player .identity[data-color="jianzhe"],
+ .player .identity[data-color="ye"],
+ .player .identity[data-color="rYe"],
+ .player .identity[data-color="bYe"],
+@@ -4149,6 +4151,7 @@ span[data-nature="kamimm"] {
+ }
+ 
+ .player .identity[data-color="fan"],
++.player .identity[data-color="ni"],
+ .player .identity[data-color="wu"],
+ div[data-nature="fan"],
+ span[data-nature="fan"],
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
 index 943d3f9..8bf326a 100644
 --- a/apps/core/mode/connect.js
@@ -104,6 +140,254 @@ index 943d3f9..8bf326a 100644
  				let ced = false;
  				const read = text => {
  					if (connectionStarted) {
+diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
+index 67fb1b5..a058e37 100644
+--- a/apps/core/mode/identity.js
++++ b/apps/core/mode/identity.js
+@@ -3,6 +3,34 @@ import html from "dedent";
+ 
+ export const type = "mode";
+ 
++/**
++ * 【私用补丁】暴虐无道(sgs-wiki 线下房间的身份变体,不臣之君盒规则卡):
++ * 暴君(复用 zhu:1 号位、亮身份、主公技、候选将数都同主公)/ 诤臣 zheng / 间者 jianzhe / 逆乱 ni。
++ * 暴君 +2 空体力上限,每击杀一名角色回复 1 点体力;胜利:暴君=其他人全死;诤臣=逆乱与暴君皆死;
++ * 逆乱=暴君死且有逆乱存活;间者=在自己回合内其他身份达成胜利则单独获胜。
++ * 在主机和各客户端都要跑(broadcastAll),所以写成自包含函数。
++ */
++const setupBaonue = () => {
++	_status.mode = "baonue";
++	const table = {
++		2: ["zhu", "ni"],
++		3: ["zhu", "jianzhe", "ni"],
++		4: ["zhu", "zheng", "jianzhe", "ni"],
++		5: ["zhu", "zheng", "jianzhe", "ni", "ni"],
++		6: ["zhu", "zheng", "zheng", "jianzhe", "ni", "ni"],
++		7: ["zhu", "zheng", "zheng", "jianzhe", "ni", "ni", "ni"],
++		8: ["zhu", "zheng", "zheng", "jianzhe", "ni", "ni", "ni", "ni"],
++		9: ["zhu", "zheng", "zheng", "zheng", "jianzhe", "ni", "ni", "ni", "ni"],
++		10: ["zhu", "zheng", "zheng", "zheng", "jianzhe", "ni", "ni", "ni", "ni", "ni"],
++	};
++	lib.config.mode_config.identity.identity = Object.keys(table)
++		.map(Number)
++		.sort((a, b) => a - b)
++		.map(n => table[n]);
++	lib.translate.zhu = "暴";
++	lib.translate.zhu2 = "暴君";
++};
++
+ /** @type { importModeConfig } */
+ export default {
+ 	name: "identity",
+@@ -205,6 +233,9 @@ export default {
+ 			};
+ 			if (_status.connectMode) {
+ 				_status.mode = lib.configOL.identity_mode;
++				if (_status.mode == "baonue") {
++					game.broadcastAll(setupBaonue);
++				}
+ 				if (_status.mode == "zhong") {
+ 					lib.configOL.number = 8;
+ 					if (lib.configOL.zhong_card) {
+@@ -233,11 +264,14 @@ export default {
+ 				if (lib.configOL.number < 2) {
+ 					lib.configOL.number = 2;
+ 				}
+-				if (_status.mode != "purple" && lib.configOL.enable_year_limit) {
++				if (_status.mode != "purple" && _status.mode != "baonue" && lib.configOL.enable_year_limit) {
+ 					lib.onwash.push(yearLimitCheck);
+ 				}
+ 				game.randomMapOL();
+ 			} else {
++				if (_status.mode == "baonue") {
++					setupBaonue();
++				}
+ 				if (_status.mode == "normal" && (get.config("enable_commoner") || get.config("double_nei"))) {
+ 					const identity = get.config("enable_commoner") ? "commoner" : "nei";
+ 					for (const list of lib.config.mode_config.identity.identity.slice(1)) {
+@@ -253,7 +287,7 @@ export default {
+ 						list.push(identity);
+ 					}
+ 				}
+-				if (_status.mode != "purple" && get.config("enable_year_limit")) {
++				if (_status.mode != "purple" && _status.mode != "baonue" && get.config("enable_year_limit")) {
+ 					lib.onwash.push(yearLimitCheck);
+ 				}
+ 				for (const current of game.players) {
+@@ -335,7 +369,14 @@ export default {
+ 						game.zhong.addSkill("sheshen");
+ 					}
+ 				}
+-				let enhance_zhu = !["zhong", "stratagem", "purple"].includes(_status.mode),
++				if (_status.mode === "baonue" && game.zhu) {
++					// 暴虐无道:暴君增加 2 点空的体力上限
++					game.broadcastAll(player => {
++						player.maxHp += 2;
++						player.update();
++					}, game.zhu);
++				}
++				let enhance_zhu = !["zhong", "stratagem", "purple", "baonue"].includes(_status.mode),
+ 					skill;
+ 				if (enhance_zhu) {
+ 					if (_status.connectMode) {
+@@ -542,7 +583,7 @@ export default {
+ 		 * 给“房间信息”界面填充身份模式的联机房间配置
+ 		 */
+ 		getRoomInfo(uiintro) {
+-			uiintro.add('<div class="text chat">游戏模式：' + (lib.configOL.identity_mode == "zhong" ? "明忠" : "标准"));
++			uiintro.add('<div class="text chat">游戏模式：' + ({ zhong: "明忠", baonue: "暴虐无道", stratagem: "谋攻", purple: "3v3v2" }[lib.configOL.identity_mode] || "标准"));
+ 			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
+ 			if (lib.configOL.identity_mode != "zhong") {
+ 				if (lib.configOL.identity_mode == "stratagem") {
+@@ -649,6 +690,13 @@ export default {
+ 						cai: "猜",
+ 					};
+ 				}
++			} else if (_status.mode == "baonue") {
++				return {
++					ni: "逆",
++					zheng: "诤",
++					jianzhe: "间",
++					cai: "猜",
++				};
+ 			} else {
+ 				if (get.config("enable_commoner")) {
+ 					return {
+@@ -689,6 +737,15 @@ export default {
+ 					case "commoner":
+ 						list[i] = "平民";
+ 						break;
++					case "zheng":
++						list[i] = "诤臣";
++						break;
++					case "jianzhe":
++						list[i] = "间者";
++						break;
++					case "ni":
++						list[i] = "逆乱";
++						break;
+ 					case "zhu":
+ 						list[i] = "主公";
+ 						break;
+@@ -741,6 +798,9 @@ export default {
+ 					case "stratagem":
+ 						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
+ 						break;
++					case "baonue":
++						str2 = get.cnNumber(get.playerNumber()) + "人暴虐无道 - " + lib.translate[game.me.identity + "2"];
++						break;
+ 					default:
+ 						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
+ 				}
+@@ -911,6 +971,36 @@ export default {
+ 				}
+ 				return;
+ 			}
++			if (_status.mode === "baonue") {
++				const zhuDead = !game.zhu || game.zhu.isDead();
++				const alive = identity => game.hasPlayer(current => current.identity === identity);
++				let winners = null;
++				if (zhuDead) {
++					winners = alive("ni") ? ["ni"] : ["zheng"];
++				} else if (!game.hasPlayer(current => current.identity !== "zhu")) {
++					winners = ["zhu"];
++				}
++				if (!winners) {
++					return;
++				}
++				// 间者:在你的回合内其他身份达成胜利条件,则你单独获胜
++				const current = _status.currentPhase;
++				const jianzheWin = current && current.identity === "jianzhe" && current.isAlive();
++				const everyone = game.players.concat(game.dead);
++				const winnerPlayers = jianzheWin ? [current] : everyone.filter(p => winners.includes(p.identity));
++				const loserPlayers = everyone.filter(p => !winnerPlayers.includes(p));
++				game.broadcastAll(
++					(winner, loser) => {
++						_status.winner = winner;
++						_status.loser = loser;
++					},
++					winnerPlayers,
++					loserPlayers
++				);
++				game.showIdentity();
++				game.over(winnerPlayers.includes(me));
++				return;
++			}
+ 			if (!game.zhu) {
+ 				if (get.population("fan") == 0) {
+ 					switch (me.identity) {
+@@ -1853,8 +1943,8 @@ export default {
+ 						if (event.zhongmode) {
+ 							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
+ 						} else {
+-							identityChoices = ["random", "zhu", "zhong", "fan", "nei"];
+-							if (get.config("enable_commoner") && !event.stratagemMode) {
++							identityChoices = _status.mode === "baonue" ? ["random", "zhu", "zheng", "jianzhe", "ni"] : ["random", "zhu", "zhong", "fan", "nei"];
++							if (get.config("enable_commoner") && !event.stratagemMode && _status.mode !== "baonue") {
+ 								identityChoices.push("commoner");
+ 							}
+ 						}
+@@ -2957,6 +3047,9 @@ export default {
+ 		fan: "反",
+ 		commoner: "民",
+ 		cai: "猜",
++		zheng: "诤",
++		jianzhe: "间",
++		ni: "逆",
+ 		cai2: "猜",
+ 		rZhu: "主",
+ 		rZhong: "忠",
+@@ -2980,6 +3073,9 @@ export default {
+ 		nei2: "内奸",
+ 		fan2: "反贼",
+ 		commoner2: "平民",
++		zheng2: "诤臣",
++		jianzhe2: "间者",
++		ni2: "逆乱",
+ 		random2: "随机",
+ 		enemy: "敌",
+ 		friend: "友",
+@@ -3102,6 +3198,13 @@ export default {
+ 				if (_status.mode === "stratagem") {
+ 					return;
+ 				}
++				if (_status.mode === "baonue") {
++					// 暴虐无道:暴君每击杀一名角色回复 1 点体力;其余身份没有击杀奖惩
++					if (source && source !== this && source.identity === "zhu" && source.isAlive()) {
++						source.recover();
++					}
++					return;
++				}
+ 				if (_status.mode === "purple") {
+ 					if (source) {
+ 						if (this.identity === "rZhu" || this.identity === "bZhu") {
+@@ -3913,6 +4016,26 @@ export default {
+ 				}
+ 				return -7;
+ 			}
++			if (_status.mode === "baonue") {
++				if (from === to) {
++					return 10;
++				}
++				const a = from.identity,
++					b = to.identity;
++				if (a === "zhu") {
++					return -7;
++				}
++				if (a === "zheng") {
++					return b === "zheng" ? 7 : b === "jianzhe" ? -2 : -7;
++				}
++				if (a === "ni") {
++					return b === "ni" ? 7 : b === "zhu" ? -7 : b === "zheng" ? -5 : -2;
++				}
++				if (a === "jianzhe") {
++					return b === "zhu" ? -4 : -2;
++				}
++				return -3;
++			}
+ 			if (_status.mode === "stratagem") {
+ 				if (!game.zhu) {
+ 					if (from.identity === "nei" || to.identity === "nei") {
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
 index 10da4f2..0864b56 100644
 --- a/apps/core/noname/init/browser.js
@@ -269,7 +553,7 @@ index bbc3353..dc07928 100644
  			},
  			event.videoId,
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..6728502 100644
+index 08f9718..2741715 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -308,7 +592,23 @@ index 08f9718..6728502 100644
  					unfrequent: true,
  					onclick(bool) {
  						game.saveConfig("show_wuxie", bool);
-@@ -7491,7 +7491,7 @@ export class Library {
+@@ -5700,6 +5700,7 @@ export class Library {
+ 						zhong: "明忠",
+ 						stratagem: "谋攻",
+ 						purple: "3v3v2",
++						baonue: "暴虐无道",
+ 					},
+ 					restart: true,
+ 					frequent: true,
+@@ -6073,6 +6074,7 @@ export class Library {
+ 						zhong: "明忠",
+ 						stratagem: "谋攻",
+ 						purple: "3v3v2",
++						baonue: "暴虐无道",
+ 					},
+ 					restart: true,
+ 					frequent: true,
+@@ -7491,7 +7493,7 @@ export class Library {
  				},
  				read_clipboard: {
  					name: "读取邀请链接",

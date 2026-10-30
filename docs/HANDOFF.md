@@ -47,6 +47,12 @@
   - 名字匹配(核心坑):无名杀 `lib.translate[id]` 自带前缀,且前缀是「平台+类别」组合("界"/"OL谋"/"新杀谋"/"手杀界"/"☆SP");`${id}_prefix` 只是上色元数据。规则:平台记号 OL/新杀→无、手杀→移动版、标→标;类别 ★SP/☆SP/J.SP→SP、晋→无;不认识的记号(武/乐/侠/星/威/用间/衰/徐兖/TW/PE…)不参与。同名多版本:先按平台取第一组有货(OL > 无 > 新杀;移动版只认手杀),组内按势力过滤(`lib.character[id].group`,贾充 群/晋),再去掉 ★☆J.SP 版,再并列取 `ol_` 开头。别名 `ALIAS = {冯方女: 冯方}`。
   - 结果(线上池 197 白名单):对上 **189**,未对上 8 = 界伏皇后(无名杀没有)+ 我们的线下将(线下孙寒华/SP徐氏/移动版谋韩当/神黄月英/教主张角/暴君董卓/昏君刘宏,以后作扩展武将补)。生效方式:内存写 `lib.config.identity_banned` / `connect_identity_banned`(建房菜单 `startMenu.js:78` 读它)/ 当前 `banned`,不落盘,池子改了下局自动跟。⚠ 首局竞态:splash 点「身份」后选将框会在池子到达前生成 → 把就绪 promise 推进 `_status.onprepare`(本体 `game.loop()` 前 await 它,`init/index.ts` ~605),最多等 6s。
   - 下一期:身份局变体(暴虐无道 → 大忠似奸 → 失心疯/无间道):`mode/identity.js` 的 `identity_mode`(normal/zhong/stratagem/purple)+ 身份表 `config.json mode_config.identity.identity` + 发身份(identity.js ~170-260)+ `checkResult`(~820-975)+ 翻译/配色;间者/袒佞等特殊规则作技能。
+**✅ 2026-10-30 扩展第二期:身份局变体「暴虐无道」(`mode/identity.js` 补丁,随 static-hosting.patch)**
+  - 入口:选项→身份→「游戏模式」/ 联机建房「游戏模式」多了 **暴虐无道**(`library/index.js` 两处 `identity_mode` item + `package.js` submode 翻译)。
+  - 实现:**暴君复用 `zhu`**(1 号位、亮身份、主公技、候选将数、>4 人 +1 血 全同主公;只把 `lib.translate.zhu/zhu2` 改成 暴/暴君),新身份 `zheng` 诤臣 / `jianzhe` 间者 / `ni` 逆乱(翻译 + `layout.css` data-color 借 忠/内/反 三色)。模块级 `setupBaonue()`(自包含,`game.broadcastAll` 给客户端):写 `lib.config.mode_config.identity.identity` 身份表(2~10 人,同 shared/identity.mjs 的 baonue 表)+ `_status.mode="baonue"`。
+  - 规则点:暴君 `maxHp += 2`(选将后、加强主公之前,broadcastAll);`dieAfter2`:暴君击杀回复 1(其余身份无击杀奖惩、无主杀忠罚);`checkResult`:暴君死→有逆乱活=逆乱胜,否则诤臣胜;其他人全死=暴君胜;`_status.currentPhase` 是存活间者则**间者单独胜**;写 `_status.winner/loser` 供联机结算。`realAttitude` 给 AI 补了阵营态度。年限/平民/双内奸在此模式下不生效。
+  - 本地验证(dev,6 人):身份表 1/2/1/2 正确、暴君标签「暴」亮明、上限 3+1+2=6;四种结局用 `player.die({source})` 手动触发都判对(`die(reason)` 的 reason 要带 `.source`,直接传玩家不算击杀)。**联机实战未试**,下次开房选暴虐无道跑一局。
+  - 下一期:大忠似奸(昏君/奸臣/忠臣/义军 + 袒佞/分线变种)→ 失心疯(失心盖牌)→ 无间道(双阵营牌背)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
