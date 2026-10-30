@@ -53,6 +53,12 @@
   - 规则点:暴君 `maxHp += 2`(选将后、加强主公之前,broadcastAll);`dieAfter2`:暴君击杀回复 1(其余身份无击杀奖惩、无主杀忠罚);`checkResult`:暴君死→有逆乱活=逆乱胜,否则诤臣胜;其他人全死=暴君胜;`_status.currentPhase` 是存活间者则**间者单独胜**;写 `_status.winner/loser` 供联机结算。`realAttitude` 给 AI 补了阵营态度。年限/平民/双内奸在此模式下不生效。
   - 本地验证(dev,6 人):身份表 1/2/1/2 正确、暴君标签「暴」亮明、上限 3+1+2=6;四种结局用 `player.die({source})` 手动触发都判对(`die(reason)` 的 reason 要带 `.source`,直接传玩家不算击杀)。**联机实战未试**,下次开房选暴虐无道跑一局。
   - 下一期:大忠似奸(昏君/奸臣/忠臣/义军 + 袒佞/分线变种)→ 失心疯(失心盖牌)→ 无间道(双阵营牌背)。
+**✅ 2026-10-30 扩展第三期:「大忠似奸」(含本桌「昏君二线」变种;identity.js 补丁)**
+  - 身份:昏君复用 `zhu`(显示 昏/昏君)、奸臣 `jianchen`(固定 1)、忠臣复用 `zhong`、义军 `yijun`;表同 shared/identity.mjs(4 人 1/1/1/1 … 10 人 1/1/3/5)。`setupDazhong()` 广播身份表+翻译;选将后 `broadcastAll` 让义军在各自客户端本地看到彼此(`player.showIdentity()` 是本地的,不广播)。
+  - 规则:杀义军摸两张;昏君杀忠臣无惩罚。全局技 `dazhong_rule`(`game.addGlobalSkill`,trigger global dying,filter `player===event.player`):奸臣首次濒死 → `broadcastAll(showIdentity)` 亮明 + 昏君得〖袒佞〗`dazhong_tanning`(source damageBegin2 `trigger.cancel()` 防伤害;mod playerEnabled 禁延时锦囊;global dyingAfter 未对其用桃则 `showHandcards`)+ 奸臣挂 `dazhong_tanning_target`(mod canBeDiscarded/canBeGained:事件名为 guohe/shunshou 且非判定区 → false;注意 lib.filter 传给 mod 的 `event` 已是父事件名字符串)。奸臣阵亡时在 `dieAfter2` 分线:忠臣数≥义军数 → `_status.dazhongLine="hunyong"`(昏君胜利条件=奸臣),否则 `"fanran"`(昏君 `loseMaxHp()`、并入忠臣阵营、此后杀忠臣 `modedDiscard` 全部牌);标记技 `dazhong_hunyong/fanran` 挂昏君身上提示。`checkResult`:昏君死=义军胜;否则 忠臣全死=奸臣胜(含已死奸臣)、奸臣+义军全死=忠臣胜,昏君按分线取对应条件(未分线=忠臣与义军全死)。
+  - **⚠ 通用坑(暴虐无道也中招,已一起修)**:新身份没有 `choice_<身份>`(候选武将数)配置 → `get.config("choice_x")` 为 undefined → **AI 一张候选都拿不到、整局没武将**。setupX 里补 `lib.config.mode_config.identity.choice_*`(诤臣同忠臣/间者·奸臣同内奸/逆乱·义军同反贼),联机分支再补 `lib.configOL.choice_*`。
+  - 本地验证(6/7 人):义军互认、奸臣濒死亮明+昏君得袒佞、袒佞防伤害(4→4)/禁延时锦囊目标、幡然醒悟(-1 上限,杀忠臣弃牌 6→0)、昏庸无道(上限不变)、杀义军摸 2、四类结局(义军/奸臣+昏君/昏君+忠臣/…)都对。**联机实战未试**。
+  - 下一期:失心疯(教主/护法/官兵/内奸 + 失心盖牌:本人看不到真实身份、教主可见)→ 无间道(龙/虎牌背双阵营)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
