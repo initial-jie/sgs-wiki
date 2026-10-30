@@ -228,6 +228,92 @@ function pushProfile() {
 		return r;
 	};
 }
+/** 大厅里改完昵称/头像要告诉大厅(在线列表、房间卡片用的是大厅缓存的那份) */
+function profileNotifyHall() {
+	try {
+		if (game.ws && game.ws.readyState === 1 && !game.online) {
+			game.send("server", "changeAvatar", get.connectNickname(), lib.config.connect_avatar);
+		}
+	} catch (e) { /* 不在大厅 */ }
+}
+function openAvatarPicker() {
+	if (!Object.keys(lib.character).length) {
+		game.alert("武将表还没加载,先进入联机大厅或任一模式再换头像");
+		return;
+	}
+	const banned = new Set(lib.config.identity_banned || []);
+	let list = Object.keys(lib.character).filter(id => !banned.has(id) && !lib.character[id].isUnseen);
+	if (list.length < 20) {
+		list = Object.keys(lib.character).filter(id => !lib.character[id].isUnseen).slice(0, 400);
+	}
+	const dialog = ui.create.dialog("选择头像(点一下即换)", [list, "character"], "hidden");
+	dialog.classList.add("fixed");
+	for (const button of dialog.buttons) {
+		button.classList.add("pointerdiv");
+		button.listen(() => {
+			const id = button.link;
+			game.saveConfig("connect_avatar", id);
+			game.saveConfig("connect_avatar", id, "connect");
+			profileNotifyHall();
+			dialog.close();
+			game.alert(`头像已换成「${lib.translate[id] || id}」,其他设备用同名进来也会是这个头像`);
+		});
+	}
+	dialog.open();
+}
+async function openProfile() {
+	const name = currentNick() || DEFAULT_NICK;
+	// 对话框依赖牌桌(ui.dialogs/ui.arena),开局 splash 阶段还没有 → 退化成提示
+	if (!ui.dialogs || !ui.arena) {
+		game.alert(`昵称「${name}」,头像 ${lib.translate[lib.config.connect_avatar] || lib.config.connect_avatar || "曹操"}。进入联机大厅或任一模式后,在大厅点自己的名字 / 扩展页「我的资料」可改名换头像。`);
+		return;
+	}
+	let profile = null;
+	try {
+		const res = await fetch(`${PROFILE_API}?name=${encodeURIComponent(name)}`, { cache: "no-store" });
+		if (res.ok) profile = (await res.json()).profile;
+	} catch (e) { /* 离线 */ }
+	const avatar = lib.config.connect_avatar || "caocao";
+	const dialog = ui.create.dialog("hidden");
+	dialog.classList.add("fixed");
+	dialog.add('<div class="text center" style="font-size:20px">我的资料</div>');
+	// 不用武将按钮(splash 阶段武将表还没装会崩),直接贴头像图
+	const pic = ui.create.div(".text.center");
+	const img = ui.create.div("", pic);
+	Object.assign(img.style, { width: "96px", height: "96px", margin: "6px auto", borderRadius: "10px", backgroundSize: "cover", backgroundPosition: "center" });
+	img.setBackground(avatar, "character");
+	dialog.add(pic);
+	const stat = profile ? `服务器记录:登记 ${profile.seen} 次,最近 ${new Date(profile.updatedAt).toLocaleString("zh-CN", { hour12: false })}` : "服务器暂无这个名字的记录(改名或换头像后会登记)";
+	dialog.add(`<div class="text center">昵称:<b>${name}</b><br>头像:${lib.translate[avatar] || avatar}<br><span style="opacity:.75">${stat}</span><br><span style="opacity:.75">同一个昵称在任何设备进来都是同一个账号,头像跟着昵称走。</span></div>`);
+	const bar = ui.create.div(".text.center");
+	bar.style.padding = "6px 0";
+	const mk = (label, fn) => {
+		const b = ui.create.div(".menubutton.large.pointerdiv", label, bar, fn);
+		b.style.margin = "4px 6px";
+		b.style.display = "inline-block";
+		return b;
+	};
+	mk("改名", async () => {
+		dialog.close();
+		const n = await game.promises.prompt("新的昵称(同名即同一账号,最多 12 字)", true);
+		const nick = typeof n === "string" ? n.trim().slice(0, 12) : "";
+		if (!nick) return;
+		game.saveConfig("connect_nickname", nick);
+		game.saveConfig("connect_nickname", nick, "connect");
+		if (_status.sgsFriendsProfileReady) await Promise.race([_status.sgsFriendsProfileReady, new Promise(r => setTimeout(r, 1500))]);
+		profileNotifyHall();
+		game.alert(`已改名为「${nick}」${lib.config.connect_avatar !== avatar ? ",并换成了这个名字之前用的头像" : ""}`);
+	});
+	mk("换头像", () => {
+		dialog.close();
+		openAvatarPicker();
+	});
+	mk("关闭", () => dialog.close());
+	dialog.add(bar);
+	dialog.open();
+}
+lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { openProfile, openAvatarPicker });
+
 // 启动:已有昵称的老玩家也按名字对齐 key、拉一次资料(别的设备上改过头像会同步过来)
 {
 	const nick = currentNick();
@@ -254,6 +340,14 @@ game.import("play", function () {
 				onclick(item) {
 					game.saveConfig("sgs-friends_pool_playpackconfig", item);
 					loadPool();
+				},
+			},
+			profile: {
+				name: "我的资料(改名 / 换头像)",
+				clear: true,
+				onclick() {
+					game.closeMenu?.();
+					openProfile();
 				},
 			},
 			refresh: {

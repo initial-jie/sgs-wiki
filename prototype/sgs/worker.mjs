@@ -93,6 +93,22 @@ p,li{margin:4px 0}ol,ul{padding-left:1.4em}ol ol{margin-top:4px}table{border-col
 .note{font-size:12.5px;color:#7a6f60;border-top:1px dashed #d9cfbd;padding-top:8px;margin-top:12px}.skill{font-weight:700;color:#a32e22}</style></head>
 <body><h1>${r.title}</h1><p class="sub">${r.sub || ""}</p>${r.html}</body></html>`]));
 
+// 线上牌桌玩家名册 /players:读 /api/noname-profile(全部),头像图取自无名杀 Pages 站
+const NONAME_SITE = "https://private-sgs-initial-j.pages.dev";
+const PLAYERS_HTML = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>线上牌桌 · 玩家名册</title>
+<style>body{margin:0;padding:16px 14px 32px;font:15px/1.6 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;background:#f6efe3;color:#2b2419}h1{font-size:20px;margin:0 0 4px}.sub{font-size:12.5px;color:#7a6f60;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.card{background:#fff;border:1px solid #e4d9c6;border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
+.av{width:48px;height:48px;border-radius:10px;background:#d9cfbd center/cover no-repeat;flex:none}.nm{font-weight:700}.meta{font-size:12px;color:#7a6f60}.empty{color:#7a6f60;padding:30px 0;text-align:center}
+a{color:#a32e22}</style></head><body><h1>线上牌桌 · 玩家名册</h1><div class="sub">名字即账号:同一个昵称在任何设备进来都是同一个人;头像在游戏里 选项→开始→联机 或大厅点自己名字修改。<a href="${NONAME_SITE}" target="_blank" rel="noopener">进入线上牌桌 →</a></div>
+<div id="list" class="grid"></div>
+<script>
+fetch("/api/noname-profile").then(r=>r.json()).then(d=>{const el=document.getElementById("list");const ps=(d.profiles||[]);if(!ps.length){el.innerHTML='<div class="empty">还没有人登记过</div>';return;}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+el.innerHTML=ps.map(p=>{const av=/^[\\w-]{1,40}$/.test(p.avatar||"")?p.avatar:"caocao";const t=p.updatedAt?new Date(p.updatedAt).toLocaleString("zh-CN",{hour12:false}):"";
+return '<div class="card"><div class="av" style="background-image:url(\''+"${NONAME_SITE}"+'/image/character/'+av+'.jpg\')"></div><div><div class="nm">'+esc(p.name)+'</div><div class="meta">头像 '+esc(av)+'<br>登记 '+(p.seen||0)+' 次 · '+esc(t)+'</div></div></div>';}).join("");
+}).catch(()=>{document.getElementById("list").innerHTML='<div class="empty">名册加载失败</div>';});
+</script></body></html>`;
+
 // 三国杀 HTTP 路由。返回 Response 或 null(不归我管)。
 export function handleSgs(request, env, url) {
   // 开房:发一个 4 位短码(房间由该短码惰性创建,首个连接者即"开房者")
@@ -155,6 +171,7 @@ export function handleSgs(request, env, url) {
     }
     if (url.pathname === "/pool" || url.pathname === "/pool/") return htmlResponse(POOL_HTML); // 将池编辑页
     if (url.pathname === "/stats" || url.pathname === "/stats/") return htmlResponse(STATS_HTML); // 武将数据页
+    if (url.pathname === "/players" || url.pathname === "/players/") return htmlResponse(PLAYERS_HTML); // 线上牌桌玩家名册
     // 三国杀房间页:根路径(历史入口,手机收藏的链接不变)+ /sgs
     if (url.pathname === "/" || url.pathname === "/sgs" || url.pathname === "/sgs/" || url.pathname === "/index.html") return htmlResponse(ROOM_HTML);
   }
@@ -221,7 +238,11 @@ export class SgsConfigDO {
       return new Response(JSON.stringify({ ok: true, profile: { name, ...all[name] } }), { headers: noStore });
     }
     const name = cleanName(url.searchParams.get("name"));
-    const p = name && all[name];
+    if (!name) { // 名册:全部玩家,最近活跃在前
+      const profiles = Object.entries(all).map(([n, v]) => ({ name: n, ...v })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      return new Response(JSON.stringify({ profiles }), { headers: noStore });
+    }
+    const p = all[name];
     return new Response(JSON.stringify({ profile: p ? { name, ...p } : null }), { headers: noStore });
   }
   async fetch(request) {

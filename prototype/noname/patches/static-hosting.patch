@@ -1315,6 +1315,19 @@ index 08f9718..4351b45 100644
  					frequent: true,
  					intro: "读取剪贴板以解析邀请链接自动加入联机房间",
  				},
+diff --git a/apps/core/noname/ui/click/index.js b/apps/core/noname/ui/click/index.js
+index add63cd..ac77751 100644
+--- a/apps/core/noname/ui/click/index.js
++++ b/apps/core/noname/ui/click/index.js
+@@ -413,6 +413,8 @@ export class Click {
+ 					if (button.info[i][4] == game.wsid) {
+ 						ui.create.div(".name", '<span class="thundertext thunderauto">' + (button.info[i][0] || "无名玩家"), node);
+ 						node.isme = true;
++						// 【私用补丁】点自己 → 打开「我的资料」(sgs-friends 扩展提供:改名 / 换头像)
++						node.listen(() => lib.sgsFriends?.openProfile?.());
+ 					} else if (button.info[i][2]) {
+ 						ui.create.div(".name", button.info[i][0] || "无名玩家", node);
+ 					} else {
 diff --git a/apps/core/noname/ui/create/index.js b/apps/core/noname/ui/create/index.js
 index 6af9480..cd63704 100644
 --- a/apps/core/noname/ui/create/index.js
