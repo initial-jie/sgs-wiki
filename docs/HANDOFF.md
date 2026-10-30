@@ -64,6 +64,12 @@
   - **失心 = 纯显示层**:`assignShixinLost()`(主机,两条发身份循环之后各插一次:本地 `special_identity` 判断前、联机同位置)从非教主随机抽 `SHIXIN_LOST[n]`(4~7 人 1,8+ 人 2)个,`broadcastAll` 给各端打 `storage.shixin_lost`、`identityShown=true`(别人不能再猜)并 `setIdentity()`。覆写 `element.player.setIdentity`(基类方法先存成模块级 `baseSetIdentity`,`lib.element.player === Player.prototype`,mixinElement 会把模式方法直接写上原型):失心且未死且未终局时——非教主视角(含失心本人)一律显示「失」(配色 shixin,借明忠橙色);教主视角显示真实身份但用失心配色;死亡 / `game.showIdentity`(终局,置 `_status.shixinRevealAll`)后亮真身。开局字幕 `getVideoName` 对失心本人显示「失心」。真实 `identity` 字段不动,AI 与结算照常(朋友圈默认不翻内存)。
   - 本地验证(7 人,我是教主):配比/失心数对;三种视角(非教主→失、本人→失、教主→护+失心色)对;击杀失心者上限 3→2;失心死后标签亮真身;教主死→官兵胜照常。**联机未实战**。未做:教主张角〖蔽众〗(无名杀无此将)。
   - 下一期(最后一个):无间道——龙/虎双阵营、主帅/护卫/内鬼、牌背公开阵营而真实阵营可能相反;与标准身份局差异最大,要自己写 checkResult 与 AI 态度(参考 purple 3v3v2 的结构)。
+**✅ 2026-10-30 扩展第五期(最后一个变体):「无间道」(identity.js 补丁)**
+  - 身份:`lZhu/lWei/lGui`(龙主帅/护卫/内鬼)`tZhu/tWei/tGui`;真实阵营 `wujianCamp()`:内鬼反转(龙内鬼=虎军)。表同 shared/identity.mjs(4/6/8/10),奇数人数多一名护卫。**不设主公**:`assignWujian()` 随机一名主帅先手并占 `game.zhu` 位(后续大量代码假设 game.zhu 存在:本地 `if(!game.zhu) game.zhu=game.me`、联机 `game.zhu.setIdentity()`),`isZhu=false` 故无主公技。
+  - 显示层(覆写的 `setIdentity` 加 wujian 分支):牌背 龙/虎 全场公开(配色 `lcamp` 红 / `tcamp` 蓝);主帅公开「帅」;本人见真实角色;主帅看**对方牌背**所有人真实角色;其余只见 龙/虎。显式传入的猜测键(`wujian_wei/wujian_gui`,`getIdentityList`)原样显示。主帅死亡 → `dieAfter2` 把己方安插在对方的内鬼 `storage.wujian_revealed` 广播亮出(龙主帅死→虎内鬼)。终局 `game.showIdentity` 置 `_status.wujianRevealAll`。
+  - 规则:击杀真实同阵营 → `modedDiscard` 全部牌;主帅 +1 血上限(占 zhu 位的那位在联机 >4 人路径会先吃标准主公 +1,单将时按 `maxHp > get.infoMaxHp(原上限)` 判断已加过);`checkResult`:龙内鬼死=龙军胜,虎内鬼死=虎军胜(主帅死不结束);`realAttitude` 按真实阵营。顺手修:`special_identity`(8 人特殊身份)在 baonue/dazhong/wujian 下跳过,否则 `fans.randomRemove()` 取空会崩。
+  - 本地验证(8 人):配比 1/2/1 ×2、我(龙内鬼)看别人只有龙/虎、主帅视角看对方牌背真身、护卫杀本方主帅弃牌且虎内鬼暴露、虎内鬼死 → 虎军四人胜(含我这个龙内鬼)。**联机未实战**。
+  - 至此四个变体(暴虐无道/大忠似奸/失心疯/无间道)+ 将池都在「游戏模式」下拉里。后续可做:线下将作扩展武将(线下孙寒华/SP徐氏/教主张角〖蔽众〗/暴君董卓〖肆虐〗/昏君刘宏〖障目〗〖鬻爵〗)、战绩回传 /api/history、技能常驻栏/重铸交互、手机横屏 PWA。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
