@@ -1,0 +1,8 @@
+{
+	"name": "sgs-friends",
+	"intro": "朋友圈牌桌:接入 sgs-wiki 房间的将池与身份局变体(暴虐无道 / 大忠似奸 / 失心疯 / 无间道)。",
+	"author": "initial-jie",
+	"diskURL": "",
+	"forumURL": "https://github.com/initial-jie/sgs-wiki",
+	"version": "0.1.0"
+}

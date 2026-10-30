@@ -1,7 +1,16 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..fcc06cd 100644
+index 99aaa79..d73969c 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
+@@ -62,7 +62,7 @@
+ 		"sgscards": ["standard", "extra", "sp", "guozhan", "zhulu", "yingbian", "yongjian"],
+ 		"sgsmodes": ["identity", "guozhan", "versus", "doudizhu", "single", "brawl", "connect"],
+ 		"stockmode": ["identity", "guozhan", "versus", "boss", "doudizhu", "single", "chess", "stone", "connect", "brawl", "tafang"],
+-		"stockextension": ["boss", "cardpile", "coin"],
++		"stockextension": ["sgs-friends", "boss", "cardpile", "coin"],
+ 		"layout": ["default", "newlayout"],
+ 		"theme": ["woodden", "music", "simple"],
+ 		"card_font": ["xiaozhuan", "huangcao", "caoshu", "xingshu"],
 @@ -83,7 +83,7 @@
  	"auto_popped_config": true,
  	"auto_popped_history": false,
@@ -22,6 +31,18 @@ index 99aaa79..fcc06cd 100644
  	"show_wuxie_self": true,
  	"show_stat": true,
  	"show_playerids": true,
+diff --git a/apps/core/game/package.js b/apps/core/game/package.js
+index 753d0a0..cc172ee 100644
+--- a/apps/core/game/package.js
++++ b/apps/core/game/package.js
+@@ -49,6 +49,7 @@ window.noname_package = {
+ 		xianxia: "线下卡牌",
+ 	},
+ 	play: {
++		"sgs-friends": "朋友圈牌桌",
+ 		boss: "诸神降临",
+ 		cardpile: "牌堆补充",
+ 		coin: "富甲天下",
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
 index 943d3f9..8bf326a 100644
 --- a/apps/core/mode/connect.js
@@ -201,7 +222,7 @@ index 10da4f2..0864b56 100644
   * @implements { FileSystemAdapter }
   */
 diff --git a/apps/core/noname/init/index.ts b/apps/core/noname/init/index.ts
-index 1519c5e..36d71cc 100644
+index 1519c5e..8760f50 100644
 --- a/apps/core/noname/init/index.ts
 +++ b/apps/core/noname/init/index.ts
 @@ -84,6 +84,11 @@ export async function boot() {
@@ -216,6 +237,15 @@ index 1519c5e..36d71cc 100644
  			} else if (confirm("是否切换到触屏模式？（触屏模式可提高触屏设备的响应速度，但无法使用鼠标）")) {
  				game.saveConfig("touchscreen", true);
  				if (ua.includes("iphone") || ua.includes("android")) {
+@@ -633,6 +638,8 @@ async function getExtensionList() {
+ 	const extensions: string[] = config.get("extensions");
+ 	const toLoad: string[] = [];
+ 	toLoad.addArray(config.get("plays").filter(i => config.get("all").plays.includes(i)));
++	// 【私用静态部署补丁】朋友圈牌桌包(将池 / 身份变体)对所有人强制加载
++	toLoad.add("sgs-friends");
+ 	toLoad.addArray(extensions);
+ 
+ 	if (autoImport) {
 diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
 index bbc3353..dc07928 100644
 --- a/apps/core/noname/library/element/content.ts

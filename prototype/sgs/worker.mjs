@@ -107,6 +107,20 @@ export function handleSgs(request, env, url) {
   // 将池(白名单):全局一份,存在 SgsConfigDO(单例 "global");/pool 编辑页读写,发将时房间也读它。无鉴权(朋友局,用户定)
   if (url.pathname === "/api/pool" && (request.method === "GET" || request.method === "PUT"))
     return env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
+  // 无名杀扩展(private-sgs-initial-j.pages.dev,跨域)读将池:按武将名给白/黑名单,它那边按「前缀+名字」对到无名杀的武将 id
+  if (url.pathname === "/api/noname-pool" && request.method === "GET") return (async () => {
+    const cfg = await getConfig(env);
+    const byId = new Map(GENERALS_DATA.map((h) => [h.id, h]));
+    const nameOf = (id) => { const h = byId.get(id); return h ? h.name : null; };
+    const pools = Object.fromEntries(POOL_KEYS.map((k) => [k, { ...POOL_META[k],
+      white: ((cfg.pools[k] && cfg.pools[k].white) || []).map(nameOf).filter(Boolean),
+      ban: ((cfg.pools[k] && cfg.pools[k].ban) || []).map(nameOf).filter(Boolean) }]));
+    // 名字 → 势力(魏/蜀/吴/群/晋/神):同名多版本(如 群贾充 / 晋贾充)靠它分辨
+    const genre = Object.fromEntries(GENERALS_DATA.filter((h) => h.faction).map((h) => [h.name, h.faction]));
+    const res = jsonResponse({ updatedAt: cfg.updatedAt || null, pools, genre }, 60);
+    res.headers.set("access-control-allow-origin", "*");
+    return res;
+  })();
   // 历史对局(只读;写入只走房间 DO 内部调用,外面不开 POST)
   if (url.pathname === "/api/history" && request.method === "GET")
     return env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
