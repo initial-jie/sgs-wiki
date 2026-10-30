@@ -59,6 +59,11 @@
   - **⚠ 通用坑(暴虐无道也中招,已一起修)**:新身份没有 `choice_<身份>`(候选武将数)配置 → `get.config("choice_x")` 为 undefined → **AI 一张候选都拿不到、整局没武将**。setupX 里补 `lib.config.mode_config.identity.choice_*`(诤臣同忠臣/间者·奸臣同内奸/逆乱·义军同反贼),联机分支再补 `lib.configOL.choice_*`。
   - 本地验证(6/7 人):义军互认、奸臣濒死亮明+昏君得袒佞、袒佞防伤害(4→4)/禁延时锦囊目标、幡然醒悟(-1 上限,杀忠臣弃牌 6→0)、昏庸无道(上限不变)、杀义军摸 2、四类结局(义军/奸臣+昏君/昏君+忠臣/…)都对。**联机实战未试**。
   - 下一期:失心疯(教主/护法/官兵/内奸 + 失心盖牌:本人看不到真实身份、教主可见)→ 无间道(龙/虎牌背双阵营)。
+**✅ 2026-10-30 扩展第四期:「失心疯」(identity.js 补丁)**
+  - 身份完全复用标准四身份,只改叫法:教主=zhu(教)、护法=zhong(护)、官兵=fan(官)、内奸=nei;胜负判定、击杀奖惩(教主杀护法弃牌、杀官兵摸三)直接走标准代码,不用动 `checkResult`。身份表同 shared/identity.mjs(6 人 1/2/2/1、7 人 1/2/3/1、8 人 1/2/3/2…)。额外规则:任何角色击杀失心 `loseMaxHp()`(dieAfter2 里加在标准奖惩之前);教主 ≤4 人时也补 +1 血+1 上限(>4 人标准主公规则已加)。
+  - **失心 = 纯显示层**:`assignShixinLost()`(主机,两条发身份循环之后各插一次:本地 `special_identity` 判断前、联机同位置)从非教主随机抽 `SHIXIN_LOST[n]`(4~7 人 1,8+ 人 2)个,`broadcastAll` 给各端打 `storage.shixin_lost`、`identityShown=true`(别人不能再猜)并 `setIdentity()`。覆写 `element.player.setIdentity`(基类方法先存成模块级 `baseSetIdentity`,`lib.element.player === Player.prototype`,mixinElement 会把模式方法直接写上原型):失心且未死且未终局时——非教主视角(含失心本人)一律显示「失」(配色 shixin,借明忠橙色);教主视角显示真实身份但用失心配色;死亡 / `game.showIdentity`(终局,置 `_status.shixinRevealAll`)后亮真身。开局字幕 `getVideoName` 对失心本人显示「失心」。真实 `identity` 字段不动,AI 与结算照常(朋友圈默认不翻内存)。
+  - 本地验证(7 人,我是教主):配比/失心数对;三种视角(非教主→失、本人→失、教主→护+失心色)对;击杀失心者上限 3→2;失心死后标签亮真身;教主死→官兵胜照常。**联机未实战**。未做:教主张角〖蔽众〗(无名杀无此将)。
+  - 下一期(最后一个):无间道——龙/虎双阵营、主帅/护卫/内鬼、牌背公开阵营而真实阵营可能相反;与标准身份局差异最大,要自己写 checkResult 与 AI 态度(参考 purple 3v3v2 的结构)。
 ⚠ 无名杀本地 clone 在会话 scratchpad(`…/scratchpad/noname`),会话结束可能被清;重来 = `git clone --depth 1 https://github.com/libnoname/noname` + 改 hallURL + `pnpm install && pnpm build`。
 
 **零成本部署方案(原计划,①大厅已做)**:
