@@ -133,7 +133,16 @@ export function handleSgs(request, env, url) {
       ban: ((cfg.pools[k] && cfg.pools[k].ban) || []).map(nameOf).filter(Boolean) }]));
     // 名字 → 势力(魏/蜀/吴/群/晋/神):同名多版本(如 群贾充 / 晋贾充)靠它分辨
     const genre = Object.fromEntries(GENERALS_DATA.filter((h) => h.faction).map((h) => [h.name, h.faction]));
-    const res = jsonResponse({ updatedAt: cfg.updatedAt || null, pools, genre }, 60);
+    // OL 皮肤(只给各池白名单里的武将):名字 → [{id,name,url},…];大图直链 web.sanguosha.com(同座位立绘)
+    const SKIN_BIG = "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/";
+    const skinOf = (id) => SKINS_DATA.skins[id] || SKINS_DATA.skins[SKINS_DATA.alias && SKINS_DATA.alias[id]] || [];
+    const skins = {};
+    for (const k of POOL_KEYS) for (const id of ((cfg.pools[k] && cfg.pools[k].white) || [])) {
+      const h = byId.get(id); if (!h || skins[h.name]) continue;
+      const list = skinOf(id); if (!list.length) continue;
+      skins[h.name] = list.map(([sid, nm, q]) => ({ id: sid, name: String(nm).split("*")[0], q, url: `${SKIN_BIG}${sid}.png` }));
+    }
+    const res = jsonResponse({ updatedAt: cfg.updatedAt || null, pools, genre, skins }, 60);
     res.headers.set("access-control-allow-origin", "*");
     return res;
   })();

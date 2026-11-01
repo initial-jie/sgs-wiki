@@ -82,6 +82,7 @@ export function computeAllowed(pool, byOurs) {
 	for (const b of pool.ban || []) white.delete(b);
 	const allowed = new Set();
 	const unmatched = [];
+	const chosen = new Map(); // 我们的名字 → 选中的无名杀 id 列表(皮肤映射用)
 	for (const name of white) {
 		const key = ALIAS[name] || name;
 		const cands = byOurs.get(key);
@@ -89,21 +90,66 @@ export function computeAllowed(pool, byOurs) {
 		const ids = cands ? pickIds(cands, (m && m[1]) || "", pool.genre && pool.genre[name]) : [];
 		if (!ids.length) { unmatched.push(name); continue; }
 		for (const id of ids) allowed.add(id);
+		chosen.set(name, ids);
 	}
-	return { allowed, unmatched };
+	return { allowed, unmatched, chosen };
 }
 
-function applyPool(pool, env) {
+// 无名杀模式 → 我们的将池环境:身份局=军争场(可在设置里换)、斗地主=斗地主池;2v2 / 1v1 池为空时回退身份局环境
+const MODE_ENV = { identity: "junzheng", doudizhu: "douzhu", versus: "2v2", single: "1v1" };
+function applyPool(data, mainEnv) {
 	const byOurs = buildIndex();
-	const { allowed, unmatched } = computeAllowed(pool, byOurs);
-	const banned = Object.keys(lib.character).filter(id => !allowed.has(id));
-	// 本地身份局 + 联机建房(startMenu 读 connect_identity_banned)两份都写进内存;不存盘,池子改了下次开局自动跟
-	lib.config.identity_banned = banned.slice();
-	lib.config.connect_identity_banned = banned.slice();
-	if (lib.config.mode === "identity") lib.config.banned = banned.slice();
 	const total = Object.keys(lib.character).length;
-	console.log(`[sgs-friends] 将池「${pool.label || env}」:可用 ${allowed.size} / 无名杀共 ${total};白名单未对上 ${unmatched.length}:`, unmatched.join(" "));
-	_status.sgsFriendsPool = { env, allowed: allowed.size, total, unmatched, updatedAt: pool.updatedAt };
+	const summary = {};
+	const allChosen = new Map();
+	for (const [mode, env0] of Object.entries(MODE_ENV)) {
+		let env = mode === "identity" ? mainEnv : env0;
+		let pool = data.pools[env];
+		if (!pool || !(pool.white || []).length) {
+			env = mainEnv;
+			pool = data.pools[env];
+		}
+		if (!pool) continue;
+		const { allowed, unmatched, chosen } = computeAllowed({ ...pool, genre: data.genre || {} }, byOurs);
+		for (const [name, ids] of chosen) allChosen.set(name, ids);
+		const banned = Object.keys(lib.character).filter(id => !allowed.has(id));
+		// 本地 + 联机建房(startMenu 读 connect_<mode>_banned)两份都写进内存;不存盘,池子改了下次开局自动跟
+		lib.config[`${mode}_banned`] = banned.slice();
+		lib.config[`connect_${mode}_banned`] = banned.slice();
+		if (lib.config.mode === mode) lib.config.banned = banned.slice();
+		summary[mode] = { env, allowed: allowed.size, unmatched };
+		console.log(`[sgs-friends] ${mode} ← 将池「${pool.label || env}」:可用 ${allowed.size} / 无名杀共 ${total};白名单未对上 ${unmatched.length}:`, unmatched.join(" "));
+	}
+	const main = summary.identity || Object.values(summary)[0] || { env: mainEnv, allowed: 0, unmatched: [] };
+	_status.sgsFriendsPool = { env: main.env, allowed: main.allowed, total, unmatched: main.unmatched, updatedAt: data.updatedAt, modes: summary };
+	applySkins(data.skins || {}, allChosen);
+}
+
+// ---------------------------------------------------------------------------------------------
+// ③ OL 皮肤:worker 把各池武将的 OL 皮肤直链一并给过来;按设置给每个武将套一张(本局随机 / 固定第一张 / 关)。
+//    写进 lib.config.skin[id] = [皮肤名, url](无名杀自己的皮肤机制,setBackground 会优先取它;polyfill 已补绝对 URL)。只在内存,不落盘。
+// ---------------------------------------------------------------------------------------------
+function applySkins(skins, chosen) {
+	if (!lib.config.skin || typeof lib.config.skin !== "object") lib.config.skin = {};
+	const mode = lib.config["sgs-friends_skin_playpackconfig"] || "random";
+	const mine = _status.sgsFriendsSkinIds || new Set();
+	for (const id of mine) delete lib.config.skin[id];
+	mine.clear();
+	_status.sgsFriendsSkinIds = mine;
+	if (mode === "off") return;
+	let n = 0;
+	for (const [name, ids] of chosen) {
+		const list = skins[name];
+		if (!Array.isArray(list) || !list.length) continue;
+		const pick = mode === "first" ? list[0] : list[Math.floor(Math.random() * list.length)];
+		if (!pick || !pick.url) continue;
+		for (const id of ids) {
+			lib.config.skin[id] = [pick.name || "OL", pick.url];
+			mine.add(id);
+			n++;
+		}
+	}
+	console.log(`[sgs-friends] OL 皮肤:套了 ${n} 个武将(${mode})`);
 }
 
 async function loadPool() {
@@ -125,7 +171,7 @@ async function loadPool() {
 		console.warn("[sgs-friends] 没有可用的将池数据,保持无名杀默认");
 		return;
 	}
-	applyPool({ ...data.pools[env], genre: data.genre || {}, updatedAt: data.updatedAt }, env);
+	applyPool(data, env);
 }
 
 // 联机模式下无名杀不跑 play 包的 init/arenaReady(init/index.ts 里 connect 分支跳过 loadPlay),
@@ -314,6 +360,30 @@ async function openProfile() {
 }
 lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { openProfile, openAvatarPicker });
 
+// ---------------------------------------------------------------------------------------------
+// ④ 房规默认值一次性迁移:无名杀会把菜单默认值存进 IndexedDB,改 config.json/菜单 init 对老玩家无效,
+//    所以按版本号迁移一次(之后玩家自己改的仍然保留)。身份局 非内奸 6 / 内奸 7;斗地主 地主 5 / 农民 3;联机同。
+// ---------------------------------------------------------------------------------------------
+{
+	const HOUSE_RULE_VERSION = 2;
+	if ((lib.config["sgs-friends_houserule_playpackconfig"] || 0) < HOUSE_RULE_VERSION) {
+		// 本地与联机(connect_*)的候选数都是按模式存的(startMenu:get.config("connect_choice_x", mode))
+		const set = (key, value, mode) => game.saveConfig(key, value, mode);
+		for (const id of ["zhu", "zhong", "fan", "commoner"]) {
+			set(`choice_${id}`, 6, "identity");
+			set(`connect_choice_${id}`, 6, "identity");
+		}
+		set("choice_nei", 7, "identity");
+		set("connect_choice_nei", 7, "identity");
+		set("choice_zhu", 5, "doudizhu");
+		set("choice_fan", 3, "doudizhu");
+		set("connect_choice_zhu", 5, "doudizhu");
+		set("connect_choice_fan", 3, "doudizhu");
+		set("sgs-friends_houserule_playpackconfig", HOUSE_RULE_VERSION);
+		console.log("[sgs-friends] 已套用房规默认值 v" + HOUSE_RULE_VERSION);
+	}
+}
+
 // 启动:已有昵称的老玩家也按名字对齐 key、拉一次资料(别的设备上改过头像会同步过来)
 {
 	const nick = currentNick();
@@ -323,20 +393,111 @@ lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { openProfile, openAvatarPi
 	}
 }
 
+// ---------------------------------------------------------------------------------------------
+// ⑤ 技能常驻栏:每个武将头像下方常驻显示技能名;轮到自己可发动的技能变绿;被封锁的(非锁定技)画锁。
+//    纯显示层:挂在 player 元素上,靠包一层 player.update / addSkill / removeSkill / disableSkill / enableSkill / init
+//    和 game.check / game.uncheck 来刷新。
+// ---------------------------------------------------------------------------------------------
+(() => {
+	// 不用 lib.init.sheet:扩展导入时 ui.css 还没建,会抛错把整个扩展打断
+	const style = document.createElement("style");
+	style.textContent = `
+.player .sgs-skillbar{position:absolute;left:3px;right:3px;bottom:12px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center;pointer-events:none;z-index:6}
+.player .sgs-skillbar span{font-size:10px;line-height:14px;padding:0 4px;border-radius:4px;background:rgba(0,0,0,.62);color:#efe6d2;white-space:nowrap;font-family:xinwei,"PingFang SC",sans-serif;letter-spacing:.5px}
+.player .sgs-skillbar span.usable{background:#2f9e5a;color:#fff;box-shadow:0 0 6px #2f9e5a}
+.player .sgs-skillbar span.locked{opacity:.55;text-decoration:line-through}
+.player .sgs-skillbar span.locked::before{content:"🔒";font-size:9px;margin-right:1px}
+#arena.chess .player .sgs-skillbar,#arena.stone .player .sgs-skillbar{display:none}`;
+	document.head.appendChild(style);
+})();
+function skillbarUsableSet() {
+	const set = new Set();
+	for (const bar of [ui.skills, ui.skills2, ui.skills3]) {
+		if (bar && bar.skills && bar.style.display !== "none") for (const s of bar.skills) set.add(s);
+	}
+	return set;
+}
+function refreshSkillBar(player) {
+	try {
+		if (!player || !player.node || !player.classList || player.classList.contains("unseen2")) return;
+		if (lib.config["sgs-friends_skillbar_playpackconfig"] === "off") {
+			if (player.sgsSkillbar) player.sgsSkillbar.remove(), delete player.sgsSkillbar;
+			return;
+		}
+		if (!player.name) {
+			if (player.sgsSkillbar) player.sgsSkillbar.innerHTML = "";
+			return;
+		}
+		let bar = player.sgsSkillbar;
+		if (!bar || bar.parentNode !== player) {
+			bar = ui.create.div(".sgs-skillbar", player);
+			player.sgsSkillbar = bar;
+		}
+		const usable = player === game.me ? skillbarUsableSet() : new Set();
+		const disabled = player.disabledSkills || {};
+		const skills = player.getSkills(null, false, false);
+		let html = "";
+		for (const skill of skills) {
+			const info = lib.skill[skill];
+			const name = lib.translate[skill];
+			if (!info || !name || skill.startsWith("_") || info.charlotte || info.ruleSkill || info.sub || info.nopop || info.equipSkill) continue;
+			const isLocked = get.is.locked ? get.is.locked(skill, player) : !!(info.forced || info.locked); // 锁定技
+			const blocked = !isLocked && (!!disabled[skill] || (get.is.blocked ? get.is.blocked(skill, player) : false));
+			const cls = usable.has(skill) ? "usable" : blocked ? "locked" : "";
+			html += `<span class="${cls}">${name}</span>`;
+		}
+		bar.innerHTML = html;
+	} catch (e) { /* 显示层,出错不影响对局 */ }
+}
+function refreshAllSkillBars() {
+	for (const p of game.players || []) refreshSkillBar(p);
+}
+try {
+	const proto = lib.element.player;
+	const wrap = (method, after) => {
+		const orig = proto[method];
+		if (typeof orig !== "function") return;
+		proto[method] = function (...args) {
+			const r = orig.apply(this, args);
+			try { after(this, r); } catch (e) { /* ignore */ }
+			return r;
+		};
+	};
+	for (const m of ["update", "addSkill", "removeSkill", "disableSkill", "enableSkill", "init", "addSkills", "removeSkills"]) {
+		wrap(m, player => refreshSkillBar(player));
+	}
+	const origCheck = game.check;
+	game.check = function (...args) {
+		const r = origCheck.apply(this, args);
+		try { if (game.me) refreshSkillBar(game.me); } catch (e) { /* ignore */ }
+		return r;
+	};
+	const origUncheck = game.uncheck;
+	game.uncheck = function (...args) {
+		const r = origUncheck.apply(this, args);
+		try { if (game.me) refreshSkillBar(game.me); } catch (e) { /* ignore */ }
+		return r;
+	};
+} catch (e) {
+	console.error("[sgs-friends] 技能常驻栏初始化失败:", e);
+}
+lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { refreshAllSkillBars });
+
 game.import("play", function () {
 	return {
 		name: "sgs-friends",
 		init() {},
 		arenaReady() {
+			setTimeout(refreshAllSkillBars, 500);
 			// 进入牌局时若池子已到,保证 lib.config.banned 是最新的(loading.ts 在模式加载时会用 identity_banned 覆盖一次)
-			if (_status.sgsFriendsPool && lib.config.mode === "identity") lib.config.banned = lib.config.identity_banned.slice();
+			if (_status.sgsFriendsPool && lib.config[`${lib.config.mode}_banned`]) lib.config.banned = lib.config[`${lib.config.mode}_banned`].slice();
 		},
 		config: {
 			pool: {
 				name: "将池环境",
 				init: "junzheng",
 				item: { junzheng: "军争场(5人及以上)", "2v2": "2v2(4人)", douzhu: "斗地主(3人)", "1v1": "1v1(2人)" },
-				intro: "开局从 sgs-wiki 房间的将池读白/黑名单,不在池里的武将自动禁用;改完要重开一局",
+				intro: "身份局用这里选的环境;斗地主固定用「斗地主池」,2v2 / 1v1 各用自己的池(空则回退本环境)。不在池里的武将自动禁用;改完要重开一局",
 				onclick(item) {
 					game.saveConfig("sgs-friends_pool_playpackconfig", item);
 					loadPool();
@@ -348,6 +509,26 @@ game.import("play", function () {
 				onclick() {
 					game.closeMenu?.();
 					openProfile();
+				},
+			},
+			skillbar: {
+				name: "技能常驻栏",
+				init: "on",
+				item: { on: "开启", off: "关闭" },
+				intro: "每个武将头像下方常驻显示技能名:可发动的变绿,被封锁的画锁",
+				onclick(item) {
+					game.saveConfig("sgs-friends_skillbar_playpackconfig", item);
+					refreshAllSkillBars();
+				},
+			},
+			skin: {
+				name: "OL 皮肤",
+				init: "random",
+				item: { random: "每次开局随机一张", first: "固定第一张", off: "关闭(用无名杀原画)" },
+				intro: "把 OL 的皮肤立绘套到池内武将上(头像、选将框都生效);图片来自 OL 官网直链",
+				onclick(item) {
+					game.saveConfig("sgs-friends_skin_playpackconfig", item);
+					loadPool();
 				},
 			},
 			refresh: {

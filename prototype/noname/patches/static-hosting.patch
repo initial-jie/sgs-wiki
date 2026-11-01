@@ -1,5 +1,5 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..f52d32e 100644
+index 99aaa79..4b68a1f 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -43,6 +43,15 @@ index 99aaa79..f52d32e 100644
  	"show_wuxie_self": true,
  	"show_stat": true,
  	"show_playerids": true,
+@@ -189,7 +192,7 @@
+ 	],
+ 	"moderned_modes": ["guozhan"],
+ 	"connect_characters": ["diy"],
+-	"connect_cards": ["huodong", "guozhan", "sp", "zhulu", "yingbian", "yongjian", "xianxia"],
++	"connect_cards": ["huodong", "guozhan", "sp", "zhulu", "yingbian", "jiubian", "yongjian", "xianxia"],
+ 	"plays": [],
+ 	"extensions": [],
+ 	"banned": [],
 diff --git a/apps/core/game/package.js b/apps/core/game/package.js
 index 753d0a0..4734abc 100644
 --- a/apps/core/game/package.js
@@ -1080,6 +1089,137 @@ index 67fb1b5..e1edd6c 100644
  		// 谋攻模式
  		stratagem_gain: {
  			trigger: {
+diff --git a/apps/core/noname/game/check.js b/apps/core/noname/game/check.js
+index 34e2315..c661597 100644
+--- a/apps/core/noname/game/check.js
++++ b/apps/core/noname/game/check.js
+@@ -181,6 +181,11 @@ export class Check {
+ 			}
+ 		});
+ 
++		// 【私用补丁】「重铸」不再常驻技能栏(按钮改在 sgsRecast 里:选中可重铸的牌后才出现)
++		const recastOwned = ownedSkills.indexOf("_recasting");
++		if (recastOwned >= 0) ownedSkills.splice(recastOwned, 1);
++		const recastGlobal = globalSkills.indexOf("_recasting");
++		if (recastGlobal >= 0) globalSkills.splice(recastGlobal, 1);
+ 		if (ownedSkills.length) {
+ 			ui.create.skills(ownedSkills);
+ 		}
+@@ -191,6 +196,41 @@ export class Check {
+ 			ui.create.skills3(equipSkills);
+ 		}
+ 	}
++	/**
++	 * 【私用补丁】铁索连环等的重铸交互:出牌阶段先点牌,选中的牌都可重铸时在控制条出现「重铸」,点了直接重铸选中的牌。
++	 * 独立于 skill():skill() 在已选牌时会提前返回。
++	 */
++	sgsRecast(event, player) {
++		if (ui.sgsRecast) {
++			ui.sgsRecast.close();
++			delete ui.sgsRecast;
++		}
++		if (!event || !event.isMine() || event.skill || event.name !== "chooseToUse" || !player) {
++			return;
++		}
++		// 不依赖 event._skillChoice(回合开始时缓存的技能候选):直接判断选中的牌能否重铸
++		if (!lib.skill._recasting || !lib.filter.filterEnable(event, player, "_recasting")) {
++			return;
++		}
++		const cards = ui.selected.cards;
++		if (!cards.length || !cards.every(card => player.canRecast(card, null, true))) {
++			return;
++		}
++		ui.sgsRecast = ui.create.control("重铸", () => {
++			const chosen = cards.slice();
++			ui.click.skill("_recasting");
++			for (const card of chosen) {
++				_status.clicked = false;
++				if (card.classList.contains("selectable") && !card.classList.contains("selected")) {
++					ui.click.card.call(card);
++				}
++			}
++			_status.clicked = false;
++			if (ui.confirm && ui.confirm.str && ui.confirm.str.includes("o")) {
++				ui.click.ok();
++			}
++		});
++	}
+ 	confirm(event, confirm) {
+ 		ui.arena.classList.add("selecting");
+ 		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
+diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
+index bc0e3f4..71059e0 100644
+--- a/apps/core/noname/game/index.js
++++ b/apps/core/noname/game/index.js
+@@ -7223,16 +7223,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
+ 		}
+ 		if (!ui.restart) {
+ 			if (game.onlineroom && typeof game.roomId == "string") {
+-				ui.restart = ui.create.control("restart", function () {
++				// 【私用补丁】联机局结束:房主「返回房间·再来一局」(30 秒后自动)→ 全员 3 秒后自动回到同一个房间;房主的退出改叫「解散房间」
++				const sgsReturnRoom = function () {
++					if (_status.sgsReturned) {
++						return;
++					}
++					_status.sgsReturned = true;
+ 					game.broadcastAll(function () {
+ 						if (ui.exit) {
+ 							ui.exit.stay = true;
+ 							ui.exit.firstChild.innerHTML = "返回房间";
+ 						}
++						if (ui.sgsCountdown) {
++							ui.sgsCountdown.innerHTML = "房主已重开房间,3 秒后自动返回…";
++						}
++						if (game.online) {
++							setTimeout(() => {
++								if (ui.exit && ui.exit.stay) {
++									ui.click.exit();
++								}
++							}, 3000);
++						}
+ 					});
+ 					game.saveConfig("tmp_owner_roomId", game.roomId);
+ 					setTimeout(game.reload, 100);
++				};
++				ui.restart = ui.create.control("restart", sgsReturnRoom);
++				ui.restart.firstChild.innerHTML = "返回房间 · 再来一局";
++				if (ui.exit) {
++					ui.exit.firstChild.innerHTML = "解散房间";
++				}
++				game.broadcastAll(function () {
++					if (ui.sgsCountdown) {
++						ui.sgsCountdown.remove();
++					}
++					ui.sgsCountdown = ui.create.div(".sgs-countdown", ui.window);
++					Object.assign(ui.sgsCountdown.style, { position: "absolute", left: "0", right: "0", top: "6px", textAlign: "center", color: "#f3e9d2", textShadow: "0 0 4px #000", fontSize: "14px", zIndex: "20", pointerEvents: "none" });
++					let left = 30;
++					const tick = () => {
++						if (!ui.sgsCountdown || _status.sgsReturned) {
++							return;
++						}
++						ui.sgsCountdown.innerHTML = game.online ? `${left} 秒后房主将带大家返回房间` : `${left} 秒后自动返回房间 · 再来一局`;
++						if (left-- > 0) {
++							setTimeout(tick, 1000);
++						}
++					};
++					tick();
+ 				});
++				_status.sgsAutoReturn = setTimeout(() => {
++					if (_status.over && ui.restart) {
++						sgsReturnRoom();
++					}
++				}, 30000);
+ 			} else {
+ 				ui.restart = ui.create.control("restart", game.reload);
+ 			}
+@@ -7403,6 +7446,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
+ 		});
+ 
+ 		game.Check.skill(event);
++		game.Check.sgsRecast(event, player);
+ 
+ 		_status.multitarget = false;
+ 		const skillinfo = get.info(event.skill) || {};
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
 index 10da4f2..0864b56 100644
 --- a/apps/core/noname/init/browser.js
@@ -1222,6 +1362,22 @@ index 1519c5e..8760f50 100644
  	toLoad.addArray(extensions);
  
  	if (autoImport) {
+diff --git a/apps/core/noname/init/polyfill.ts b/apps/core/noname/init/polyfill.ts
+index dc294b9..6e89446 100644
+--- a/apps/core/noname/init/polyfill.ts
++++ b/apps/core/noname/init/polyfill.ts
+@@ -249,9 +249,10 @@ HTMLDivElement.prototype.setBackgroundDB = async function (img) {
+  */
+ HTMLDivElement.prototype.setBackgroundImage = function (img) {
+ 	if (Array.isArray(img)) {
++		// 【私用补丁】皮肤可能是绝对 URL(OL 皮肤直链),不拼 assetURL
+ 		this.style.backgroundImage = img
+ 			.unique()
+-			.map(v => `url("${lib.assetURL}${v}")`)
++			.map(v => (URL.canParse(v) ? `url("${v}")` : `url("${lib.assetURL}${v}")`))
+ 			.join(",");
+ 	} else if (URL.canParse(img)) {
+ 		this.style.backgroundImage = `url("${img}")`;
 diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
 index bbc3353..dc07928 100644
 --- a/apps/core/noname/library/element/content.ts
@@ -1245,7 +1401,7 @@ index bbc3353..dc07928 100644
  			},
  			event.videoId,
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..4351b45 100644
+index 08f9718..2537507 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -1295,6 +1451,51 @@ index 08f9718..4351b45 100644
  					},
  					restart: true,
  					frequent: true,
+@@ -5716,7 +5720,7 @@ export class Library {
+ 				},
+ 				connect_choice_zhu: {
+ 					name: "主公候选武将数",
+-					init: 3,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -5764,7 +5768,7 @@ export class Library {
+ 				},
+ 				connect_choice_zhong: {
+ 					name: "忠臣候选武将数",
+-					init: 4,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -5787,7 +5791,7 @@ export class Library {
+ 				},
+ 				connect_choice_fan: {
+ 					name: "反贼候选武将数",
+-					init: 3,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -5804,7 +5808,7 @@ export class Library {
+ 				},
+ 				connect_choice_nei: {
+ 					name: "内奸候选武将数",
+-					init: 6,
++					init: 7,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -5839,7 +5843,7 @@ export class Library {
+ 				},
+ 				connect_choice_commoner: {
+ 					name: "平民候选武将数",
+-					init: 4,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
 @@ -6073,6 +6077,10 @@ export class Library {
  						zhong: "明忠",
  						stratagem: "谋攻",
@@ -1306,6 +1507,51 @@ index 08f9718..4351b45 100644
  					},
  					restart: true,
  					frequent: true,
+@@ -6379,7 +6387,7 @@ export class Library {
+ 				},
+ 				choice_zhu: {
+ 					name: "主公候选武将数",
+-					init: 3,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -6427,7 +6435,7 @@ export class Library {
+ 				},
+ 				choice_zhong: {
+ 					name: "忠臣候选武将数",
+-					init: 4,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -6444,7 +6452,7 @@ export class Library {
+ 				},
+ 				choice_nei: {
+ 					name: "内奸候选武将数",
+-					init: 6,
++					init: 7,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -6461,7 +6469,7 @@ export class Library {
+ 				},
+ 				choice_fan: {
+ 					name: "反贼候选武将数",
+-					init: 3,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
+@@ -6485,7 +6493,7 @@ export class Library {
+ 				},
+ 				choice_commoner: {
+ 					name: "平民候选武将数",
+-					init: 4,
++					init: 6,
+ 					input: true,
+ 					restart: true,
+ 					onblur(e) {
 @@ -7491,7 +7499,7 @@ export class Library {
  				},
  				read_clipboard: {
