@@ -190,7 +190,7 @@ const ART=()=>DATA&&DATA.artBase||"";
 const thumbOf=h=>h.card||h.art?ART()+"thumb/"+h.id+".jpg":"";
 const cardOf=h=>h.card?ART()+"cards/"+h.id+".jpg":"";
 const artOf=h=>h.art?ART()+"art/"+h.id+".jpg":"";
-const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${thumbOf(h)?`<img src="${esc(thumbOf(h))}" alt="" onerror="this.remove()"/>`:""}${esc(h.name[0])}</div>`;
+const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${thumbOf(h)?`<img src="${esc(thumbOf(h))}" alt="" onerror="this.parentNode.textContent='${esc(h.name[0])}'"/>`:esc(h.name[0])}</div>`;
 const heroMeta=h=>`血 ${h.hp} · 补给 ${h.supply} · 子弹 ${h.ammo}`;
 function takenBy(hid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.heroId===hid&&x.heroRevealed); return s?s.seatNo:null; }
 function barHtml(cur,max,cls){ let h=`<span class="bar ${cls}">`; for(let i=0;i<Math.min(max,12);i++) h+=`<i class="${i<cur?"on":""}"></i>`; return h+"</span>"; }
