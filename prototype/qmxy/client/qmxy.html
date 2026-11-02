@@ -73,6 +73,23 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .seat .sub2{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .seat .lbl{font-size:12px;color:var(--fg-soft)}
 .btn-skill{border-color:var(--yel);color:var(--yel);background:transparent;font-size:12px;padding:4px 9px}
+button.ident{border-color:var(--mag);color:var(--mag);background:transparent}
+button.ident.has{background:var(--mag);color:#fff}
+.idbig{font-size:26px;font-weight:900;letter-spacing:.2em;text-align:center;padding:14px 0;margin-bottom:10px;border-radius:8px;border:1px solid var(--line);background:rgba(10,14,24,.6)}
+.idbig.brain{color:var(--brain)} .idbig.immune{color:var(--immune)} .idbig.virus{color:var(--virus)} .idbig.mutant{color:var(--mutant)}
+.seat .sava{width:40px;height:40px;border-radius:7px;object-fit:cover;object-position:top;border:1px solid var(--line);cursor:pointer;flex:none;background:#0a0e18;box-shadow:0 0 0 1px rgba(53,224,255,.25)}
+.ava img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:5px;display:block}
+.artwrap{position:fixed;inset:0;z-index:95;background:rgba(3,6,12,.94);display:flex;flex-direction:column}
+.arttop{display:flex;align-items:center;gap:8px;padding:10px 12px;color:#fff}
+.arttop .an{font-weight:900;font-size:17px}
+.arttop .am{font-size:12px;color:var(--fg-soft)}
+.arttop button{background:rgba(255,255,255,.08);color:#f3ead8;border:1px solid rgba(255,255,255,.22);padding:6px 11px}
+.artbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 8px}
+.artimg{max-width:100%;max-height:100%;object-fit:contain;display:block;border-radius:6px}
+.artskills{max-width:520px;width:100%;max-height:100%;overflow:auto}
+.artfoot{display:flex;gap:8px;justify-content:center;padding:10px 12px 14px}
+.artfoot button{background:rgba(255,255,255,.08);color:#f3ead8;border:1px solid rgba(255,255,255,.22)}
+.artfoot button.on{background:var(--cyan);color:#041018;border-color:var(--cyan)}
 .badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 6px;margin-left:5px;font-weight:700;vertical-align:1px}
 .badge.dying{background:var(--mag);color:#fff;animation:pulse 1.2s infinite}
 .badge.dead{background:#4b5468;color:#fff}
@@ -169,7 +186,11 @@ function heroLabel(s){
   return "";
 }
 function skillsHtml(h){ return h.skills.map(k=>`<div class="skl"><div class="sn">${esc(k.name)}</div><div class="se">${esc(k.text).replace(/\n/g,"<br>")}</div></div>`).join(""); }
-const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${esc(h.name[0])}</div>`;
+const ART=()=>DATA&&DATA.artBase||"";
+const thumbOf=h=>h.card||h.art?ART()+"thumb/"+h.id+".jpg":"";
+const cardOf=h=>h.card?ART()+"cards/"+h.id+".jpg":"";
+const artOf=h=>h.art?ART()+"art/"+h.id+".jpg":"";
+const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${thumbOf(h)?`<img src="${esc(thumbOf(h))}" alt="" onerror="this.remove()"/>`:""}${esc(h.name[0])}</div>`;
 const heroMeta=h=>`血 ${h.hp} · 补给 ${h.supply} · 子弹 ${h.ammo}`;
 function takenBy(hid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.heroId===hid&&x.heroRevealed); return s?s.seatNo:null; }
 function barHtml(cur,max,cls){ let h=`<span class="bar ${cls}">`; for(let i=0;i<Math.min(max,12);i++) h+=`<i class="${i<cur?"on":""}"></i>`; return h+"</span>"; }
@@ -190,6 +211,8 @@ function rerenderModal(){
   if(modal.t==="skill") return openSkillView(modal.seat);
   if(modal.t==="ledger") return openLedger(modal.seat);
   if(modal.t==="shot") return openShot(modal.v);
+  if(modal.t==="ident") return openMyIdent(modal.seat);
+  if(modal.t==="art") return renderArt();
 }
 function openPicker(seatNo){
   if(!DATA){toast("角色数据还在加载…");return;}
@@ -224,6 +247,7 @@ function previewHero(id){
   const ov=document.createElement("div"); ov.className="mask"; ov.id="pv"; ov.style.zIndex="90";
   ov.innerHTML=`<div class="sheet"><h2>查看技能<span class="x" data-a="pvclose">×</span></h2>
     <div class="herohead">${avaHtml(h,true)}<div><div class="hn">${esc(h.name)}</div><div class="hmeta">${heroMeta(h)}</div></div></div>
+    ${cardOf(h)||artOf(h)?`<img class="artimg" style="max-height:46vh;margin:0 auto 10px" src="${esc(artOf(h)||cardOf(h))}" alt="" onerror="this.remove()"/>`:""}
     ${skillsHtml(h)}
     ${tk?`<div class="hint" style="color:var(--mag)">${tk} 号已亮出选用这名角色,不能重复选。</div>`:""}
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-a="pvclose">返回列表</button><button class="primary" data-a="pickHero" data-c="${id}"${tk?" disabled":""}>选定此角色</button></div></div>`;
@@ -259,7 +283,6 @@ function render(){
   if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
   h+=viewHeader();
   if(state.phase==="over") h+=viewResult();
-  h+=viewMine();
   if(state.phase==="setup") h+=viewSetup();
   if(state.phase==="play") h+=viewPlay();
   h+=viewSeats();
@@ -290,31 +313,6 @@ function viewResult(){
   h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="newGame">再来一局(保留座位)</button></div></div>`;
   return h;
 }
-function viewMine(){
-  const mine=mineSeats();
-  if(!mine.length) return `<div class="card secret"><h2>我的机密</h2><div class="hint">先在下方「座位」里认领你坐的位置,身份和候选角色只会显示在你自己的手机上。</div></div>`;
-  return mine.map(s=>{
-    let h=`<div class="card secret"><h2>我的机密<span class="tag">${s.seatNo} 号座位 · 仅你可见</span></h2>`;
-    if(s.npc){ return h+`<div class="hint" style="margin-top:0">这是 NPC 座位(${esc(DATA.npcs[s.npc].name)}),只有血量,不行动。</div></div>`; }
-    if(s.identity) h+=`<div class="row"><span>身份</span>${idHtml(s.identity)}${s.identity==="brain"?'<span class="hint" style="margin:0">(公开)</span>':""}<span class="hint grow" style="margin:0">${esc(IDN()[s.identity].goal)}</span></div>`;
-    else h+=`<div class="hint" style="margin-top:0">还没有身份 —— 等系统发身份,或用实体身份牌在下面登记。</div>`;
-    if(s.heroId!=null&&HERO[s.heroId]){
-      const c=HERO[s.heroId];
-      h+=`<div class="row" style="margin-top:10px"><span class="grow">角色 <b>${esc(c.name)}</b> <span class="hint">${heroMeta(c)}</span>${s.heroRevealed?"":' <span class="badge hid">未亮</span>'}</span>
-        <button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button></div>`;
-    } else if(s.offers&&s.offers.length){
-      h+=`<div class="row" style="margin-top:10px"><span class="grow">发给你 ${s.offers.length} 张角色候选${s.identity==="brain"?"(至高之脑先选先亮)":""}</span><button class="primary sm" data-a="picker" data-s="${s.seatNo}">去选角色 ▾</button></div>`;
-    } else if(state.phase!=="over"){
-      h+=`<div class="row" style="margin-top:10px"><span class="grow hint" style="margin:0">还没选角色(可等「发角色」,或用实体牌选好后搜索登记)</span><button class="sm" data-a="picker" data-s="${s.seatNo}">选角色 ▾</button></div>`;
-    }
-    if(state.phase!=="over"){
-      h+=`<details data-k="id${s.seatNo}" style="margin-top:10px"><summary>用实体身份牌?手动登记</summary><div class="row" style="margin-top:6px">
-        <select id="idf-${s.seatNo}" class="grow" style="width:auto"><option value="">(清空)</option>${DATA.idKeys.map(k=>`<option value="${k}"${s.identity===k?" selected":""}>${esc(IDN()[k].name)}</option>`).join("")}</select>
-        <button class="sm" data-a="setId" data-s="${s.seatNo}">登记</button></div><div class="hint">至高之脑公开;其余只有你看得到,阵亡时公开。</div></details>`;
-    }
-    return h+`</div>`;
-  }).join("");
-}
 function viewSetup(){
   const c=state.idCounts, sum=c.brain+c.immune+c.virus+c.mutant, n=state.playerCount;
   const allHero=players().every(s=>s.hasHero), allId=players().every(s=>s.hasIdentity);
@@ -325,7 +323,7 @@ function viewSetup(){
     <div class="row" style="margin-top:6px">${DATA.idKeys.map(k=>`<label style="display:flex;align-items:center;gap:5px">${idHtml(k)}<input class="num" type="number" min="0" max="8" id="ic-${k}" value="${c[k]}"></label>`).join("")}
     <button class="sm" data-a="setCounts">改配比</button></div>
     <div class="row" style="margin-top:8px"><button class="grow" data-a="dealIds">系统随机发身份(至高之脑公开)</button></div>
-    <div class="hint">推荐:5 人 1/1/2/1 · 6 人 1/1/3/1 · 7 人 1/2/3/1 · 8 人 1/2/4/1 · 3 人 1/0/2/0 + 3 NPC。用实体身份牌的话跳过,各自在「我的机密」登记。${allId?"✓ 全员已有身份":""}</div>`;
+    <div class="hint">推荐:5 人 1/1/2/1 · 6 人 1/1/3/1 · 7 人 1/2/3/1 · 8 人 1/2/4/1 · 3 人 1/0/2/0 + 3 NPC。发完后各自点自己座位上的「🪪 我的身份」查看身份与胜利条件;用实体身份牌的话跳过,在同一处登记。${allId?"✓ 全员已有身份":""}</div>`;
   h+=`<div class="row" style="margin-top:12px"><b class="grow">③ 发角色</b><button data-a="dealHeroes">随机发候选(脑 5 选 1,其余 3 选 1)</button></div>
     <div class="hint">至高之脑先选、选完即亮;其余选完不亮,开局时同时亮出。也可以不发,用实体牌选好后搜索登记。${allHero?"✓ 全员已选":""}</div>`;
   h+=`<div class="row" style="margin-top:12px"><b class="grow">④ 开始</b><select id="first" style="width:auto">${players().map(s=>`<option value="${s.seatNo}"${state.brainSeat===s.seatNo?" selected":""}>${s.seatNo} 号先手${state.brainSeat===s.seatNo?"(脑)":""}</option>`).join("")}</select>
@@ -353,10 +351,14 @@ function viewSeats(){
   for(const s of seatsArr()){
     const mine=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
     const heldByOther=s.holderDevices.length&&!mine;
-    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}${s.npc?" npc":""}"><div class="row"><span class="st grow">座位 ${s.seatNo}${heroLabel(s)}`
+    const hv=s.heroId!=null&&HERO[s.heroId]?HERO[s.heroId]:null;
+    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}${s.npc?" npc":""}"><div class="row">`
+      +(hv&&thumbOf(hv)?`<img class="sava" data-a="art" data-s="${s.seatNo}" src="${esc(thumbOf(hv))}" alt="立绘" title="看立绘" onerror="this.style.visibility='hidden'"/>`:"")
+      +`<span class="st grow">座位 ${s.seatNo}${heroLabel(s)}`
       +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")
       +(s.identity&&!mine?" "+idHtml(s.identity):"")+smBadge(s.seatNo)+`</span>`;
     if(s.heroId!=null&&HERO[s.heroId]) h+=`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">技能</button>`;
+    if(mine&&!s.npc) h+=`<button class="sm ident${s.identity?" has":""}" data-a="myident" data-s="${s.seatNo}">🪪 ${s.identity?"我的身份":"登记身份"}</button>`;
     if(mine) h+=`<button class="ghost sm" data-a="release" data-s="${s.seatNo}">释放</button>`;
     else if(heldByOther) h+=`<button class="sm" data-a="takeover" data-s="${s.seatNo}" style="border-color:var(--mag);color:var(--mag)">替换</button>`;
     else h+=`<button class="sm" data-a="claim" data-s="${s.seatNo}">认领</button>`;
@@ -364,7 +366,8 @@ function viewSeats(){
     if(state.phase==="setup"){
       h+=`<div class="sub2">`;
       if(mine&&!s.npc){ const c=s.heroId!=null?HERO[s.heroId]:null;
-        h+=`<span class="lbl">角色</span>`+(s.offers&&s.offers.length?`<button class="primary sm" data-a="picker" data-s="${s.seatNo}">从 ${s.offers.length} 张候选里选 ▾</button>`:`<button class="sm" data-a="picker" data-s="${s.seatNo}">${c?esc(c.name)+" ▾":"选角色 ▾"}</button>`); }
+        h+=`<span class="lbl">角色</span>`+(s.offers&&s.offers.length?`<button class="primary sm" data-a="picker" data-s="${s.seatNo}">从 ${s.offers.length} 张候选里选 ▾</button>`:`<button class="sm" data-a="picker" data-s="${s.seatNo}">${c?esc(c.name)+" ▾":"选角色 ▾"}</button>`)
+          +(c&&!s.heroRevealed?'<span class="badge hid">未亮 · 仅你可见</span>':""); }
       else if(!s.npc&&s.offerCount) h+=`<span class="who">选角中…</span>`;
       h+=`<span class="grow"></span><span class="lbl">NPC</span>${s.npc?`<button class="xs" data-a="npc" data-s="${s.seatNo}" data-n="">取消</button>`:`<button class="xs ghost" data-a="npc" data-s="${s.seatNo}" data-n="zhan">占坑(2血)</button><button class="xs ghost" data-a="npc" data-s="${s.seatNo}" data-n="jinbi">金币(3血)</button>`}</div>`;
     } else {
@@ -399,6 +402,44 @@ function viewAdmin(){
   return `<div class="card"><div class="hint" style="margin-top:0">房间在最后一次操作 2 小时后自动解散。</div>
     <div class="row" style="margin-top:8px">${state.phase!=="setup"?'<button class="ghost grow" data-a="newGame">再来一局</button>':""}${state.phase==="play"?'<button class="ghost grow" data-a="forceEnd">手动结算…</button>':""}
     <button class="ghost grow" data-a="disband" style="color:var(--mag);border-color:var(--mag)">解散房间</button></div></div>`;
+}
+
+/* ============ 立绘(手机当角色牌):点座位头像 → 全屏看图;有干净立绘的可切「立绘 / 卡面」;可切「技能」============ */
+let artSeat=null, artMode=null, artSkills=false;
+function openArt(seatNo){ const s=state&&state.seats[seatNo]; if(!s||s.heroId==null||!HERO[s.heroId]) return; artSeat=seatNo; artMode=null; artSkills=false; modal={t:"art",seat:seatNo}; renderArt(); }
+function renderArt(){
+  const s=state&&state.seats[artSeat], h=s&&HERO[s.heroId]; if(!h){closeModal();return;}
+  const modes=[artOf(h)?["art","立绘"]:null, cardOf(h)?["card","卡面"]:null].filter(Boolean);
+  const cur=artMode||(modes[0]&&modes[0][0]);
+  const src=cur==="art"?artOf(h):cardOf(h);
+  $("#modal").innerHTML=`<div class="artwrap"><div class="arttop"><span class="an">${esc(h.name)}</span><span class="am">座位 ${artSeat} · ${heroMeta(h)}</span><span class="grow"></span>
+      <button data-a="artskill">${artSkills?"看图":"技能"}</button><button data-a="close">×</button></div>
+    <div class="artbody">${artSkills?`<div class="artskills">${skillsHtml(h)}</div>`:`<img class="artimg" src="${esc(src)}" alt="${esc(h.name)}" onerror="this.style.visibility='hidden'"/>`}</div>
+    ${modes.length>1&&!artSkills?`<div class="artfoot">${modes.map(m=>`<button class="${m[0]===cur?"on":""}" data-a="artmode" data-m="${m[0]}">${m[1]}</button>`).join("")}</div>`:""}</div>`;
+}
+
+/* ============ 我的身份弹层(仅本人座位;点开才显示,防旁人瞄到)============ */
+function openMyIdent(seatNo){
+  const s=state&&state.seats[seatNo]; if(!s||!state.youHold.includes(seatNo)||s.npc){closeModal();return;}
+  modal={t:"ident",seat:seatNo};
+  const idn=s.identity?IDN()[s.identity]:null, c=s.heroId!=null?HERO[s.heroId]:null;
+  let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>我的身份 · 座位 ${seatNo}<span class="x" data-a="close">×</span></h2>`;
+  if(idn){
+    h+=`<div class="idbig ${s.identity}">${esc(idn.name)}</div>`;
+    h+=`<div style="margin-bottom:10px"><b>胜利条件</b>:${esc(idn.goal)}</div>`;
+    const sm=state.superMind;
+    if(s.identity==="brain") h+=`<div class="hint" style="margin:0 0 10px">你的身份对全场公开。${sm&&sm.active?"超意识生效:血量/补给/子弹上限各 +1"+(sm.seized?"(单挑中已被异变夺走)":""):"病毒数不多于脑+免疫官,超意识未生效"}。杀死免疫官要弃置所有牌。</div>`;
+    else if(s.identity==="mutant") h+=`<div class="hint" style="margin:0 0 10px">别人看不到。脑死时只有你是唯一存活者才算你赢;与脑单挑时你夺走超意识(三上限 +1)。</div>`;
+    else h+=`<div class="hint" style="margin:0 0 10px">别人看不到;阵亡时亮出。${s.identity==="virus"?"杀死病毒的人摸三张,注意别暴露。":"至高之脑是 "+(state.brainSeat!=null?state.brainSeat+" 号":"?")+"。"}</div>`;
+  } else h+=`<div class="hint" style="margin:0 0 10px">还没有身份:等「开局设置」里系统发身份,或用实体身份牌在下面登记。</div>`;
+  if(c) h+=`<div class="row" style="margin-bottom:10px"><span class="grow">角色 <b>${esc(c.name)}</b> <span class="hint" style="display:inline">${heroMeta(c)}</span>${s.heroRevealed?"":' <span class="badge hid">未亮</span>'}</span><button class="btn-skill" data-a="skill" data-s="${seatNo}">技能</button></div>`;
+  else if(s.offers&&s.offers.length) h+=`<div class="row" style="margin-bottom:10px"><span class="grow">发给你 ${s.offers.length} 张角色候选${s.identity==="brain"?"(至高之脑先选先亮)":""}</span><button class="primary sm" data-a="picker" data-s="${seatNo}">去选角色 ▾</button></div>`;
+  if(state.phase!=="over"){
+    h+=`<details data-k="idreg${seatNo}"><summary>用实体身份牌?手动登记 / 更正</summary><div class="row" style="margin-top:6px">
+      <select id="idf-${seatNo}" class="grow" style="width:auto"><option value="">(清空)</option>${DATA.idKeys.map(k=>`<option value="${k}"${s.identity===k?" selected":""}>${esc(IDN()[k].name)}</option>`).join("")}</select>
+      <button class="sm" data-a="setId" data-s="${seatNo}">登记</button></div><div class="hint">至高之脑公开;其余只有你看得到,阵亡时公开。</div></details>`;
+  }
+  $("#modal").innerHTML=h+`</div></div>`;
 }
 
 /* ============ 台账弹层(公开,任何人可改)============ */
@@ -502,6 +543,10 @@ document.addEventListener("click",e=>{
     case "dealHeroes": if(!players().some(s=>s.hasHero||s.offerCount)||confirm("重新发角色会清掉所有人已选的角色,继续?")) act("dealHeroes"); break;
     case "start": act("startGame",{first:+$("#first").value}); break;
     case "setId": act("setIdentity",{seatNo:sn,identity:$("#idf-"+sn).value||null}); break;
+    case "myident": openMyIdent(sn); break;
+    case "art": openArt(sn); break;
+    case "artskill": artSkills=!artSkills; renderArt(); break;
+    case "artmode": artMode=b.dataset.m; artSkills=false; renderArt(); break;
     case "nextTurn": act("nextTurn"); break;
     case "setTurn": act("setTurn",{seatNo:sn}); closeModal(); break;
     case "proto": act("setProtocol",{on:b.dataset.on==="1"}); break;
