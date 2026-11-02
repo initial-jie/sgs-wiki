@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>枪鸣锈语线下房间</title>
+<style>
+/* 赛博朋克:深蓝黑底 + 霓虹青/品红/黄。身份四色:脑 青 / 免疫官 绿 / 病毒 橙红 / 异变 紫 */
+:root{
+  --bg:#0b0f1a; --bg2:#121a2b; --card:rgba(18,26,43,.92); --line:rgba(120,200,255,.22);
+  --fg:#e6f0ff; --fg-soft:#8fa3c2; --cyan:#35e0ff; --mag:#ff3fa4; --yel:#ffd93b; --red:#ff5a4e;
+  --brain:#35e0ff; --immune:#4ade80; --virus:#ff7a45; --mutant:#c084fc; --npc:#9aa4b8;
+  --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);
+  background-image:linear-gradient(rgba(53,224,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(53,224,255,.04) 1px,transparent 1px),
+    radial-gradient(ellipse at 80% 0%,rgba(255,63,164,.16),transparent 55%);
+  background-size:28px 28px,28px 28px,auto; color:var(--fg);font-family:var(--body);line-height:1.6;padding:12px 16px 60px;max-width:560px;margin:0 auto}
+h1{font-weight:900;font-size:24px;letter-spacing:.25em;text-align:center;margin:6px 0 0;color:#fff;text-shadow:0 0 12px var(--cyan),0 0 2px #fff}
+h1 .st{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--mag);border:2px solid var(--mag);border-radius:4px;padding:0 5px;margin-left:6px;transform:rotate(-8deg);vertical-align:middle;font-weight:700;text-shadow:none}
+.sub{text-align:center;color:var(--fg-soft);font-size:12px;letter-spacing:.14em;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:8px;padding:12px 14px;margin-bottom:11px;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35)}
+.card.secret{border-left-color:var(--mag)}
+.card h2{font-weight:900;font-size:16px;letter-spacing:.1em;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:10px;color:#fff}
+.card h2 .tag{float:right;font-size:11px;color:var(--fg-soft);letter-spacing:0;font-weight:400}
+label{font-size:13px;color:var(--fg-soft)}
+input,select{font-family:inherit;font-size:14px;background:#0a0e18;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+select option{background:#0a0e18}
+button{font-family:inherit;font-size:14px;border-radius:6px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--cyan);border-color:var(--cyan);color:#041018;font-weight:700}
+button.danger{background:var(--mag);border-color:var(--mag);color:#fff;font-weight:700}
+button.warn{background:var(--yel);border-color:var(--yel);color:#211a00;font-weight:700}
+button.ghost{background:transparent;color:var(--fg-soft)}
+button.sm{font-size:12px;padding:4px 9px}
+button.xs{font-size:12px;padding:2px 7px;line-height:1.4}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+.hint{font-size:12px;color:var(--fg-soft);margin-top:6px}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:1px 9px;color:var(--fg-soft)}
+a{color:var(--cyan)}
+#connbar{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;align-items:center;justify-content:center;gap:12px;padding:9px 14px;background:var(--mag);color:#fff;font-size:13px;font-weight:600}
+#connbar button{background:#fff;color:var(--mag);border:none;padding:5px 14px;font-weight:700}
+body.disconnected #connbar{display:flex}
+body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#fff;color:#041018;padding:9px 16px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:10000;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 身份 / 属性 */
+.idn{display:inline-block;font-weight:700;border-radius:4px;padding:1px 8px;color:#041018;font-size:13px}
+.idn.brain{background:var(--brain)} .idn.immune{background:var(--immune)} .idn.virus{background:var(--virus)} .idn.mutant{background:var(--mutant)} .idn.npc{background:var(--npc)}
+.stat{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:5px;padding:1px 7px;background:#0a0e18}
+.stat b{font-size:15px} .stat.hp b{color:var(--red)} .stat.ammo b{color:var(--yel)} .stat.sup b{color:var(--cyan)}
+.stat .cap{opacity:.6;font-size:11px}
+.bar{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}
+.bar i{display:inline-block;width:9px;height:14px;border-radius:2px;background:#2a3348;border:1px solid rgba(255,255,255,.08)}
+.bar i.on{background:var(--red);box-shadow:0 0 6px var(--red)} .bar.ammo i.on{background:var(--yel);box-shadow:0 0 6px var(--yel)}
+.proto{border-radius:8px;padding:9px 12px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+.proto.on{background:rgba(74,222,128,.13);border:1px solid var(--immune);color:var(--immune)}
+.proto.off{background:rgba(255,63,164,.13);border:1px solid var(--mag);color:var(--mag)}
+
+/* 座位 */
+.seat{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:7px;background:rgba(10,14,24,.6)}
+.seat.mine{border-color:var(--mag);background:rgba(255,63,164,.06)}
+.seat.turn{box-shadow:inset 4px 0 0 var(--cyan)}
+.seat.dead{opacity:.5} .seat.dead .nm{text-decoration:line-through}
+.seat.npc{border-style:dashed}
+.seat .st{font-weight:900;font-size:15px}
+.seat .nm{font-weight:700;margin-left:6px;color:#fff}
+.seat .who{font-size:12px;color:var(--fg-soft)}
+.seat .sub2{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.seat .lbl{font-size:12px;color:var(--fg-soft)}
+.btn-skill{border-color:var(--yel);color:var(--yel);background:transparent;font-size:12px;padding:4px 9px}
+.badge{display:inline-block;font-size:11px;border-radius:4px;padding:0 6px;margin-left:5px;font-weight:700;vertical-align:1px}
+.badge.dying{background:var(--mag);color:#fff;animation:pulse 1.2s infinite}
+.badge.dead{background:#4b5468;color:#fff}
+.badge.me{border:1px solid var(--mag);color:var(--mag)}
+.badge.turn{background:var(--cyan);color:#041018}
+.badge.hid{border:1px solid var(--fg-soft);color:var(--fg-soft)}
+.badge.sm{background:var(--mutant);color:#fff}
+@keyframes pulse{50%{opacity:.45}}
+.hidden-card{display:inline-block;font-size:12px;background:repeating-linear-gradient(45deg,#1b2235 0 4px,#263050 4px 8px);color:#c9d6f0;border-radius:3px;padding:0 7px;font-weight:600;margin-left:6px}
+.tagc{display:inline-block;font-size:11px;border-radius:3px;padding:0 6px;margin:2px 3px 0 0;border:1px solid var(--line);color:var(--fg)}
+.tagc.eq{border-color:rgba(74,222,128,.5)} .tagc.dl{border-color:rgba(255,217,59,.6);color:var(--yel)}
+.tagc .x{opacity:.6;margin-left:4px;cursor:pointer}
+
+/* 弹层 */
+.mask{position:fixed;inset:0;background:rgba(3,6,12,.72);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-top:3px solid var(--mag);border-radius:11px;width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.sheet h2{font-weight:900;font-size:17px;letter-spacing:.06em;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#fff}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--fg-soft);cursor:pointer;padding:0 4px}
+.gsearch{position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:1}
+.glist{max-height:56vh;overflow:auto;margin-top:4px}
+.grow-item{display:flex;align-items:center;gap:9px;padding:8px 6px;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:6px}
+.grow-item:active{background:rgba(255,63,164,.08)}
+.grow-item.taken{opacity:.5}
+.ava{width:34px;height:34px;border-radius:6px;flex:none;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;background:#0a0e18;color:var(--cyan)}
+.ava.big{width:56px;height:56px;font-size:28px;border-radius:8px}
+.grow-item .gn{font-weight:700;font-size:15px;color:#fff}
+.grow-item .gmeta{font-size:11px;color:var(--fg-soft)}
+.gv{flex:none;font-size:12px;padding:5px 10px;border:1px solid var(--yel);color:var(--yel);background:transparent;border-radius:6px;white-space:nowrap}
+.herohead{display:flex;gap:11px;align-items:center;margin-bottom:10px}
+.herohead .hn{font-weight:900;font-size:19px;color:#fff}
+.herohead .hmeta{font-size:12px;color:var(--fg-soft)}
+.skl{border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:8px;background:rgba(10,14,24,.6)}
+.skl .sn{font-weight:800;font-size:15px;color:var(--yel);margin-bottom:3px}
+.skl .se{font-size:13px;line-height:1.7}
+.kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.kinds button{padding:8px 0;font-weight:700}
+.pick{display:flex;gap:6px;flex-wrap:wrap}
+.pick button{min-width:44px}
+.pick button.on{background:var(--cyan);color:#041018;border-color:var(--cyan)}
+.res{border-radius:8px;padding:10px 12px;margin-top:10px;font-size:14px}
+.res.hit{background:rgba(255,90,78,.15);border:1px solid var(--red)} .res.miss{background:rgba(143,163,194,.12);border:1px solid var(--fg-soft)}
+.res .big{font-size:22px;font-weight:900}
+.cardlist p{font-size:13px;margin:4px 0}
+.cardlist .unv{color:var(--yel)}
+details summary{cursor:pointer;font-size:13px;color:var(--fg-soft)}
+.log{font-size:12px;color:var(--fg-soft);max-height:220px;overflow:auto;font-family:var(--mono)}
+.log div{padding:2px 0;border-bottom:1px dotted var(--line)}
+footer{text-align:center;font-size:11px;color:var(--fg-soft);margin-top:18px;letter-spacing:.1em}
+.num{width:56px;text-align:center}
+.result{border-left-color:var(--mag);background:rgba(255,63,164,.08)}
+.result .big{font-weight:900;font-size:20px;text-align:center;letter-spacing:.15em;color:var(--mag)}
+</style>
+</head>
+<body>
+<div id="connbar"><span>⚠ 连接已断开,正在重连…操作已暂停</span><button id="rcNow" type="button">立即重连</button></div>
+<div id="app"></div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/common/room-client.js"></script><!-- 公共房间客户端(连接/重连/改名/toast);见 prototype/common/client/ -->
+<script>
+/* 枪鸣锈语线下房间:桌上用实体牌,手机管「身份保密 + 选角候选 + 血量/弹匣/装备/延时牌台账 + 命中判定辅助 + 安全协议 + 胜负」。
+   权威逻辑在 DO(prototype/qmxy/shared/qmxy-logic.mjs);这里只渲染 roomState 与发 action{op,…}。 */
+const {esc,toast,$}=RoomClient;
+let state=null, DATA=null, HERO={}, CARD={};
+
+const RC=RoomClient.create({
+  wsPath: code=>"/api/qmxy/"+code+"/ws",
+  errorText:{GAME_OVER:"本局已结束,点「再来一局」",NOT_SETUP:"对局已开始,不能再改开局设置",COUNT_MISMATCH:"身份配比总数要等于玩家数(不含 NPC)",ONE_BRAIN:"至高之脑必须恰好 1 名",
+    NOT_OFFERED:"只能从发给你的候选里选",HERO_TAKEN:"这名角色已被别人亮出选用",IS_NPC:"NPC 座位不能做这个操作",DEAD:"该角色已阵亡",NOT_DEAD:"该角色没有阵亡",
+    EQUIP_FULL:"装备区已满 3 件(黄月英除外),先弃一件",DUP_DELAY:"同名延时牌不能放两张",BAD_CARD:"不认识这张牌",TOO_FEW_PLAYERS:"至少 2 名玩家",SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上"},
+  beforeConnect(){ state=null; closeModal(); },
+  onState(m){ state=m; render(); },
+  onMessage(m){ if(m.type==="actionResult"&&m.private) {} },
+  onClosed(){ state=null; closeModal(); render(); },
+  onRenamed(){ render(); },
+});
+function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
+
+fetch("/qmxy/data.json?v=__QMXY_DATA_VER__").then(r=>r.json()).then(d=>{
+  DATA=d; HERO=Object.fromEntries(d.heroes.map(h=>[h.id,h])); CARD=Object.fromEntries(d.cards.map(c=>[c.key,c])); render();
+}).catch(()=>toast("角色数据加载失败,刷新重试"));
+
+/* ============ 小工具 ============ */
+const IDN=()=>DATA.identities;
+const idHtml=k=>k&&IDN()[k]?`<span class="idn ${k}">${esc(IDN()[k].name)}</span>`:"";
+const seatsArr=()=>Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
+const mineSeats=()=>seatsArr().filter(s=>state.youHold.includes(s.seatNo));
+const players=()=>seatsArr().filter(s=>!s.npc);
+function heroLabel(s){
+  if(s.npc) return `<span class="nm" style="color:var(--npc)">${esc(DATA.npcs[s.npc].name)}</span>`;
+  if(s.heroId!=null&&HERO[s.heroId]) return `<span class="nm">${esc(HERO[s.heroId].name)}</span>`+(s.heroRevealed?"":'<span class="badge hid">未亮 · 仅你可见</span>');
+  if(s.hasHero) return '<span class="hidden-card">已选未亮</span>';
+  return "";
+}
+function skillsHtml(h){ return h.skills.map(k=>`<div class="skl"><div class="sn">${esc(k.name)}</div><div class="se">${esc(k.text).replace(/\n/g,"<br>")}</div></div>`).join(""); }
+const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${esc(h.name[0])}</div>`;
+const heroMeta=h=>`血 ${h.hp} · 补给 ${h.supply} · 子弹 ${h.ammo}`;
+function takenBy(hid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.heroId===hid&&x.heroRevealed); return s?s.seatNo:null; }
+function barHtml(cur,max,cls){ let h=`<span class="bar ${cls}">`; for(let i=0;i<Math.min(max,12);i++) h+=`<i class="${i<cur?"on":""}"></i>`; return h+"</span>"; }
+function statsHtml(s){
+  const t=s.stats; if(s.npc) return `<span class="stat hp"><b>${s.hp}</b><span class="cap">/${t.hp}</span>${barHtml(s.hp,t.hp,"hp")}</span>`;
+  return `<span class="stat hp" title="血量">❤<b>${s.hp}</b><span class="cap">/${t.hp}</span>${barHtml(s.hp,t.hp,"hp")}</span>
+    <span class="stat ammo" title="子弹">▮<b>${s.ammo}</b><span class="cap">/${t.ammo}</span>${barHtml(s.ammo,t.ammo,"ammo")}</span>
+    <span class="stat sup" title="补给(每回合摸牌)">摸<b>${t.supply}</b></span>`;
+}
+function smBadge(seatNo){ const sm=state.superMind; return sm&&sm.active&&sm.holder===seatNo?`<span class="badge sm" title="血量/补给/子弹上限各 +1">超意识${sm.seized?"(夺)":""}</span>`:""; }
+
+/* ---------- 弹层 ---------- */
+let modal=null;
+function closeModal(){ modal=null; $("#modal").innerHTML=""; }
+function rerenderModal(){
+  if(!modal) return;
+  if(modal.t==="picker"){ if(!state.seats[modal.seat]||!state.youHold.includes(modal.seat)) return closeModal(); renderPickerList(); return; }
+  if(modal.t==="skill") return openSkillView(modal.seat);
+  if(modal.t==="ledger") return openLedger(modal.seat);
+  if(modal.t==="shot") return openShot(modal.v);
+}
+function openPicker(seatNo){
+  if(!DATA){toast("角色数据还在加载…");return;}
+  const s=state.seats[seatNo]; modal={t:"picker",seat:seatNo};
+  const cur=s.heroId!=null&&HERO[s.heroId]?HERO[s.heroId].name:"";
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet">
+    <h2>选角色 · 座位 ${seatNo}<span class="x" data-a="close">×</span></h2>
+    <div class="gsearch">${s.offers&&s.offers.length?`<div class="hint" style="margin:0 0 6px">已发角色:只能从发给你的 ${s.offers.length} 张里选。${s.identity==="brain"?"你是至高之脑:选完立即亮出。":"选完先不亮,开局时全员同时亮出。"}</div>`
+      :`<input id="gq" placeholder="角色名或拼音,如 张春华 / zhangch / zch" autocomplete="off" autocapitalize="off">`}
+      <div class="row" style="margin-top:6px">${cur?`<button class="ghost sm" data-a="clearHero" data-s="${seatNo}">清除角色</button>`:""}
+        <span class="grow hint" style="text-align:right;margin:0">当前:${cur?esc(cur):"未选"}</span></div></div>
+    <div class="glist" id="glist"></div></div></div>`;
+  renderPickerList();
+  const inp=$("#gq"); if(inp){ inp.oninput=()=>renderPickerList(); try{inp.focus();}catch(e){} }
+}
+function renderPickerList(){
+  const box=$("#glist"); if(!box||!modal||modal.t!=="picker") return;
+  const s=state.seats[modal.seat], q=($("#gq")&&$("#gq").value.trim())||"";
+  const pool=(s.offers&&s.offers.length)?s.offers.map(id=>HERO[id]).filter(Boolean):DATA.heroes;
+  const list=RoomClient.searchList(pool,q);
+  box.innerHTML=list.map(h=>{ const tk=takenBy(h.id,modal.seat);
+    return `<div class="grow-item${tk?" taken":""}" data-a="pickItem" data-c="${h.id}">${avaHtml(h)}
+      <div class="grow"><div class="gn">${esc(h.name)}${s.heroId===h.id?' <span class="badge me">当前</span>':""}</div>
+      <div class="gmeta">${tk?`<b style="color:var(--mag)">${tk} 号已亮出选用</b> · `:""}${heroMeta(h)} · ${h.skills.map(k=>esc(k.name)).join("/")}</div></div>
+      <button class="gv" data-a="preview" data-c="${h.id}">查看技能</button></div>`; }).join("")
+    ||`<div class="hint" style="padding:12px">没找到「${esc(q)}」</div>`;
+}
+function previewHero(id){
+  const h=HERO[id]; if(!h||!modal||modal.t!=="picker") return;
+  const seat=modal.seat, tk=takenBy(id,seat);
+  const old=$("#pv"); if(old) old.remove();
+  const ov=document.createElement("div"); ov.className="mask"; ov.id="pv"; ov.style.zIndex="90";
+  ov.innerHTML=`<div class="sheet"><h2>查看技能<span class="x" data-a="pvclose">×</span></h2>
+    <div class="herohead">${avaHtml(h,true)}<div><div class="hn">${esc(h.name)}</div><div class="hmeta">${heroMeta(h)}</div></div></div>
+    ${skillsHtml(h)}
+    ${tk?`<div class="hint" style="color:var(--mag)">${tk} 号已亮出选用这名角色,不能重复选。</div>`:""}
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="ghost" data-a="pvclose">返回列表</button><button class="primary" data-a="pickHero" data-c="${id}"${tk?" disabled":""}>选定此角色</button></div></div>`;
+  $("#modal").appendChild(ov);
+}
+function pickHero(id){
+  const seat=modal&&modal.seat; if(seat==null) return;
+  const s=state.seats[seat];
+  if(s.heroId!=null&&s.heroId!==id&&!confirm("更换角色?")) return;
+  act("pickHero",{seatNo:seat,heroId:id}); closeModal();
+}
+function openSkillView(seatNo){
+  const s=state.seats[seatNo], h=s&&HERO[s.heroId]; if(!h){closeModal();return;}
+  modal={t:"skill",seat:seatNo};
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
+    <div class="herohead">${avaHtml(h,true)}<div><div class="hn">${esc(h.name)}</div><div class="hmeta">${heroMeta(h)} · 座位 ${seatNo}${state.youHold.includes(seatNo)?"(你)":""}</div></div></div>${skillsHtml(h)}</div></div>`;
+}
+function openHeroView(id){
+  const h=HERO[id]; if(!h) return; modal={t:"hero",id};
+  $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
+    <div class="herohead">${avaHtml(h,true)}<div><div class="hn">${esc(h.name)}</div><div class="hmeta">${heroMeta(h)}</div></div></div>${skillsHtml(h)}</div></div>`;
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  const app=$("#app");
+  let h='<h1>枪鸣锈语<span class="st">RUSTY</span></h1><div class="sub">赛博枪战 · 线下房间</div>';
+  if(!state){
+    app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。桌上照常用实体牌,手机负责身份保密、血量/弹匣台账、命中判定和胜负。"})
+      +'<div class="hint" style="text-align:center"><a href="/">三国杀房间</a> · <a href="/fs">风声房间</a></div>';
+    RoomClient.bindConnectForm(RC); return;
+  }
+  if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
+  h+=viewHeader();
+  if(state.phase==="over") h+=viewResult();
+  h+=viewMine();
+  if(state.phase==="setup") h+=viewSetup();
+  if(state.phase==="play") h+=viewPlay();
+  h+=viewSeats();
+  h+=viewRef();
+  h+=viewLog();
+  h+=viewAdmin();
+  h+='<footer>枪鸣锈语 · 线下房间原型 · 以实体卡牌文本为准</footer>';
+  const openK=[...document.querySelectorAll("details[data-k]")].filter(d=>d.open).map(d=>d.dataset.k);
+  const focusId=document.activeElement&&document.activeElement.id, vals={};
+  document.querySelectorAll("#app input[id],#app select[id]").forEach(el=>{ if(el.dataset.dirty) vals[el.id]=el.value; });
+  app.innerHTML=h;
+  openK.forEach(k=>{const d=document.querySelector(`details[data-k="${k}"]`); if(d) d.open=true;});
+  for(const [id,v] of Object.entries(vals)){ const el=document.getElementById(id); if(el){el.value=v;el.dataset.dirty="1";} }
+  if(focusId&&document.getElementById(focusId)) document.getElementById(focusId).focus();
+  rerenderModal();
+}
+function viewHeader(){
+  return `<div class="card"><div class="row"><span class="grow">房间 <b>${esc(RC.code||state.roomCode)}</b></span>
+    <button class="chip" data-a="rename" style="border:none;cursor:pointer">我 ${esc(RC.deviceId)} ✎</button>
+    <span class="chip">座位 [${state.youHold.join(",")||"未入座"}]</span>
+    <button class="ghost sm" data-a="newroom">新开房间</button></div></div>`;
+}
+function viewResult(){
+  const r=state.result||{winners:[]};
+  let h=`<div class="card result"><div class="big">本局结束</div><div style="text-align:center;margin:4px 0 8px">${esc(r.reason||"")}</div>`;
+  h+=`<div style="text-align:center;margin-bottom:8px">胜者:<b>${(r.winners||[]).map(n=>n+"号").join("、")||"无"}</b></div>`;
+  h+=seatsArr().map(s=>`<div class="row" style="padding:3px 0"><b style="width:36px">${s.seatNo}号</b><span class="grow">${s.npc?esc(DATA.npcs[s.npc].name):(s.heroId!=null&&HERO[s.heroId]?esc(HERO[s.heroId].name):"—")}</span>${s.npc?'<span class="idn npc">NPC</span>':idHtml(s.identity)}${(r.winners||[]).includes(s.seatNo)?' <span class="badge turn">胜</span>':""}</div>`).join("");
+  h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="newGame">再来一局(保留座位)</button></div></div>`;
+  return h;
+}
+function viewMine(){
+  const mine=mineSeats();
+  if(!mine.length) return `<div class="card secret"><h2>我的机密</h2><div class="hint">先在下方「座位」里认领你坐的位置,身份和候选角色只会显示在你自己的手机上。</div></div>`;
+  return mine.map(s=>{
+    let h=`<div class="card secret"><h2>我的机密<span class="tag">${s.seatNo} 号座位 · 仅你可见</span></h2>`;
+    if(s.npc){ return h+`<div class="hint" style="margin-top:0">这是 NPC 座位(${esc(DATA.npcs[s.npc].name)}),只有血量,不行动。</div></div>`; }
+    if(s.identity) h+=`<div class="row"><span>身份</span>${idHtml(s.identity)}${s.identity==="brain"?'<span class="hint" style="margin:0">(公开)</span>':""}<span class="hint grow" style="margin:0">${esc(IDN()[s.identity].goal)}</span></div>`;
+    else h+=`<div class="hint" style="margin-top:0">还没有身份 —— 等系统发身份,或用实体身份牌在下面登记。</div>`;
+    if(s.heroId!=null&&HERO[s.heroId]){
+      const c=HERO[s.heroId];
+      h+=`<div class="row" style="margin-top:10px"><span class="grow">角色 <b>${esc(c.name)}</b> <span class="hint">${heroMeta(c)}</span>${s.heroRevealed?"":' <span class="badge hid">未亮</span>'}</span>
+        <button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button></div>`;
+    } else if(s.offers&&s.offers.length){
+      h+=`<div class="row" style="margin-top:10px"><span class="grow">发给你 ${s.offers.length} 张角色候选${s.identity==="brain"?"(至高之脑先选先亮)":""}</span><button class="primary sm" data-a="picker" data-s="${s.seatNo}">去选角色 ▾</button></div>`;
+    } else if(state.phase!=="over"){
+      h+=`<div class="row" style="margin-top:10px"><span class="grow hint" style="margin:0">还没选角色(可等「发角色」,或用实体牌选好后搜索登记)</span><button class="sm" data-a="picker" data-s="${s.seatNo}">选角色 ▾</button></div>`;
+    }
+    if(state.phase!=="over"){
+      h+=`<details data-k="id${s.seatNo}" style="margin-top:10px"><summary>用实体身份牌?手动登记</summary><div class="row" style="margin-top:6px">
+        <select id="idf-${s.seatNo}" class="grow" style="width:auto"><option value="">(清空)</option>${DATA.idKeys.map(k=>`<option value="${k}"${s.identity===k?" selected":""}>${esc(IDN()[k].name)}</option>`).join("")}</select>
+        <button class="sm" data-a="setId" data-s="${s.seatNo}">登记</button></div><div class="hint">至高之脑公开;其余只有你看得到,阵亡时公开。</div></details>`;
+    }
+    return h+`</div>`;
+  }).join("");
+}
+function viewSetup(){
+  const c=state.idCounts, sum=c.brain+c.immune+c.virus+c.mutant, n=state.playerCount;
+  const allHero=players().every(s=>s.hasHero), allId=players().every(s=>s.hasIdentity);
+  let h=`<div class="card"><h2>开局设置<span class="tag">任何人都可操作</span></h2>`;
+  h+=`<div><b>① 人数与 NPC</b> <span class="hint">${seatsArr().length} 座 · 玩家 ${n} 人 · NPC ${seatsArr().length-n}</span></div>
+    <div class="hint">人少(3 人)时把玩家之间的座位标成 NPC 机器人隔开:在下方座位点「NPC」。至高之脑推荐坐 1 号。</div>`;
+  h+=`<div style="margin-top:12px"><b>② 发身份</b> <span class="hint">配比合计 ${sum}${sum!==n?' <b style="color:var(--mag)">≠ 玩家数 '+n+'</b>':""}${c.virus>c.brain+c.immune?' · 病毒多于脑+免疫官 → <b style="color:var(--mutant)">超意识生效</b>':""}</span></div>
+    <div class="row" style="margin-top:6px">${DATA.idKeys.map(k=>`<label style="display:flex;align-items:center;gap:5px">${idHtml(k)}<input class="num" type="number" min="0" max="8" id="ic-${k}" value="${c[k]}"></label>`).join("")}
+    <button class="sm" data-a="setCounts">改配比</button></div>
+    <div class="row" style="margin-top:8px"><button class="grow" data-a="dealIds">系统随机发身份(至高之脑公开)</button></div>
+    <div class="hint">推荐:5 人 1/1/2/1 · 6 人 1/1/3/1 · 7 人 1/2/3/1 · 8 人 1/2/4/1 · 3 人 1/0/2/0 + 3 NPC。用实体身份牌的话跳过,各自在「我的机密」登记。${allId?"✓ 全员已有身份":""}</div>`;
+  h+=`<div class="row" style="margin-top:12px"><b class="grow">③ 发角色</b><button data-a="dealHeroes">随机发候选(脑 5 选 1,其余 3 选 1)</button></div>
+    <div class="hint">至高之脑先选、选完即亮;其余选完不亮,开局时同时亮出。也可以不发,用实体牌选好后搜索登记。${allHero?"✓ 全员已选":""}</div>`;
+  h+=`<div class="row" style="margin-top:12px"><b class="grow">④ 开始</b><select id="first" style="width:auto">${players().map(s=>`<option value="${s.seatNo}"${state.brainSeat===s.seatNo?" selected":""}>${s.seatNo} 号先手${state.brainSeat===s.seatNo?"(脑)":""}</option>`).join("")}</select>
+    <button class="primary" data-a="start">开始对局</button></div>
+    <div class="hint">开局:全员亮角色,血量与子弹填满,安全协议生效。每人起手 4 张牌(桌上自己发)。</div>`;
+  return h+`</div>`;
+}
+function viewPlay(){
+  const t=state.turn, ts=t!=null?state.seats[t]:null;
+  let h=`<div class="card"><div class="row"><span class="grow">当前回合 <b style="font-size:18px">${t!=null?t+" 号":"—"}</b> <span class="hint">第 ${state.round} 轮${ts&&ts.heroId!=null&&HERO[ts.heroId]?" · "+esc(HERO[ts.heroId].name):""}</span></span>
+    ${t!=null?`<button class="sm" data-a="refill" data-s="${t}">子弹补满</button>`:""}<button class="primary" data-a="nextTurn">下一回合 →</button></div>
+    <div class="hint">回合:摸牌(补给数张,子弹调至上限)→ 出牌 → 弃牌(手牌上限 = 血量上限)。${state.round===1?"王莽〖时空乱流〗第一轮不执行回合。":""}</div>`;
+  h+=`<div class="proto ${state.protocol?"on":"off"}" style="margin-top:10px"><span class="grow">${state.protocol?"🔒 安全协议生效:每人每回合只能用一张【点射】或【扫射】":"🔓 安全协议已解除:射击牌无次数限制,点射/扫射可互转"}</span>
+    <button class="xs ghost" data-a="proto" data-on="${state.protocol?0:1}">${state.protocol?"手动解除":"恢复"}</button></div>`;
+  const sm=state.superMind;
+  if(sm&&sm.active) h+=`<div class="hint">超意识生效(病毒多于脑+免疫官):${sm.holder!=null?sm.holder+" 号":"—"} 血量/补给/子弹上限各 +1${sm.seized?"(单挑中被异变夺走)":""}。</div>`;
+  h+=`<div class="row" style="margin-top:10px"><button class="warn grow" data-a="shot">🎯 命中判定</button></div></div>`;
+  return h;
+}
+function viewSeats(){
+  const N=seatsArr().length;
+  let h=`<div class="card"><h2>座位<span class="tag">点认领入座 · 可代持没电的座位</span></h2>`;
+  h+=`<div class="row" style="margin-bottom:8px"><span class="hint" style="margin:0">共 <b>${N}</b> 座(按出牌顺序编号)</span>
+    <button class="ghost sm" data-a="seatMinus"${N<=3?" disabled":""}>− 减座位</button><button class="ghost sm" data-a="seatPlus"${N>=8?" disabled":""}>＋ 加座位</button></div>`;
+  for(const s of seatsArr()){
+    const mine=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
+    const heldByOther=s.holderDevices.length&&!mine;
+    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}${s.npc?" npc":""}"><div class="row"><span class="st grow">座位 ${s.seatNo}${heroLabel(s)}`
+      +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")
+      +(s.identity&&!mine?" "+idHtml(s.identity):"")+smBadge(s.seatNo)+`</span>`;
+    if(s.heroId!=null&&HERO[s.heroId]) h+=`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">技能</button>`;
+    if(mine) h+=`<button class="ghost sm" data-a="release" data-s="${s.seatNo}">释放</button>`;
+    else if(heldByOther) h+=`<button class="sm" data-a="takeover" data-s="${s.seatNo}" style="border-color:var(--mag);color:var(--mag)">替换</button>`;
+    else h+=`<button class="sm" data-a="claim" data-s="${s.seatNo}">认领</button>`;
+    h+=`</div>`;
+    if(state.phase==="setup"){
+      h+=`<div class="sub2">`;
+      if(mine&&!s.npc){ const c=s.heroId!=null?HERO[s.heroId]:null;
+        h+=`<span class="lbl">角色</span>`+(s.offers&&s.offers.length?`<button class="primary sm" data-a="picker" data-s="${s.seatNo}">从 ${s.offers.length} 张候选里选 ▾</button>`:`<button class="sm" data-a="picker" data-s="${s.seatNo}">${c?esc(c.name)+" ▾":"选角色 ▾"}</button>`); }
+      else if(!s.npc&&s.offerCount) h+=`<span class="who">选角中…</span>`;
+      h+=`<span class="grow"></span><span class="lbl">NPC</span>${s.npc?`<button class="xs" data-a="npc" data-s="${s.seatNo}" data-n="">取消</button>`:`<button class="xs ghost" data-a="npc" data-s="${s.seatNo}" data-n="zhan">占坑(2血)</button><button class="xs ghost" data-a="npc" data-s="${s.seatNo}" data-n="jinbi">金币(3血)</button>`}</div>`;
+    } else {
+      h+=`<div class="sub2">${statsHtml(s)}<span class="grow"></span>${state.phase==="play"&&!s.dead?`<button class="sm" data-a="ledger" data-s="${s.seatNo}">台账 ▸</button>`:(s.dead&&state.phase==="play"?`<button class="ghost xs" data-a="revive" data-s="${s.seatNo}">撤销死亡</button>`:"")}</div>`;
+      if(s.equips.length||s.delays.length) h+=`<div style="margin-top:4px">${s.equips.map(k=>`<span class="tagc eq">${esc(CARD[k]?CARD[k].name:k)}</span>`).join("")}${s.delays.map(k=>`<span class="tagc dl">⏱${esc(CARD[k]?CARD[k].name:k)}</span>`).join("")}</div>`;
+    }
+    if(heldByOther) h+=`<div class="hint">当前由 <b>${esc(s.holderDevices[0])}</b> 持有 · 若其断线,点「替换」即可接管</div>`;
+    h+=`</div>`;
+  }
+  return h+`</div>`;
+}
+function viewRef(){
+  const by=t=>DATA.cards.filter(c=>c.type===t);
+  const cl=t=>by(t).map(c=>`<p class="${c.verified===false?"unv":""}">· <b>【${esc(c.name)}】</b>${c.ammo?"<span class='tagc'>耗子弹</span>":""}${esc(c.text).replace(/\n/g,"<br>")}</p>`).join("");
+  return `<div class="card cardlist"><details data-k="ref"><summary><b style="font-size:15px;color:#fff">规则速查</b> · 命中判定 / 身份 / 牌表 / 角色</summary>
+    <p style="margin-top:8px"><b>命中判定</b>:翻牌堆顶看左上角点数(1 点×40 / 2 点×30 / 3 点×20 / 4 点×10 / 爆头×4 / 哑火×4),与目标之间每隔一人 −1(最短路,NPC 算角色),扫射 −2,向前翻滚 +1;点数 > 0 命中。爆头无视修正直接命中且伤害 +1(技能检定算 5 点);哑火无视修正不中(算 0 点)。目标可先用【翻滚】抵消 1 发子弹,翻滚后不能再判定。自己不能射自己;可以射别人面前的延时牌(占射击次数,命中后选引爆或作废)。</p>
+    <p><b>安全协议</b>:开局每人每回合只能用一张射击牌;第一个角色死亡后解除,射击无限制且点射/扫射互转。</p>
+    <p><b>身份</b>:${DATA.idKeys.map(k=>`${idHtml(k)} ${esc(IDN()[k].goal)}`).join("<br>")}<br>终局:脑死 → 异变是唯一存活者则异变胜,否则病毒胜;病毒与异变全死 → 脑与免疫官胜。杀病毒摸 3;脑杀免疫官弃全部牌。</p>
+    <p><b>回合</b>:摸牌(补给数,子弹补满)→ 出牌(同名延时牌不能放两张;装备最多 3 件)→ 弃牌(手牌上限 = 血量上限)。血量 ≤0 濒死,任何人可用【补丁】救;死亡亮身份、弃所有牌。</p>
+    <p style="margin-top:8px"><b>基本牌</b></p>${cl("basic")}
+    <p style="margin-top:8px"><b>战术牌</b> <span class="hint" style="display:inline">(黄色=文本待核,以实体牌为准)</span></p>${cl("tactic")}
+    <p style="margin-top:8px"><b>延时战术牌</b></p>${cl("delay")}
+    <p style="margin-top:8px"><b>装备牌</b></p>${cl("equip")}
+    <p style="margin-top:8px"><b>全部角色</b>(点开看技能)</p><div>${DATA.heroes.map(c=>`<button class="sm ghost" style="margin:2px" data-a="viewHero" data-c="${c.id}">${esc(c.name)}</button>`).join("")}</div>
+  </details></div>`;
+}
+function viewLog(){
+  return `<div class="card"><details data-k="log"><summary><b style="font-size:15px;color:#fff">记录</b> · 最近 ${state.log.length} 条</summary>
+    <div class="log" style="margin-top:6px">${state.log.map(l=>`<div>${esc(l)}</div>`).join("")||"—"}</div></details></div>`;
+}
+function viewAdmin(){
+  return `<div class="card"><div class="hint" style="margin-top:0">房间在最后一次操作 2 小时后自动解散。</div>
+    <div class="row" style="margin-top:8px">${state.phase!=="setup"?'<button class="ghost grow" data-a="newGame">再来一局</button>':""}${state.phase==="play"?'<button class="ghost grow" data-a="forceEnd">手动结算…</button>':""}
+    <button class="ghost grow" data-a="disband" style="color:var(--mag);border-color:var(--mag)">解散房间</button></div></div>`;
+}
+
+/* ============ 台账弹层(公开,任何人可改)============ */
+function openLedger(seatNo){
+  const s=state&&state.seats[seatNo]; if(!s||s.dead){closeModal();return;}
+  modal={t:"ledger",seat:seatNo};
+  const t=s.stats, others=seatsArr().filter(x=>x.seatNo!==seatNo&&!x.dead);
+  let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>座位 ${seatNo}${heroLabel(s)}<span class="x" data-a="close">×</span></h2>`;
+  h+=`<div class="row"><b style="width:52px">血量</b><button class="danger" data-a="hp" data-s="${seatNo}" data-d="-1">− 1 受伤</button><button data-a="hp" data-s="${seatNo}" data-d="-2">− 2</button><button class="primary" data-a="hp" data-s="${seatNo}" data-d="1">＋ 1 补丁/回复</button><span class="stat hp">❤<b>${s.hp}</b><span class="cap">/${t.hp}</span></span></div>`;
+  if(!s.npc){
+    h+=`<div class="row" style="margin-top:8px"><b style="width:52px">子弹</b><button data-a="ammo" data-s="${seatNo}" data-d="-1">− 1 发</button><button data-a="ammo" data-s="${seatNo}" data-d="1">＋ 1</button><button class="ghost" data-a="refill" data-s="${seatNo}">补满</button><span class="stat ammo">▮<b>${s.ammo}</b><span class="cap">/${t.ammo}</span></span></div>`;
+    h+=`<div style="margin-top:12px"><b>装备区</b> <span class="hint" style="display:inline">${s.equips.length}/3${s.heroId===13?"(黄月英不限)":""}</span></div>
+      <div style="margin-top:4px">${s.equips.map((k,i)=>`<span class="tagc eq">${esc(CARD[k].name)}<span class="x" data-a="rmEq" data-s="${seatNo}" data-c="${k}">×</span></span>`).join("")||'<span class="hint">无</span>'}</div>
+      <div class="row" style="margin-top:6px"><select id="eq-${seatNo}" class="grow" style="width:auto">${DATA.cards.filter(c=>c.type==="equip").map(c=>`<option value="${c.key}">${esc(c.name)} — ${esc(c.text.slice(0,18))}…</option>`).join("")}</select><button class="sm" data-a="addEq" data-s="${seatNo}">装上</button></div>`;
+    h+=`<div style="margin-top:12px"><b>面前的延时牌</b></div>
+      <div style="margin-top:4px">${s.delays.map(k=>`<span class="tagc dl">⏱${esc(CARD[k].name)}<span class="x" data-a="rmDl" data-s="${seatNo}" data-c="${k}" title="引爆/移除">×</span></span>`).join("")||'<span class="hint">无</span>'}</div>
+      <div class="row" style="margin-top:6px"><select id="dl-${seatNo}" class="grow" style="width:auto">${DATA.cards.filter(c=>c.type==="delay").map(c=>`<option value="${c.key}">${esc(c.name)}</option>`).join("")}</select><button class="sm" data-a="addDl" data-s="${seatNo}">放置</button></div>
+      <div class="hint">回合开始引爆后点 × 移除;被射击提前引爆/作废、被剥离、被无懈同样点 ×。</div>`;
+    h+=`<details data-k="mod${seatNo}" style="margin-top:10px"><summary>上限修正(技能/临时效果)· 自我遥控器</summary>
+      <div class="row" style="margin-top:6px"><label>血量<input class="num" type="number" id="mh-${seatNo}" value="${s.mods.hp}"></label><label>补给<input class="num" type="number" id="ms-${seatNo}" value="${s.mods.supply}"></label><label>子弹<input class="num" type="number" id="ma-${seatNo}" value="${s.mods.ammo}"></label>
+      <button class="sm" data-a="setMods" data-s="${seatNo}">应用</button><button class="sm ghost" data-a="swap" data-s="${seatNo}">${s.swap?"取消互换":"补给⇄子弹互换"}</button></div>
+      <div class="hint">当前上限 血 ${t.hp} · 补给 ${t.supply} · 子弹 ${t.ammo}(已含装备/超意识)</div></details>`;
+  }
+  h+=`<div class="row" style="margin-top:14px"><label style="display:flex;align-items:center;gap:5px">凶手<select id="killer-${seatNo}" style="width:auto;padding:6px 8px"><option value="">无/不记</option>${others.map(x=>`<option value="${x.seatNo}">${x.seatNo} 号</option>`).join("")}</select></label>
+    <button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>
+    ${!s.npc&&state.turn!==seatNo?`<button class="ghost" data-a="setTurn" data-s="${seatNo}">设为当前回合</button>`:""}</div>`;
+  if(s.dying) h+=`<div class="hint">濒死:任何人可用【补丁】回 1 救回(点 ＋1);无人救就确认死亡。</div>`;
+  h+=`<div class="hint">死亡:亮出身份、弃置所有牌;杀病毒/金币机器人者摸 3;脑杀免疫官弃全部牌;首个死亡解除安全协议。</div>`;
+  $("#modal").innerHTML=h+`</div></div>`;
+}
+
+/* ============ 命中判定弹层 ============ */
+function openShot(v){
+  v=v||{shooter:state.turn,target:null,mode:"single",drawn:null,bonus:0}; modal={t:"shot",v};
+  const alive=seatsArr().filter(s=>!s.dead);
+  const nm=s=>`${s.seatNo}号${s.npc?" NPC":(s.heroId!=null&&HERO[s.heroId]?" "+HERO[s.heroId].name:"")}`;
+  const seatBtns=(key)=>`<div class="pick">${alive.filter(s=>!(key==="shooter"&&s.npc)).map(s=>`<button class="sm${v[key]===s.seatNo?" on":""}" data-a="shotSet" data-k="${key}" data-v="${s.seatNo}">${esc(nm(s))}</button>`).join("")}</div>`;
+  let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>🎯 命中判定<span class="x" data-a="close">×</span></h2>
+    <div><b>射手</b></div>${seatBtns("shooter")}
+    <div style="margin-top:8px"><b>目标</b></div>${seatBtns("target")}
+    <div class="row" style="margin-top:8px"><b>方式</b><button class="sm${v.mode==="single"?" on":""}" data-a="shotSet" data-k="mode" data-v="single">点射</button><button class="sm${v.mode==="spray"?" on":""}" data-a="shotSet" data-k="mode" data-v="spray">扫射(−2)</button>
+      <span class="grow"></span><b>修正</b><button class="xs" data-a="shotSet" data-k="bonus" data-v="${v.bonus-1}">−</button><span class="stat"><b>${v.bonus>=0?"+":""}${v.bonus}</b></span><button class="xs" data-a="shotSet" data-k="bonus" data-v="${v.bonus+1}">＋</button></div>
+    <div class="hint">修正:向前翻滚 +1、静滞力场 −1、微型黑洞 −1、致命闪光 −999 等。隔人惩罚自动算。</div>
+    <div style="margin-top:8px"><b>翻出的牌</b></div><div class="pick">${["1","2","3","4"].map(p=>`<button class="sm${v.drawn===p?" on":""}" data-a="shotSet" data-k="drawn" data-v="${p}">${p} 点</button>`).join("")}<button class="sm${v.drawn==="head"?" on":""}" data-a="shotSet" data-k="drawn" data-v="head">💀 爆头</button><button class="sm${v.drawn==="dud"?" on":""}" data-a="shotSet" data-k="drawn" data-v="dud">哑火</button></div>`;
+  const r=localHit(v);
+  if(r&&!r.error){
+    h+=`<div class="res ${r.hit?"hit":"miss"}"><div class="big">${r.hit?"✅ 命中":"❌ 未命中"}${r.hit&&r.damage>1?" · 伤害 "+r.damage:""}</div>
+      <div>隔 ${r.between} 人 → 修正 ${r.mod>=0?"+":""}${r.mod}${r.points!=null?" → 点数 "+r.points:""}${r.exact?" · 恰好命中":""}</div>${r.notes.map(n=>`<div class="hint" style="margin-top:2px">${esc(n)}</div>`).join("")}</div>
+      <div class="row" style="margin-top:10px"><button class="primary grow" data-a="shotLog">记录到日志${r.hit?"并扣 "+r.damage+" 血":""}</button><button class="ghost" data-a="shotLogOnly">只记录</button></div>`;
+  } else if(r&&r.error) h+=`<div class="hint" style="color:var(--mag)">${esc(RC_ERR[r.error]||r.error)}</div>`;
+  else h+=`<div class="hint">选好射手、目标和翻出的牌,这里会算出结果。</div>`;
+  $("#modal").innerHTML=h+`</div></div>`;
+}
+const RC_ERR={SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上"};
+// 与服务端 hitCheck 同一套规则的本地预览(权威结果由服务端 logShot 记录)
+function localHit(v){
+  if(v.shooter==null||v.target==null||!v.drawn) return null;
+  const ring=seatsArr().filter(s=>!s.dead).map(s=>s.seatNo);
+  const i=ring.indexOf(v.shooter), j=ring.indexOf(v.target);
+  if(i<0||j<0) return {error:"NOT_ON_TABLE"}; if(i===j) return {error:"SELF_SHOT"};
+  const n=ring.length, d=Math.abs(i-j), between=Math.max(0,Math.min(d,n-d)-1);
+  const mod=-between-(v.mode==="spray"?2:0)+(v.bonus||0);
+  const sh=state.seats[v.shooter], tg=state.seats[v.target];
+  const helmet=(tg.equips||[]).includes("toukui");
+  let drawn=v.drawn; if(drawn==="4"&&sh.heroId===19) drawn="head";
+  const r={between,mod,hit:false,exact:false,damage:0,notes:[],points:null};
+  if(drawn==="head"){ r.hit=true; r.damage=2; r.notes.push("爆头:无视修正直接命中,伤害 +1"); if(sh.heroId===19) r.notes.push("吕布〖死亡宣告〗:真正的爆头直接杀死目标(4 点视为爆头的不算)"); }
+  else if(drawn==="dud"){ r.notes.push("哑火:无视修正,未命中"); }
+  else { r.points=Number(drawn)+mod; r.hit=r.points>0; r.exact=r.points===1; r.damage=r.hit?1:0; if(r.exact) r.notes.push("恰好命中(修正后 1 点):甄宓〖幸运一击〗/ 司马懿〖时空赝品〗相关"); }
+  if(sh.heroId===6){ r.hit=!r.hit; r.damage=r.hit?(drawn==="dud"?2:1):0; r.notes.push("孙鲁班〖翻云覆雨〗:结果反转"); }
+  if(helmet&&(v.mode==="spray"||drawn==="head")){ r.hit=false; r.damage=0; r.notes.push("偏折头盔:扫射与爆头对目标无效"); }
+  return r;
+}
+
+/* ============ 事件(委托)============ */
+document.addEventListener("click",e=>{
+  const m=e.target.closest("[data-mclose]"); if(m&&e.target===m){closeModal();return;}
+  const pv=$("#pv"); if(pv&&e.target===pv){pv.remove();return;}
+  const b=e.target.closest("[data-a]"); if(!b) return;
+  const a=b.dataset.a, sn=b.dataset.s!=null?+b.dataset.s:null;
+  switch(a){
+    case "rename": RC.promptRename(); break;
+    case "newroom": { const c=RoomClient.randomCode(); if(confirm("离开当前房间、新开一局(房间号 "+c+")?\n记得把新房间号告诉其他玩家。")) RC.connect(RC.base||RoomClient.defaultBase(),c); break; }
+    case "skill": openSkillView(sn); break;
+    case "picker": openPicker(sn); break;
+    case "pickItem": { const c=+b.dataset.c; if(takenBy(c,modal.seat)) toast("该角色已被亮出选用"); else previewHero(c); break; }
+    case "preview": e.stopPropagation(); previewHero(+b.dataset.c); break;
+    case "pvclose": { const pv=$("#pv"); if(pv) pv.remove(); break; }
+    case "pickHero": pickHero(+b.dataset.c); break;
+    case "clearHero": if(confirm("清除已选角色?")){ act("clearHero",{seatNo:sn}); closeModal(); } break;
+    case "close": closeModal(); break;
+    case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
+    case "release": if(confirm("释放这个座位?")) RC.send({type:"releaseSeat",seatNo:sn}); break;
+    case "takeover": if(confirm("强制接管这个座位?原持有设备会被撤下(用于朋友手机没电)。")) RC.send({type:"takeoverSeat",seatNo:sn}); break;
+    case "seatPlus": RC.send({type:"addSeat"}); break;
+    case "seatMinus": { const last=seatsArr().slice(-1)[0]; if(last&&last.holderDevices.length&&!confirm(last.seatNo+" 号有人坐,确定删掉这个座位?")) break; RC.send({type:"removeSeat"}); break; }
+    case "disband": if(confirm("解散房间?所有人退出,不可恢复。")) RC.send({type:"disbandRoom"}); break;
+    case "npc": act("setNpc",{seatNo:sn,npc:b.dataset.n||null}); break;
+    case "setCounts": act("setIdCounts",Object.fromEntries(DATA.idKeys.map(k=>[k,+$("#ic-"+k).value]))); break;
+    case "dealIds": if(!players().some(s=>s.hasIdentity)||confirm("重新发身份会覆盖所有人的身份,继续?")) act("dealIdentities"); break;
+    case "dealHeroes": if(!players().some(s=>s.hasHero||s.offerCount)||confirm("重新发角色会清掉所有人已选的角色,继续?")) act("dealHeroes"); break;
+    case "start": act("startGame",{first:+$("#first").value}); break;
+    case "setId": act("setIdentity",{seatNo:sn,identity:$("#idf-"+sn).value||null}); break;
+    case "nextTurn": act("nextTurn"); break;
+    case "setTurn": act("setTurn",{seatNo:sn}); closeModal(); break;
+    case "proto": act("setProtocol",{on:b.dataset.on==="1"}); break;
+    case "refill": act("refillAmmo",{seatNo:sn}); break;
+    case "ledger": openLedger(sn); break;
+    case "hp": act("adjHp",{seatNo:sn,delta:+b.dataset.d,killer:($("#killer-"+sn)&&$("#killer-"+sn).value)||null}); break;
+    case "ammo": act("adjAmmo",{seatNo:sn,delta:+b.dataset.d}); break;
+    case "addEq": act("addEquip",{seatNo:sn,card:$("#eq-"+sn).value}); break;
+    case "rmEq": act("removeEquip",{seatNo:sn,card:b.dataset.c}); break;
+    case "addDl": act("addDelay",{seatNo:sn,card:$("#dl-"+sn).value}); break;
+    case "rmDl": act("removeDelay",{seatNo:sn,card:b.dataset.c,how:"explode"}); break;
+    case "setMods": act("setMods",{seatNo:sn,hp:+$("#mh-"+sn).value,supply:+$("#ms-"+sn).value,ammo:+$("#ma-"+sn).value}); break;
+    case "swap": act("toggleSwap",{seatNo:sn}); break;
+    case "death": { const k=$("#killer-"+sn), killer=k&&k.value?+k.value:null; const s=state.seats[sn];
+      if(confirm(sn+" 号确认死亡?\n"+(s.npc?"NPC 退出桌面。":"亮出身份、弃置所有牌;")+(killer?"凶手 "+killer+" 号。":""))) act("confirmDeath",{seatNo:sn,killer}); closeModal(); break; }
+    case "revive": act("revive",{seatNo:sn}); break;
+    case "shot": openShot(null); break;
+    case "shotSet": { const v=modal&&modal.t==="shot"?modal.v:null; if(!v) break; const k=b.dataset.k, val=b.dataset.v; v[k]=(k==="mode"||k==="drawn")?val:+val; openShot(v); break; }
+    case "shotLog": case "shotLogOnly": { const v=modal&&modal.t==="shot"?modal.v:null; if(!v) break; const r=localHit(v);
+      act("logShot",{shooter:v.shooter,target:v.target,mode:v.mode,drawn:v.drawn,bonus:v.bonus});
+      if(a==="shotLog"&&r&&r.hit) act("adjHp",{seatNo:v.target,delta:-r.damage,killer:v.shooter});
+      closeModal(); break; }
+    case "newGame": if(confirm("再来一局?清空角色、身份和台账,保留座位与 NPC 标记。")) act("newGame"); break;
+    case "forceEnd": { const w=prompt("手动结算(规则争议):输入胜者座位号,用逗号分隔,如 2,5"); if(w==null) break;
+      const winners=w.split(/[,，\s]+/).map(Number).filter(Boolean); const note=prompt("备注(可空)")||""; act("forceEnd",{winners,note}); break; }
+    case "viewHero": openHeroView(+b.dataset.c); break;
+  }
+});
+document.addEventListener("input",e=>{ if(e.target.id) e.target.dataset.dirty="1"; });
+document.getElementById("rcNow").onclick=()=>RC.reconnectNow();
+render();
+</script>
+</body>
+</html>

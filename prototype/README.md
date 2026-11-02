@@ -22,6 +22,13 @@ fengsheng/                 风声(游卡典藏版,线下辅助形态)——同�
   client/fs.html           风声房间前端(民国谍报档案风)
   fs-sim.mjs               node 断言:node prototype/fengsheng/fs-sim.mjs
   build-pinyin.mjs         角色名拼音 → shared/char-pinyin.json(选角拼音搜索)
+qmxy/                      枪鸣锈语(游卡 2026 赛博枪战三国杀,线下辅助形态)——第三个游戏;研究笔记见 docs/qmxy/
+  shared/qmxy-logic.mjs    QmxyCore extends RoomBase:NPC 座位/身份保密(脑公开)/候选选角/三属性+超意识/血量弹匣装备延时牌台账/命中判定/安全协议/终局
+  shared/qmxy-data.mjs     24 将 + NPC + 牌表 + 身份配比(verified:false 的牌待核)
+  worker.mjs               /qmxy 页面 + /qmxy/data.json + QmxyRoomDO
+  client/qmxy.html         枪鸣锈语房间前端(赛博霓虹风)
+  qmxy-sim.mjs             node 断言:node prototype/qmxy/qmxy-sim.mjs
+  build-pinyin.mjs         角色名拼音 → shared/hero-pinyin.json
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由
 ```
 
