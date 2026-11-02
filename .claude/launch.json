@@ -26,6 +26,20 @@
       "port": 8787
     },
     {
+      "name": "onuw-room",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--config",
+        "prototype/worker/wrangler.toml",
+        "--port",
+        "8788",
+        "--local"
+      ],
+      "port": 8788
+    },
+    {
       "name": "noname-dev",
       "runtimeExecutable": "/opt/homebrew/bin/pnpm",
       "runtimeArgs": [

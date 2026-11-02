@@ -1,6 +1,24 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 87 passed)确认基线,即可继续。
+
+## 🐺 第四个游戏:一夜终极狼人(2026-11-02,`prototype/onuw/`,待 deploy)
+
+One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》的图鉴 + 语音主持。与前三个不同:**不是线下辅助,而是系统发牌、全流程主持**(线上线下都能用)。
+路由 `/onuw`、`/api/onuw/<码>/ws`,DO `OnuwRoomDO`(绑定 `ONUW_ROOM`,**wrangler 迁移 v6**)。基线 `node prototype/onuw/onuw-sim.mjs` **87**。
+- **数据** `shared/onuw-data.mjs`:23 角色(基础 12 + Daybreak 11:哨兵/头狼/神秘狼/梦狼/预言家学徒/灵异侦探/女巫/村庄白痴/揭露者/馆长/保镖)+ 6 神器 + 夜晚顺序 `NIGHT_ORDER` + 每角色播报文案 `narr{open,close}` + 图鉴 desc。
+  规则来源 rulespal / ultraboardgames 转录:头狼中央横牌可被其他中央牌角色看/换;保镖保护者得票最高时次高者出局;皮匠死狼必败,皮匠+狼同死则皮匠与村民同胜;场上无狼:无人死村民胜、非爪牙死爪牙胜。
+- **逻辑** `shared/onuw-logic.mjs` `OnuwCore`:`phase` setup→night→day→vote→over。
+  开局:牌堆必须 = 人数+3,有头狼再加第 4 张中央狼人牌 `wolfSlot`;阶段表只按牌堆生成(含中央牌,不泄露谁拿了);每阶段至少 `phaseSec`(默认 10s,无人是该角色也等),有行动者没完成最多等 `phaseMaxSec`(默认 30s,0=一直等)。
+  **没有服务端定时器**:服务端只记 `startedAt`,客户端按 `serverNow` 倒计时,到点发 `{type:"tick"}`,`tick()` 幂等推进;DO 里 tick 没变化就不广播不落盘。
+  化身幽灵:复制立即行动角色时同阶段继续按新角色行动(`_effRole`),复制狼/爪牙/守夜人/失眠者/揭露者/馆长则在该阶段一起睁眼;最终持有化身幽灵牌者 = 她复制的角色(`cardRole`),灵异侦探牌同理。
+  白天 `config.rounds`(默认 顺序/自由/顺序),顺序发言随机起点顺时针,`anchor` 最后一轮首位归票沉底再发一次,`perSpeakSec` 0=手动结束;投票 `voteSec` 默认 60s 超时弃票,全投完立即结算 `_resolve()`(并列同死、≥2 票才死、保镖、猎人连锁、神器覆盖)。
+- **保密**(`_seatView`):`initRole` 本人可见;**当前牌 `card` 对本人也保密**(只有笔记 `notes` 记录夜里看到的);护盾/揭露翻开的牌/是否已投 公开;结算后全公开(含 `nightLog`)。
+- **前端** `client/onuw.html`:圆桌(座位牌背围一圈,1 号正上方顺时针;中央 3 竖 + 头狼 1 横)点牌选目标 → 「确认」;`actionSpec()` 按有效角色给出要点几张座位/中央牌;多座位代持用 tab 切换 `actSeat`。
+  语音 `speechSynthesis` zh-CN,本机开关 🔊 存 localStorage `onuw_narr`,点「开始游戏」的那台自动开;所有设备算同一个播报 key,只有开了的出声。图鉴弹层 📖。
+- 验证:浏览器两标签(A机 1/2/3、B机 4/5)走完 哨兵→化身幽灵→狼人互认→头狼换牌(拒狼同伴)→预言家看两张中央→强盗→捣蛋鬼→酒鬼→天亮三轮顺序发言(含强制下一位、归票沉底)→投票(点牌背/输座位号/拒自投)→结算翻牌,无控制台错误。
+  本地起 `.claude/launch.json` 的 `onuw-room`(8788,避开其他会话占着的 8787)。
+- **没做/可做**:气场预言家(Aura Seer,Bonus 包)/ 吸血鬼 / 外星人扩展;梦狼只做了"狼人互认时显示";神器只影响结算,缄默面具/羞耻裹布不强制;语音是系统 TTS,没有 app 那种配乐;每阶段固定时长不区分角色。
 
 ## 🔫 第三个游戏:枪鸣锈语(2026-11-02,`prototype/qmxy/`,待 deploy)
 

@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>一夜终极狼人房间</title>
+<style>
+/* 月夜:深靛蓝底 + 月光米白 + 血红/松绿/琥珀。阵营色:村民 蓝 / 狼人 红 / 皮匠 琥珀 */
+:root{
+  --bg:#0d1020; --bg2:#161a30; --card:rgba(22,26,48,.94); --line:rgba(190,200,255,.18);
+  --fg:#eef0ff; --fg-soft:#9aa3c7; --moon:#f3e9c6; --red:#ff5a4e; --blue:#5aa9ff; --amber:#e8b84a; --green:#58d68d;
+  --village:#5aa9ff; --werewolf:#ff5a4e; --tanner:#e8b84a;
+  --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);background-image:radial-gradient(circle at 85% -5%,rgba(243,233,198,.14),transparent 40%),radial-gradient(circle at 10% 110%,rgba(90,169,255,.1),transparent 45%);
+  color:var(--fg);font-family:var(--body);line-height:1.6;padding:12px 16px 60px;max-width:560px;margin:0 auto}
+body.day{background-image:radial-gradient(circle at 85% -5%,rgba(255,220,120,.32),transparent 45%),radial-gradient(circle at 10% 110%,rgba(255,170,90,.14),transparent 45%)}
+h1{font-weight:900;font-size:22px;letter-spacing:.18em;text-align:center;margin:4px 0 0;color:var(--moon);text-shadow:0 0 14px rgba(243,233,198,.45)}
+h1 .st{display:inline-block;font-size:11px;letter-spacing:.08em;color:var(--red);border:2px solid var(--red);border-radius:4px;padding:0 5px;margin-left:6px;transform:rotate(-8deg);vertical-align:middle;font-weight:700;text-shadow:none}
+.sub{text-align:center;color:var(--fg-soft);font-size:12px;letter-spacing:.14em;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--moon);border-radius:10px;padding:12px 14px;margin-bottom:11px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.card.secret{border-left-color:var(--red)}
+.card.day{border-left-color:var(--amber)}
+.card h2{font-weight:900;font-size:16px;letter-spacing:.08em;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:10px;color:#fff}
+.card h2 .tag{float:right;font-size:11px;color:var(--fg-soft);letter-spacing:0;font-weight:400}
+label{font-size:13px;color:var(--fg-soft)}
+input,select{font-family:inherit;font-size:14px;background:#0a0d1a;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+select option{background:#0a0d1a}
+button{font-family:inherit;font-size:14px;border-radius:7px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--moon);border-color:var(--moon);color:#1a1405;font-weight:700}
+button.danger{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+button.warn{background:var(--amber);border-color:var(--amber);color:#211a00;font-weight:700}
+button.ghost{background:transparent;color:var(--fg-soft)}
+button.sm{font-size:12px;padding:4px 9px}
+button.xs{font-size:12px;padding:2px 7px;line-height:1.4}
+button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+.hint{font-size:12px;color:var(--fg-soft);margin-top:6px}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:1px 9px;color:var(--fg-soft)}
+a{color:var(--blue)}
+#connbar{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;align-items:center;justify-content:center;gap:12px;padding:9px 14px;background:var(--red);color:#fff;font-size:13px;font-weight:600}
+#connbar button{background:#fff;color:var(--red);border:none;padding:5px 14px;font-weight:700}
+body.disconnected #connbar{display:flex}
+body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#fff;color:#1a1405;padding:9px 16px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:10000;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.topbar{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.topbar .who{font-size:12px;color:var(--fg-soft)}
+
+/* 阵营 / 角色 */
+.tm{display:inline-block;font-weight:700;border-radius:4px;padding:0 7px;color:#fff;font-size:12px}
+.tm.village{background:var(--village)} .tm.werewolf{background:var(--werewolf)} .tm.tanner{background:var(--tanner);color:#1a1405}
+.rolebig{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(10,13,26,.6);margin-bottom:8px}
+.rolebig .ic{font-size:40px;line-height:1}
+.rolebig .rn{font-weight:900;font-size:22px;letter-spacing:.1em;color:#fff}
+.rolebig .re{font-size:12px;color:var(--fg-soft)}
+.rolebig.village{border-color:rgba(90,169,255,.5)} .rolebig.werewolf{border-color:rgba(255,90,78,.6)} .rolebig.tanner{border-color:rgba(232,184,74,.6)}
+
+/* 圆桌 */
+.table{position:relative;width:min(92vw,440px);aspect-ratio:1;margin:6px auto 4px}
+.pc{position:absolute;width:58px;height:80px;margin-left:-29px;margin-top:-40px;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:repeating-linear-gradient(135deg,#2a2f55 0 5px,#20243f 5px 10px);border:2px solid #4a5290;box-shadow:0 4px 10px rgba(0,0,0,.45);color:#fff;transition:transform .15s,box-shadow .15s}
+.pc .no{font-weight:900;font-size:22px;line-height:1.1;text-shadow:0 1px 3px #000}
+.pc .nm{font-size:10px;color:#cfd6ff;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 2px}
+.pc.mine{border-color:var(--moon);box-shadow:0 0 0 2px rgba(243,233,198,.35),0 4px 10px rgba(0,0,0,.45)}
+.pc.sel{transform:scale(1.1);border-color:var(--blue);box-shadow:0 0 0 3px rgba(90,169,255,.5)}
+.pc.selectable{animation:glow 1.3s infinite}
+@keyframes glow{50%{box-shadow:0 0 0 3px rgba(90,169,255,.35),0 4px 10px rgba(0,0,0,.45)}}
+.pc.dim{opacity:.45;cursor:default}
+.pc.speaker{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,184,74,.5)}
+.pc.face{background:#1c2140;border-color:#8c93c9}
+.pc.face.village{border-color:var(--village)} .pc.face.werewolf{border-color:var(--werewolf)} .pc.face.tanner{border-color:var(--tanner)}
+.pc.face .ic{font-size:24px;line-height:1.1}
+.pc.face .rn{font-size:11px;font-weight:700;color:#fff}
+.pc.dead{filter:grayscale(.7)}
+.pc .bd{position:absolute;top:-7px;right:-7px;font-size:13px;background:#0d1020;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc .bd2{position:absolute;top:-7px;left:-7px;font-size:12px;background:#0d1020;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc .mic{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);font-size:12px;background:var(--amber);color:#1a1405;border-radius:10px;padding:0 6px;font-weight:700;line-height:1.4}
+.pc .dead-x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--red);text-shadow:0 0 6px #000}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
+.center .rowc{display:flex;gap:6px}
+.cc{width:42px;height:58px;border-radius:5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#2a2f55 0 4px,#20243f 4px 8px);border:2px solid #4a5290;color:#aeb6e8;font-size:10px;position:relative}
+.cc.h{width:58px;height:42px}
+.cc.sel{transform:scale(1.1);border-color:var(--blue);box-shadow:0 0 0 3px rgba(90,169,255,.5)}
+.cc.selectable{animation:glow 1.3s infinite}
+.cc.face{background:#1c2140;border-color:#8c93c9} .cc.face .ic{font-size:18px;line-height:1} .cc.face .rn{font-size:9px;font-weight:700;color:#fff}
+.cc.face.village{border-color:var(--village)} .cc.face.werewolf{border-color:var(--werewolf)} .cc.face.tanner{border-color:var(--tanner)}
+.banner{text-align:center;border-radius:10px;padding:8px 12px;margin-bottom:8px;border:1px solid var(--line);background:rgba(10,13,26,.7)}
+.banner .ph{font-size:12px;letter-spacing:.2em;color:var(--fg-soft)}
+.banner .big{font-size:20px;font-weight:900;letter-spacing:.1em;color:#fff}
+.banner .cd{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--moon)}
+.banner.night{border-color:rgba(243,233,198,.35)} .banner.day{border-color:rgba(232,184,74,.5);background:rgba(232,184,74,.1)} .banner.vote{border-color:rgba(255,90,78,.5);background:rgba(255,90,78,.08)}
+.banner .cd.low{color:var(--red)}
+.steps{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+.steps i{display:inline-block;width:14px;height:5px;border-radius:3px;background:#2a2f55}
+.steps i.done{background:var(--fg-soft)} .steps i.cur{background:var(--moon)}
+.act{border:1px solid rgba(90,169,255,.5);border-radius:10px;padding:10px 12px;background:rgba(90,169,255,.07);margin-bottom:8px}
+.act .ti{font-weight:800;font-size:15px;color:#fff;margin-bottom:4px}
+.act .tp{font-size:13px;color:var(--fg)}
+.act .sel-info{font-size:13px;color:var(--blue);margin:6px 0}
+.notes{font-size:13px}
+.note{border-left:3px solid var(--line);padding:4px 10px;margin:5px 0;background:rgba(10,13,26,.5);border-radius:0 6px 6px 0}
+.note.latest{border-left-color:var(--moon)}
+.note .np{font-size:11px;color:var(--fg-soft)}
+.note .ncards{display:flex;gap:6px;margin-top:4px}
+.mini{width:40px;height:54px;border-radius:5px;border:2px solid #8c93c9;background:#1c2140;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;text-align:center;line-height:1.1}
+.mini .ic{font-size:17px;line-height:1.1;margin-bottom:2px}
+.mini.village{border-color:var(--village)} .mini.werewolf{border-color:var(--werewolf)} .mini.tanner{border-color:var(--tanner)}
+.mini .tt{font-size:8px;color:var(--fg-soft);font-weight:400}
+.seats-setup .seat{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:rgba(10,13,26,.5);display:flex;align-items:center;gap:8px}
+.seats-setup .seat.mine{border-color:var(--moon);background:rgba(243,233,198,.07)}
+.seats-setup .st{font-weight:900;font-size:16px}
+.seats-setup .who{font-size:12px;color:var(--fg-soft)}
+.rgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.rrow{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:rgba(10,13,26,.5)}
+.rrow.on{border-color:rgba(243,233,198,.5);background:rgba(243,233,198,.07)}
+.rrow .ic{font-size:20px;line-height:1}
+.rrow .rn{font-weight:700;font-size:13px;color:#fff;cursor:pointer}
+.rrow .ro{font-size:10px;color:var(--fg-soft)}
+.rrow .cnt{font-family:var(--mono);font-weight:700;min-width:14px;text-align:center}
+.rrow button{padding:2px 7px;font-size:14px;line-height:1.2}
+.deckbar{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px}
+.deckbar b{font-size:18px}
+.deckbar.ok b{color:var(--green)} .deckbar.bad b{color:var(--red)}
+.tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.tabs button.on{background:var(--moon);color:#1a1405;border-color:var(--moon)}
+.mask{position:fixed;inset:0;background:rgba(5,6,16,.78);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-top:3px solid var(--moon);border-radius:11px;width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.sheet h2{font-weight:900;font-size:17px;letter-spacing:.06em;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#fff}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--fg-soft);cursor:pointer;padding:0 4px}
+.codex .ce{display:flex;gap:10px;padding:8px 4px;border-bottom:1px dashed var(--line)}
+.codex .ce .ic{font-size:28px;line-height:1.2;flex:none;width:36px;text-align:center}
+.codex .ce .cn{font-weight:800;font-size:15px;color:#fff}
+.codex .ce .cm{font-size:11px;color:var(--fg-soft)}
+.codex .ce .cd{font-size:13px;margin-top:2px}
+.codex h3{font-size:13px;letter-spacing:.15em;color:var(--fg-soft);margin:10px 0 2px}
+.result{border-left-color:var(--amber);background:rgba(232,184,74,.08)}
+.result .big{font-weight:900;font-size:22px;text-align:center;letter-spacing:.15em;color:var(--amber);margin-bottom:6px}
+.result .ln{font-size:13px;margin:3px 0}
+.vt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.vt td{padding:3px 6px;border-bottom:1px dotted var(--line)}
+.log{font-size:12px;color:var(--fg-soft);max-height:220px;overflow:auto;font-family:var(--mono)}
+.log div{padding:2px 0;border-bottom:1px dotted var(--line)}
+details summary{cursor:pointer;font-size:13px;color:var(--fg-soft)}
+footer{text-align:center;font-size:11px;color:var(--fg-soft);margin-top:18px;letter-spacing:.1em}
+.num{width:64px;text-align:center}
+.cfg label{display:block;margin-top:6px}
+.cfg .inl{display:inline-flex;align-items:center;gap:6px}
+.cfg .inl input{width:72px;text-align:center}
+.rounds .rd{display:flex;align-items:center;gap:6px;margin:4px 0}
+.rounds .rd b{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div id="connbar"><span>⚠ 连接已断开,正在重连…操作已暂停</span><button id="rcNow" type="button">立即重连</button></div>
+<div id="app"></div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/common/room-client.js"></script><!-- 公共房间客户端(连接/重连/改名/toast);见 prototype/common/client/ -->
+<script>
+/* 一夜终极狼人房间:系统发牌 + 语音播报夜晚顺序 + 行动在 UI 里完成 + 多轮发言 + 限时投票 + 自动结算。
+   权威逻辑在 DO(prototype/onuw/shared/onuw-logic.mjs);这里只渲染 roomState、发 action{op,…} 与到点 tick。 */
+const {esc,toast,$}=RoomClient;
+let state=null, DATA=null, R={}, ART={};
+let clockOffset=0;                 // serverNow - Date.now()
+let actSeat=null;                  // 多座位代持时当前操作的座位
+let sel={seats:[],center:[]};      // 当前行动的选牌
+let voteSel=null;                  // 投票选中的目标
+let narrOn=RoomClient.lsGet("onuw_narr")==="1"; // 本机是否语音播报
+let lastNarr=null, lastTickAt=0;
+
+const RC=RoomClient.create({
+  wsPath: code=>"/api/onuw/"+code+"/ws",
+  errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",DECK_SIZE:"牌数必须等于 人数+3",ROLE_MAX:"该角色数量超过上限",BAD_ROLES:"角色配置不合法",BAD_CONFIG:"配置不合法",TOO_FEW_PLAYERS:"至少 3 名玩家",
+    NOT_NIGHT:"现在不是夜晚",NOT_ACTOR:"这个阶段不轮到你",ALREADY_ACTED:"你已经行动过了",SELF_TARGET:"不能选自己",SHIELDED:"这张牌被护盾保护,不能动",MANDATORY:"这个行动必须执行,不能跳过",BAD_TARGET:"目标不合法",BAD_KIND:"现在不能做这个操作",
+    NOT_LONE:"你不是唯一的狼人,不能看中央牌",NO_WOLF_CARD:"没有中央狼人牌",TARGET_IS_WOLF:"不能换给狼人同伴",HAS_ARTIFACT:"这名玩家已经有神器了",NO_ACTION:"这个角色没有夜晚行动",
+    NOT_DAY:"现在不是白天",NOT_SPEAKER:"还没轮到你发言",NOT_YET:"讨论时间还没到",NOT_VOTE:"现在不是投票时间"},
+  beforeConnect(){ state=null; closeModal(); sel={seats:[],center:[]}; voteSel=null; lastNarr=null; },
+  onState(m){ const prev=state; state=m; clockOffset=(m.serverNow||Date.now())-Date.now(); afterState(prev); render(); },
+  onMessage(){},
+  onClosed(){ state=null; closeModal(); render(); },
+  onRenamed(){ render(); },
+});
+function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
+
+fetch("/onuw/data.json?v=__ONUW_DATA_VER__").then(r=>r.json()).then(d=>{ DATA=d; R=Object.fromEntries(d.roles.map(r=>[r.key,r])); ART=Object.fromEntries(d.artifacts.map(a=>[a.key,a])); render(); }).catch(()=>toast("角色数据加载失败,刷新重试"));
+
+/* ============ 小工具 ============ */
+const sNow=()=>Date.now()+clockOffset;
+const seatsArr=()=>Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
+const mySeats=()=>state.youHold.slice().sort((a,b)=>a-b);
+const rn=k=>R[k]?R[k].name:(k||"?");
+const ric=k=>R[k]?R[k].icon:"❔";
+const rteam=k=>k==="pi"||k==="doppelganger"?"village":(R[k]?R[k].team:"village");
+const teamName=t=>DATA.teams[t]?DATA.teams[t].name:t;
+const tmHtml=t=>`<span class="tm ${t}">${esc(teamName(t))}</span>`;
+const miniCard=(k,tt)=>`<div class="mini ${rteam(k)}"><div class="ic">${ric(k)}</div>${esc(rn(k))}${tt?`<div class="tt">${esc(tt)}</div>`:""}</div>`;
+const nameOf=s=>s.holderDevices[0]||"";
+const fmt=ms=>{ const s=Math.max(0,Math.ceil(ms/1000)); return s>=60?`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`:String(s); };
+function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
+
+/* ============ 语音播报 ============ */
+let voice=null;
+function pickVoice(){ if(!("speechSynthesis" in window)) return; const vs=speechSynthesis.getVoices(); voice=vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Tingting|Xiaoxiao|Yunxi|Google|Huihui/i.test(v.name))||vs.find(v=>/zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null; }
+if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
+function speak(text,cancel){ if(!narrOn||!text||!("speechSynthesis" in window)) return; if(cancel) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=1; if(voice) u.voice=voice; speechSynthesis.speak(u); }
+let actx=null;
+function ding(){ if(!narrOn) return; try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=880; g.gain.value=.001; o.connect(g); g.connect(actx.destination); o.start(); g.gain.exponentialRampToValueAtTime(.25,actx.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.6); o.stop(actx.currentTime+.65);}catch(e){} }
+function setNarr(on){ narrOn=on; RoomClient.lsSet("onuw_narr",on?"1":"0"); if(on){ try{ speechSynthesis.cancel(); speak("语音播报已开启",true);}catch(e){} } else { try{speechSynthesis.cancel();}catch(e){} } render(); }
+// 状态变化 → 该播什么(只播一次;所有设备算出同样的 key,只有开了播报的设备出声)
+function afterState(prev){
+  if(!state||!DATA) return;
+  let key=null, text=null;
+  if(state.phase==="night"&&state.night){
+    const n=state.night, role=n.role; key="n"+n.idx;
+    if(key!==lastNarr){
+      const prevRole=n.idx>0?n.phases[n.idx-1]:null;
+      text=(n.idx===0?DATA.narr.nightStart+" ":"")+(prevRole&&R[prevRole].narr?R[prevRole].narr.close+" ":"")+(R[role].narr?R[role].narr.open:"");
+    }
+  } else if(state.phase==="day"&&state.day){
+    const d=state.day; key=`d${d.round}-${d.cur}`;
+    if(key!==lastNarr){
+      const parts=[];
+      if(lastNarr&&lastNarr[0]==="n"){ const ph=prev&&prev.night&&prev.night.role; if(ph&&R[ph]&&R[ph].narr) parts.push(R[ph].narr.close); parts.push(DATA.narr.nightEnd); }
+      if(!lastNarr||!lastNarr.startsWith(`d${d.round}-`)) parts.push(d.mode==="order"?`第${d.round+1}轮顺序发言,从${d.order[0]}号开始。`:`第${d.round+1}轮自由讨论,${Math.round(d.freeMs/60000)}分钟。`);
+      if(d.mode==="order"&&d.speaker!=null){ if(d.anchorSeat!=null&&d.cur===d.order.length-1) parts.push(`所有人发言完毕,由${d.anchorSeat}号归票沉底发言。`); else parts.push(`请${d.speaker}号发言。`); }
+      text=parts.join(" ");
+    }
+  } else if(state.phase==="vote"){ key="v"; if(key!==lastNarr) text=`讨论结束,请投票。${state.config.voteSec}秒内点选你要出局的玩家。`; }
+  else if(state.phase==="over"&&state.result){ key="o"; if(key!==lastNarr){ const r=state.result; text=DATA.narr.voteClosed+" "+(r.deaths.length?r.deaths.map(n=>`${n}号,${rn(r.final[n])}`).join(";")+"出局。":"无人出局。")+" "+r.lines[0]; } }
+  else key=state.phase;
+  if(key!==lastNarr){ lastNarr=key; if(text){ ding(); speak(text,true); } sel={seats:[],center:[]}; }
+}
+
+/* ============ 到点 tick(幂等,服务端校验)============ */
+function deadline(){ // 返回当前阶段的截止时刻(毫秒,服务端时钟)或 null
+  if(!state) return null; const c=state.config;
+  if(state.phase==="night"&&state.night) return state.night.startedAt+c.phaseSec*1000;
+  if(state.phase==="day"&&state.day){ const d=state.day; if(d.mode==="order") return c.perSpeakSec>0?d.speakerStartedAt+c.perSpeakSec*1000:null; return d.startedAt+d.freeMs; }
+  if(state.phase==="vote"&&state.voting) return state.voting.startedAt+c.voteSec*1000;
+  return null;
+}
+setInterval(()=>{
+  if(!state) return;
+  const dl=deadline(); const el=$("#cd");
+  if(dl!=null){ const rem=dl-sNow(); if(el){ el.textContent=rem>0?fmt(rem):(state.phase==="night"?"…":"0"); el.classList.toggle("low",rem>0&&rem<=10000); }
+    if(rem<=0&&Date.now()-lastTickAt>2000&&RC.connected){ lastTickAt=Date.now(); RC.ws&&RC.ws.readyState===1&&RC.ws.send(JSON.stringify({type:"tick"})); } }
+  else if(el) el.textContent="";
+},400);
+
+/* ============ 弹层 ============ */
+let modal=null;
+function closeModal(){ modal=null; $("#modal").innerHTML=""; }
+function openCodex(focus){
+  modal={t:"codex"};
+  const groups=[["village","村民阵营"],["werewolf","狼人阵营"],["tanner","独立"]];
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 角色图鉴<span class="x" data-a="close">×</span></h2>`;
+  for(const [t,tn] of groups){
+    h+=`<h3>${tmHtml(t)} ${esc(tn)}</h3>`;
+    for(const r of DATA.roles.filter(x=>x.team===t)) h+=`<div class="ce" id="cx-${r.key}" ${focus===r.key?'style="background:rgba(243,233,198,.08);border-radius:6px"':""}><div class="ic">${r.icon}</div><div><div class="cn">${esc(r.name)} <span class="cm">${esc(r.en)} · ${r.order!=null?"夜晚第 "+r.order+" 位睁眼":"夜晚不睁眼"} · ${r.pack==="daybreak"?"Daybreak 扩展":"基础版"} · 最多 ${r.max} 张</span></div><div class="cd">${esc(r.desc)}</div></div></div>`;
+  }
+  h+=`<h3>🏺 神器(馆长)</h3>`+DATA.artifacts.map(a=>`<div class="ce"><div class="ic">🏺</div><div><div class="cn">${esc(a.name)}</div><div class="cd">${esc(a.desc)}</div></div></div>`).join("");
+  h+=`</div></div>`;
+  $("#modal").innerHTML=h;
+  if(focus){ const e=$("#cx-"+focus); e&&e.scrollIntoView({block:"center"}); }
+}
+function openArtifact(seatNo){
+  const s=state.seats[seatNo], a=s&&s.artifact&&ART[s.artifact]; if(!a) return;
+  modal={t:"art"};
+  $("#modal").innerHTML=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>🏺 ${seatNo}号 的神器<span class="x" data-a="close">×</span></h2><div class="rolebig"><div class="ic">🏺</div><div><div class="rn">${esc(a.name)}</div><div class="re">${esc(a.desc)}</div></div></div><div class="hint">只有你能看到。结算时按神器的效果决定你的角色。</div></div></div>`;
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  const app=$("#app");
+  let h='<h1>一夜终极狼人<span class="st">ONE NIGHT</span></h1><div class="sub">ONE NIGHT ULTIMATE WEREWOLF · 房间</div>';
+  if(!state){
+    app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。系统发牌、语音播报夜晚顺序,行动在手机上完成;天亮后按配置发言、投票并自动结算。线下建议一台手机开语音播报,其余静音。"})
+      +'<div class="hint" style="text-align:center">其他游戏:<a href="/">三国杀</a> · <a href="/fs">风声</a> · <a href="/qmxy">枪鸣锈语</a></div>';
+    RoomClient.bindConnectForm(RC); return;
+  }
+  if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
+  document.body.classList.toggle("day",state.phase==="day"||state.phase==="vote"||state.phase==="over");
+  h+=viewTopbar();
+  if(state.phase==="setup") h+=viewSetup();
+  else h+=viewGame();
+  h+=viewLog();
+  h+='<footer>一夜终极狼人 · 房间版原型<br>其他房间:<a href="/">三国杀</a> · <a href="/fs">风声</a> · <a href="/qmxy">枪鸣锈语</a></footer>';
+  app.innerHTML=h;
+  layoutTable();
+  if(modal&&modal.t==="codex") openCodex();
+}
+function viewTopbar(){
+  const ms=mySeats();
+  return `<div class="topbar"><span class="who">房间 <b>${esc(RC.code||state.roomCode)}</b> · ${esc(RC.deviceId)}${ms.length?" · 座位 "+ms.join("/"):""}</span>
+    <button class="xs ghost" data-a="rename">改名</button><button class="xs ghost" data-a="codex">📖 图鉴</button>
+    <button class="xs ${narrOn?"on":"ghost"}" data-a="narr" title="本机语音播报">${narrOn?"🔊 播报中":"🔇 播报关"}</button>
+    <button class="xs ghost" data-a="disband">解散</button></div>`;
+}
+
+/* ---- 准备阶段 ---- */
+function viewSetup(){
+  const seats=seatsArr(), need=seats.length+3;
+  let h=`<div class="card"><h2>座位 <span class="tag">${seats.length} 人 · 3~10</span></h2><div class="seats-setup">`;
+  for(const s of seats){
+    const mine=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
+    h+=`<div class="seat${mine?" mine":""}"><span class="st">${s.seatNo}</span><span class="grow"><span class="who">${held?esc(nameOf(s))+(mine?" (我)":""):"空位"}</span></span>
+      ${mine?`<button class="xs ghost" data-a="release" data-s="${s.seatNo}">离座</button>`:held?`<button class="xs ghost" data-a="takeover" data-s="${s.seatNo}">替换</button>`:`<button class="xs primary" data-a="claim" data-s="${s.seatNo}">落座</button>`}</div>`;
+  }
+  h+=`</div><div class="row" style="margin-top:6px"><button class="sm ghost" data-a="addSeat">＋ 加座位</button><button class="sm ghost" data-a="removeSeat">－ 减座位</button><span class="hint">一台手机可代持多个座位(点别人的空位落座)。</span></div></div>`;
+  // 角色配置
+  const cnt={}; for(const k of state.roles) cnt[k]=(cnt[k]||0)+1;
+  const total=state.roles.length;
+  h+=`<div class="card"><h2>本局角色 <span class="tag">点角色名看图鉴</span></h2>
+    <div class="deckbar ${total===need?"ok":"bad"}"><b>${total}</b>/${need} 张(人数 ${seats.length} + 中央 3)${state.roles.includes("alphawolf")?' <span class="chip">头狼:中央另加一张横放狼人牌</span>':""}<span class="grow"></span><button class="sm" data-a="recommend">推荐配置</button><button class="sm ghost" data-a="clearRoles">清空</button></div>
+    <div class="rgrid">`;
+  for(const r of DATA.roles){ const c=cnt[r.key]||0;
+    h+=`<div class="rrow${c?" on":""}"><span class="ic">${r.icon}</span><span class="grow"><div class="rn" data-a="codexOf" data-k="${r.key}">${esc(r.name)}</div><div class="ro">${r.order!=null?"第 "+r.order+" 位":"不睁眼"} · ${esc(r.en)}</div></span>
+      <button data-a="roleDec" data-k="${r.key}" ${c?"":"disabled"}>−</button><span class="cnt">${c}</span><button data-a="roleInc" data-k="${r.key}" ${c>=r.max?"disabled":""}>+</button></div>`;
+  }
+  h+=`</div><div class="hint">夜晚顺序:${DATA.nightOrder.filter(k=>k==="werewolf"?state.roles.some(x=>["werewolf","alphawolf","mysticwolf","dreamwolf"].includes(x)):state.roles.includes(k)).map(k=>ric(k)+rn(k)).join(" → ")||"(还没选角色)"}</div></div>`;
+  // 流程配置
+  const c=state.config;
+  h+=`<div class="card cfg"><h2>流程配置</h2>
+    <div class="row"><span class="inl"><label>夜晚每阶段</label><input class="num" type="number" id="cf-phaseSec" value="${c.phaseSec}" min="3" max="120"><label>秒</label></span>
+      <span class="inl"><label>最长等待</label><input class="num" type="number" id="cf-phaseMaxSec" value="${c.phaseMaxSec}" min="0" max="600"><label>秒(0=一直等)</label></span></div>
+    <div class="hint">每个角色阶段至少等这么久(没人是这个角色也等,不泄露信息);有人该行动却没完成,最多等到「最长等待」后放弃。</div>
+    <div class="rounds" style="margin-top:8px"><label>发言轮次</label>`;
+  c.rounds.forEach((r,i)=>{ h+=`<div class="rd"><b>第 ${i+1} 轮</b><select data-a="roundMode" data-i="${i}" style="width:auto"><option value="order" ${r.mode==="order"?"selected":""}>顺序发言</option><option value="free" ${r.mode==="free"?"selected":""}>自由讨论</option></select><button class="xs ghost" data-a="roundDel" data-i="${i}" ${c.rounds.length<=1?"disabled":""}>删</button></div>`; });
+  h+=`<button class="xs ghost" data-a="roundAdd" ${c.rounds.length>=6?"disabled":""}>＋ 加一轮</button></div>
+    <div class="row" style="margin-top:8px"><span class="inl"><label>顺序发言每人</label><input class="num" type="number" id="cf-perSpeakSec" value="${c.perSpeakSec}" min="0" max="900"><label>秒(0=不限,手动结束)</label></span></div>
+    <div class="row" style="margin-top:6px"><span class="inl"><label>自由讨论</label><input class="num" type="number" id="cf-freeMin" value="${c.freeSec?Math.round(c.freeSec/60*10)/10:0}" min="0" max="60" step="0.5"><label>分钟(0=人数分钟)</label></span></div>
+    <div class="row" style="margin-top:6px"><label class="inl"><input type="checkbox" id="cf-anchor" ${c.anchor?"checked":""} style="width:auto">最后一轮顺序发言:首位发言者最后再归票沉底发言</label></div>
+    <div class="row" style="margin-top:6px"><span class="inl"><label>投票时限</label><input class="num" type="number" id="cf-voteSec" value="${c.voteSec}" min="10" max="600"><label>秒(超时=弃票)</label></span></div>
+    <div class="hint">每轮顺序发言随机选一人开始,依次顺时针;本机改动即时同步给全房。</div></div>`;
+  h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${total===need&&seats.length>=3?"":"disabled"}>🌙 开始游戏(天黑请闭眼)</button>
+    <div class="hint">点开始的这台手机会自动开启语音播报(线下:其余手机保持静音;线上:各自开着也行)。</div></div>`;
+  return h;
+}
+
+/* ---- 对局(圆桌 + 面板)---- */
+function viewGame(){
+  let h=viewBanner();
+  h+=viewTable();
+  if(state.phase==="night") h+=viewNightPanel();
+  else if(state.phase==="day") h+=viewDayPanel();
+  else if(state.phase==="vote") h+=viewVotePanel();
+  else if(state.phase==="over") h+=viewResult();
+  h+=viewMyRoles();
+  if(state.phase!=="over") h+=`<div class="card"><div class="row"><button class="sm ghost" data-a="newGame">终止本局,回到准备</button></div></div>`;
+  return h;
+}
+function viewBanner(){
+  const c=state.config;
+  if(state.phase==="night"){ const n=state.night, r=R[n.role];
+    return `<div class="banner night"><div class="ph">🌙 夜晚 · 第 ${n.idx+1}/${n.total} 阶段</div><div class="big">${r.icon} ${esc(r.name)},请睁眼</div><div class="cd" id="cd"></div>
+      <div class="steps">${n.phases.map((k,i)=>`<i class="${i<n.idx?"done":i===n.idx?"cur":""}" title="${esc(rn(k))}"></i>`).join("")}</div></div>`; }
+  if(state.phase==="day"){ const d=state.day;
+    return `<div class="banner day"><div class="ph">☀️ 白天 · 第 ${d.round+1}/${c.rounds.length} 轮 · ${d.mode==="order"?"顺序发言":"自由讨论"}</div>
+      <div class="big">${d.mode==="order"?(d.speaker!=null?`🎤 ${d.speaker}号 ${esc(nameOf(state.seats[d.speaker]))}${d.anchorSeat!=null&&d.cur===d.order.length-1?" · 归票沉底":""}`:""):"💬 自由讨论"}</div><div class="cd" id="cd"></div></div>`; }
+  if(state.phase==="vote") return `<div class="banner vote"><div class="ph">🗳️ 投票 · 已投 ${state.voting.voted}/${seatsArr().length}</div><div class="big">点选要出局的玩家</div><div class="cd" id="cd"></div></div>`;
+  if(state.phase==="over") return `<div class="banner day"><div class="ph">🏁 结算</div><div class="big">${state.result.winTeams.length?state.result.winTeams.map(t=>teamName(t)).join(" + ")+" 获胜":"无人获胜"}</div></div>`;
+  return "";
+}
+// 当前行动需要我点什么:返回 {seats:n|0, center:n|0, allowSelf, kind, label, skip, confirmLabel}
+function actionSpec(){
+  if(state.phase==="vote"){ return {seats:1,center:0,allowSelf:false,label:"点选你要投出局的玩家",confirmLabel:"确认投票"}; }
+  if(state.phase!=="night") return null;
+  const n=curActSeat(); if(n==null) return null;
+  const me=state.night.me[n]; if(!me||me.acted) return null;
+  const eff=me.eff, sub=me.sub||{};
+  const T={
+    sentinel:{seats:1,label:"选一名其他玩家放置护盾",skip:"不放置",confirmLabel:"放置护盾"},
+    doppelganger:{seats:1,label:"选一名其他玩家,查看并成为那个角色",confirmLabel:"查看"},
+    werewolf:{center:1,label:me.lone?"你是唯一的狼人:可以看一张中央牌":"",skip:"不看",confirmLabel:"查看"},
+    mysticwolf:{seats:1,label:"选一名其他玩家查看",skip:"不看",confirmLabel:"查看"},
+    alphawolf:{seats:1,label:"选一名非狼人玩家,把中央横放的狼人牌换给他(必须)",confirmLabel:"交换"},
+    seer:{seats:1,center:2,either:true,label:"看一名其他玩家的牌,或看两张中央牌",skip:"不看",confirmLabel:"查看"},
+    apprenticeseer:{center:1,label:"选一张中央牌查看",skip:"不看",confirmLabel:"查看"},
+    pi:{seats:1,label:`选一名其他玩家查看(${(sub.viewed||[]).length}/2)`,skip:(sub.viewed||[]).length?"结束":"不看",confirmLabel:"查看"},
+    robber:{seats:1,label:"选一名其他玩家,交换并查看你的新牌",skip:"不换",confirmLabel:"交换"},
+    witch:sub.witchIdx==null?{center:1,label:"选一张中央牌查看(看了就必须换给一名玩家)",skip:"不看",confirmLabel:"查看"}:{seats:1,allowSelf:true,label:`把中央第 ${sub.witchIdx+1} 张牌换给哪名玩家?(可以是自己)`,confirmLabel:"交换"},
+    troublemaker:{seats:2,label:"依次选两名其他玩家,交换他们的牌",skip:"不换",confirmLabel:"确认交换"},
+    villageidiot:{dir:true,label:"把其他所有玩家的牌向左或向右移一位",skip:"不动"},
+    drunk:{center:1,label:"选一张中央牌与之交换(必须,不能看)",confirmLabel:"交换",skip:state.seats[n].shield?"被护盾,跳过":null},
+    revealer:{seats:1,label:"选一名其他玩家翻开他的牌(狼人/皮匠会翻回去)",skip:"不翻",confirmLabel:"翻开"},
+    curator:{seats:1,allowSelf:true,label:"选一名玩家(可以是自己)放置随机神器",skip:"不放",confirmLabel:"放置"},
+  }[eff];
+  if(!T) return null;
+  return Object.assign({seats:0,center:0,kind:eff,eff},T);
+}
+function selectableSets(){ // 哪些座位/中央牌可点
+  const sp=actionSpec(); const out={seats:new Set(),center:new Set()}; if(!sp) return out;
+  const n=curActSeat();
+  if(sp.seats){ for(const s of seatsArr()){ if(s.seatNo===n&&!sp.allowSelf) continue; if(state.phase==="night"&&s.shield&&!(sp.eff==="sentinel")) continue; out.seats.add(s.seatNo);} }
+  if(sp.center){ for(let i=0;i<state.centerCount;i++) out.center.add(i); }
+  if(sp.either){ if(sel.seats.length) out.center.clear(); if(sel.center.length) out.seats.clear(); }
+  if(sp.seats&&sel.seats.length>=sp.seats&&!sp.either) out.seats=new Set(sel.seats);
+  if(sp.center&&sel.center.length>=sp.center&&!sp.either) out.center=new Set(sel.center);
+  if(sp.eff==="sentinel"){ for(const s of seatsArr()) if(s.seatNo!==n) out.seats.add(s.seatNo); }
+  if(sp.eff==="pi"){ const v=(state.night.me[n].sub||{}).viewed||[]; for(const x of v) out.seats.delete(x); }
+  return out;
+}
+function viewTable(){
+  const seats=seatsArr(), N=seats.length, over=state.phase==="over", r=state.result;
+  const sets=selectableSets(); const n=curActSeat();
+  let h=`<div class="table" id="table">`;
+  seats.forEach((s,i)=>{
+    const mine=state.youHold.includes(s.seatNo);
+    const canSel=sets.seats.has(s.seatNo), isSel=(state.phase==="vote"?voteSel===s.seatNo:sel.seats.includes(s.seatNo));
+    const face=over?r.final[s.seatNo]:(s.revealed||null);
+    const speaker=state.phase==="day"&&state.day.speaker===s.seatNo;
+    const dead=over&&r.deaths.includes(s.seatNo);
+    let cls="pc"+(mine?" mine":"")+(canSel?" selectable":"")+(isSel?" sel":"")+(face?" face "+rteam(face):"")+(speaker?" speaker":"")+(dead?" dead":"")+((actionSpec()&&!canSel&&!isSel)?" dim":"");
+    let inner=face?`<div class="ic">${ric(face)}</div><div class="rn">${esc(rn(face))}</div><div class="nm">${s.seatNo}号 ${esc(nameOf(s))}</div>`:`<div class="no">${s.seatNo}</div><div class="nm">${esc(nameOf(s))||"空位"}</div>`;
+    if(s.shield) inner+=`<div class="bd" title="护盾">🛡️</div>`;
+    else if(s.hasArtifact) inner+=`<div class="bd" title="神器">🏺</div>`;
+    if(state.phase==="vote"&&s.hasVoted) inner+=`<div class="bd2" title="已投票">✓</div>`;
+    if(over&&r.votes[s.seatNo]!=null) inner+=`<div class="bd2" title="投给">→${r.votes[s.seatNo]}</div>`;
+    if(speaker) inner+=`<div class="mic">🎤</div>`;
+    if(dead) inner+=`<div class="dead-x">✖</div>`;
+    h+=`<div class="${cls}" data-a="seatClick" data-s="${s.seatNo}" data-i="${i}" data-n="${N}">${inner}</div>`;
+  });
+  // 中央牌:头狼横牌在上,三张竖牌在下
+  const cc=i=>{ const canSel=sets.center.has(i), isSel=sel.center.includes(i); const face=over?r.center[i]:null;
+    return `<div class="cc${i===state.wolfSlot?" h":""}${canSel?" selectable":""}${isSel?" sel":""}${face?" face "+rteam(face):""}" data-a="centerClick" data-c="${i}">${face?`<div class="ic">${ric(face)}</div><div class="rn">${esc(rn(face))}</div>`:(i===state.wolfSlot?"狼人牌":"中央 "+(i+1))}</div>`; };
+  h+=`<div class="center">${state.wolfSlot!=null?cc(state.wolfSlot):""}<div class="rowc">${[0,1,2].filter(i=>i<state.centerCount).map(cc).join("")}</div></div>`;
+  h+=`</div>`;
+  return h;
+}
+function layoutTable(){ // 座位围成一圈:1 号在正上方,顺时针
+  const t=$("#table"); if(!t) return;
+  for(const el of t.querySelectorAll(".pc")){ const i=+el.dataset.i, N=+el.dataset.n; const a=-Math.PI/2+2*Math.PI*i/N; el.style.left=(50+41*Math.cos(a))+"%"; el.style.top=(50+41*Math.sin(a))+"%"; }
+}
+function viewNightPanel(){
+  const ms=mySeats(); if(!ms.length) return `<div class="card"><div class="hint">你没有座位,只能围观。</div></div>`;
+  const n=curActSeat(); const me=state.night.me[n]; const s=state.seats[n];
+  let h=`<div class="card secret"><h2>🤫 我的行动 <span class="tag">${n}号</span></h2>`+seatTabs();
+  if(!me) h+=`<div class="hint">这个阶段不轮到你。请闭眼,等待播报叫到你的角色。</div>`;
+  else if(me.acted) h+=`<div class="hint">✅ 你已完成本阶段。请闭眼等待。</div>`;
+  else {
+    const sp=actionSpec();
+    h+=`<div class="act"><div class="ti">${ric(me.eff)} ${esc(rn(me.eff))}${me.eff!==s.initRole?" <span class='chip'>化身幽灵复制</span>":""}</div><div class="tp">${esc(sp?sp.label:"")}</div>`;
+    if(sp){
+      if(sp.dir) h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="shift" data-d="left">← 向左</button><button class="primary" data-a="shift" data-d="right">向右 →</button>${sp.skip?`<button class="ghost" data-a="skip">${sp.skip}</button>`:""}</div>`;
+      else {
+        const picked=sel.seats.length?`已选:${sel.seats.map(x=>x+"号").join("、")}`:sel.center.length?`已选:中央 ${sel.center.map(i=>i===state.wolfSlot?"狼人牌":"第 "+(i+1)+" 张").join("、")}`:"在上方圆桌点选";
+        const ready=(sp.seats&&sel.seats.length===sp.seats)||(sp.center&&sel.center.length===sp.center);
+        h+=`<div class="sel-info">${esc(picked)}</div><div class="row"><button class="primary" data-a="confirm" ${ready?"":"disabled"}>${esc(sp.confirmLabel||"确认")}</button><button class="ghost" data-a="clearSel" ${sel.seats.length||sel.center.length?"":"disabled"}>重选</button>${sp.skip?`<button class="ghost" data-a="skip">${esc(sp.skip)}</button>`:""}</div>`;
+      }
+    }
+    h+=`</div>`;
+  }
+  h+=notesHtml(s)+`</div>`;
+  h+=`<div class="card"><div class="row"><button class="sm ghost" data-a="forceNight">卡住了?强制进入下一阶段</button></div></div>`;
+  return h;
+}
+function seatTabs(){ const ms=mySeats(); if(ms.length<2) return ""; return `<div class="tabs">${ms.map(x=>`<button class="sm ${x===actSeat?"on":""}" data-a="actSeat" data-s="${x}">${x}号</button>`).join("")}</div>`; }
+function notesHtml(s){
+  if(!s.notes||!s.notes.length) return "";
+  return `<div class="notes"><div class="hint">📝 你知道的:</div>`+s.notes.map((nt,i)=>`<div class="note${i===s.notes.length-1?" latest":""}"><div class="np">${esc(rn(nt.phase)||"")}</div>${esc(nt.text)}${nt.cards&&nt.cards.length?`<div class="ncards">${nt.cards.map(c=>miniCard(c.role,c.kind==="seat"?c.no+"号":(c.no===state.wolfSlot?"狼人牌":"中央"+(c.no+1)))).join("")}</div>`:""}</div>`).join("")+`</div>`;
+}
+function viewDayPanel(){
+  const d=state.day, c=state.config, ms=mySeats();
+  let h=`<div class="card day"><h2>☀️ 发言</h2>`;
+  if(d.mode==="order"){
+    const sp=d.speaker, mine=ms.includes(sp);
+    h+=`<div>发言顺序:${d.order.map((x,i)=>`<span class="chip" style="${i===d.cur?"border-color:var(--amber);color:var(--amber)":i<d.cur?"opacity:.5":""}">${x}号${d.anchorSeat!=null&&i===d.order.length-1?"归票":""}</span>`).join(" ")}</div>
+      <div class="hint">${c.perSpeakSec?`每人 ${c.perSpeakSec} 秒,到时自动下一位。`:"不限时,发言者点「结束发言」。"}</div>
+      <div class="row" style="margin-top:8px">${mine?`<button class="primary" data-a="endSpeech">我说完了,结束发言</button>`:`<button class="ghost" data-a="forceSpeech">强制下一位</button>`}<button class="ghost" data-a="startVote">跳过剩余发言,直接投票</button></div>`;
+  } else h+=`<div class="hint">自由讨论,倒计时结束自动进入下一轮。</div><div class="row" style="margin-top:8px"><button class="warn" data-a="endRound">提前结束本轮讨论</button><button class="ghost" data-a="startVote">直接投票</button></div>`;
+  h+=`</div>`;
+  return h;
+}
+function viewVotePanel(){
+  const ms=mySeats(); if(!ms.length) return `<div class="card"><div class="hint">你没有座位,只能围观。</div></div>`;
+  const n=curActSeat(), s=state.seats[n];
+  let h=`<div class="card secret"><h2>🗳️ 我的投票 <span class="tag">${n}号</span></h2>`+seatTabs();
+  h+=`<div class="hint">点上方圆桌的玩家牌背,或输入座位号;超时未投=弃票。${s.vote!=null?`<b style="color:var(--amber)">已投给 ${s.vote}号</b>(可改)`:""}</div>
+    <div class="row" style="margin-top:8px"><input class="num" type="number" id="vote-no" placeholder="座位号" min="1" max="${seatsArr().length}" value="${voteSel!=null?voteSel:""}"><button class="primary" data-a="voteConfirm" ${voteSel!=null?"":"disabled"}>确认投给 ${voteSel!=null?voteSel+"号":"…"}</button></div>
+    <div class="row" style="margin-top:8px"><button class="sm ghost" data-a="forceVote">强制结束投票</button></div></div>`;
+  return h;
+}
+function viewResult(){
+  const r=state.result;
+  let h=`<div class="card result"><div class="big">${r.winTeams.length?r.winTeams.map(t=>tmHtml(t)).join(" "):"无人获胜"}</div>`;
+  h+=`<div class="ln">${r.deaths.length?"☠️ 出局:"+r.deaths.map(n=>`${n}号(${rn(r.final[n])})`).join("、"):"无人出局"}</div>`;
+  h+=r.lines.map(l=>`<div class="ln">${esc(l)}</div>`).join("");
+  h+=`<div class="ln">🏆 赢家:${r.winners.length?r.winners.map(n=>n+"号").join("、"):"无"}</div>`;
+  h+=`<table class="vt">${seatsArr().map(s=>{ const f=r.final[s.seatNo]; return `<tr><td><b>${s.seatNo}号</b> ${esc(nameOf(s))}</td><td>${ric(s.initRole)} ${esc(rn(s.initRole))}${s.card!==s.initRole?` → ${ric(s.card)} ${esc(rn(s.card))}`:""}${f!==s.card?` ⇒ ${esc(rn(f))}`:""}${s.artifact?` 🏺${esc(ART[s.artifact].name)}`:""}</td><td>${tmHtml(s.team)}</td><td>${r.votes[s.seatNo]!=null?"投 "+r.votes[s.seatNo]+"号":"弃票"} · 得 ${r.tally[s.seatNo]} 票${r.winners.includes(s.seatNo)?" 🏆":""}</td></tr>`; }).join("")}</table>`;
+  h+=`<details style="margin-top:8px"><summary>🌙 夜里发生了什么</summary><div class="log">${(state.nightLog||[]).map(l=>`<div>${esc(l)}</div>`).join("")||"<div>没有任何行动</div>"}</div></details>`;
+  h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="newGame">再来一局(保留配置)</button></div></div>`;
+  return h;
+}
+function viewMyRoles(){
+  const ms=mySeats(); if(!ms.length) return "";
+  let h=`<div class="card secret"><h2>🪪 我的身份 <span class="tag">只有本机可见</span></h2>`;
+  for(const n of ms){ const s=state.seats[n]; const r=R[s.initRole]; if(!r) continue;
+    h+=`<div class="rolebig ${r.team}"><div class="ic">${r.icon}</div><div class="grow"><div class="rn">${n}号 · ${esc(r.name)} ${tmHtml(r.team)}</div><div class="re">${esc(r.desc)}</div>${state.phase!=="night"&&s.artifact?`<div style="margin-top:4px"><button class="xs warn" data-a="artifact" data-s="${n}">🏺 看我的神器</button></div>`:""}</div></div>`;
+    if(state.phase!=="night") h+=notesHtml(s);
+  }
+  h+=`<div class="hint">⚠ 你面前的牌可能已经被换走——你只知道自己拿到的初始角色和夜里看到的信息。</div></div>`;
+  return h;
+}
+function viewLog(){ return `<div class="card"><details><summary>📜 日志(公开)</summary><div class="log">${(state.log||[]).map(l=>`<div>${esc(l)}</div>`).join("")}</div></details></div>`; }
+
+/* ============ 交互 ============ */
+function onSeatClick(n){
+  if(state.phase==="vote"){ if(!mySeats().length) return; if(n===curActSeat()) return toast("不能投自己"); voteSel=n; render(); return; }
+  const sp=actionSpec(); if(!sp||!sp.seats) return;
+  const sets=selectableSets(); if(!sets.seats.has(n)&&!sel.seats.includes(n)) return;
+  if(sel.seats.includes(n)) sel.seats=sel.seats.filter(x=>x!==n);
+  else { if(sel.seats.length>=sp.seats) sel.seats.shift(); sel.seats.push(n); sel.center=[]; }
+  render();
+}
+function onCenterClick(i){
+  const sp=actionSpec(); if(!sp||!sp.center) return;
+  const sets=selectableSets(); if(!sets.center.has(i)&&!sel.center.includes(i)) return;
+  if(sel.center.includes(i)) sel.center=sel.center.filter(x=>x!==i);
+  else { if(sel.center.length>=sp.center) sel.center.shift(); sel.center.push(i); sel.seats=[]; }
+  render();
+}
+function confirmAction(){
+  const sp=actionSpec(); const n=curActSeat(); if(!sp||n==null) return;
+  const base={seatNo:n}; let msg=null;
+  switch(sp.eff){
+    case "sentinel": msg={kind:"shield",target:sel.seats[0]}; break;
+    case "doppelganger": msg={kind:"copy",target:sel.seats[0]}; break;
+    case "werewolf": case "apprenticeseer": msg={kind:"peekCenter",idx:sel.center[0]}; break;
+    case "mysticwolf": case "pi": msg={kind:"peekPlayer",target:sel.seats[0]}; break;
+    case "alphawolf": msg={kind:"swapCenter",target:sel.seats[0]}; break;
+    case "seer": msg=sel.seats.length?{kind:"peekPlayer",target:sel.seats[0]}:{kind:"peekCenter",idxs:sel.center.slice(0,2)}; break;
+    case "robber": msg={kind:"swapSelf",target:sel.seats[0]}; break;
+    case "witch": msg=sel.center.length?{kind:"peekCenter",idx:sel.center[0]}:{kind:"swapCenter",target:sel.seats[0]}; break;
+    case "troublemaker": msg={kind:"swapTwo",a:sel.seats[0],b:sel.seats[1]}; break;
+    case "drunk": msg={kind:"swapCenter",idx:sel.center[0]}; break;
+    case "revealer": msg={kind:"reveal",target:sel.seats[0]}; break;
+    case "curator": msg={kind:"artifact",target:sel.seats[0]}; break;
+  }
+  if(!msg) return;
+  act("nightAct",Object.assign(base,msg)); sel={seats:[],center:[]};
+}
+function sendConfig(patch){ act("setConfig",{config:patch}); }
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]"); if(!b) return;
+  const a=b.dataset.a, sn=+b.dataset.s;
+  switch(a){
+    case "close": closeModal(); break;
+    case "closeMask": if(e.target===b) closeModal(); break;
+    case "rename": RC.promptRename(); break;
+    case "codex": openCodex(); break;
+    case "codexOf": openCodex(b.dataset.k); break;
+    case "narr": setNarr(!narrOn); break;
+    case "disband": if(confirm("解散房间?所有人都会被踢出,房间数据清空。")) RC.send({type:"disbandRoom"}); break;
+    case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
+    case "takeover": { const s=state.seats[sn]; if(confirm(`座位 ${sn} 当前由「${nameOf(s)}」持有,替换成你?`)) RC.send({type:"takeoverSeat",seatNo:sn}); break; }
+    case "release": RC.send({type:"releaseSeat",seatNo:sn}); break;
+    case "addSeat": RC.send({type:"addSeat"}); break;
+    case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
+    case "roleInc": act("setRoles",{roles:state.roles.concat([b.dataset.k])}); break;
+    case "roleDec": { const i=state.roles.indexOf(b.dataset.k); if(i>=0){ const r=state.roles.slice(); r.splice(i,1); act("setRoles",{roles:r}); } break; }
+    case "recommend": act("setRoles",{roles:DATA.defaultFill.slice(0,seatsArr().length+3)}); break;
+    case "clearRoles": act("setRoles",{roles:[]}); break;
+    case "roundDel": { const r=state.config.rounds.slice(); r.splice(+b.dataset.i,1); sendConfig({rounds:r}); break; }
+    case "roundAdd": sendConfig({rounds:state.config.rounds.concat([{mode:"order"}])}); break;
+    case "start": if(!narrOn) setNarr(true); act("startGame"); break;
+    case "actSeat": actSeat=sn; sel={seats:[],center:[]}; voteSel=null; render(); break;
+    case "seatClick": onSeatClick(sn); break;
+    case "centerClick": onCenterClick(+b.dataset.c); break;
+    case "confirm": confirmAction(); break;
+    case "clearSel": sel={seats:[],center:[]}; render(); break;
+    case "skip": act("nightAct",{seatNo:curActSeat(),kind:"skip"}); sel={seats:[],center:[]}; break;
+    case "shift": act("nightAct",{seatNo:curActSeat(),kind:"shift",dir:b.dataset.d}); break;
+    case "forceNight": if(confirm("强制进入下一阶段?未完成的行动将作废。")) act("nightAdvance",{force:true}); break;
+    case "endSpeech": act("dayNext"); break;
+    case "forceSpeech": if(confirm("强制结束当前发言,换下一位?")) act("dayNext",{force:true}); break;
+    case "endRound": if(confirm("提前结束本轮讨论?")) act("dayNext",{force:true}); break;
+    case "startVote": if(confirm("跳过剩余发言,直接开始投票?")) act("startVote"); break;
+    case "voteConfirm": if(voteSel!=null){ act("vote",{seatNo:curActSeat(),target:voteSel}); } break;
+    case "forceVote": if(confirm("强制结束投票?未投的按弃票。")) act("closeVote",{force:true}); break;
+    case "artifact": openArtifact(sn); break;
+    case "newGame": if(state.phase==="over"||confirm("终止本局回到准备阶段?")) act("newGame"); break;
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.a==="roundMode"){ const r=state.config.rounds.map((x,i)=>i===+t.dataset.i?{mode:t.value}:x); sendConfig({rounds:r}); return; }
+  if(!t.id) return;
+  if(t.id==="vote-no"){ const v=+t.value; if(v>=1&&state.seats[v]&&v!==curActSeat()){ voteSel=v; render(); } else if(t.value) toast("座位号不对"); return; }
+  if(t.id.startsWith("cf-")){
+    const k=t.id.slice(3);
+    if(k==="anchor") return sendConfig({anchor:t.checked});
+    if(k==="freeMin") return sendConfig({freeSec:Math.round((+t.value||0)*60)});
+    sendConfig({[k]:+t.value});
+  }
+});
+document.getElementById("rcNow").onclick=()=>RC.reconnectNow();
+render();
+</script>
+</body>
+</html>
