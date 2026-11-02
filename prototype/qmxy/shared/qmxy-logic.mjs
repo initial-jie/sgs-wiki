@@ -9,6 +9,8 @@
 // 命中判定(hitCheck):翻牌点数 − 射手与目标之间隔的角色数(取最短路,NPC 算角色,阵亡者不算)− 扫射 2 + 向前翻滚 1 + 其他修正;
 //   >0 命中。爆头无视修正直接命中且伤害 +1;哑火无视修正不中。「恰好命中」= 修正后点数为 1(甄宓/司马懿用)。
 //   吕布〖死亡宣告〗:4 点视为爆头。偏折头盔:扫射与爆头对其无效。孙鲁班〖翻云覆雨〗:结果反转(爆头↔哑火)。
+//   深渊(扩展《雾区·呓语》):座位 abyss=true 视为处于深渊;不同空间不能互射(射手装备【悖论视界】的点射例外:直接命中「精准」),
+//   计算隔人只数同空间的角色;处于深渊者受到的射击伤害 +1。
 //
 // 动作:core.action(deviceId, {op, ...}),见 action() 内分派。
 
@@ -31,14 +33,29 @@ export function defaultIdCounts(playerCount) {
   return { brain: 1, immune: 2, virus: playerCount - 4, mutant: 1 }; // >8 人:说明书没有,按 8 人延展
 }
 
-// 纯函数:命中判定。ring = 桌上存活座位号(按座位顺序);opts = {shooter, target, mode:"single"|"spray", drawn:"1".."4"|"head"|"dud", bonus, shooterHero, targetEquips}
-export function hitCheck(ring, opts) {
+// 纯函数:命中判定。ring = 桌上存活座位号(按座位顺序);opts = {shooter, target, mode:"single"|"spray", drawn:"1".."4"|"head"|"dud", bonus, shooterHero, targetEquips,
+//   abyss:Set<座位>(处于深渊的座位), shooterEquips}
+export function hitCheck(ringAll, opts) {
   const { shooter, target } = opts;
   const mode = opts.mode === "spray" ? "spray" : "single";
   const bonus = Number(opts.bonus) || 0;
+  const abyss = opts.abyss || new Set();
+  if (ringAll.indexOf(Number(shooter)) < 0 || ringAll.indexOf(Number(target)) < 0) return { error: "NOT_ON_TABLE" };
+  if (Number(shooter) === Number(target)) return { error: "SELF_SHOT" };
+  const sIn = abyss.has(Number(shooter)), tIn = abyss.has(Number(target));
+  if (sIn !== tIn) { // 不同空间:只有装备【悖论视界】的点射能打,且「精准」直接命中
+    if (mode === "single" && (opts.shooterEquips || []).includes("beilun")) {
+      const helmet0 = (opts.targetEquips || []).includes("toukui");
+      const dmg = 1 + (tIn ? 1 : 0);
+      const r = { between: 0, mod: 0, mode, drawn: "", hit: true, exact: false, damage: dmg, notes: ["悖论视界:跨空间点射,精准 —— 目标不翻滚则不判定直接命中"], crossSpace: true };
+      if (tIn) r.notes.push("目标处于深渊:射击伤害 +1");
+      if (helmet0) r.notes.push("偏折头盔只防扫射与爆头,精准点射照常");
+      return r;
+    }
+    return { error: "DIFF_SPACE" };
+  }
+  const ring = ringAll.filter((n) => abyss.has(n) === sIn); // 只数同空间的角色
   const i = ring.indexOf(Number(shooter)), j = ring.indexOf(Number(target));
-  if (i < 0 || j < 0) return { error: "NOT_ON_TABLE" };
-  if (i === j) return { error: "SELF_SHOT" };
   const n = ring.length, d = Math.abs(i - j);
   const between = Math.max(0, Math.min(d, n - d) - 1); // 最短路上隔着的角色数
   const mod = -between - (mode === "spray" ? 2 : 0) + bonus;
@@ -63,6 +80,8 @@ export function hitCheck(ring, opts) {
     r.notes.push("孙鲁班〖翻云覆雨〗:结果反转" + (drawn === "head" ? "(爆头→哑火)" : drawn === "dud" ? "(哑火→爆头)" : ""));
   }
   if (helmet && (mode === "spray" || drawn === "head")) { r.hit = false; r.damage = 0; r.notes.push("偏折头盔:扫射与爆头对目标无效"); }
+  if (r.hit && tIn) { r.damage += 1; r.notes.push("目标处于深渊:射击伤害 +1"); }
+  if (sIn) r.notes.push("双方都在深渊:只数深渊内的角色算隔人");
   return r;
 }
 
@@ -87,11 +106,13 @@ export class QmxyCore extends RoomBase {
       swap: false,          // 自我遥控器:角色牌补给数与子弹上限互换
       equips: [],           // 装备区 [cardKey](最多 3,黄月英不限)
       delays: [],           // 面前的延时牌 [cardKey](不能有两张同名)
+      abyss: false,         // 处于深渊(扩展《雾区·呓语》:角色牌横置;受射击伤害 +1;不同空间不能互射)
       dying: false, dead: false, killedBy: null };
   }
 
   _resetRoom() {
     this.phase = "setup";           // setup | play | over
+    this.pack = "base";             // 角色池:base 基础包 24 将 | all 含扩展《雾区·呓语》(pack:"wuqu")
     this.idCounts = defaultIdCounts(this._playerSeats().length);
     this.turn = null;               // 当前回合座位
     this.round = 0;                 // 轮数(王莽第一轮不行动)
@@ -105,6 +126,8 @@ export class QmxyCore extends RoomBase {
   _playerSeats() { return this.seatNos().filter((n) => !this.seats[n].npc); }
   _alivePlayers() { return this._playerSeats().filter((n) => !this.seats[n].dead); }
   _ring() { return this.seatNos().filter((n) => !this.seats[n].dead); } // 桌上还在的角色(含 NPC)
+  _abyssSet() { return new Set(this.seatNos().filter((n) => this.seats[n].abyss && !this.seats[n].dead)); }
+  _pool() { return HEROES.filter((h) => this.pack === "all" || !h.pack || h.pack === "base"); }
   _brainSeat() { return this.seatNos().find((n) => this.seats[n].identity === "brain") ?? null; }
 
   addSeat(id) { const r = super.addSeat(id); if (r.ok) this.idCounts = defaultIdCounts(this._playerSeats().length); return r; }
@@ -161,6 +184,11 @@ export class QmxyCore extends RoomBase {
         this._log(k ? `${seatNo}号设为 NPC:${NPCS[k].name}` : `${seatNo}号取消 NPC`);
         return { ok: true };
       }
+      case "setPack": {
+        if (!["base", "all"].includes(msg.pack)) return { error: "BAD_PACK" };
+        this.pack = msg.pack; this._log(`角色池切换为「${msg.pack === "base" ? "基础包" : "基础包 + 雾区·呓语"}」`);
+        return { ok: true };
+      }
       case "setIdCounts": {
         const c = {};
         for (const k of ID_KEYS) { const v = Math.round(Number(msg[k])); if (!Number.isFinite(v) || v < 0 || v > 8) return { error: "BAD_COUNTS" }; c[k] = v; }
@@ -193,8 +221,9 @@ export class QmxyCore extends RoomBase {
         const g = setupGuard(); if (g) return g;
         const players = this._playerSeats();
         const brain = this._brainSeat();
-        const per = Math.max(1, Math.min(3, Math.floor((HEROES.length - (brain != null ? BRAIN_EXTRA_OFFERS : 0)) / players.length)));
-        const pool = shuffle(HEROES, this.rng).map((h) => h.id);
+        const all = this._pool();
+        const per = Math.max(1, Math.min(3, Math.floor((all.length - (brain != null ? BRAIN_EXTRA_OFFERS : 0)) / players.length)));
+        const pool = shuffle(all, this.rng).map((h) => h.id);
         let at = 0;
         for (const n of players) {
           const k = per + (n === brain ? BRAIN_EXTRA_OFFERS : 0);
@@ -321,15 +350,22 @@ export class QmxyCore extends RoomBase {
         this._log(`${this._name(seatNo)}面前的【${CARD_BY_KEY[msg.card].name}】${msg.how === "explode" ? "引爆" : "移除"}`);
         return { ok: true };
       }
+      case "toggleAbyss": { // 进入/离开深渊(坍缩/捕食/次元裂缝/技能):角色牌横置
+        const e = needSeat() || overGuard(); if (e) return e;
+        if (s.dead) return { error: "DEAD" };
+        s.abyss = !s.abyss;
+        this._log(`${this._name(seatNo)}${s.abyss ? "进入深渊(角色牌横置,受射击伤害 +1)" : "离开深渊"}`);
+        return { ok: true };
+      }
       case "logShot": { // 命中判定辅助:算修正、记结果(公开)
         const g = overGuard(); if (g) return g;
         const sh = Number(msg.shooter), tg = Number(msg.target);
         if (!this.seats[sh] || !this.seats[tg]) return { error: "BAD_SEAT" };
         const r = hitCheck(this._ring(), { shooter: sh, target: tg, mode: msg.mode, drawn: msg.drawn, bonus: msg.bonus,
-          shooterHero: this.seats[sh].heroId, targetEquips: this.seats[tg].equips });
+          shooterHero: this.seats[sh].heroId, targetEquips: this.seats[tg].equips, shooterEquips: this.seats[sh].equips, abyss: this._abyssSet() });
         if (r.error) return r;
-        const dn = r.drawn === "head" ? "爆头" : r.drawn === "dud" ? "哑火" : r.drawn + "点";
-        this._log(`🔫 ${this._name(sh)} ${r.mode === "spray" ? "扫射" : "点射"} ${this._name(tg)}:翻出${dn},修正 ${r.mod >= 0 ? "+" : ""}${r.mod}(隔 ${r.between} 人)→ ${r.hit ? "命中" + (r.damage > 1 ? " 伤害 " + r.damage : "") : "未命中"}`);
+        const dn = r.drawn === "head" ? "爆头" : r.drawn === "dud" ? "哑火" : r.drawn ? r.drawn + "点" : "不判定";
+        this._log(`🔫 ${this._name(sh)} ${r.mode === "spray" ? "扫射" : "点射"} ${this._name(tg)}:` + (r.crossSpace ? "悖论视界跨空间精准 → " : `翻出${dn},修正 ${r.mod >= 0 ? "+" : ""}${r.mod}(隔 ${r.between} 人)→ `) + `${r.hit ? "命中" + (r.damage > 1 ? " 伤害 " + r.damage : "") : "未命中"}`);
         return { ok: true, result: r };
       }
       case "confirmDeath": { // 濒死无人救 → 死亡:亮身份、清区域、奖惩、首死解除安全协议、判终局
@@ -377,7 +413,7 @@ export class QmxyCore extends RoomBase {
         return { ok: true };
       }
       case "newGame": { // 再来一局:清角色/身份/台账,保留座位、持有者、NPC 标记、配比
-        const keep = { idCounts: this.idCounts };
+        const keep = { idCounts: this.idCounts, pack: this.pack };
         for (const n of this.seatNos()) {
           const old = this.seats[n]; const ns = this._newSeat(n);
           ns.holderDevices = old.holderDevices; ns.npc = old.npc; ns.hp = old.npc ? NPCS[old.npc].hp : 0;
@@ -405,7 +441,7 @@ export class QmxyCore extends RoomBase {
     if (k && (s.identity === "virus" || s.npc === "jinbi")) rewards.push(`${this._name(killer)}摸三张牌`);
     if (k && k.identity === "brain" && s.identity === "immune") rewards.push(`至高之脑杀死免疫官:${this._name(killer)}弃置所有牌`);
     if (rewards.length) line += "。奖惩:" + rewards.join(";");
-    s.equips = []; s.delays = [];
+    s.equips = []; s.delays = []; s.abyss = false;
     this._log(line);
     if (this.protocol) { this.protocol = false; this._log("🔓 首个角色死亡,安全协议解除:射击牌无次数限制,点射/扫射可互转"); }
     const sm = this.superMind();
@@ -441,7 +477,7 @@ export class QmxyCore extends RoomBase {
     const open = this.phase === "over";
     const v = { seatNo: s.seatNo, holderDevices: s.holderDevices.slice(), npc: s.npc,
       hp: s.hp, ammo: s.ammo, stats: this.stats(s.seatNo), mods: clone(s.mods), swap: s.swap,
-      equips: s.equips.slice(), delays: s.delays.slice(), dying: !!s.dying, dead: !!s.dead, killedBy: s.killedBy,
+      equips: s.equips.slice(), delays: s.delays.slice(), abyss: !!s.abyss, dying: !!s.dying, dead: !!s.dead, killedBy: s.killedBy,
       heroRevealed: !!s.heroRevealed, hasHero: s.heroId != null, hasIdentity: !!s.identity };
     v.heroId = (s.heroId != null && (s.heroRevealed || mine || open)) ? s.heroId : null;
     v.identity = (s.identity && (mine || open || s.dead || s.identity === "brain")) ? s.identity : null;
@@ -449,12 +485,12 @@ export class QmxyCore extends RoomBase {
     return v;
   }
   _roomView() {
-    return { game: "qmxy", phase: this.phase, idCounts: clone(this.idCounts), playerCount: this._playerSeats().length,
+    return { game: "qmxy", phase: this.phase, pack: this.pack, idCounts: clone(this.idCounts), playerCount: this._playerSeats().length,
       turn: this.turn, round: this.round, protocol: this.protocol, superMind: this.superMind(), brainSeat: this._brainSeat(),
       result: clone(this.result), log: this.log.slice(0, 80) };
   }
   _serializeExtra() {
-    return { qmxy: { phase: this.phase, idCounts: this.idCounts, turn: this.turn, round: this.round, protocol: this.protocol, result: this.result, log: this.log } };
+    return { qmxy: { phase: this.phase, pack: this.pack, idCounts: this.idCounts, turn: this.turn, round: this.round, protocol: this.protocol, result: this.result, log: this.log } };
   }
   _hydrateExtra(data) { if (data.qmxy) Object.assign(this, data.qmxy); }
 }

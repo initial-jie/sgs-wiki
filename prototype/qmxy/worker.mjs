@@ -2,7 +2,7 @@
 // 逻辑在 ./shared/qmxy-logic.mjs(与 node 模拟 qmxy-sim 同一份);DO 外壳见 common/room-do.mjs。
 
 import { QmxyCore } from "./shared/qmxy-logic.mjs";
-import { HEROES, NPCS, IDENTITIES, ID_KEYS, DEFAULT_ID_COUNTS, CARDS, POINT_DISTRIBUTION, ART_BASE } from "./shared/qmxy-data.mjs";
+import { HEROES, NPCS, IDENTITIES, ID_KEYS, DEFAULT_ID_COUNTS, CARDS, POINT_DISTRIBUTION, ART_BASE, ABYSS_RULES } from "./shared/qmxy-data.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import QMXY_HTML from "./client/qmxy.html";
 import PINYIN from "./shared/hero-pinyin.json"; // 角色名→拼音(build-pinyin.mjs 生成),贴到 py 字段供选角拼音搜索
@@ -10,7 +10,7 @@ import PINYIN from "./shared/hero-pinyin.json"; // 角色名→拼音(build-piny
 const SEAT_COUNT = 5; // 3~8 人,开房默认 5 座,房内可增减(3 人局把 3 个座位标成 NPC 隔开)
 const DATA_JSON = JSON.stringify({
   heroes: HEROES.map((h) => (PINYIN[h.name] ? { ...h, py: PINYIN[h.name] } : h)),
-  artBase: ART_BASE, npcs: NPCS, identities: IDENTITIES, idKeys: ID_KEYS, defaultIdCounts: DEFAULT_ID_COUNTS, cards: CARDS, points: POINT_DISTRIBUTION,
+  artBase: ART_BASE, npcs: NPCS, identities: IDENTITIES, idKeys: ID_KEYS, defaultIdCounts: DEFAULT_ID_COUNTS, cards: CARDS, points: POINT_DISTRIBUTION, abyss: ABYSS_RULES,
 });
 
 function fnv1a(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }

@@ -64,7 +64,45 @@ export const HEROES = [
     { name: "窃神宴", text: "你可以将一张 1 点的手牌当【剥离】使用。" } ] },
   { id: 24, name: "曹操", hp: 4, supply: 2, ammo: 3, card: true, skills: [
     { name: "噬恶之心", text: "当你造成或受到伤害后，你可以消耗当前回合角色所有剩余子弹，然后摸等量的牌。" } ] },
+  // ── 第一弹扩展《雾区·呓语》(2026-10-30;pack:"wuqu")。文本来自开箱/原画视频抽帧转录(docs/qmxy/raw/expansion-wuqu-transcript.md),待实卡核对。
+  //   abyssOnly=true:「仅拓展角色」模式(不加深渊机制)要剔除。special=true:特殊角色(每包随机一张,贾南风/张献忠二选一)。
+  { id: 101, name: "关银屏", pack: "wuqu", hp: 4, supply: 2, ammo: 5, art: true, skills: [
+    { name: "停不下来", text: "你的【点射】仅能当【扫射】使用。" },
+    { name: "热火朝天", text: "你的射击命中判定-1；每当你射击命中后，你本回合接下来命中判定+1。" } ] },
+  { id: 102, name: "曹节", pack: "wuqu", hp: 5, supply: 2, ammo: 2, art: true, skills: [
+    { name: "平衡术", text: "你每回合首次造成或受到射击伤害后，若不为恰好命中，你摸两张牌，否则此伤害+1。" } ] },
+  { id: 103, name: "吕玲绮", pack: "wuqu", hp: 4, supply: 2, ammo: 3, art: true, skills: [
+    { name: "百花缭乱", text: "你使用的【点射】会发射2枚子弹（不足则发射1枚）；你使用的【扫射】伤害+1。" } ] },
+  { id: 104, name: "孙寒华", pack: "wuqu", hp: 5, supply: 2, ammo: 2, art: true, skills: [
+    { name: "阴阳术", text: "限定技，有角色死亡时，你可以拼接你们的角色牌（拼接后的角色牌，子弹上限和补给为两者之和）；你接下来每回合开始时失去1点体力。" } ] },
+  { id: 105, name: "董白", pack: "wuqu", hp: 3, supply: 2, ammo: 4, art: true, skills: [
+    { name: "如猫一般", text: "回合开始时，你可以展示并获得至多两名其他角色各一张手牌；本回合你与这些牌同点数的命中判定视为哑火。" } ] },
+  { id: 106, name: "黄巢", pack: "wuqu", hp: 3, supply: 3, ammo: 3, art: true, abyssOnly: true, skills: [
+    { name: "冲天香阵", text: "当你造成或受到射击伤害后，你可令受伤角色于此回合结束时进入深渊。" },
+    { name: "铁衣著尽", text: "当你离开深渊时，你获得处于深渊任意名角色各一张牌。" } ] },
+  { id: 107, name: "姜维", pack: "wuqu", hp: 4, supply: 3, ammo: 2, art: true, abyssOnly: true, skills: [
+    { name: "凝视深渊", text: "你可以将【翻滚】当【坍缩】使用。" },
+    { name: "以身为剑", text: "若你处于深渊，可将一张1点的牌当【归零斩】对深渊中的角色使用。" } ] },
+  { id: 108, name: "刘秀", pack: "wuqu", hp: 3, supply: 3, ammo: 3, art: true, skills: [
+    { name: "只瞄头", text: "你射击的命中判定：4点视为爆头，其余数字点数视为哑火；每过一轮，视为爆头的点数-1（最少为1）。" } ] },
+  { id: 109, name: "钟会", pack: "wuqu", hp: 3, supply: 3, ammo: 3, art: true, skills: [
+    { name: "人格骇入", text: "回合开始时，你可以任意调整你武将牌上的补给和子弹上限直到回合结束（两者之和不能改变）。" },
+    { name: "限时占用", text: "限定技，你可以在其他角色回合开始时对其发动“人格骇入”。" } ] },
+  { id: 110, name: "贾南风", pack: "wuqu", hp: 8, supply: 3, ammo: 2, special: true, abyssOnly: true, skills: [
+    { name: "吃干抹净", text: "你始终处于深渊；回合开始和结束时，若有角色未处于深渊，你须将一张牌当【捕食】使用。" } ] },
+  { id: 111, name: "张献忠", pack: "wuqu", hp: 6, supply: 3, ammo: 3, special: true, abyssOnly: true, skills: [
+    { name: "邀约于深渊", text: "你始终处于深渊；其他角色回合开始时，其可以交给你一张牌以进入深渊。" },
+    { name: "蝗虫遍天下", text: "每回合限一次，你可以将一张牌当无体力限制的【化血为剑】对深渊外的角色使用。若因此杀死角色，你可以重复此流程。" } ] },
 ];
+
+// 《雾区·呓语》新概念(规则卡原文)
+export const ABYSS_RULES = {
+  intro: "深渊是一种异次元空间，与正常角色处于不同空间；不同空间的角色相互影响有限；不同空间的角色不能对彼此射击。一名角色射击计算命中时，不会计算处于不同空间的角色。",
+  example: "场上有逆时针存在的ABCD四名角色，若B和D处于深渊，则A不能对B、D角色射击；若A角色对C角色射击，计算命中判定时，由于BD角色处于深渊不参与计算，因此命中判定-0。B角色对D角色射击同理。同时：位于深渊的角色，将角色牌横置，且受到的射击伤害+1。",
+  usage: ["仅拓展角色：将所有扩展包内角色牌与标准版的角色洗混（剔除贾南风、姜维、黄巢、张献忠），一起游玩。", "拓展牌堆：将拓展包内游戏牌与标准版游戏牌全部洗混，角色牌也一起洗混游玩。"],
+  keywords: [["精确", "若目标不使用【翻滚】抵消此次射击，则不进行命中判定直接命中。（悖论视界牌面写作「精准」）"], ["重返", "出牌阶段，你可将此牌置入弃牌堆，摸一张牌。"], ["限定技", "每局游戏限发动一次的技能。"]],
+  faq: [["处于不同空间的角色，如果成为【归零斩】和【夺取】的目标，目标还可以选择使用射击吗？", "不可以。"], ["貂蝉可以对处于不同空间的角色发动杀意回眸吗？", "不可以。"]],
+};
 
 // NPC 机器人:不由玩家控制、不行动、不摸牌;血量为 0 即死(无濒死)。人少时放在玩家之间隔座。
 export const NPCS = {
@@ -113,6 +151,11 @@ export const CARDS = [
   { key: "toukui", name: "偏折头盔", type: "equip", text: "【扫射】和判定为爆头的射击对你无效。" },
   { key: "yaokong", name: "自我遥控器", type: "equip", swap: true, text: "可以对你或对其他角色使用；你角色牌上的补给数与子弹上限互换。" },
   { key: "yasuo", name: "空气压缩炮", type: "equip", text: "你使用【点射】不消耗子弹。" },
+  // ── 《雾区·呓语》新牌(pack:"wuqu")
+  { key: "tansuo", name: "坍缩", type: "basic", pack: "wuqu", count: 10, text: "令一名角色进入或离开深渊。可重返（出牌阶段，你可将此牌置入弃牌堆，摸一张牌）。" },
+  { key: "beilun", name: "悖论视界", type: "equip", pack: "wuqu", text: "你的【点射】可对不同空间的角色使用，且对此类角色拥有精准（若目标不使用【翻滚】抵消此次射击，则不进行命中判定直接命中）。" },
+  { key: "bushi", name: "捕食", type: "tactic", pack: "wuqu", text: "令一名未处于深渊的角色进入深渊，然后深渊中的其余角色依次可对其使用一张【点射】（不消耗子弹）。" },
+  { key: "ciyuan", name: "次元裂缝", type: "delay", pack: "wuqu", count: 3, text: "放置于一名角色面前，目标下个回合开始时引爆；目标及其相邻角色进入深渊。" },
 ];
 
 export const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h]));

@@ -97,6 +97,8 @@ button.ident.has{background:var(--mag);color:#fff}
 .badge.turn{background:var(--cyan);color:#041018}
 .badge.hid{border:1px solid var(--fg-soft);color:var(--fg-soft)}
 .badge.sm{background:var(--mutant);color:#fff}
+.badge.abyss{background:#1b1030;color:#c084fc;border:1px solid #c084fc}
+.seat.abyss{background:rgba(192,132,252,.07)}
 @keyframes pulse{50%{opacity:.45}}
 .hidden-card{display:inline-block;font-size:12px;background:repeating-linear-gradient(45deg,#1b2235 0 4px,#263050 4px 8px);color:#c9d6f0;border-radius:3px;padding:0 7px;font-weight:600;margin-left:6px}
 .tagc{display:inline-block;font-size:11px;border-radius:3px;padding:0 6px;margin:2px 3px 0 0;border:1px solid var(--line);color:var(--fg)}
@@ -160,7 +162,7 @@ const RC=RoomClient.create({
   wsPath: code=>"/api/qmxy/"+code+"/ws",
   errorText:{GAME_OVER:"本局已结束,点「再来一局」",NOT_SETUP:"对局已开始,不能再改开局设置",COUNT_MISMATCH:"身份配比总数要等于玩家数(不含 NPC)",ONE_BRAIN:"至高之脑必须恰好 1 名",
     NOT_OFFERED:"只能从发给你的候选里选",HERO_TAKEN:"这名角色已被别人亮出选用",IS_NPC:"NPC 座位不能做这个操作",DEAD:"该角色已阵亡",NOT_DEAD:"该角色没有阵亡",
-    EQUIP_FULL:"装备区已满 3 件(黄月英除外),先弃一件",DUP_DELAY:"同名延时牌不能放两张",BAD_CARD:"不认识这张牌",TOO_FEW_PLAYERS:"至少 2 名玩家",SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上"},
+    EQUIP_FULL:"装备区已满 3 件(黄月英除外),先弃一件",DUP_DELAY:"同名延时牌不能放两张",BAD_CARD:"不认识这张牌",TOO_FEW_PLAYERS:"至少 2 名玩家",SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上",DIFF_SPACE:"不同空间不能互射(除非射手装备悖论视界用点射)",BAD_PACK:"不认识的角色池"},
   beforeConnect(){ state=null; closeModal(); },
   onState(m){ state=m; render(); },
   onMessage(m){ if(m.type==="actionResult"&&m.private) {} },
@@ -191,7 +193,7 @@ const thumbOf=h=>h.card||h.art?ART()+"thumb/"+h.id+".jpg":"";
 const cardOf=h=>h.card?ART()+"cards/"+h.id+".jpg":"";
 const artOf=h=>h.art?ART()+"art/"+h.id+".jpg":"";
 const avaHtml=(h,big)=>`<div class="ava${big?" big":""}">${thumbOf(h)?`<img src="${esc(thumbOf(h))}" alt="" onerror="this.parentNode.textContent='${esc(h.name[0])}'"/>`:esc(h.name[0])}</div>`;
-const heroMeta=h=>`血 ${h.hp} · 补给 ${h.supply} · 子弹 ${h.ammo}`;
+const heroMeta=h=>`血 ${h.hp} · 补给 ${h.supply} · 子弹 ${h.ammo}${h.pack==="wuqu"?" · ⟡ 雾区·呓语"+(h.special?"·特殊角色":"")+(h.abyssOnly?"·需深渊机制":""):""}`;
 function takenBy(hid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.heroId===hid&&x.heroRevealed); return s?s.seatNo:null; }
 function barHtml(cur,max,cls){ let h=`<span class="bar ${cls}">`; for(let i=0;i<Math.min(max,12);i++) h+=`<i class="${i<cur?"on":""}"></i>`; return h+"</span>"; }
 function statsHtml(s){
@@ -231,7 +233,7 @@ function openPicker(seatNo){
 function renderPickerList(){
   const box=$("#glist"); if(!box||!modal||modal.t!=="picker") return;
   const s=state.seats[modal.seat], q=($("#gq")&&$("#gq").value.trim())||"";
-  const pool=(s.offers&&s.offers.length)?s.offers.map(id=>HERO[id]).filter(Boolean):DATA.heroes;
+  const pool=(s.offers&&s.offers.length)?s.offers.map(id=>HERO[id]).filter(Boolean):DATA.heroes.filter(x=>state.pack==="all"||!x.pack||x.pack==="base");
   const list=RoomClient.searchList(pool,q);
   box.innerHTML=list.map(h=>{ const tk=takenBy(h.id,modal.seat);
     return `<div class="grow-item${tk?" taken":""}" data-a="pickItem" data-c="${h.id}">${avaHtml(h)}
@@ -317,6 +319,8 @@ function viewSetup(){
   const c=state.idCounts, sum=c.brain+c.immune+c.virus+c.mutant, n=state.playerCount;
   const allHero=players().every(s=>s.hasHero), allId=players().every(s=>s.hasIdentity);
   let h=`<div class="card"><h2>开局设置<span class="tag">任何人都可操作</span></h2>`;
+  const nAll=DATA.heroes.length, nBase=DATA.heroes.filter(x=>!x.pack||x.pack==="base").length;
+  h+=`<div class="row" style="margin-bottom:10px"><span>角色池</span><button class="sm${state.pack==="base"?" primary":""}" data-a="pack" data-p="base">基础包 ${nBase}</button><button class="sm${state.pack==="all"?" primary":""}" data-a="pack" data-p="all"${nAll>nBase?"":" disabled"}>+ 雾区·呓语 ${nAll-nBase}</button></div>`;
   h+=`<div><b>① 人数与 NPC</b> <span class="hint">${seatsArr().length} 座 · 玩家 ${n} 人 · NPC ${seatsArr().length-n}</span></div>
     <div class="hint">人少(3 人)时把玩家之间的座位标成 NPC 机器人隔开:在下方座位点「NPC」。至高之脑推荐坐 1 号。</div>`;
   h+=`<div style="margin-top:12px"><b>② 发身份</b> <span class="hint">配比合计 ${sum}${sum!==n?' <b style="color:var(--mag)">≠ 玩家数 '+n+'</b>':""}${c.virus>c.brain+c.immune?' · 病毒多于脑+免疫官 → <b style="color:var(--mutant)">超意识生效</b>':""}</span></div>
@@ -352,10 +356,10 @@ function viewSeats(){
     const mine=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
     const heldByOther=s.holderDevices.length&&!mine;
     const hv=s.heroId!=null&&HERO[s.heroId]?HERO[s.heroId]:null;
-    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}${s.npc?" npc":""}"><div class="row">`
+    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}${s.npc?" npc":""}${s.abyss?" abyss":""}"><div class="row">`
       +(hv&&thumbOf(hv)?`<img class="sava" data-a="art" data-s="${s.seatNo}" src="${esc(thumbOf(hv))}" alt="立绘" title="看立绘" onerror="this.style.visibility='hidden'"/>`:"")
       +`<span class="st grow">座位 ${s.seatNo}${heroLabel(s)}`
-      +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")
+      +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")+(s.abyss?'<span class="badge abyss">⟡ 深渊</span>':"")
       +(s.identity&&!mine?" "+idHtml(s.identity):"")+smBadge(s.seatNo)+`</span>`;
     if(s.heroId!=null&&HERO[s.heroId]) h+=`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">技能</button>`;
     if(mine&&!s.npc) h+=`<button class="sm ident${s.identity?" has":""}" data-a="myident" data-s="${s.seatNo}">🪪 ${s.identity?"我的身份":"登记身份"}</button>`;
@@ -380,7 +384,8 @@ function viewSeats(){
   return h+`</div>`;
 }
 function viewRef(){
-  const by=t=>DATA.cards.filter(c=>c.type===t);
+  const by=t=>DATA.cards.filter(c=>c.type===t&&(state.pack==="all"||!c.pack));
+  const A=DATA.abyss;
   const cl=t=>by(t).map(c=>`<p class="${c.verified===false?"unv":""}">· <b>【${esc(c.name)}】</b>${c.ammo?"<span class='tagc'>耗子弹</span>":""}${esc(c.text).replace(/\n/g,"<br>")}</p>`).join("");
   return `<div class="card cardlist"><details data-k="ref"><summary><b style="font-size:15px;color:#fff">规则速查</b> · 命中判定 / 身份 / 牌表 / 角色</summary>
     <p style="margin-top:8px"><b>命中判定</b>:翻牌堆顶看左上角点数(1 点×40 / 2 点×30 / 3 点×20 / 4 点×10 / 爆头×4 / 哑火×4),与目标之间每隔一人 −1(最短路,NPC 算角色),扫射 −2,向前翻滚 +1;点数 > 0 命中。爆头无视修正直接命中且伤害 +1(技能检定算 5 点);哑火无视修正不中(算 0 点)。目标可先用【翻滚】抵消 1 发子弹,翻滚后不能再判定。自己不能射自己;可以射别人面前的延时牌(占射击次数,命中后选引爆或作废)。</p>
@@ -391,7 +396,12 @@ function viewRef(){
     <p style="margin-top:8px"><b>战术牌</b> <span class="hint" style="display:inline">(黄色=文本待核,以实体牌为准)</span></p>${cl("tactic")}
     <p style="margin-top:8px"><b>延时战术牌</b></p>${cl("delay")}
     <p style="margin-top:8px"><b>装备牌</b></p>${cl("equip")}
-    <p style="margin-top:8px"><b>全部角色</b>(点开看技能)</p><div>${DATA.heroes.map(c=>`<button class="sm ghost" style="margin:2px" data-a="viewHero" data-c="${c.id}">${esc(c.name)}</button>`).join("")}</div>
+    ${state.pack==="all"&&A?`<p style="margin-top:8px"><b>⟡ 深渊</b>(扩展《雾区·呓语》):${esc(A.intro)}<br><span class="hint" style="display:inline">举例:${esc(A.example)}</span></p>
+    <p><b>用法</b>:${A.usage.map(u=>esc(u)).join("<br>")}</p>
+    <p><b>关键词</b>:${A.keywords.map(k=>`<b>${esc(k[0])}</b> ${esc(k[1])}`).join("<br>")}</p>
+    <p><b>FAQ</b>:${A.faq.map(q=>`Q:${esc(q[0])} A:${esc(q[1])}`).join("<br>")}</p>`:""}
+    <p style="margin-top:8px"><b>全部角色</b>(点开看技能;扩展将标 ⟡)</p><div>${DATA.heroes.map(c=>`<button class="sm ghost" style="margin:2px" data-a="viewHero" data-c="${c.id}">${c.pack&&c.pack!=="base"?"⟡":""}${esc(c.name)}${c.special?"★":""}</button>`).join("")}</div>
+    ${state.pack==="all"?`<p class="hint">★ 特殊角色(每包随机一张);「仅拓展角色」玩法要剔除 贾南风、姜维、黄巢、张献忠(技能依赖深渊)。</p>`:""}
   </details></div>`;
 }
 function viewLog(){
@@ -463,6 +473,7 @@ function openLedger(seatNo){
       <button class="sm" data-a="setMods" data-s="${seatNo}">应用</button><button class="sm ghost" data-a="swap" data-s="${seatNo}">${s.swap?"取消互换":"补给⇄子弹互换"}</button></div>
       <div class="hint">当前上限 血 ${t.hp} · 补给 ${t.supply} · 子弹 ${t.ammo}(已含装备/超意识)</div></details>`;
   }
+  if(state.pack==="all"||s.abyss) h+=`<div class="row" style="margin-top:12px"><b>深渊</b><button class="${s.abyss?"":"ghost"}" data-a="abyss" data-s="${seatNo}" style="${s.abyss?"background:#c084fc;border-color:#c084fc;color:#1b1030":""}">${s.abyss?"离开深渊(竖置)":"进入深渊(横置)"}</button><span class="hint" style="margin:0">坍缩 / 捕食 / 次元裂缝 / 技能;在深渊受射击伤害 +1,不同空间不能互射</span></div>`;
   h+=`<div class="row" style="margin-top:14px"><label style="display:flex;align-items:center;gap:5px">凶手<select id="killer-${seatNo}" style="width:auto;padding:6px 8px"><option value="">无/不记</option>${others.map(x=>`<option value="${x.seatNo}">${x.seatNo} 号</option>`).join("")}</select></label>
     <button class="${s.dying?"danger":"ghost"}" data-a="death" data-s="${seatNo}">${s.dying?"无人救 · 确认死亡":"确认死亡"}</button>
     ${!s.npc&&state.turn!==seatNo?`<button class="ghost" data-a="setTurn" data-s="${seatNo}">设为当前回合</button>`:""}</div>`;
@@ -475,7 +486,7 @@ function openLedger(seatNo){
 function openShot(v){
   v=v||{shooter:state.turn,target:null,mode:"single",drawn:null,bonus:0}; modal={t:"shot",v};
   const alive=seatsArr().filter(s=>!s.dead);
-  const nm=s=>`${s.seatNo}号${s.npc?" NPC":(s.heroId!=null&&HERO[s.heroId]?" "+HERO[s.heroId].name:"")}`;
+  const nm=s=>`${s.seatNo}号${s.npc?" NPC":(s.heroId!=null&&HERO[s.heroId]?" "+HERO[s.heroId].name:"")}${s.abyss?" ⟡":""}`;
   const seatBtns=(key)=>`<div class="pick">${alive.filter(s=>!(key==="shooter"&&s.npc)).map(s=>`<button class="sm${v[key]===s.seatNo?" on":""}" data-a="shotSet" data-k="${key}" data-v="${s.seatNo}">${esc(nm(s))}</button>`).join("")}</div>`;
   let h=`<div class="mask" data-mclose="1"><div class="sheet"><h2>🎯 命中判定<span class="x" data-a="close">×</span></h2>
     <div><b>射手</b></div>${seatBtns("shooter")}
@@ -493,16 +504,24 @@ function openShot(v){
   else h+=`<div class="hint">选好射手、目标和翻出的牌,这里会算出结果。</div>`;
   $("#modal").innerHTML=h+`</div></div>`;
 }
-const RC_ERR={SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上"};
+const RC_ERR={SELF_SHOT:"自己不能射自己",NOT_ON_TABLE:"射手或目标不在桌上",DIFF_SPACE:"不同空间不能互射(射手装备【悖论视界】时可用点射,精准直接命中)"};
 // 与服务端 hitCheck 同一套规则的本地预览(权威结果由服务端 logShot 记录)
 function localHit(v){
-  if(v.shooter==null||v.target==null||!v.drawn) return null;
-  const ring=seatsArr().filter(s=>!s.dead).map(s=>s.seatNo);
+  if(v.shooter==null||v.target==null) return null;
+  const _sh=state.seats[v.shooter], _tg=state.seats[v.target];
+  if(!v.drawn&&!(_sh&&_tg&&!!_sh.abyss!==!!_tg.abyss&&(_sh.equips||[]).includes("beilun"))) return null;
+  const sh=state.seats[v.shooter], tg=state.seats[v.target];
+  if(v.shooter===v.target) return {error:"SELF_SHOT"};
+  const sIn=!!sh.abyss, tIn=!!tg.abyss;
+  if(sIn!==tIn){
+    if(v.mode==="single"&&(sh.equips||[]).includes("beilun")) return {between:0,mod:0,hit:true,exact:false,damage:1+(tIn?1:0),points:null,crossSpace:true,notes:["悖论视界:跨空间点射,精准 —— 目标不翻滚则不判定直接命中"].concat(tIn?["目标处于深渊:射击伤害 +1"]:[])};
+    return {error:"DIFF_SPACE"};
+  }
+  const ring=seatsArr().filter(s=>!s.dead&&!!s.abyss===sIn).map(s=>s.seatNo);
   const i=ring.indexOf(v.shooter), j=ring.indexOf(v.target);
-  if(i<0||j<0) return {error:"NOT_ON_TABLE"}; if(i===j) return {error:"SELF_SHOT"};
+  if(i<0||j<0) return {error:"NOT_ON_TABLE"};
   const n=ring.length, d=Math.abs(i-j), between=Math.max(0,Math.min(d,n-d)-1);
   const mod=-between-(v.mode==="spray"?2:0)+(v.bonus||0);
-  const sh=state.seats[v.shooter], tg=state.seats[v.target];
   const helmet=(tg.equips||[]).includes("toukui");
   let drawn=v.drawn; if(drawn==="4"&&sh.heroId===19) drawn="head";
   const r={between,mod,hit:false,exact:false,damage:0,notes:[],points:null};
@@ -511,6 +530,7 @@ function localHit(v){
   else { r.points=Number(drawn)+mod; r.hit=r.points>0; r.exact=r.points===1; r.damage=r.hit?1:0; if(r.exact) r.notes.push("恰好命中(修正后 1 点):甄宓〖幸运一击〗/ 司马懿〖时空赝品〗相关"); }
   if(sh.heroId===6){ r.hit=!r.hit; r.damage=r.hit?(drawn==="dud"?2:1):0; r.notes.push("孙鲁班〖翻云覆雨〗:结果反转"); }
   if(helmet&&(v.mode==="spray"||drawn==="head")){ r.hit=false; r.damage=0; r.notes.push("偏折头盔:扫射与爆头对目标无效"); }
+  if(r.hit&&tIn){ r.damage+=1; r.notes.push("目标处于深渊:射击伤害 +1"); }
   return r;
 }
 
@@ -538,6 +558,8 @@ document.addEventListener("click",e=>{
     case "seatMinus": { const last=seatsArr().slice(-1)[0]; if(last&&last.holderDevices.length&&!confirm(last.seatNo+" 号有人坐,确定删掉这个座位?")) break; RC.send({type:"removeSeat"}); break; }
     case "disband": if(confirm("解散房间?所有人退出,不可恢复。")) RC.send({type:"disbandRoom"}); break;
     case "npc": act("setNpc",{seatNo:sn,npc:b.dataset.n||null}); break;
+    case "pack": act("setPack",{pack:b.dataset.p}); break;
+    case "abyss": act("toggleAbyss",{seatNo:sn}); break;
     case "setCounts": act("setIdCounts",Object.fromEntries(DATA.idKeys.map(k=>[k,+$("#ic-"+k).value]))); break;
     case "dealIds": if(!players().some(s=>s.hasIdentity)||confirm("重新发身份会覆盖所有人的身份,继续?")) act("dealIdentities"); break;
     case "dealHeroes": if(!players().some(s=>s.hasHero||s.offerCount)||confirm("重新发角色会清掉所有人已选的角色,继续?")) act("dealHeroes"); break;

@@ -13,10 +13,10 @@ function check(name, cond, detail = "") {
 function lcg(seed) { let x = seed >>> 0; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
 console.log("\n=== 数据 ===");
-check("角色 24 名,id 连续", HEROES.length === 24 && HEROES.every((h, i) => h.id === i + 1));
+check("基础包 24 名 id 连续;扩展 11 名 id 101~111", HEROES.filter((h) => !h.pack).length === 24 && HEROES.filter((h) => !h.pack).every((h, i) => h.id === i + 1) && HEROES.filter((h) => h.pack === "wuqu").length === 11 && HEROES.filter((h) => h.pack === "wuqu").every((h, i) => h.id === 101 + i));
 check("每个角色有血量/补给/子弹与技能文本", HEROES.every((h) => h.hp > 0 && h.supply >= 0 && h.ammo >= 0 && h.skills.length && h.skills.every((k) => k.name && k.text)));
 check("左慈 0/0,大乔 6 弹", HERO_BY_ID[17].supply === 0 && HERO_BY_ID[17].ammo === 0 && HERO_BY_ID[4].ammo === 6);
-check("牌表 4 类齐全", ["basic", "tactic", "delay", "equip"].every((t) => CARDS.some((c) => c.type === t)) && CARDS.filter((c) => c.type === "equip").length === 8);
+check("牌表 4 类齐全(基础 8 装备;扩展 4 张)", ["basic", "tactic", "delay", "equip"].every((t) => CARDS.some((c) => c.type === t)) && CARDS.filter((c) => c.type === "equip" && !c.pack).length === 8 && CARDS.filter((c) => c.pack === "wuqu").length === 4);
 check("待核牌标记 verified:false", CARDS.filter((c) => c.verified === false).map((c) => c.name).join(",") === "归零斩,夺取,剥离,无中生有,无懈可击");
 check("身份表 3~8 人", [3, 4, 5, 6, 7, 8].every((n) => DEFAULT_ID_COUNTS[n].reduce((a, b) => a + b) === n));
 check("5 人默认 1/1/2/1", JSON.stringify(defaultIdCounts(5)) === JSON.stringify({ brain: 1, immune: 1, virus: 2, mutant: 1 }));
@@ -36,6 +36,12 @@ check("吕布 4 点视为爆头", hc({ shooter: 1, target: 4, drawn: "4", shoote
 check("偏折头盔:扫射/爆头无效,点射照常", !hc({ shooter: 1, target: 2, drawn: "head", targetEquips: ["toukui"] }).hit && !hc({ shooter: 1, target: 2, mode: "spray", drawn: "4", targetEquips: ["toukui"] }).hit && hc({ shooter: 1, target: 2, drawn: "4", targetEquips: ["toukui"] }).hit);
 check("孙鲁班反转:哑火→命中、1 点隔 1 人→命中", hc({ shooter: 1, target: 2, drawn: "dud", shooterHero: 6 }).hit && hc({ shooter: 1, target: 3, drawn: "1", shooterHero: 6 }).hit && !hc({ shooter: 1, target: 2, drawn: "4", shooterHero: 6 }).hit);
 check("自己打自己 / 不在桌上 报错", hc({ shooter: 1, target: 1, drawn: "1" }).error === "SELF_SHOT" && hitCheck([1, 2], { shooter: 1, target: 3, drawn: "1" }).error === "NOT_ON_TABLE");
+{ const ab = new Set([2, 4]);
+  check("深渊:不同空间不能互射", hc({ shooter: 1, target: 2, drawn: "4", abyss: ab }).error === "DIFF_SPACE");
+  check("深渊:同空间隔人只数同空间(1→3 隔 2 号在深渊 → 隔 0)", hc({ shooter: 1, target: 3, drawn: "1", abyss: ab }).between === 0 && hc({ shooter: 1, target: 3, drawn: "1", abyss: ab }).hit);
+  check("深渊内互射:2→4 隔 0", hc({ shooter: 2, target: 4, drawn: "1", abyss: ab }).hit && hc({ shooter: 2, target: 4, drawn: "1", abyss: ab }).between === 0);
+  check("深渊内受射击伤害 +1", hc({ shooter: 2, target: 4, drawn: "2", abyss: ab }).damage === 2 && hc({ shooter: 2, target: 4, drawn: "head", abyss: ab }).damage === 3);
+  check("悖论视界:跨空间点射精准直接命中,目标在深渊伤 2;扫射仍不行", (() => { const r = hc({ shooter: 1, target: 2, abyss: ab, shooterEquips: ["beilun"] }); return r.hit && r.crossSpace && r.damage === 2; })() && hc({ shooter: 1, target: 2, mode: "spray", drawn: "4", abyss: ab, shooterEquips: ["beilun"] }).error === "DIFF_SPACE"); }
 
 console.log("\n=== 开局:NPC / 身份(脑公开)/ 选角候选 ===");
 const N = 6;
@@ -72,6 +78,11 @@ for (const n of room.seatNos()) if (!room.seats[n].npc && room.seats[n].heroId =
 check("亮出全员", act(1, { op: "revealHeroes" }).ok && V(brain).seats[nonBrain].heroId === nbHero);
 check("NPC 不能选角色", act(6, { op: "pickHero", seatNo: 6, heroId: 1 }).error === "IS_NPC");
 
+console.log("\n=== 角色池 ===");
+check("默认基础包,发角色只发基础包", room.pack === "base" && room.seatNos().every((n) => room.seats[n].offers.every((id) => !HERO_BY_ID[id].pack || HERO_BY_ID[id].pack === "base")));
+check("切换角色池", act(1, { op: "setPack", pack: "all" }).ok && room.pack === "all" && act(1, { op: "setPack", pack: "x" }).error === "BAD_PACK");
+act(1, { op: "setPack", pack: "base" });
+
 console.log("\n=== 三属性 / 超意识 ===");
 // 固定身份便于断言:1 脑 2 免疫官 3,4 病毒 5 异变(6 NPC);固定角色
 const setId = (i, identity) => act(i, { op: "setIdentity", seatNo: i, identity });
@@ -105,6 +116,7 @@ check("子弹可暂超上限(化血为剑)", act(1, { op: "adjAmmo", seatNo: 3, 
 check("回合开始补满到上限", act(1, { op: "refillAmmo", seatNo: 3 }).ok && room.seats[3].ammo === 2);
 check("手动修正上限", act(1, { op: "setMods", seatNo: 5, hp: 1, supply: 0, ammo: 0 }).ok && room.stats(5).hp === 5);
 check("命中记录:吕布(3 号)点射 5 号隔 1 人翻 4 点 = 爆头", (() => { const r = act(1, { op: "logShot", shooter: 3, target: 5, mode: "single", drawn: "4" }); return r.ok && r.result.damage === 2 && room.log[0].includes("爆头") && room.log[0].includes("命中"); })());
+check("进入深渊后台账:横置标记、跨空间报错、离开恢复", act(1, { op: "toggleAbyss", seatNo: 5 }).ok && room.seats[5].abyss && V(1).seats[5].abyss === true && act(1, { op: "logShot", shooter: 1, target: 5, drawn: "4" }).error === "DIFF_SPACE" && act(1, { op: "toggleAbyss", seatNo: 5 }).ok && !room.seats[5].abyss);
 check("命中记录:NPC 也算隔人(1 号→5 号隔 6 号 NPC 走短路 0 人? 1-5 隔 6 号)", act(1, { op: "logShot", shooter: 1, target: 5, drawn: "1" }).result.between === 1);
 check("打自己报错", act(1, { op: "logShot", shooter: 1, target: 1, drawn: "1" }).error === "SELF_SHOT");
 
