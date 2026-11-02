@@ -327,7 +327,7 @@ function viewSetup(){
     <div class="row" style="margin-top:6px">${DATA.idKeys.map(k=>`<label style="display:flex;align-items:center;gap:5px">${idHtml(k)}<input class="num" type="number" min="0" max="8" id="ic-${k}" value="${c[k]}"></label>`).join("")}
     <button class="sm" data-a="setCounts">改配比</button></div>
     <div class="row" style="margin-top:8px"><button class="grow" data-a="dealIds">系统随机发身份(至高之脑公开)</button></div>
-    <div class="hint">推荐:5 人 1/1/2/1 · 6 人 1/1/3/1 · 7 人 1/2/3/1 · 8 人 1/2/4/1 · 3 人 1/0/2/0 + 3 NPC。发完后各自点自己座位上的「🪪 我的身份」查看身份与胜利条件;用实体身份牌的话跳过,在同一处登记。${allId?"✓ 全员已有身份":""}</div>`;
+    <div class="hint"><b>至高之脑自动坐 1 号</b>:发完身份(或手动登记脑)后整桌按原顺序平移,其余座位号顺延,你的座位号可能会变。推荐:5 人 1/1/2/1 · 6 人 1/1/3/1 · 7 人 1/2/3/1 · 8 人 1/2/4/1 · 3 人 1/0/2/0 + 3 NPC。发完后各自点自己座位上的「🪪 我的身份」查看身份与胜利条件;用实体身份牌的话跳过,在同一处登记。${allId?"✓ 全员已有身份":""}</div>`;
   h+=`<div class="row" style="margin-top:12px"><b class="grow">③ 发角色</b><button data-a="dealHeroes">随机发候选(脑 5 选 1,其余 3 选 1)</button></div>
     <div class="hint">至高之脑先选、选完即亮;其余选完不亮,开局时同时亮出。也可以不发,用实体牌选好后搜索登记。${allHero?"✓ 全员已选":""}</div>`;
   h+=`<div class="row" style="margin-top:12px"><b class="grow">④ 开始</b><select id="first" style="width:auto">${players().map(s=>`<option value="${s.seatNo}"${state.brainSeat===s.seatNo?" selected":""}>${s.seatNo} 号先手${state.brainSeat===s.seatNo?"(脑)":""}</option>`).join("")}</select>

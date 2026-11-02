@@ -56,14 +56,24 @@ check("必须恰好一个脑", act(1, { op: "setIdCounts", brain: 2, immune: 0, 
 act(1, { op: "setIdCounts", brain: 1, immune: 1, virus: 2, mutant: 1 });
 check("系统发身份", act(1, { op: "dealIdentities" }).ok);
 const brain = room.seatNos().find((n) => room.seats[n].identity === "brain");
-check("NPC 不发身份", room.seats[6].identity === null);
+check("至高之脑固定为 1 号位", brain === 1 && room.log.some((l) => l.includes("固定为 1 号位")) || (brain === 1 && !room.log.some((l) => l.includes("固定为 1 号位"))));
+{ // 座位平移保序:持有者跟着人走,NPC 也平移;原 6 号 NPC 现在在哪取决于脑原来的位置
+  const npcSeat = room.seatNos().find((n) => room.seats[n].npc === "jinbi");
+  check("NPC 随桌平移且仍被记为 NPC", npcSeat != null && room.seats[npcSeat].hp === 3);
+  check("每个座位的持有者与 holds 一致", room.seatNos().every((n) => room.seats[n].seatNo === n && room.seats[n].holderDevices.every((d) => room.isHolder(d, n))));
+  check("每个设备恰持一个座位", Object.values(room.devices).every((d) => d.holds.size === 1) && new Set(Object.values(room.devices).flatMap((d) => [...d.holds])).size === N);
+  check("脑的持有者视图 youHold=[1]", room.viewFor(room.seats[1].holderDevices[0]).youHold.join() === "1");
+}
+for (let i = 1; i <= N; i++) dev[i] = room.seats[i].holderDevices[0]; // 平移后按新座位号重建「座位 i 的持有者」
+const npcNo = room.seatNos().find((n) => room.seats[n].npc);
+check("NPC 不发身份", room.seats[npcNo].identity === null);
 check("脑对所有人公开", V(1).seats[brain].identity === "brain" && V(2).seats[brain].identity === "brain");
 const nonBrain = room.seatNos().find((n) => n !== brain && !room.seats[n].npc);
 check("非脑身份他人不可见、本人可见", V(brain).seats[nonBrain].identity === null && V(nonBrain).seats[nonBrain].identity === room.seats[nonBrain].identity);
 check("日志只写脑是谁", room.log[0].includes(`至高之脑是 ${brain}号`) && !/免疫官是|病毒是/.test(room.log[0]));
 check("病毒 2 ≤ 脑+免疫官 2 → 超意识不生效", room.superMind().active === false);
 
-check("发角色:脑 5 张其余 3 张", act(1, { op: "dealHeroes" }).ok && room.seats[brain].offers.length === 5 && room.seats[nonBrain].offers.length === 3 && room.seats[6].offers.length === 0);
+check("发角色:脑 5 张其余 3 张", act(1, { op: "dealHeroes" }).ok && room.seats[brain].offers.length === 5 && room.seats[nonBrain].offers.length === 3 && room.seats[npcNo].offers.length === 0);
 check("候选仅本人可见", Array.isArray(V(nonBrain).seats[nonBrain].offers) && V(brain).seats[nonBrain].offers === undefined && V(brain).seats[nonBrain].offerCount === 3);
 check("候选全场不重复", new Set(room.seatNos().flatMap((n) => room.seats[n].offers)).size === 5 + 3 * 4);
 const notOffered = HEROES.find((h) => !room.seats[nonBrain].offers.includes(h.id)).id;
@@ -76,7 +86,7 @@ check("其他人选完未亮:本人可见,他人只知已选", act(nonBrain, { o
 check("日志不泄露未亮角色名", !room.log[0].includes(HERO_BY_ID[nbHero].name));
 for (const n of room.seatNos()) if (!room.seats[n].npc && room.seats[n].heroId == null) act(n, { op: "pickHero", seatNo: n, heroId: room.seats[n].offers[0] });
 check("亮出全员", act(1, { op: "revealHeroes" }).ok && V(brain).seats[nonBrain].heroId === nbHero);
-check("NPC 不能选角色", act(6, { op: "pickHero", seatNo: 6, heroId: 1 }).error === "IS_NPC");
+check("NPC 不能选角色", act(npcNo, { op: "pickHero", seatNo: npcNo, heroId: 1 }).error === "IS_NPC");
 
 console.log("\n=== 角色池 ===");
 check("默认基础包,发角色只发基础包", room.pack === "base" && room.seatNos().every((n) => room.seats[n].offers.every((id) => !HERO_BY_ID[id].pack || HERO_BY_ID[id].pack === "base")));
@@ -84,8 +94,12 @@ check("切换角色池", act(1, { op: "setPack", pack: "all" }).ok && room.pack 
 act(1, { op: "setPack", pack: "base" });
 
 console.log("\n=== 三属性 / 超意识 ===");
-// 固定身份便于断言:1 脑 2 免疫官 3,4 病毒 5 异变(6 NPC);固定角色
+// 固定身份便于断言:1 脑 2 免疫官 3,4 病毒 5 异变(6 NPC);固定角色。先把 NPC 标回 6 号(平移后可能不在 6 号)
+if (npcNo !== 6) { act(1, { op: "setNpc", seatNo: npcNo, npc: null }); act(1, { op: "setNpc", seatNo: 6, npc: "jinbi" }); }
 const setId = (i, identity) => act(i, { op: "setIdentity", seatNo: i, identity });
+check("手动登记脑到 3 号 → 平移为 1 号,原 1 号变 5 号", (() => { const h3 = room.seats[3].holderDevices[0]; act(3, { op: "setIdentity", seatNo: 3, identity: "brain" }); const ok = room.seats[1].identity === "brain" && room.seats[1].holderDevices[0] === h3 && room.isHolder(h3, 1); for (let i = 1; i <= N; i++) dev[i] = room.seats[i].holderDevices[0]; return ok; })());
+check("再登记另一人为脑 → 旧脑身份清空并再次平移到 1 号", (() => { act(2, { op: "setIdentity", seatNo: 2, identity: "brain" }); for (let i = 1; i <= N; i++) dev[i] = room.seats[i].holderDevices[0]; return room.seats[1].identity === "brain" && room.seatNos().filter((n) => room.seats[n].identity === "brain").length === 1; })());
+{ const npc2 = room.seatNos().find((n) => room.seats[n].npc); if (npc2 !== 6) { act(1, { op: "setNpc", seatNo: npc2, npc: null }); act(1, { op: "setNpc", seatNo: 6, npc: "jinbi" }); } }
 setId(1, "brain"); setId(2, "immune"); setId(3, "virus"); setId(4, "virus"); setId(5, "mutant");
 const setHero = (i, h) => { room.seats[i].offers = []; room.seats[i].heroId = h; room.seats[i].heroRevealed = true; };
 setHero(1, 4); setHero(2, 13); setHero(3, 19); setHero(4, 17); setHero(5, 1); // 大乔 黄月英 吕布 左慈 张春华
@@ -140,7 +154,7 @@ check("脑死 → 异变唯一存活 → 异变胜", act(1, { op: "confirmDeath"
 check("结束后身份全公开、台账冻结", V(5).seats[4].identity === "virus" && act(1, { op: "adjHp", seatNo: 5, delta: -1 }).error === "GAME_OVER");
 
 console.log("\n=== 其他终局 / 再来一局 / 持久化 ===");
-check("再来一局保留座位、NPC 与持有者", act(1, { op: "newGame" }).ok && room.phase === "setup" && room.seats[6].npc === "jinbi" && room.seats[6].hp === 3 && room.seats[1].holderDevices[0] === "p1" && !room.seats[1].identity && room.seats[1].equips.length === 0);
+check("再来一局保留座位、NPC 与持有者", act(1, { op: "newGame" }).ok && room.phase === "setup" && room.seats[6].npc === "jinbi" && room.seats[6].hp === 3 && room.seats[1].holderDevices[0] === dev[1] && !room.seats[1].identity && room.seats[1].equips.length === 0);
 setId(1, "brain"); setId(2, "immune"); setId(3, "virus"); setId(4, "virus"); setId(5, "mutant");
 act(1, { op: "setIdCounts", brain: 1, immune: 1, virus: 2, mutant: 1 });
 for (const [i, h] of [[1, 4], [2, 13], [3, 19], [4, 17], [5, 1]]) setHero(i, h);
@@ -160,8 +174,8 @@ act(1, { op: "setNpc", seatNo: 3, npc: "zhan" }); // 3 座:2 玩家 + 1 NPC
 check("玩家数随 NPC 变", room._playerSeats().length === 2 && room.idCounts.brain === 1);
 setId(1, "brain"); act(1, { op: "addEquip", seatNo: 2, card: "caihong" }); act(1, { op: "addDelay", seatNo: 2, card: "emp" });
 const back = QmxyCore.hydrate(JSON.parse(JSON.stringify(room.serialize())));
-check("序列化往返:身份/装备/延时/NPC/持有", back.seats[1].identity === "brain" && back.seats[2].equips[0] === "caihong" && back.seats[2].delays[0] === "emp" && back.seats[3].npc === "zhan" && back.isHolder("p2", 2));
-check("往返后保密视图一致", JSON.stringify(back.viewFor("p2")) === JSON.stringify(room.viewFor("p2")));
+check("序列化往返:身份/装备/延时/NPC/持有", back.seats[1].identity === "brain" && back.seats[2].equips[0] === "caihong" && back.seats[2].delays[0] === "emp" && back.seats[3].npc === "zhan" && back.isHolder(dev[2], 2));
+check("往返后保密视图一致", JSON.stringify(back.viewFor(dev[2])) === JSON.stringify(room.viewFor(dev[2])));
 check("改名后座位与身份仍在", room.renameDevice("p1", "小明").ok && room.viewFor("小明").seats[1].identity === "brain");
 
 console.log(`\n结果: ${passed} passed, ${failed} failed`);

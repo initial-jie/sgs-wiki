@@ -128,6 +128,20 @@ export class QmxyCore extends RoomBase {
   _ring() { return this.seatNos().filter((n) => !this.seats[n].dead); } // 桌上还在的角色(含 NPC)
   _abyssSet() { return new Set(this.seatNos().filter((n) => this.seats[n].abyss && !this.seats[n].dead)); }
   _pool() { return HEROES.filter((h) => this.pack === "all" || !h.pack || h.pack === "base"); }
+  // 至高之脑固定坐 1 号:把整桌座位(含 NPC、持有者)按原顺序循环平移,使脑成为 1 号。返回 {from, shift} 或 null(已是 1 号/没有脑)。
+  _rotateBrainToSeat1() {
+    const brain = this._brainSeat();
+    const nos = this.seatNos(); const N = nos.length;
+    if (brain == null || brain === 1 || N < 2) return null;
+    const shift = brain - 1; // 旧号 → 新号:((old - brain) mod N) + 1
+    const next = {};
+    for (const old of nos) { const nn = ((old - brain + N) % N) + 1; const st = this.seats[old]; st.seatNo = nn; next[nn] = st; }
+    this.seats = next;
+    for (const d of Object.values(this.devices)) d.holds = new Set([...d.holds].map((old) => ((old - brain + N) % N) + 1));
+    if (this.turn != null) this.turn = ((this.turn - brain + N) % N) + 1;
+    this._log(`至高之脑固定为 1 号位:全桌座位按原顺序平移(原 ${brain} 号 → 1 号,其余依次顺延)`);
+    return { from: brain, shift };
+  }
   _brainSeat() { return this.seatNos().find((n) => this.seats[n].identity === "brain") ?? null; }
 
   addSeat(id) { const r = super.addSeat(id); if (r.ok) this.idCounts = defaultIdCounts(this._playerSeats().length); return r; }
@@ -205,6 +219,7 @@ export class QmxyCore extends RoomBase {
         players.forEach((n, i) => { this.seats[n].identity = ids[i]; });
         const b = this._brainSeat();
         this._log(`系统发身份:脑 ${c.brain} · 免疫官 ${c.immune} · 病毒 ${c.virus} · 异变 ${c.mutant};至高之脑是 ${this._name(b)}`);
+        this._rotateBrainToSeat1();
         return { ok: true };
       }
       case "setIdentity": { // 本人登记(用实体身份牌时)
@@ -213,8 +228,10 @@ export class QmxyCore extends RoomBase {
         if (s.npc) return { error: "IS_NPC" };
         if (msg.identity == null || msg.identity === "") { s.identity = null; return { ok: true }; }
         if (!IDENTITIES[msg.identity]) return { error: "BAD_IDENTITY" };
+        if (msg.identity === "brain") for (const n of this.seatNos()) if (n !== seatNo && this.seats[n].identity === "brain") this.seats[n].identity = null; // 只能有一个脑
         s.identity = msg.identity;
         this._log(msg.identity === "brain" ? `${this._name(seatNo)}登记为至高之脑(公开)` : `${this._name(seatNo)}登记了身份`); // 非脑不写内容
+        if (msg.identity === "brain" && this.phase === "setup") this._rotateBrainToSeat1();
         return { ok: true };
       }
       case "dealHeroes": { // 每名玩家发候选:脑 3+2 张,其余 3 张(24 将不够时按人数缩减);覆盖上一轮候选与已选角色

@@ -1,6 +1,6 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 85 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)确认基线,即可继续。
 
 ## 🔫 第三个游戏:枪鸣锈语(2026-11-02,`prototype/qmxy/`,待 deploy)
 
@@ -8,7 +8,9 @@
 按风声模板接入 common/:路由 `/qmxy`、`/api/qmxy/<码>/ws`,DO `QmxyRoomDO`(绑定 `QMXY_ROOM`,**wrangler 迁移 v5**)。形态=线下辅助。
 规则核心差异:无距离,命中=翻牌点数 − 每隔一人 1(NPC 算角色,阵亡不算)− 扫射 2 + 翻滚 1,>0 命中,爆头直接中+1 伤,哑火必不中;角色三属性 血量/补给/子弹上限;身份 至高之脑(公开)/免疫官/病毒/异变;安全协议(每回合 1 张射击牌,首死解除);超意识(病毒 > 脑+免疫官 → 脑三上限 +1,单挑归异变);最多 8 人,3 人用 3 个 NPC 隔座。
 已做/没做清单见 `docs/qmxy/README.md` 第 6 节。**待核**:归零斩/夺取/剥离/无中生有/无懈可击/补丁的牌面原文(`qmxy-data.mjs` 里 `verified:false`)、4 人身份表;用户说之后对实体牌补。
-验证:`node prototype/qmxy/qmxy-sim.mjs` 85;浏览器两标签(A机/B机)走完 NPC→发身份→发角色→开局→命中判定→台账→NPC 死亡解除协议,无控制台错误。
+**2026-11-02 第二批**:① 顶部「我的机密」卡撤掉,改为座位卡上「🪪 我的身份」按钮 → 弹层(身份大字 + 胜利条件 + 角色摘要 + 实体身份牌登记),同三国杀房间;② 立绘:`assets/qmxy/`(thumb 方形头像 / cards 实卡裁图(贴吧实拍,带拍照者气泡,待换) / art 干净立绘:6 孙鲁班、8 貂蝉、101~109 扩展将),Pages 直链 `ART_BASE`,座位头像点开全屏看图(有 art 的可切卡面)/ 看技能;③ 扩展《雾区·呓语》:11 将(id 101~111,pack:"wuqu",abyssOnly/special 标记)+ 4 新牌 + `ABYSS_RULES` 全部从视频抽帧转录(`docs/qmxy/raw/expansion-wuqu-transcript.md`),房内「角色池」开关(`setPack`)、座位 `abyss` 横置状态(`toggleAbyss`)、`hitCheck` 按空间分隔人/跨空间 DIFF_SPACE/悖论视界精准/深渊受击 +1。基线 **100**(2026-11-02 晚:至高之脑选定后 `_rotateBrainToSeat1` 把整桌座位含 NPC/持有者循环平移到脑 = 1 号,dealIdentities 与手动登记脑都触发)。
+视频抽帧法:B 站页面 `window.__INITIAL_STATE__` 拿 cid → `api.bilibili.com/x/player/playurl?...platform=html5` 拿 mp4 直链(浏览器同源 fetch)→ curl 下载(带 Referer)→ scratchpad venv 的 `imageio-ffmpeg` 抽帧 → PIL 拼缩略图网格快速定位 → 子代理裁片放大逐字转录。
+验证:`node prototype/qmxy/qmxy-sim.mjs` 100;浏览器两标签(A机/B机)走完 NPC→发身份→发角色→开局→命中判定→台账→NPC 死亡解除协议,无控制台错误。
 
 ## 🧪 线上牌桌方向:引入无名杀(noname)—— 2026-10-24 试跑结论 + 大厅 DO + Pages 部署(含白屏修复)
 
