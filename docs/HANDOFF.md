@@ -1,11 +1,11 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 124 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 131 passed)确认基线,即可继续。
 
 ## 🐺 第四个游戏:一夜终极狼人(2026-11-02,`prototype/onuw/`,待 deploy)
 
 One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》的图鉴 + 语音主持。与前三个不同:**不是线下辅助,而是系统发牌、全流程主持**(线上线下都能用)。
-路由 `/onuw`、`/api/onuw/<码>/ws`,DO `OnuwRoomDO`(绑定 `ONUW_ROOM`,**wrangler 迁移 v6**)。基线 `node prototype/onuw/onuw-sim.mjs` **124**。
+路由 `/onuw`、`/api/onuw/<码>/ws`,DO `OnuwRoomDO`(绑定 `ONUW_ROOM`,**wrangler 迁移 v6**)。基线 `node prototype/onuw/onuw-sim.mjs` **131**。
 - **数据** `shared/onuw-data.mjs`:23 角色(基础 12 + Daybreak 11:哨兵/头狼/神秘狼/梦狼/预言家学徒/灵异侦探/女巫/村庄白痴/揭露者/馆长/保镖)+ 6 神器 + 夜晚顺序 `NIGHT_ORDER` + 每角色播报文案 `narr{open,close}` + 图鉴 desc。
   规则来源 rulespal / ultraboardgames 转录:头狼中央横牌可被其他中央牌角色看/换;保镖保护者得票最高时次高者出局;皮匠死狼必败,皮匠+狼同死则皮匠与村民同胜;场上无狼:无人死村民胜、非爪牙死爪牙胜。
 - **逻辑** `shared/onuw-logic.mjs` `OnuwCore`:`phase` setup→night→day→vote→over。
@@ -27,6 +27,7 @@ One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》�
   **卡图**:官方卡面扫图来自 fandom(清单与下载命令 `docs/onuw/art-sources.md`),**用户 2026-11-03 已下载 57 张进 `assets/onuw/` 并 push**(文件实际是 WebP,扩展名沿用 .png/.jpg,浏览器照常显示),Pages 直链 `ART_BASE` + 角色 `img` 字段,加载失败退回表情。
   没做:外星人包(靠 app 随机指令)、超级反派包(基本是换皮)、Bonus 的共情者(Empath,社交指令)/夺舍者(Body Snatcher,外星人系)。
 - **2026-11-03 开房默认**:座位上限 16,开房默认 8 座;推荐配置按用户定的表(`defaultRoles`:8 人 头狼/神秘狼/守夜人×2/预言家/强盗/女巫/捣蛋鬼/酒鬼/侍从/皮匠,9 +失眠者,10 +猎人,11~14 依次 +灵异侦探/馆长/哨兵/被诅咒者,15~16 +梦狼/旁观者;<8 人沿用旧简单表),`recommendRoles` 动作;牌堆正好是推荐配置时加减座位自动跟随。结束一局 `newGame` 本来就保留牌堆与流程配置;另外客户端点「开始」时把配置存 localStorage `onuw_last`,换房后准备页出现「沿用上次(N人/M张)」。播报与横幅带英文名(`withEn`);选角列表用卡图头部缩略图(`object-position:50% 28%`);≥11 人座位牌缩小(`.table.big/.huge`)。
+- **2026-11-03 首次实战反馈**:① 神秘狼村规加强:可看一名玩家或一张中央牌(`peekCenter`);② **播报门控**:开局者=播报员 `narrator`(🔊 开启时 `setNarrator` 可接管),它念完本阶段(`SpeechSynthesisUtterance.onend`,兜底定时)发 `narrDone{idx}`,服务端把 `night.narrDoneAt` 作为阶段计时起点,未回报 45s 兜底(`NARR_TIMEOUT_MS`);倒计时显示「🔊 播报中…」;③ 投票允许投自己(皮匠);④ 一机多座时 `autoSeat()` 自动切到该行动/该投票的座位(一人一机不需要切);⑤ 🎚️ 音色设置:本机 localStorage `onuw_voice`{name,rate,pitch},默认挑增强/自然音,语速 0.95 音调 0.9。sim 里 `mk()` 默认模拟播报员秒念完(`instantNarr`),门控单独用例。
 - **早期没做清单(部分已补)**:气场预言家(Aura Seer,Bonus 包)/ 吸血鬼 / 外星人扩展;梦狼只做了"狼人互认时显示";神器只影响结算,缄默面具/羞耻裹布不强制;语音是系统 TTS,没有 app 那种配乐;每阶段固定时长不区分角色。
 
 ## 🔫 第三个游戏:枪鸣锈语(2026-11-02,`prototype/qmxy/`,待 deploy)

@@ -194,9 +194,9 @@ const RC=RoomClient.create({
   errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",DECK_SIZE:"牌数必须等于 人数+3",ROLE_MAX:"该角色数量超过上限",BAD_ROLES:"角色配置不合法",BAD_CONFIG:"配置不合法",TOO_FEW_PLAYERS:"至少 3 名玩家",
     NOT_NIGHT:"现在不是夜晚",NOT_ACTOR:"这个阶段不轮到你",ALREADY_ACTED:"你已经行动过了",SELF_TARGET:"不能选自己",SHIELDED:"这张牌被护盾保护,不能动",MANDATORY:"这个行动必须执行,不能跳过",BAD_TARGET:"目标不合法",BAD_KIND:"现在不能做这个操作",
     NOT_LONE:"你不是唯一的狼人,不能看中央牌",NO_WOLF_CARD:"没有中央狼人牌",TARGET_IS_WOLF:"不能换给狼人同伴",HAS_ARTIFACT:"这名玩家已经有神器了",NO_ACTION:"这个角色没有夜晚行动",
-    NOT_DAY:"现在不是白天",NOT_SPEAKER:"还没轮到你发言",NOT_YET:"讨论时间还没到",NOT_VOTE:"现在不是投票时间",TARGET_IS_VAMP:"不能给吸血鬼放印记",NOT_ADJACENT:"病患只能放给左右邻座"},
+    NOT_NARRATOR:"只有播报员设备能回报播报完成",NOT_DAY:"现在不是白天",NOT_SPEAKER:"还没轮到你发言",NOT_YET:"讨论时间还没到",NOT_VOTE:"现在不是投票时间",TARGET_IS_VAMP:"不能给吸血鬼放印记",NOT_ADJACENT:"病患只能放给左右邻座"},
   beforeConnect(){ state=null; closeModal(); sel={seats:[],center:[]}; voteSel=null; lastNarr=null; },
-  onState(m){ const prev=state; state=m; clockOffset=(m.serverNow||Date.now())-Date.now(); afterState(prev); render(); },
+  onState(m){ const prev=state; state=m; clockOffset=(m.serverNow||Date.now())-Date.now(); afterState(prev); autoSeat(); render(); },
   onMessage(){},
   onClosed(){ state=null; closeModal(); render(); },
   onRenamed(){ render(); },
@@ -227,12 +227,41 @@ function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSea
 
 /* ============ 语音播报 ============ */
 let voice=null;
-function pickVoice(){ if(!("speechSynthesis" in window)) return; const vs=speechSynthesis.getVoices(); voice=vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Tingting|Xiaoxiao|Yunxi|Google|Huihui/i.test(v.name))||vs.find(v=>/zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null; }
+// 音色偏好:本机存 onuw_voice {name,rate,pitch};没存则按"增强/自然音 > 微软云希/云扬 > Google > 婷婷"挑
+function voicePref(){ try{ return JSON.parse(RoomClient.lsGet("onuw_voice")||"{}"); }catch(e){ return {}; } }
+function saveVoicePref(p){ RoomClient.lsSet("onuw_voice",JSON.stringify(p)); }
+function zhVoices(){ if(!("speechSynthesis" in window)) return []; const vs=speechSynthesis.getVoices(); return vs.filter(v=>/^zh/i.test(v.lang)).concat(vs.filter(v=>!/^zh/i.test(v.lang))); }
+function pickVoice(){ if(!("speechSynthesis" in window)) return; const vs=speechSynthesis.getVoices(), pref=voicePref();
+  voice=(pref.name&&vs.find(v=>v.name===pref.name))
+    ||vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Enhanced|Premium|增强|Natural|Yunxi|Yunyang|Yunjian|云希|云扬/i.test(v.name))
+    ||vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Google|Xiaoxiao|晓晓/i.test(v.name))
+    ||vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Tingting|婷婷/i.test(v.name))
+    ||vs.find(v=>/zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null; }
 if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
-function speak(text,cancel){ if(!narrOn||!text||!("speechSynthesis" in window)) return; if(cancel) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=1; if(voice) u.voice=voice; speechSynthesis.speak(u); }
+// speak(text,cancel,onDone):念完(或出错/不可用)回调 onDone;没开播报也立刻回调
+function speak(text,cancel,onDone){
+  if(!narrOn||!text||!("speechSynthesis" in window)){ onDone&&onDone(); return; }
+  if(cancel) speechSynthesis.cancel();
+  const pref=voicePref(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=pref.rate||0.95; u.pitch=pref.pitch||0.9; if(voice) u.voice=voice;
+  let fired=false; const fin=()=>{ if(fired) return; fired=true; clearTimeout(tm); onDone&&onDone(); };
+  u.onend=fin; u.onerror=fin; const tm=setTimeout(fin,Math.min(60000,4000+text.length*350)); // 兜底:有的浏览器不触发 onend
+  speechSynthesis.speak(u);
+}
+function openVoiceSettings(){
+  modal={t:"voice"}; const pref=voicePref(), vs=zhVoices();
+  $("#modal").innerHTML=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>🎚️ 播报音色<span class="x" data-a="close">×</span></h2>
+    <label>音色(本机可用的系统语音;Edge/Chrome 的「Microsoft 云希/云扬」「Google 普通话」更自然;iPhone 可在 设置→辅助功能→朗读内容→声音→中文 下载增强版)</label>
+    <select id="vc-name" style="margin-top:4px">${vs.map(v=>`<option value="${esc(v.name)}" ${(voice&&voice.name===v.name)?"selected":""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("")||"<option>本机没有可用语音</option>"}</select>
+    <div class="row" style="margin-top:10px"><label>语速 <b id="vc-rate-v">${pref.rate||0.95}</b></label><input type="range" id="vc-rate" min="0.6" max="1.4" step="0.05" value="${pref.rate||0.95}" class="grow"></div>
+    <div class="row" style="margin-top:6px"><label>音调 <b id="vc-pitch-v">${pref.pitch||0.9}</b></label><input type="range" id="vc-pitch" min="0.5" max="1.4" step="0.05" value="${pref.pitch||0.9}" class="grow"></div>
+    <div class="hint">想要更"磁性":语速 0.85~0.95、音调 0.7~0.85。</div>
+    <div class="row" style="margin-top:10px"><button class="primary" data-a="vcTest">试听</button><button class="ghost" data-a="close">完成</button></div></div></div>`;
+}
+function applyVoiceSettings(){ const n=$("#vc-name")&&$("#vc-name").value, r=+($("#vc-rate")&&$("#vc-rate").value)||0.95, pc=+($("#vc-pitch")&&$("#vc-pitch").value)||0.9; saveVoicePref({name:n,rate:r,pitch:pc}); pickVoice(); if($("#vc-rate-v")) $("#vc-rate-v").textContent=r; if($("#vc-pitch-v")) $("#vc-pitch-v").textContent=pc; }
 let actx=null;
 function ding(){ if(!narrOn) return; try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=880; g.gain.value=.001; o.connect(g); g.connect(actx.destination); o.start(); g.gain.exponentialRampToValueAtTime(.25,actx.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.6); o.stop(actx.currentTime+.65);}catch(e){} }
-function setNarr(on){ narrOn=on; RoomClient.lsSet("onuw_narr",on?"1":"0"); if(on){ try{ speechSynthesis.cancel(); speak("语音播报已开启",true);}catch(e){} } else { try{speechSynthesis.cancel();}catch(e){} } render(); }
+function setNarr(on){ narrOn=on; RoomClient.lsSet("onuw_narr",on?"1":"0"); if(on){ try{ speechSynthesis.cancel(); speak("语音播报已开启",true);}catch(e){} if(state&&RC.connected) act("setNarrator"); } else { try{speechSynthesis.cancel();}catch(e){} } render(); }
+const isNarrator=()=>state&&state.narrator===RC.deviceId;
 // 状态变化 → 该播什么(只播一次;所有设备算出同样的 key,只有开了播报的设备出声)
 function afterState(prev){
   if(!state||!DATA) return;
@@ -258,13 +287,24 @@ function afterState(prev){
   } else if(state.phase==="vote"){ key="v"; if(key!==lastNarr) text=`讨论结束,请投票。${state.config.voteSec}秒内点选你要出局的玩家。`; }
   else if(state.phase==="over"&&state.result){ key="o"; if(key!==lastNarr){ const r=state.result; text=DATA.narr.voteClosed+" "+(r.deaths.length?r.deaths.map(n=>`${n}号,${rn(r.final[n])}`).join(";")+"出局。":"无人出局。")+" "+r.lines[0]; } }
   else key=state.phase;
-  if(key!==lastNarr){ lastNarr=key; if(text){ ding(); speak(text,true); } sel={seats:[],center:[]}; mmMode="card"; grWhat="cards"; }
+  if(key!==lastNarr){ lastNarr=key;
+    const nightIdx=state.phase==="night"?state.night.idx:null;
+    const done=()=>{ if(nightIdx!=null&&isNarrator()&&state&&state.phase==="night"&&state.night.idx===nightIdx&&state.night.narrDoneAt==null) act("narrDone",{idx:nightIdx}); };
+    if(text){ ding(); speak(text,true,done); } else done();
+    sel={seats:[],center:[]}; mmMode="card"; grWhat="cards"; autoSeat();
+  }
+}
+// 一台手机代持多个座位时,自动切到"该行动/该投票"的座位,不用手点 tab
+function autoSeat(){
+  const ms=mySeats(); if(ms.length<2) return;
+  if(state.phase==="night"&&state.night){ const cur=state.night.me[actSeat]; if(cur&&!cur.acted) return; const n=ms.find(x=>state.night.me[x]&&!state.night.me[x].acted); if(n!=null){ actSeat=n; sel={seats:[],center:[]}; } }
+  else if(state.phase==="vote"){ if(actSeat!=null&&!state.seats[actSeat].hasVoted) return; const n=ms.find(x=>!state.seats[x].hasVoted); if(n!=null){ actSeat=n; voteSel=null; } }
 }
 
 /* ============ 到点 tick(幂等,服务端校验)============ */
 function deadline(){ // 返回当前阶段的截止时刻(毫秒,服务端时钟)或 null
   if(!state) return null; const c=state.config;
-  if(state.phase==="night"&&state.night) return state.night.startedAt+c.phaseSec*1000;
+  if(state.phase==="night"&&state.night) return state.night.narrDoneAt!=null?state.night.narrDoneAt+c.phaseSec*1000:state.night.startedAt+45000; // 播报念完才开始计时;播报员失联 45s 兜底
   if(state.phase==="day"&&state.day){ const d=state.day; if(d.mode==="order") return c.perSpeakSec>0?d.speakerStartedAt+c.perSpeakSec*1000:null; return d.startedAt+d.freeMs; }
   if(state.phase==="vote"&&state.voting) return state.voting.startedAt+c.voteSec*1000;
   return null;
@@ -272,7 +312,8 @@ function deadline(){ // 返回当前阶段的截止时刻(毫秒,服务端时钟
 setInterval(()=>{
   if(!state) return;
   const dl=deadline(); const el=$("#cd");
-  if(dl!=null){ const rem=dl-sNow(); if(el){ el.textContent=rem>0?fmt(rem):(state.phase==="night"?"…":"0"); el.classList.toggle("low",rem>0&&rem<=10000); }
+  const narrating=state.phase==="night"&&state.night&&state.night.narrDoneAt==null;
+  if(dl!=null){ const rem=dl-sNow(); if(el){ el.textContent=narrating?"🔊 播报中…":(rem>0?fmt(rem):(state.phase==="night"?"…":"0")); el.classList.toggle("low",!narrating&&rem>0&&rem<=10000); }
     if(rem<=0&&Date.now()-lastTickAt>2000&&RC.connected){ lastTickAt=Date.now(); RC.ws&&RC.ws.readyState===1&&RC.ws.send(JSON.stringify({type:"tick"})); } }
   else if(el) el.textContent="";
 },400);
@@ -320,12 +361,13 @@ function render(){
   app.innerHTML=h;
   layoutTable();
   if(modal&&modal.t==="codex") openCodex();
+  if(modal&&modal.t==="voice") openVoiceSettings();
 }
 function viewTopbar(){
   const ms=mySeats();
   return `<div class="topbar"><span class="who">房间 <b>${esc(RC.code||state.roomCode)}</b> · ${esc(RC.deviceId)}${ms.length?" · 座位 "+ms.join("/"):""}</span>
     <button class="xs ghost" data-a="rename">改名</button><button class="xs ghost" data-a="codex">📖 图鉴</button>
-    <button class="xs ${narrOn?"on":"ghost"}" data-a="narr" title="本机语音播报">${narrOn?"🔊 播报中":"🔇 播报关"}</button>
+    <button class="xs ${narrOn?"on":"ghost"}" data-a="narr" title="本机语音播报${isNarrator()?"(本机是播报员)":""}">${narrOn?"🔊 播报中":"🔇 播报关"}${isNarrator()?" ★":""}</button><button class="xs ghost" data-a="voice" title="音色/语速/音调">🎚️</button>
     <button class="xs ghost" data-a="disband">解散</button></div>`;
 }
 
@@ -402,7 +444,7 @@ function viewBanner(){
 }
 // 当前行动需要我点什么:返回 {seats:n|0, center:n|0, allowSelf, kind, label, skip, confirmLabel}
 function actionSpec(){
-  if(state.phase==="vote"){ return {seats:1,center:0,allowSelf:false,label:"点选你要投出局的玩家",confirmLabel:"确认投票"}; }
+  if(state.phase==="vote"){ return {seats:1,center:0,allowSelf:true,label:"点选你要投出局的玩家",confirmLabel:"确认投票"}; }
   if(state.phase!=="night") return null;
   const n=curActSeat(); if(n==null) return null;
   const me=state.night.me[n]; if(!me||me.acted) return null;
@@ -411,7 +453,7 @@ function actionSpec(){
     sentinel:{seats:1,label:"选一名其他玩家放置护盾",skip:"不放置",confirmLabel:"放置护盾"},
     doppelganger:{seats:1,label:"选一名其他玩家,查看并成为那个角色",confirmLabel:"查看"},
     werewolf:{center:1,label:me.lone?"你是唯一的狼人:可以看一张中央牌":"",skip:"不看",confirmLabel:"查看"},
-    mysticwolf:{seats:1,label:"选一名其他玩家查看",skip:"不看",confirmLabel:"查看"},
+    mysticwolf:{seats:1,center:1,either:true,label:"看一名其他玩家的牌,或看一张中央牌",skip:"不看",confirmLabel:"查看"},
     alphawolf:{seats:1,label:"选一名非狼人玩家,把中央横放的狼人牌换给他(必须)",confirmLabel:"交换"},
     seer:{seats:1,center:2,either:true,label:"看一名其他玩家的牌,或看两张中央牌",skip:"不看",confirmLabel:"查看"},
     apprenticeseer:{center:1,label:"选一张中央牌查看",skip:"不看",confirmLabel:"查看"},
@@ -540,7 +582,7 @@ function viewVotePanel(){
   const ms=mySeats(); if(!ms.length) return `<div class="card"><div class="hint">你没有座位,只能围观。</div></div>`;
   const n=curActSeat(), s=state.seats[n];
   let h=`<div class="card secret"><h2>🗳️ 我的投票 <span class="tag">${n}号</span></h2>`+seatTabs();
-  h+=`<div class="hint">点上方圆桌的玩家牌背,或输入座位号;超时未投=弃票。${s.vote!=null?`<b style="color:var(--amber)">已投给 ${s.vote}号</b>(可改)`:""}</div>
+  h+=`<div class="hint">点上方圆桌的玩家牌背,或输入座位号(可以投自己);超时未投=弃票。${s.vote!=null?`<b style="color:var(--amber)">已投给 ${s.vote}号</b>(可改)`:""}</div>
     <div class="row" style="margin-top:8px"><input class="num" type="number" id="vote-no" placeholder="座位号" min="1" max="${seatsArr().length}" value="${voteSel!=null?voteSel:""}"><button class="primary" data-a="voteConfirm" ${voteSel!=null?"":"disabled"}>确认投给 ${voteSel!=null?voteSel+"号":"…"}</button></div>
     <div class="row" style="margin-top:8px"><button class="sm ghost" data-a="forceVote">强制结束投票</button></div></div>`;
   return h;
@@ -570,7 +612,7 @@ function viewLog(){ return `<div class="card"><details><summary>📜 日志(公�
 
 /* ============ 交互 ============ */
 function onSeatClick(n){
-  if(state.phase==="vote"){ if(!mySeats().length) return; if(n===curActSeat()) return toast("不能投自己"); voteSel=n; render(); return; }
+  if(state.phase==="vote"){ if(!mySeats().length) return; voteSel=n; render(); return; }
   const sp=actionSpec(); if(!sp||!sp.seats) return;
   const sets=selectableSets();
   if(sp.marksman){ if(!sets.seats.has(n)) return; if(mmMode==="card"){ sel.mmCard=sel.mmCard===n?null:n; if(sel.mmMark===n) sel.mmMark=null; } else { sel.mmMark=sel.mmMark===n?null:n; if(sel.mmCard===n) sel.mmCard=null; } render(); return; }
@@ -593,7 +635,8 @@ function confirmAction(){
     case "sentinel": msg={kind:"shield",target:sel.seats[0]}; break;
     case "doppelganger": msg={kind:"copy",target:sel.seats[0]}; break;
     case "werewolf": case "apprenticeseer": msg={kind:"peekCenter",idx:sel.center[0]}; break;
-    case "mysticwolf": case "pi": msg={kind:"peekPlayer",target:sel.seats[0]}; break;
+    case "pi": msg={kind:"peekPlayer",target:sel.seats[0]}; break;
+    case "mysticwolf": msg=sel.seats.length?{kind:"peekPlayer",target:sel.seats[0]}:{kind:"peekCenter",idx:sel.center[0]}; break;
     case "alphawolf": msg={kind:"swapCenter",target:sel.seats[0]}; break;
     case "seer": msg=sel.seats.length?{kind:"peekPlayer",target:sel.seats[0]}:{kind:"peekCenter",idxs:sel.center.slice(0,2)}; break;
     case "robber": msg={kind:"swapSelf",target:sel.seats[0]}; break;
@@ -624,6 +667,8 @@ document.addEventListener("click",e=>{
     case "codex": openCodex(); break;
     case "codexOf": openCodex(b.dataset.k); break;
     case "narr": setNarr(!narrOn); break;
+    case "voice": openVoiceSettings(); break;
+    case "vcTest": applyVoiceSettings(); { const was=narrOn; narrOn=true; speak("狼人 Werewolf,请睁眼,互相确认身份。",true,()=>{ narrOn=was; }); } break;
     case "disband": if(confirm("解散房间?所有人都会被踢出,房间数据清空。")) RC.send({type:"disbandRoom"}); break;
     case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
     case "takeover": { const s=state.seats[sn]; if(confirm(`座位 ${sn} 当前由「${nameOf(s)}」持有,替换成你?`)) RC.send({type:"takeoverSeat",seatNo:sn}); break; }
@@ -663,7 +708,8 @@ document.addEventListener("change",e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.a==="roundMode"){ const r=state.config.rounds.map((x,i)=>i===+t.dataset.i?{mode:t.value}:x); sendConfig({rounds:r}); return; }
   if(!t.id) return;
-  if(t.id==="vote-no"){ const v=+t.value; if(v>=1&&state.seats[v]&&v!==curActSeat()){ voteSel=v; render(); } else if(t.value) toast("座位号不对"); return; }
+  if(t.id==="vote-no"){ const v=+t.value; if(v>=1&&state.seats[v]){ voteSel=v; render(); } else if(t.value) toast("座位号不对"); return; }
+  if(t.id&&t.id.startsWith("vc-")){ applyVoiceSettings(); return; }
   if(t.id.startsWith("cf-")){
     const k=t.id.slice(3);
     if(k==="anchor") return sendConfig({anchor:t.checked});

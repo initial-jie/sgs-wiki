@@ -31,10 +31,14 @@ function layout(room, seatRoles, center) {
   room.nightLog = [];
   room._enterPhase(0);
 }
-function mk(n, roles, seed = 1) {
+function mk(n, roles, seed = 1, instantNarr = true) {
   const room = new OnuwCore("1234", n, lcg(seed), now);
   const dev = {}; for (let i = 1; i <= n; i++) { dev[i] = `p${i}`; room.claimSeat(dev[i], i); }
   room.action(dev[1], { op: "setRoles", roles });
+  if (instantNarr) { // 模拟播报员一进阶段就念完(播报门控单独有用例)
+    const orig = room._enterPhase.bind(room);
+    room._enterPhase = (i) => { orig(i); if (room.phase === "night") room.night.narrDoneAt = room.now(); };
+  }
   return { room, dev, V: (i) => room.viewFor(dev[i]), act: (i, o) => room.action(dev[i], o), tick: () => room.action("x", { op: "tick" }) };
 }
 
@@ -96,7 +100,7 @@ console.log("\n=== 场景 A:6 人 哨兵/化身幽灵/头狼/预言家/强盗/�
   check("最后一轮顺序发言含归票沉底:首位再发一次", room.day.mode === "order" && room.day.order.length === 7 && room.day.order[0] === room.day.order[6] && room.day.anchorSeat === room.day.order[0]);
   for (let i = 0; i < 7; i++) act(room.currentSpeaker(), { op: "dayNext" });
   check("三轮结束自动进入投票", room.phase === "vote" && V(1).voting.voted === 0);
-  check("不能投自己", act(1, { op: "vote", seatNo: 1, target: 1 }).error === "SELF_TARGET");
+  check("可以投自己(皮匠常用),再改投也行", act(1, { op: "vote", seatNo: 1, target: 1 }).ok && room.seats[1].vote === 1);
   const votes = { 1: 3, 2: 4, 3: 1, 4: 3, 5: 3, 6: 1 };
   act(1, { op: "vote", seatNo: 1, target: 3 });
   check("他人只见是否已投,本人可见投给谁", V(2).seats[1].hasVoted === true && V(2).seats[1].vote === undefined && V(1).seats[1].vote === 3);
@@ -108,6 +112,19 @@ console.log("\n=== 场景 A:6 人 哨兵/化身幽灵/头狼/预言家/强盗/�
   check("化身幽灵牌=狼人阵营,不在胜者里;胜者 1,4,5,6", r.final[2] === "werewolf" && r.winners.join(",") === "1,4,5,6");
   check("结算后全公开:中央牌/当前牌/笔记/夜晚记录", V(1).center.length === 4 && V(1).seats[5].card === "robber" && Array.isArray(V(1).seats[4].notes) && V(1).nightLog.some((l) => l.includes("捣蛋鬼")));
   check("再来一局:回到准备阶段,牌堆配置保留", act(1, { op: "newGame" }).ok && room.phase === "setup" && room.roles.length === 9 && room.seats[3].card === null);
+}
+
+console.log("\n=== 播报门控 / 神秘狼村规 ===");
+{
+  const { room, V, act } = mk(5, ["werewolf", "mysticwolf", "seer", "robber", "troublemaker", "villager", "villager", "drunk"], 1, false);
+  act(1, { op: "startGame" }); layout(room, ["werewolf", "mysticwolf", "seer", "robber", "troublemaker"], ["villager", "villager", "drunk"]);
+  check("开局者是播报员", room.narrator === "p1" && V(1).narrator === "p1");
+  T += 10 * SEC; check("播报员没回报 → 到 10s 也不推进", room.action("x", { op: "tick" }).changed === false && room.night.idx === 0);
+  check("非播报员回报无效", act(2, { op: "narrDone", idx: 0 }).error === "NOT_NARRATOR");
+  check("播报员回报 → 计时从此刻起算,再 10s 才推进", act(1, { op: "narrDone", idx: 0 }).ok && room.action("x", { op: "tick" }).changed === false && (T += 10 * SEC, room.action("x", { op: "tick" }).changed === true) && room.night.idx === 1);
+  check("神秘狼可看一张中央牌(村规)", act(2, { op: "nightAct", seatNo: 2, kind: "peekCenter", idx: 2 }).ok && V(2).seats[2].notes.at(-1).text.includes("酒鬼"));
+  T += 45 * SEC; check("播报员失联 45s 兜底推进", room.action("x", { op: "tick" }).changed === true && room.night.idx === 2);
+  check("别的设备可接管播报员", act(3, { op: "setNarrator" }).ok && room.narrator === "p3" && act(3, { op: "narrDone", idx: 2 }).ok);
 }
 
 console.log("\n=== 场景 B:8 人 神秘狼/爪牙/守夜人/女巫/灵异侦探/村庄白痴/揭露者/皮匠 + 保镖/猎人在中央 ===");

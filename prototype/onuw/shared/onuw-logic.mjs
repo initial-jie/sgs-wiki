@@ -8,6 +8,7 @@
 //
 // 时间:没有服务端定时器,服务端只记 startedAt;客户端按 serverNow 倒计时,到点发 tick,服务端 tick() 校验后推进(幂等)。
 //   每阶段至少 phaseSec 秒(无该角色玩家也等这么久,不泄露信息);有行动者未完成则最多等到 phaseMaxSec(0=一直等)。
+//   播报门控:开局的设备是播报员(narrator);它念完本阶段播报后发 narrDone,阶段计时从 narrDoneAt 起算;播报员 45s 没回报(关了页面)则按 startedAt 起算。
 //   顺序发言 perSpeakSec(0=不限时,手动结束);自由讨论 freeSec(0=人数×60);投票 voteSec,超时=弃票。
 //
 // 扩展:Daybreak(护盾/神器)、Bonus Roles(气场预言家/王子/被诅咒者/那东西/旁观者/侍从/皮匠学徒/诺查丹玛斯)、
@@ -26,6 +27,8 @@ function shuffle(arr, rng) {
 const rn = (k) => (ROLE_BY_KEY[k] ? ROLE_BY_KEY[k].name : k);
 const mn = (k) => (k && MARK_BY_KEY[k] ? MARK_BY_KEY[k].name : "没有印记");
 const TEAM_NAME = { village: "村民", werewolf: "狼人", vampire: "吸血鬼", tanner: "皮匠", indep: "独立" };
+
+export const NARR_TIMEOUT_MS = 45 * 1000; // 播报员失联兜底
 
 export function defaultConfig() {
   return {
@@ -75,6 +78,7 @@ export class OnuwCore extends RoomBase {
     this.vampTarget = null; // 吸血鬼们放置吸血鬼印记的目标(仁菲尔德看)
     this.touched = [];      // 查看/移动过牌或印记的座位(气场预言家看)
     this.dayNotice = null;  // 天亮时的公开宣布(诺查丹玛斯加入的阵营)
+    this.narrator = this.narrator || null; // 播报员设备(开局者;可用 setNarrator 接管);跨局保留
     this.artifactDeck = [];
     this.log = [];          // 公开日志
     this.nightLog = [];     // 夜里发生了什么(结算后公开)
@@ -153,7 +157,9 @@ export class OnuwCore extends RoomBase {
       case "setRoles": return this._setRoles(msg.roles);
       case "recommendRoles": return this.phase !== "setup" ? { error: "NOT_SETUP" } : (this.roles = defaultRoles(this.seatNos().length), { ok: true });
       case "setConfig": return this._setConfig(msg.config);
-      case "startGame": return this._startGame();
+      case "startGame": { this.narrator = id; return this._startGame(); }
+      case "setNarrator": { this.narrator = id; return { ok: true }; }
+      case "narrDone": return this._narrDone(id, msg);
       case "nightAct": return this._nightAct(id, msg);
       case "nightAdvance": return this._nightAdvance(!!msg.force);
       case "dayNext": return this._dayNext(id, !!msg.force);
@@ -247,7 +253,7 @@ export class OnuwCore extends RoomBase {
   _enterPhase(i) {
     const nt = this.night;
     if (i >= nt.phases.length) return this._startDay();
-    nt.idx = i; nt.startedAt = this.now(); nt.acted = {}; nt.sub = {};
+    nt.idx = i; nt.startedAt = this.now(); nt.narrDoneAt = null; nt.acted = {}; nt.sub = {};
     const role = nt.phases[i], isNight = ROLE_BY_KEY[role].order >= 0;
     nt.actors = this._actors(role);
     for (const n of nt.actors) {
@@ -322,12 +328,25 @@ export class OnuwCore extends RoomBase {
     if (role === "doppelganger") return this.dg && this.dg.seat === n ? this.dg.role : "doppelganger";
     return role;
   }
+  // 播报员念完本阶段 → 计时起点
+  _narrDone(id, msg) {
+    if (this.phase !== "night") return { error: "NOT_NIGHT" };
+    const nt = this.night;
+    if (Number(msg.idx) !== nt.idx) return { ok: true, changed: false };
+    if (this.narrator && id !== this.narrator) return { error: "NOT_NARRATOR" };
+    if (nt.narrDoneAt != null) return { ok: true, changed: false };
+    nt.narrDoneAt = this.now();
+    return { ok: true, changed: true };
+  }
   _nightAdvance(force) {
     if (this.phase !== "night") return { error: "NOT_NIGHT" };
-    const nt = this.night, elapsed = this.now() - nt.startedAt;
+    const nt = this.night, now = this.now();
+    if (force) { this._enterPhase(nt.idx + 1); return { ok: true, changed: true }; }
+    let base = nt.narrDoneAt;
+    if (base == null) { if (now - nt.startedAt < NARR_TIMEOUT_MS) return { ok: true, changed: false }; base = nt.startedAt; } // 播报员失联兜底
+    const elapsed = now - base;
     const minMs = this.config.phaseSec * 1000, maxMs = this.config.phaseMaxSec * 1000;
     const allActed = nt.actors.every((n) => nt.acted[n]);
-    if (force) { this._enterPhase(nt.idx + 1); return { ok: true, changed: true }; }
     if (elapsed >= minMs && (allActed || (maxMs > 0 && elapsed >= maxMs))) { this._enterPhase(nt.idx + 1); return { ok: true, changed: true }; }
     return { ok: true, changed: false };
   }
@@ -475,6 +494,13 @@ export class OnuwCore extends RoomBase {
         return done();
       }
       case "mysticwolf": {
+        if (kind === "peekCenter") { // 村规加强:也可以看一张中央牌
+          if (!this._validCenter(idx)) return { error: "BAD_TARGET" };
+          this._touch(n);
+          this._note(n, `你查看了中央第 ${idx + 1} 张牌:${rn(this.center[idx])}`, [this._centerCard(idx)]);
+          this.nightLog.push(`神秘狼(${n}号)查看了中央第 ${idx + 1} 张牌`);
+          return done();
+        }
         if (kind !== "peekPlayer") return { error: "BAD_KIND" };
         const e = chkOther(target); if (e) return { error: e };
         this._touch(n);
@@ -767,8 +793,7 @@ export class OnuwCore extends RoomBase {
     const n = Number(msg.seatNo), t = Number(msg.target);
     if (!this.isHolder(id, n)) return { error: "NOT_HOLDER" };
     if (!this._validSeat(t)) return { error: "BAD_TARGET" };
-    if (t === n) return { error: "SELF_TARGET" };
-    this.seats[n].vote = t;
+    this.seats[n].vote = t; // 允许投自己(皮匠常用)
     this._closeVote(false); // 全员投完立即结算
     return { ok: true };
   }
@@ -922,23 +947,23 @@ export class OnuwCore extends RoomBase {
       const me = {};
       for (const n of holds) if (nt.actors.includes(n)) me[n] = { eff: this._effRole(n), acted: !!nt.acted[n], sub: clone(nt.sub[n] || {}), lone: nt.phases[nt.idx] === "werewolf" ? this._wolvesNow().length === 1 : undefined };
       const role = nt.phases[nt.idx];
-      night = { idx: nt.idx, total: nt.phases.length, role, dusk: ROLE_BY_KEY[role].order < 0, phases: nt.phases.slice(), startedAt: nt.startedAt, me };
+      night = { idx: nt.idx, total: nt.phases.length, role, dusk: ROLE_BY_KEY[role].order < 0, phases: nt.phases.slice(), startedAt: nt.startedAt, narrDoneAt: nt.narrDoneAt ?? null, me };
     }
     const voting = this.phase === "vote" ? { startedAt: this.voting.startedAt, voted: this.seatNos().filter((n) => this.seats[n].vote != null).length } : null;
     return {
       phase: this.phase, roles: this.roles.slice(), config: clone(this.config), deckSize: this.deckSize(),
       centerCount: this.center.length, wolfSlot: this.wolfSlot, center: over ? this.center.slice() : null,
-      night, day: this.day ? { ...clone(this.day), speaker: this.currentSpeaker() } : null, voting, dayNotice: this.dayNotice,
+      night, day: this.day ? { ...clone(this.day), speaker: this.currentSpeaker() } : null, voting, dayNotice: this.dayNotice, narrator: this.narrator,
       result: this.result ? clone(this.result) : null, log: this.log.slice(0, 80), nightLog: over ? this.nightLog.slice() : null,
       serverNow: this.now(),
     };
   }
   _serializeExtra() {
     return { phase: this.phase, roles: this.roles, config: this.config, center: this.center, wolfSlot: this.wolfSlot, night: this.night, day: this.day, voting: this.voting, result: this.result,
-      dg: this.dg, copycat: this.copycat, pi: this.pi, nostra: this.nostra, vampTarget: this.vampTarget, touched: this.touched, dayNotice: this.dayNotice, artifactDeck: this.artifactDeck, log: this.log, nightLog: this.nightLog };
+      dg: this.dg, copycat: this.copycat, pi: this.pi, nostra: this.nostra, vampTarget: this.vampTarget, touched: this.touched, dayNotice: this.dayNotice, narrator: this.narrator, artifactDeck: this.artifactDeck, log: this.log, nightLog: this.nightLog };
   }
   _hydrateExtra(d) {
-    for (const k of ["phase", "roles", "config", "center", "wolfSlot", "night", "day", "voting", "result", "dg", "copycat", "pi", "nostra", "vampTarget", "touched", "dayNotice", "artifactDeck", "log", "nightLog"]) if (d[k] !== undefined) this[k] = d[k];
+    for (const k of ["phase", "roles", "config", "center", "wolfSlot", "night", "day", "voting", "result", "dg", "copycat", "pi", "nostra", "vampTarget", "touched", "dayNotice", "narrator", "artifactDeck", "log", "nightLog"]) if (d[k] !== undefined) this[k] = d[k];
     for (const s of Object.values(this.seats)) { // 旧版字段兜底
       if (!s.notes) s.notes = [];
       if (s.shield === undefined) s.shield = false;
