@@ -203,7 +203,7 @@ const RC=RoomClient.create({
 });
 function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
 
-fetch("/onuw/data.json?v=__ONUW_DATA_VER__").then(r=>r.json()).then(d=>{ DATA=d; R=Object.fromEntries(d.roles.map(r=>[r.key,r])); ART=Object.fromEntries(d.artifacts.map(a=>[a.key,a])); MK=Object.fromEntries((d.marks||[]).map(m=>[m.key,m])); render(); }).catch(()=>toast("角色数据加载失败,刷新重试"));
+fetch("/onuw/data.json?v=__ONUW_DATA_VER__").then(r=>r.json()).then(d=>{ DATA=d; R=Object.fromEntries(d.roles.map(r=>[r.key,r])); ART=Object.fromEntries(d.artifacts.map(a=>[a.key,a])); MK=Object.fromEntries((d.marks||[]).map(m=>[m.key,m])); render(); loadBgmList(); }).catch(()=>toast("角色数据加载失败,刷新重试"));
 
 /* ============ 小工具 ============ */
 const sNow=()=>Date.now()+clockOffset;
@@ -256,12 +256,22 @@ function openVoiceSettings(){
     <div class="row" style="margin-top:10px"><label>语速 <b id="vc-rate-v">${pref.rate||0.95}</b></label><input type="range" id="vc-rate" min="0.6" max="1.4" step="0.05" value="${pref.rate||0.95}" class="grow"></div>
     <div class="row" style="margin-top:6px"><label>音调 <b id="vc-pitch-v">${pref.pitch||0.9}</b></label><input type="range" id="vc-pitch" min="0.5" max="1.4" step="0.05" value="${pref.pitch||0.9}" class="grow"></div>
     <div class="hint">想要更"磁性":语速 0.85~0.95、音调 0.7~0.85。</div>
-    <div class="row" style="margin-top:10px"><button class="primary" data-a="vcTest">试听</button><button class="ghost" data-a="close">完成</button></div></div></div>`;
+    <h2 style="margin-top:14px">🎵 背景音乐</h2>
+    <label>曲目(放在 assets/onuw/,清单 bgm.json;本机记忆)</label>
+    <select id="vc-bgm" style="margin-top:4px">${(BGM_LIST&&BGM_LIST.length?BGM_LIST.map(t=>`<option value="${esc(t.file)}" ${bgmTrack()===t.file?"selected":""}>${esc(t.title||t.file)}</option>`).join(""):`<option value="bgm.mp3" ${bgmTrack()==="bgm.mp3"?"selected":""}>bgm.mp3(${BGM_LIST===null?"清单加载中…":"没有清单,直接找这个文件"})</option>`)}<option value="${SYNTH_KEY}" ${bgmTrack()===SYNTH_KEY?"selected":""}>合成氛围音(无需文件)</option></select>
+    ${(()=>{ const ti=bgmTrackInfo(); return ti&&ti.credit?`<div class="hint">${esc(ti.credit)}</div>`:""; })()}
+    <div class="row" style="margin-top:10px"><button class="primary" data-a="vcTest">试听播报</button><button class="${bgmOn?"on":"ghost"}" data-a="bgm">${bgmOn?"🎵 BGM 开着":"🎵 开 BGM"}</button><button class="ghost" data-a="close">完成</button></div></div></div>`;
+  loadBgmList();
 }
 function applyVoiceSettings(){ const n=$("#vc-name")&&$("#vc-name").value, r=+($("#vc-rate")&&$("#vc-rate").value)||0.95, pc=+($("#vc-pitch")&&$("#vc-pitch").value)||0.9; saveVoicePref({name:n,rate:r,pitch:pc}); pickVoice(); if($("#vc-rate-v")) $("#vc-rate-v").textContent=r; if($("#vc-pitch-v")) $("#vc-pitch-v").textContent=pc; }
-/* 背景音乐(线下掩盖走动声):顶栏 🎵 开关,本机记忆 onuw_bgm。优先放 assets/onuw/bgm.mp3(用户可自行放一首),没有就用 WebAudio 合成夜风+低音铺底。
-   播报时自动压到很低(duck),念完恢复。全部经 WebAudio GainNode 控制音量(iOS 忽略 <audio>.volume)。 */
-let bgmOn=RoomClient.lsGet("onuw_bgm")==="1", bgm=null;
+/* 背景音乐(线下掩盖走动声):顶栏 🎵 开关,本机记忆 onuw_bgm。曲目来自 assets/onuw/bgm.json({tracks:[{file,title,credit}]}),在 🎚️ 里选,本机记忆 onuw_bgm_track;
+   没有清单就试 assets/onuw/bgm.mp3;都没有(或选了"合成")就用 WebAudio 合成的暖色铺底。播报时自动压到很低(duck),念完恢复。全部经 GainNode 控制音量(iOS 忽略 <audio>.volume)。 */
+let bgmOn=RoomClient.lsGet("onuw_bgm")==="1", bgm=null, BGM_LIST=null; // BGM_LIST: null=未加载/没有清单, []=清单为空
+const SYNTH_KEY="__synth";
+function bgmTrack(){ const k=RoomClient.lsGet("onuw_bgm_track")||""; if(k===SYNTH_KEY) return SYNTH_KEY; if(BGM_LIST&&BGM_LIST.length){ const t=BGM_LIST.find(t=>t.file===k); return (t||BGM_LIST[0]).file; } return k===""?"bgm.mp3":k; }
+function bgmTrackInfo(){ const f=bgmTrack(); return (BGM_LIST||[]).find(t=>t.file===f)||null; }
+function setBgmTrack(f){ RoomClient.lsSet("onuw_bgm_track",f); if(bgm){ bgmStop(); setTimeout(()=>{ if(bgmOn) bgmStart(); },650); } }
+function loadBgmList(){ if(!DATA||!DATA.artBase||BGM_LIST!==null) return; fetch(DATA.artBase+"bgm.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(j=>{ BGM_LIST=(j&&Array.isArray(j.tracks)?j.tracks:[]).filter(t=>t&&t.file); if(modal&&modal.t==="voice") openVoiceSettings(); }).catch(()=>{ BGM_LIST=[]; }); }
 const BGM_VOL=0.32, BGM_DUCK=0.06;
 function bgmStart(){
   if(bgm) return;
@@ -269,18 +279,18 @@ function bgmStart(){
     const ctx=actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==="suspended") ctx.resume();
     const master=ctx.createGain(); master.gain.value=0.0001; master.connect(ctx.destination);
     bgm={ctx,master,nodes:[],el:null};
-    const url=DATA&&DATA.artBase?DATA.artBase+"bgm.mp3":"";
-    const synth=()=>{ // 合成:低通噪声当夜风(慢速起伏)+ 三个轻微失谐的正弦铺底,每 20s 换一个小调和弦
+    const tk=bgmTrack(); const url=(tk!==SYNTH_KEY&&DATA&&DATA.artBase)?DATA.artBase+tk:"";
+    const synth=()=>{ // 合成兜底:很轻的低通噪声当夜风 + 四个暖色铺底(A 大调 I–vi–IV–V 轮换,每 24s 换一个),不走小调不阴森
       const buf=ctx.createBuffer(1,ctx.sampleRate*4,ctx.sampleRate), d=buf.getChannelData(0); let last=0; for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.5; }
-      const noise=ctx.createBufferSource(); noise.buffer=buf; noise.loop=true; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=260; lp.Q.value=0.7;
-      const lfo=ctx.createOscillator(); lfo.frequency.value=0.05; const lfoG=ctx.createGain(); lfoG.gain.value=140; lfo.connect(lfoG); lfoG.connect(lp.frequency);
-      const ng=ctx.createGain(); ng.gain.value=0.5; noise.connect(lp); lp.connect(ng); ng.connect(master); noise.start(); lfo.start();
-      const chords=[[110,164.81,261.63],[98,146.83,246.94],[87.31,130.81,207.65],[110,130.81,196]]; const padG=ctx.createGain(); padG.gain.value=0.16; const plp=ctx.createBiquadFilter(); plp.type="lowpass"; plp.frequency.value=600; padG.connect(plp); plp.connect(master);
-      const oscs=chords[0].map((f,i)=>{ const o=ctx.createOscillator(); o.type=i===0?"sine":"triangle"; o.frequency.value=f; o.detune.value=(i-1)*6; const g=ctx.createGain(); g.gain.value=i===0?0.5:0.3; o.connect(g); g.connect(padG); o.start(); return o; });
-      let ci=0; const tm=setInterval(()=>{ if(!bgm) return clearInterval(tm); ci=(ci+1)%chords.length; oscs.forEach((o,i)=>o.frequency.setTargetAtTime(chords[ci][i],ctx.currentTime,4)); },20000);
+      const noise=ctx.createBufferSource(); noise.buffer=buf; noise.loop=true; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=220; lp.Q.value=0.5;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.05; const lfoG=ctx.createGain(); lfoG.gain.value=90; lfo.connect(lfoG); lfoG.connect(lp.frequency);
+      const ng=ctx.createGain(); ng.gain.value=0.22; noise.connect(lp); lp.connect(ng); ng.connect(master); noise.start(); lfo.start();
+      const chords=[[110,164.81,277.18,329.63],[92.5,138.59,220,277.18],[73.42,110,185,220],[82.41,123.47,207.65,246.94]]; const padG=ctx.createGain(); padG.gain.value=0.2; const plp=ctx.createBiquadFilter(); plp.type="lowpass"; plp.frequency.value=900; padG.connect(plp); plp.connect(master);
+      const oscs=chords[0].map((f,i)=>{ const o=ctx.createOscillator(); o.type=i===0?"sine":"triangle"; o.frequency.value=f; o.detune.value=(i-1.5)*4; const g=ctx.createGain(); g.gain.value=i===0?0.5:i===3?0.18:0.3; o.connect(g); g.connect(padG); o.start(); return o; });
+      let ci=0; const tm=setInterval(()=>{ if(!bgm) return clearInterval(tm); ci=(ci+1)%chords.length; oscs.forEach((o,i)=>o.frequency.setTargetAtTime(chords[ci][i],ctx.currentTime,5)); },24000);
       bgm.nodes.push(noise,lfo,...oscs); bgm.timer=tm;
     };
-    if(url){ const el=new Audio(); el.crossOrigin="anonymous"; el.loop=true; el.src=url; el.onerror=()=>{ if(bgm&&!bgm.nodes.length) synth(); }; el.oncanplay=()=>{ if(!bgm||bgm.nodes.length) return; try{ const src=ctx.createMediaElementSource(el); src.connect(master); el.play(); bgm.el=el; bgm.nodes.push(src); }catch(e){ synth(); } }; el.load(); setTimeout(()=>{ if(bgm&&!bgm.nodes.length) synth(); },2500); }
+    if(url){ const el=new Audio(); el.crossOrigin="anonymous"; el.loop=true; el.src=url; el.onerror=()=>{ if(bgm&&!bgm.nodes.length) synth(); }; el.oncanplay=()=>{ if(!bgm||bgm.nodes.length) return; try{ const src=ctx.createMediaElementSource(el); src.connect(master); el.play(); bgm.el=el; bgm.nodes.push(src); const ti=bgmTrackInfo(); if(ti&&ti.title&&!bgmStart.toasted){ bgmStart.toasted=true; toast("🎵 "+ti.title+(ti.credit?" · "+ti.credit:"")); } }catch(e){ synth(); } }; el.load(); setTimeout(()=>{ if(bgm&&!bgm.nodes.length) synth(); },2500); }
     else synth();
     bgmDuck(false);
   }catch(e){ toast("本机不支持背景音乐"); bgm=null; }
@@ -737,7 +747,7 @@ document.addEventListener("click",e=>{
   }
 });
 document.addEventListener("change",e=>{
-  const t=e.target;
+  const t=e.target; if(t.id==="vc-bgm"){ setBgmTrack(t.value); if(modal&&modal.t==="voice") openVoiceSettings(); return; }
   if(t.dataset&&t.dataset.a==="roundMode"){ const r=state.config.rounds.map((x,i)=>i===+t.dataset.i?{mode:t.value}:x); sendConfig({rounds:r}); return; }
   if(!t.id) return;
   if(t.id==="vote-no"){ const v=+t.value; if(v>=1&&state.seats[v]){ voteSel=v; render(); } else if(t.value) toast("座位号不对"); return; }
