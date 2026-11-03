@@ -2,6 +2,11 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 131 passed)确认基线,即可继续。
 
+## 📜 风声角色立绘(2026-11-03,待用户下载 + deploy)
+- 图源 = 风声文本本来就取自的开源客户端 Death-alter/TheMessage(`assets/resources/images/characters/`,47/49 个角色有图,文件名=拼音驼峰;孙守謨/王响没有)。清单 + 一键 curl 在 `docs/fengsheng/art-sources.md`,下载到 `assets/fengsheng/char/` 原名保存。
+- 接线:`fs-data.mjs` 加 `ART_BASE` + `CHAR_ART{id:文件}`;worker data.json 带 `artBase`、角色带 `art:"char/<文件>"`;`fs.html` 的 `avaHtml` 贴图(onerror 退回首字)、座位行公开角色前 `.sava` 小头像(点开技能)、技能/预览弹层技能上方 `.artimg` 大图;大厅卡片用顾小梦。盒子封面网上没找到可用图。
+- 隐私:座位行头像只在 charId 可见(公开或本人)时出现,与原来名字显示的条件一致,不泄露暗置角色。
+
 ## 🎲 游戏大厅 /hub + 游戏注册表(2026-11-03,待 deploy)
 - **唯一清单** `prototype/common/games.mjs`(GAMES:key/api/name/en/py/aliases/path/external/icon/color/tag/players/desc)。worker 下发 `room-client.js` 与 `hub.html` 时用 `injectGames()` 把 `/*GAMES*/[]/*/GAMES*/` 占位换成 JSON;`/common/games.json` 同清单。**加第五个游戏:注册表加一条 + wiki 首页 index.html 房间块手补一行**(Pages 静态页,不吃注册表)。
 - **大厅页** `prototype/common/client/hub.html` → `/hub`:搜索(名字包含/别名精确或包含/英文/拼音 `searchRank`,回车进第一个,`?q=` 预填)、游戏卡片(外链站点 noname/wiki 新开窗)、"最近去过的房间"(localStorage `rooms_recent`,7 天内,链接 `path?code=1234`)。

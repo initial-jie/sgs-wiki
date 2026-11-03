@@ -2,13 +2,13 @@
 // 逻辑在 ./shared/fs-logic.mjs(与 node 模拟 fs-sim 同一份);DO 外壳见 common/room-do.mjs。
 
 import { FsCore } from "./shared/fs-logic.mjs";
-import { CHARACTERS, CARDS, TASKS, FACTIONS, DEFAULT_ID_COUNTS, INTEL_KINDS } from "./shared/fs-data.mjs";
+import { CHARACTERS, CARDS, TASKS, FACTIONS, DEFAULT_ID_COUNTS, INTEL_KINDS, ART_BASE, CHAR_ART } from "./shared/fs-data.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import FS_HTML from "./client/fs.html";
 import PINYIN from "./shared/char-pinyin.json"; // 角色名→拼音(build-pinyin.mjs 生成),贴到 py 字段供选角拼音搜索
 
 const SEAT_COUNT = 5; // 风声 3~9 人,开房默认 5 座,房内可增减
-const DATA_JSON = JSON.stringify({ characters: CHARACTERS.map((c) => (PINYIN[c.name] ? { ...c, py: PINYIN[c.name] } : c)), cards: CARDS, tasks: TASKS, factions: FACTIONS, defaultIdCounts: DEFAULT_ID_COUNTS, intelKinds: INTEL_KINDS });
+const DATA_JSON = JSON.stringify({ artBase: ART_BASE, characters: CHARACTERS.map((c) => ({ ...c, ...(PINYIN[c.name] ? { py: PINYIN[c.name] } : {}), ...(CHAR_ART[c.id] ? { art: "char/" + CHAR_ART[c.id] } : {}) })), cards: CARDS, tasks: TASKS, factions: FACTIONS, defaultIdCounts: DEFAULT_ID_COUNTS, intelKinds: INTEL_KINDS });
 
 // 数据版本 = DATA_JSON 的短哈希,注入页面(__FS_DATA_VER__)→ 客户端 fetch /fs/data.json?v=<哈希>。
 // 数据只在 deploy 时变:URL 一变浏览器就拿新的,旧 URL 可放心长缓存(避开"deploy 后最长 1h 拿旧数据"的坑)

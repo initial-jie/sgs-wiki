@@ -113,6 +113,9 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
   font-family:var(--display);font-weight:900;font-size:17px;background:var(--paper);color:var(--ink)}
 .ava.hid{background:repeating-linear-gradient(45deg,#3a332a 0 4px,#4a4236 4px 8px);color:#e9dcc0}
 .ava.big{width:56px;height:56px;font-size:28px;border-radius:8px}
+.ava img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;border-radius:5px;display:block}
+.seat .sava{width:36px;height:36px;border-radius:6px;object-fit:cover;object-position:50% 18%;border:1px solid var(--line);flex:none;margin-right:6px;cursor:pointer;background:#2b2621}
+.artimg{display:block;max-width:100%;max-height:42vh;margin:0 auto 10px;border-radius:8px;border:1px solid var(--line);object-fit:contain}
 .grow-item .gn{font-family:var(--display);font-weight:700;font-size:15px}
 .grow-item .gmeta{font-size:11px;color:var(--ink-soft)}
 .gv{flex:none;font-size:12px;padding:5px 10px;border:1px solid var(--stamp);color:var(--stamp);background:transparent;border-radius:6px;white-space:nowrap}
@@ -186,7 +189,10 @@ function charLabel(s){
   return "";
 }
 function skillsHtml(c){ return c.skills.map(k=>`<div class="skl"><div class="sn">${esc(k.name)}</div><div class="se">${esc(k.text).replace(/\n/g,"<br>")}</div></div>`).join(""); }
-const avaHtml=(c,big)=>`<div class="ava${c.hidden?" hid":""}${big?" big":""}">${esc(c.name[0])}</div>`;
+const artOf=c=>c&&c.art&&DATA&&DATA.artBase?DATA.artBase+c.art:"";
+// 头像:有立绘就贴图(加载失败退回首字);隐藏角色在选角/本人视图里也照样显示(这些视图只有本人看得到)
+const avaHtml=(c,big)=>`<div class="ava${c.hidden?" hid":""}${big?" big":""}">${artOf(c)?`<img src="${esc(artOf(c))}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(c.name[0])}'">`:esc(c.name[0])}</div>`;
+const artImgHtml=c=>artOf(c)?`<img class="artimg" src="${esc(artOf(c))}" alt="${esc(c.name)}" onerror="this.remove()">`:"";
 function charMeta(c){ return `${esc(c.title)} · ${c.sex}${c.hidden?" · 隐藏角色":" · 公开角色"}${c.pack!=="base"?" · 扩展":""}`; }
 // 别人已公开选用的角色(只看公开的,不泄露暗置)
 function takenBy(cid,exceptSeat){ const s=seatsArr().find(x=>x.seatNo!==exceptSeat&&x.charId===cid&&x.faceUp); return s?s.seatNo:null; }
@@ -261,7 +267,7 @@ function openSkillView(seatNo){
   $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
     <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)} · 座位 ${seatNo}${mine?"(你)":""}</div>
       ${c.hidden?`<div class="hmeta">${s.faceUp?"已翻开 · 全场可见":"暗置中 · 只有你看得到"}</div>`:""}</div></div>
-    ${skillsHtml(c)}
+    ${artImgHtml(c)}${skillsHtml(c)}
     ${mine&&c.hidden&&state.phase!=="over"?(s.faceUp?`<button class="ghost" style="width:100%" data-a="flip" data-s="${seatNo}" data-up="0">翻回暗置(技能让角色牌翻至面朝下时)</button>`
       :`<button class="danger" style="width:100%;padding:11px" data-a="flip" data-s="${seatNo}" data-up="1">发动技能 · 翻开角色</button>`):""}
   </div></div>`;
@@ -269,7 +275,7 @@ function openSkillView(seatNo){
 function openCharView(id){
   const c=CHAR[id]; if(!c) return; modal={t:"char",id};
   $("#modal").innerHTML=`<div class="mask" data-mclose="1"><div class="sheet"><h2>角色技能<span class="x" data-a="close">×</span></h2>
-    <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)}</div></div></div>${skillsHtml(c)}</div></div>`;
+    <div class="herohead">${avaHtml(c,true)}<div><div class="hn">${esc(c.name)}</div><div class="hmeta">${charMeta(c)}</div></div></div>${artImgHtml(c)}${skillsHtml(c)}</div></div>`;
 }
 
 /* ============ 渲染 ============ */
@@ -394,7 +400,8 @@ function viewSeats(){
   for(const s of seatsArr()){
     const mine=state.youHold.includes(s.seatNo), turn=state.phase==="play"&&state.turn===s.seatNo;
     const heldByOther=s.holderDevices.length&&!mine;
-    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}"><div class="row"><span class="st grow">座位 ${s.seatNo}${charLabel(s)}`
+    const sc=s.charId!=null?CHAR[s.charId]:null;
+    h+=`<div class="seat${mine?" mine":""}${turn?" turn":""}${s.dead?" dead":""}"><div class="row">${sc&&artOf(sc)?`<img class="sava" data-a="skill" data-s="${s.seatNo}" src="${esc(artOf(sc))}" alt="" loading="lazy" onerror="this.remove()">`:""}<span class="st grow">座位 ${s.seatNo}${charLabel(s)}`
       +(mine?'<span class="badge me">我</span>':"")+(turn?'<span class="badge turn">回合中</span>':"")+(s.dying?'<span class="badge dying">濒死</span>':"")+(s.dead?'<span class="badge dead">阵亡</span>':"")
       +(s.identity&&!mine?" "+idHtml(s.identity):"")+`</span>`;
     if(s.charId!=null) h+=`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button>`;
