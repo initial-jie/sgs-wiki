@@ -242,7 +242,7 @@ if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged=pi
 function speak(text,cancel,onDone){
   if(!narrOn||!text||!("speechSynthesis" in window)){ onDone&&onDone(); return; }
   if(cancel) speechSynthesis.cancel();
-  const pref=voicePref(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=pref.rate||0.95; u.pitch=pref.pitch||0.9; if(voice) u.voice=voice;
+  const pref=voicePref(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=pref.rate||0.95; u.pitch=pref.pitch||0.9; try{ if(voice) u.voice=voice; }catch(e){}
   let fired=false; const fin=()=>{ if(fired) return; fired=true; clearTimeout(tm); onDone&&onDone(); };
   u.onend=fin; u.onerror=fin; const tm=setTimeout(fin,Math.min(60000,4000+text.length*350)); // 兜底:有的浏览器不触发 onend
   speechSynthesis.speak(u);
