@@ -243,7 +243,8 @@ function speak(text,cancel,onDone){
   if(!narrOn||!text||!("speechSynthesis" in window)){ onDone&&onDone(); return; }
   if(cancel) speechSynthesis.cancel();
   const pref=voicePref(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=pref.rate||0.95; u.pitch=pref.pitch||0.9; try{ if(voice) u.voice=voice; }catch(e){}
-  let fired=false; const fin=()=>{ if(fired) return; fired=true; clearTimeout(tm); onDone&&onDone(); };
+  let fired=false; const fin=()=>{ if(fired) return; fired=true; clearTimeout(tm); bgmDuck(false); onDone&&onDone(); };
+  bgmDuck(true);
   u.onend=fin; u.onerror=fin; const tm=setTimeout(fin,Math.min(60000,4000+text.length*350)); // 兜底:有的浏览器不触发 onend
   speechSynthesis.speak(u);
 }
@@ -258,6 +259,35 @@ function openVoiceSettings(){
     <div class="row" style="margin-top:10px"><button class="primary" data-a="vcTest">试听</button><button class="ghost" data-a="close">完成</button></div></div></div>`;
 }
 function applyVoiceSettings(){ const n=$("#vc-name")&&$("#vc-name").value, r=+($("#vc-rate")&&$("#vc-rate").value)||0.95, pc=+($("#vc-pitch")&&$("#vc-pitch").value)||0.9; saveVoicePref({name:n,rate:r,pitch:pc}); pickVoice(); if($("#vc-rate-v")) $("#vc-rate-v").textContent=r; if($("#vc-pitch-v")) $("#vc-pitch-v").textContent=pc; }
+/* 背景音乐(线下掩盖走动声):顶栏 🎵 开关,本机记忆 onuw_bgm。优先放 assets/onuw/bgm.mp3(用户可自行放一首),没有就用 WebAudio 合成夜风+低音铺底。
+   播报时自动压到很低(duck),念完恢复。全部经 WebAudio GainNode 控制音量(iOS 忽略 <audio>.volume)。 */
+let bgmOn=RoomClient.lsGet("onuw_bgm")==="1", bgm=null;
+const BGM_VOL=0.32, BGM_DUCK=0.06;
+function bgmStart(){
+  if(bgm) return;
+  try{
+    const ctx=actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==="suspended") ctx.resume();
+    const master=ctx.createGain(); master.gain.value=0.0001; master.connect(ctx.destination);
+    bgm={ctx,master,nodes:[],el:null};
+    const url=DATA&&DATA.artBase?DATA.artBase+"bgm.mp3":"";
+    const synth=()=>{ // 合成:低通噪声当夜风(慢速起伏)+ 三个轻微失谐的正弦铺底,每 20s 换一个小调和弦
+      const buf=ctx.createBuffer(1,ctx.sampleRate*4,ctx.sampleRate), d=buf.getChannelData(0); let last=0; for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.5; }
+      const noise=ctx.createBufferSource(); noise.buffer=buf; noise.loop=true; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=260; lp.Q.value=0.7;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.05; const lfoG=ctx.createGain(); lfoG.gain.value=140; lfo.connect(lfoG); lfoG.connect(lp.frequency);
+      const ng=ctx.createGain(); ng.gain.value=0.5; noise.connect(lp); lp.connect(ng); ng.connect(master); noise.start(); lfo.start();
+      const chords=[[110,164.81,261.63],[98,146.83,246.94],[87.31,130.81,207.65],[110,130.81,196]]; const padG=ctx.createGain(); padG.gain.value=0.16; const plp=ctx.createBiquadFilter(); plp.type="lowpass"; plp.frequency.value=600; padG.connect(plp); plp.connect(master);
+      const oscs=chords[0].map((f,i)=>{ const o=ctx.createOscillator(); o.type=i===0?"sine":"triangle"; o.frequency.value=f; o.detune.value=(i-1)*6; const g=ctx.createGain(); g.gain.value=i===0?0.5:0.3; o.connect(g); g.connect(padG); o.start(); return o; });
+      let ci=0; const tm=setInterval(()=>{ if(!bgm) return clearInterval(tm); ci=(ci+1)%chords.length; oscs.forEach((o,i)=>o.frequency.setTargetAtTime(chords[ci][i],ctx.currentTime,4)); },20000);
+      bgm.nodes.push(noise,lfo,...oscs); bgm.timer=tm;
+    };
+    if(url){ const el=new Audio(); el.crossOrigin="anonymous"; el.loop=true; el.src=url; el.onerror=()=>{ if(bgm&&!bgm.nodes.length) synth(); }; el.oncanplay=()=>{ if(!bgm||bgm.nodes.length) return; try{ const src=ctx.createMediaElementSource(el); src.connect(master); el.play(); bgm.el=el; bgm.nodes.push(src); }catch(e){ synth(); } }; el.load(); setTimeout(()=>{ if(bgm&&!bgm.nodes.length) synth(); },2500); }
+    else synth();
+    bgmDuck(false);
+  }catch(e){ toast("本机不支持背景音乐"); bgm=null; }
+}
+function bgmStop(){ if(!bgm) return; try{ bgm.master.gain.setTargetAtTime(0.0001,bgm.ctx.currentTime,0.3); const b=bgm; setTimeout(()=>{ try{ b.nodes.forEach(n=>{ try{n.stop&&n.stop();}catch(e){} try{n.disconnect();}catch(e){} }); if(b.el){ b.el.pause(); b.el.src=""; } clearInterval(b.timer); }catch(e){} },600); }catch(e){} bgm=null; }
+function bgmDuck(on){ if(!bgm) return; try{ bgm.master.gain.setTargetAtTime(on?BGM_DUCK:BGM_VOL,bgm.ctx.currentTime,on?0.15:0.8); }catch(e){} }
+function setBgm(on){ bgmOn=on; RoomClient.lsSet("onuw_bgm",on?"1":"0"); if(on) bgmStart(); else bgmStop(); render(); }
 let actx=null;
 function ding(){ if(!narrOn) return; try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=880; g.gain.value=.001; o.connect(g); g.connect(actx.destination); o.start(); g.gain.exponentialRampToValueAtTime(.25,actx.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.6); o.stop(actx.currentTime+.65);}catch(e){} }
 function setNarr(on){ narrOn=on; RoomClient.lsSet("onuw_narr",on?"1":"0"); if(on){ try{ speechSynthesis.cancel(); speak("语音播报已开启",true);}catch(e){} if(state&&RC.connected) act("setNarrator"); } else { try{speechSynthesis.cancel();}catch(e){} } render(); }
@@ -367,7 +397,7 @@ function viewTopbar(){
   const ms=mySeats();
   return `<div class="topbar"><span class="who">房间 <b>${esc(RC.code||state.roomCode)}</b> · ${esc(RC.deviceId)}${ms.length?" · 座位 "+ms.join("/"):""}</span>
     <button class="xs ghost" data-a="rename">改名</button><button class="xs ghost" data-a="codex">📖 图鉴</button>
-    <button class="xs ${narrOn?"on":"ghost"}" data-a="narr" title="本机语音播报${isNarrator()?"(本机是播报员)":""}">${narrOn?"🔊 播报中":"🔇 播报关"}${isNarrator()?" ★":""}</button><button class="xs ghost" data-a="voice" title="音色/语速/音调">🎚️</button>
+    <button class="xs ${narrOn?"on":"ghost"}" data-a="narr" title="本机语音播报${isNarrator()?"(本机是播报员)":""}">${narrOn?"🔊 播报中":"🔇 播报关"}${isNarrator()?" ★":""}</button><button class="xs ghost" data-a="voice" title="音色/语速/音调">🎚️</button><button class="xs ${bgmOn?"on":"ghost"}" data-a="bgm" title="背景音乐(线下掩盖走动声;播报时自动压低)">${bgmOn?"🎵 BGM":"🎵"}</button>
     <button class="xs ghost" data-a="disband">解散</button></div>`;
 }
 
@@ -479,8 +509,8 @@ function actionSpec(){
     pickpocket:{seats:1,label:"点一名其他玩家,交换印记并查看新印记",skip:"不换",confirmLabel:"交换印记"},
     gremlin:{gremlin:true,seats:2,allowSelf:true,label:"先选换「牌」还是换「印记」,再依次点两名玩家",skip:"不换",confirmLabel:"确认交换"},
     thing:{dir:true,tap:true,label:"拍左边还是右边邻座的肩膀?",skip:"不拍"},
-    squire:{seats:1,targets:true,label:`查看狼人的牌(${(sub.viewed||[]).length}/${(sub.targets||[]).length})`,skip:"不看了",confirmLabel:"查看"},
-    beholder:{seats:1,targets:true,label:`查看预言家/学徒的牌(${(sub.viewed||[]).length}/${(sub.targets||[]).length})`,skip:"不看了",confirmLabel:"查看"},
+    squire:{all:true,label:`一键查看狼人(${(sub.targets||[]).map(x=>x+"号").join("、")})现在的牌`,skip:"不看",confirmLabel:"查看全部"},
+    beholder:{all:true,label:`一键查看预言家/学徒(${(sub.targets||[]).map(x=>x+"号").join("、")})现在的牌`,skip:"不看",confirmLabel:"查看全部"},
   }[eff];
   if(!T) return null;
   return Object.assign({seats:0,center:0,kind:eff,eff},T);
@@ -544,7 +574,8 @@ function viewNightPanel(){
     const sp=actionSpec();
     h+=`<div class="act"><div class="ti">${ric(me.eff)} ${esc(rn(me.eff))} <span style="font-size:12px;color:var(--fg-soft)">${esc(R[me.eff]?R[me.eff].en:"")}</span>${me.eff!==s.initRole?" <span class='chip'>化身幽灵复制</span>":""}</div><div class="tp">${esc(sp?sp.label:"")}</div>`;
     if(sp){
-      if(sp.dir) h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="left">← ${sp.tap?"拍左边":"向左"}</button><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="right">${sp.tap?"拍右边":"向右"} →</button>${sp.skip?`<button class="ghost" data-a="skip">${sp.skip}</button>`:""}</div>`;
+      if(sp.all) h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="confirm">${esc(sp.confirmLabel)}</button>${sp.skip?`<button class="ghost" data-a="skip">${esc(sp.skip)}</button>`:""}</div>`;
+      else if(sp.dir) h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="left">← ${sp.tap?"拍左边":"向左"}</button><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="right">${sp.tap?"拍右边":"向右"} →</button>${sp.skip?`<button class="ghost" data-a="skip">${sp.skip}</button>`:""}</div>`;
       else if(sp.marksman){
         h+=`<div class="row" style="margin-top:6px"><button class="sm ${mmMode==="card"?"on":""}" data-a="mmMode" data-m="card">看牌${sel.mmCard!=null?":"+sel.mmCard+"号":""}</button><button class="sm ${mmMode==="mark"?"on":""}" data-a="mmMode" data-m="mark">看印记${sel.mmMark!=null?":"+sel.mmMark+"号":""}</button></div>
           <div class="row" style="margin-top:8px"><button class="primary" data-a="confirm" ${sel.mmCard!=null||sel.mmMark!=null?"":"disabled"}>查看</button><button class="ghost" data-a="clearSel">重选</button>${sp.skip?`<button class="ghost" data-a="skip">${esc(sp.skip)}</button>`:""}</div>`;
@@ -651,7 +682,7 @@ function confirmAction(){
     case "marksman": msg={kind:"marksman",cardTarget:sel.mmCard,markTarget:sel.mmMark}; break;
     case "pickpocket": msg={kind:"swapMark",target:sel.seats[0]}; break;
     case "gremlin": msg={kind:"swapTwo",a:sel.seats[0],b:sel.seats[1],what:grWhat}; break;
-    case "squire": case "beholder": msg={kind:"peekPlayer",target:sel.seats[0]}; break;
+    case "squire": case "beholder": msg={kind:"peekAll"}; break;
   }
   if(!msg) return;
   act("nightAct",Object.assign(base,msg)); sel={seats:[],center:[]};
@@ -668,6 +699,7 @@ document.addEventListener("click",e=>{
     case "codexOf": openCodex(b.dataset.k); break;
     case "narr": setNarr(!narrOn); break;
     case "voice": openVoiceSettings(); break;
+    case "bgm": setBgm(!bgmOn); break;
     case "vcTest": applyVoiceSettings(); { const was=narrOn; narrOn=true; speak("狼人 Werewolf,请睁眼,互相确认身份。",true,()=>{ narrOn=was; }); } break;
     case "disband": if(confirm("解散房间?所有人都会被踢出,房间数据清空。")) RC.send({type:"disbandRoom"}); break;
     case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
@@ -718,6 +750,7 @@ document.addEventListener("change",e=>{
   }
 });
 document.getElementById("rcNow").onclick=()=>RC.reconnectNow();
+document.addEventListener("click",()=>{ if(bgmOn&&!bgm&&state) bgmStart(); },{once:false});
 render();
 </script>
 </body>

@@ -690,6 +690,16 @@ export class OnuwCore extends RoomBase {
         return done();
       }
       case "squire": case "beholder": {
+        if (kind === "peekAll") { // 一键查看全部目标(被护盾的跳过)
+          const rest = (sub.targets || []).filter((t) => !(sub.viewed || []).includes(t));
+          if (!rest.length) return done();
+          sub.viewed = (sub.viewed || []).concat(rest); this._touch(n);
+          const cards = [], parts = [];
+          for (const t of rest) { if (this.seats[t].shield) parts.push(`${t}号 被护盾保护,无法查看`); else { parts.push(`${t}号:${rn(this.cardRole(this.seats[t].card))}`); cards.push(this._seatCard(t)); } }
+          this._note(n, "你查看了 " + parts.join("、"), cards);
+          this.nightLog.push(`${rn(eff)}(${n}号)查看了 ${this._list(rest)}`);
+          return done();
+        }
         if (kind !== "peekPlayer") return { error: "BAD_KIND" };
         if (!(sub.targets || []).includes(target)) return { error: "BAD_TARGET" };
         if (this.seats[target].shield) return { error: "SHIELDED" };

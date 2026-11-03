@@ -251,7 +251,7 @@ console.log("\n=== 场景 F:Bonus 包 —— 那东西/皮匠学徒/诺查丹玛
   T += 10 * SEC; tick();
   check("侍从看到狼人 1 号,可查看其牌", room.night.idx === 7 && room.night.sub[7].targets.join(",") === "1" && act(7, { op: "nightAct", seatNo: 7, kind: "peekPlayer", target: 2 }).error === "BAD_TARGET" && act(7, { op: "nightAct", seatNo: 7, kind: "peekPlayer", target: 1 }).ok && room.night.acted[7]);
   T += 10 * SEC; tick();
-  check("旁观者看到预言家 2 号", room.night.idx === 8 && room.night.sub[8].targets.join(",") === "2" && act(8, { op: "nightAct", seatNo: 8, kind: "skip" }).ok);
+  check("旁观者一键查看预言家 2 号的牌", room.night.idx === 8 && room.night.sub[8].targets.join(",") === "2" && act(8, { op: "nightAct", seatNo: 8, kind: "peekAll" }).ok && room.night.acted[8] && V(8).seats[8].notes.at(-1).text === "你查看了 2号:预言家" && V(8).seats[8].notes.at(-1).cards.length === 1);
   T += 10 * SEC; tick();
   check("天亮公开宣布诺查丹玛斯加入皮匠阵营", room.phase === "day" && room.dayNotice === "诺查丹玛斯加入了皮匠阵营" && V(1).dayNotice === room.dayNotice);
   act(1, { op: "startVote" });

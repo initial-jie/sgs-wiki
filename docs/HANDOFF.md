@@ -28,6 +28,7 @@ One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》�
   没做:外星人包(靠 app 随机指令)、超级反派包(基本是换皮)、Bonus 的共情者(Empath,社交指令)/夺舍者(Body Snatcher,外星人系)。
 - **2026-11-03 开房默认**:座位上限 16,开房默认 8 座;推荐配置按用户定的表(`defaultRoles`:8 人 头狼/神秘狼/守夜人×2/预言家/强盗/女巫/捣蛋鬼/酒鬼/侍从/皮匠,9 +失眠者,10 +猎人,11~14 依次 +灵异侦探/馆长/哨兵/被诅咒者,15~16 +梦狼/旁观者;<8 人沿用旧简单表),`recommendRoles` 动作;牌堆正好是推荐配置时加减座位自动跟随。结束一局 `newGame` 本来就保留牌堆与流程配置;另外客户端点「开始」时把配置存 localStorage `onuw_last`,换房后准备页出现「沿用上次(N人/M张)」。播报与横幅带英文名(`withEn`);选角列表用卡图头部缩略图(`object-position:50% 28%`);≥11 人座位牌缩小(`.table.big/.huge`)。
 - **2026-11-03 首次实战反馈**:① 神秘狼村规加强:可看一名玩家或一张中央牌(`peekCenter`);② **播报门控**:开局者=播报员 `narrator`(🔊 开启时 `setNarrator` 可接管),它念完本阶段(`SpeechSynthesisUtterance.onend`,兜底定时)发 `narrDone{idx}`,服务端把 `night.narrDoneAt` 作为阶段计时起点,未回报 45s 兜底(`NARR_TIMEOUT_MS`);倒计时显示「🔊 播报中…」;③ 投票允许投自己(皮匠);④ 一机多座时 `autoSeat()` 自动切到该行动/该投票的座位(一人一机不需要切);⑤ 🎚️ 音色设置:本机 localStorage `onuw_voice`{name,rate,pitch},默认挑增强/自然音,语速 0.95 音调 0.9。sim 里 `mk()` 默认模拟播报员秒念完(`instantNarr`),门控单独用例。
+- **2026-11-03 第二批反馈**:侍从/旁观者改一键 `peekAll`(被护盾的目标跳过);顶栏 🎵 背景音乐(本机 `onuw_bgm`):优先播 `assets/onuw/bgm.mp3`(用户可自己放一首,Pages 直链 CORS 可用),没有则 WebAudio 合成夜风噪声+小调铺底;全部走 GainNode(iOS 忽略 audio.volume),播报期间 `bgmDuck` 压到 0.06,念完回 0.32;需用户手势才出声(点开关或进房后首次点击)。
 - **早期没做清单(部分已补)**:气场预言家(Aura Seer,Bonus 包)/ 吸血鬼 / 外星人扩展;梦狼只做了"狼人互认时显示";神器只影响结算,缄默面具/羞耻裹布不强制;语音是系统 TTS,没有 app 那种配乐;每阶段固定时长不区分角色。
 
 ## 🔫 第三个游戏:枪鸣锈语(2026-11-02,`prototype/qmxy/`,待 deploy)
