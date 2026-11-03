@@ -90,6 +90,9 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .pc .bd2{position:absolute;top:-7px;left:-7px;font-size:12px;background:#0d1020;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
 .pc .mic{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);font-size:12px;background:var(--amber);color:#1a1405;border-radius:10px;padding:0 6px;font-weight:700;line-height:1.4}
 .pc .dead-x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--red);text-shadow:0 0 6px #000}
+.table.big .pc{width:48px;height:66px;margin-left:-24px;margin-top:-33px} .table.big .pc .no{font-size:18px} .table.big .pc .nm{font-size:9px;max-width:44px}
+.table.huge .pc{width:42px;height:58px;margin-left:-21px;margin-top:-29px} .table.huge .pc .no{font-size:16px} .table.huge .pc .nm{font-size:8px;max-width:38px} .table.huge .pc.face .ic{font-size:18px} .table.huge .pc.face .rn{font-size:9px}
+.table.big .cc{width:36px;height:50px} .table.big .cc.h{width:50px;height:36px}
 .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
 .center .rowc{display:flex;gap:6px}
 .cc{width:42px;height:58px;border-radius:5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#2a2f55 0 4px,#20243f 4px 8px);border:2px solid #4a5290;color:#aeb6e8;font-size:10px;position:relative}
@@ -129,6 +132,7 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .rrow{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:rgba(10,13,26,.5)}
 .rrow.on{border-color:rgba(243,233,198,.5);background:rgba(243,233,198,.07)}
 .rrow .ic{font-size:20px;line-height:1}
+.rrow .th{width:34px;height:34px;border-radius:6px;object-fit:cover;object-position:50% 28%;border:1px solid var(--line);background:#0a0d1a;flex:none}
 .rrow .rn{font-weight:700;font-size:13px;color:#fff;cursor:pointer}
 .rrow .ro{font-size:10px;color:var(--fg-soft)}
 .rrow .cnt{font-family:var(--mono);font-weight:700;min-width:14px;text-align:center}
@@ -238,7 +242,8 @@ function afterState(prev){
     if(key!==lastNarr){
       const prevRole=n.idx>0?n.phases[n.idx-1]:null;
       const firstNight=n.idx>0&&!n.dusk&&R[n.phases[n.idx-1]].order<0; // 黄昏结束进入夜晚
-      text=(n.idx===0?(n.dusk?DATA.narr.duskStart:DATA.narr.nightStart)+" ":"")+(prevRole&&R[prevRole].narr?R[prevRole].narr.close+" ":"")+(firstNight?DATA.narr.nightStart+" ":"")+(R[role].narr?R[role].narr.open:"");
+      const withEn=(r,t)=>t.replace(r.name,r.name+" "+r.en); // 播报里带上英文名(大家习惯英文称呼)
+      text=(n.idx===0?(n.dusk?DATA.narr.duskStart:DATA.narr.nightStart)+" ":"")+(prevRole&&R[prevRole].narr?withEn(R[prevRole],R[prevRole].narr.close)+" ":"")+(firstNight?DATA.narr.nightStart+" ":"")+(R[role].narr?withEn(R[role],R[role].narr.open):"");
     }
   } else if(state.phase==="day"&&state.day){
     const d=state.day; key=`d${d.round}-${d.cur}`;
@@ -325,9 +330,13 @@ function viewTopbar(){
 }
 
 /* ---- 准备阶段 ---- */
+// 上一把的配置记在本机:点「开始游戏」时保存;新房间/换房后若与当前不同,给一个「沿用上次配置」按钮
+function loadLast(){ try{ return JSON.parse(RoomClient.lsGet("onuw_last")||"null"); }catch(e){ return null; } }
+function saveLast(){ RoomClient.lsSet("onuw_last",JSON.stringify({roles:state.roles,config:state.config,seats:seatsArr().length,at:Date.now()})); }
+function lastCfgBtn(){ const L=loadLast(); if(!L||!Array.isArray(L.roles)||!L.roles.length) return ""; const same=JSON.stringify(L.roles.slice().sort())===JSON.stringify(state.roles.slice().sort())&&JSON.stringify(L.config)===JSON.stringify(state.config); if(same) return ""; return `<button class="sm ghost" data-a="useLast" title="上一把:${esc(L.seats)} 人 ${esc(L.roles.map(rn).join("、"))}">沿用上次(${L.seats}人/${L.roles.length}张)</button>`; }
 function viewSetup(){
   const seats=seatsArr(), need=seats.length+3;
-  let h=`<div class="card"><h2>座位 <span class="tag">${seats.length} 人 · 3~10</span></h2><div class="seats-setup">`;
+  let h=`<div class="card"><h2>座位 <span class="tag">${seats.length} 人 · 3~16</span></h2><div class="seats-setup">`;
   for(const s of seats){
     const mine=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
     h+=`<div class="seat${mine?" mine":""}"><span class="st">${s.seatNo}</span><span class="grow"><span class="who">${held?esc(nameOf(s))+(mine?" (我)":""):"空位"}</span></span>
@@ -338,12 +347,12 @@ function viewSetup(){
   const cnt={}; for(const k of state.roles) cnt[k]=(cnt[k]||0)+1;
   const total=state.roles.length;
   h+=`<div class="card"><h2>本局角色 <span class="tag">点角色名看图鉴</span></h2>
-    <div class="deckbar ${total===need?"ok":"bad"}"><b>${total}</b>/${need} 张(人数 ${seats.length} + 中央 3)${state.roles.includes("alphawolf")?' <span class="chip">头狼:中央另加一张横放狼人牌</span>':""}<span class="grow"></span><button class="sm" data-a="recommend">推荐配置</button><button class="sm ghost" data-a="clearRoles">清空</button></div>
+    <div class="deckbar ${total===need?"ok":"bad"}"><b>${total}</b>/${need} 张(人数 ${seats.length} + 中央 3)${state.roles.includes("alphawolf")?' <span class="chip">头狼:中央另加一张横放狼人牌</span>':""}<span class="grow"></span>${lastCfgBtn()}<button class="sm" data-a="recommend">推荐配置</button><button class="sm ghost" data-a="clearRoles">清空</button></div>
     <div class="rgrid">`;
   for(const pk of ["base","daybreak","bonus","vampire"]){
     h+=`<h4>${esc(packName(pk))}</h4>`;
     for(const r of DATA.roles.filter(x=>x.pack===pk&&!x.virtual)){ const c=cnt[r.key]||0;
-      h+=`<div class="rrow${c?" on":""}"><span class="ic">${r.icon}</span><span class="grow"><div class="rn" data-a="codexOf" data-k="${r.key}">${esc(r.name)}</div><div class="ro">${r.order!=null?(r.order<0?"黄昏 ":"夜晚 ")+r.order:"不睁眼"} · ${esc(r.en)}</div></span>
+      h+=`<div class="rrow${c?" on":""}">${rimg(r.key)?`<img class="th" src="${esc(rimg(r.key))}" alt="" onerror="this.outerHTML='<span class=ic>${r.icon}</span>'"/>`:`<span class="ic">${r.icon}</span>`}<span class="grow"><div class="rn" data-a="codexOf" data-k="${r.key}">${esc(r.name)}</div><div class="ro">${r.order!=null?(r.order<0?"黄昏 ":"夜晚 ")+r.order:"不睁眼"} · ${esc(r.en)}</div></span>
         <button data-a="roleDec" data-k="${r.key}" ${c?"":"disabled"}>−</button><span class="cnt">${c}</span><button data-a="roleInc" data-k="${r.key}" ${c>=r.max?"disabled":""}>+</button></div>`;
     }
   }
@@ -382,7 +391,7 @@ function viewGame(){
 function viewBanner(){
   const c=state.config;
   if(state.phase==="night"){ const n=state.night, r=R[n.role];
-    return `<div class="banner ${n.dusk?"dusk":"night"}"><div class="ph">${n.dusk?"🌆 黄昏":"🌙 夜晚"} · 第 ${n.idx+1}/${n.total} 阶段</div><div class="big">${r.icon} ${esc(r.name)},请睁眼</div><div class="cd" id="cd"></div>
+    return `<div class="banner ${n.dusk?"dusk":"night"}"><div class="ph">${n.dusk?"🌆 黄昏":"🌙 夜晚"} · 第 ${n.idx+1}/${n.total} 阶段</div><div class="big">${r.icon} ${esc(r.name)} <span style="font-size:14px;color:var(--fg-soft);font-weight:600">${esc(r.en)}</span>,请睁眼</div><div class="cd" id="cd"></div>
       <div class="steps">${n.phases.map((k,i)=>`<i class="${i<n.idx?"done":i===n.idx?"cur":""}" title="${esc(rn(k))}"></i>`).join("")}</div></div>`; }
   if(state.phase==="day"){ const d=state.day;
     return `<div class="banner day"><div class="ph">☀️ 白天 · 第 ${d.round+1}/${c.rounds.length} 轮 · ${d.mode==="order"?"顺序发言":"自由讨论"}</div>
@@ -454,7 +463,7 @@ function selectableSets(){ // 哪些座位/中央牌可点
 function viewTable(){
   const seats=seatsArr(), N=seats.length, over=state.phase==="over", r=state.result;
   const sets=selectableSets(); const n=curActSeat();
-  let h=`<div class="table" id="table">`;
+  let h=`<div class="table${N>=14?" huge":N>=11?" big":""}" id="table">`;
   seats.forEach((s,i)=>{
     const mine=state.youHold.includes(s.seatNo);
     const canSel=sets.seats.has(s.seatNo), isSel=(state.phase==="vote"?voteSel===s.seatNo:sel.seats.includes(s.seatNo));
@@ -481,7 +490,7 @@ function viewTable(){
 }
 function layoutTable(){ // 座位围成一圈:1 号在正上方,顺时针
   const t=$("#table"); if(!t) return;
-  for(const el of t.querySelectorAll(".pc")){ const i=+el.dataset.i, N=+el.dataset.n; const a=-Math.PI/2+2*Math.PI*i/N; el.style.left=(50+41*Math.cos(a))+"%"; el.style.top=(50+41*Math.sin(a))+"%"; }
+  for(const el of t.querySelectorAll(".pc")){ const i=+el.dataset.i, N=+el.dataset.n; const a=-Math.PI/2+2*Math.PI*i/N; const R0=N>=11?43:41; el.style.left=(50+R0*Math.cos(a))+"%"; el.style.top=(50+R0*Math.sin(a))+"%"; }
 }
 function viewNightPanel(){
   const ms=mySeats(); if(!ms.length) return `<div class="card"><div class="hint">你没有座位,只能围观。</div></div>`;
@@ -491,7 +500,7 @@ function viewNightPanel(){
   else if(me.acted) h+=`<div class="hint">✅ 你已完成本阶段。请闭眼等待。</div>`;
   else {
     const sp=actionSpec();
-    h+=`<div class="act"><div class="ti">${ric(me.eff)} ${esc(rn(me.eff))}${me.eff!==s.initRole?" <span class='chip'>化身幽灵复制</span>":""}</div><div class="tp">${esc(sp?sp.label:"")}</div>`;
+    h+=`<div class="act"><div class="ti">${ric(me.eff)} ${esc(rn(me.eff))} <span style="font-size:12px;color:var(--fg-soft)">${esc(R[me.eff]?R[me.eff].en:"")}</span>${me.eff!==s.initRole?" <span class='chip'>化身幽灵复制</span>":""}</div><div class="tp">${esc(sp?sp.label:"")}</div>`;
     if(sp){
       if(sp.dir) h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="left">← ${sp.tap?"拍左边":"向左"}</button><button class="primary" data-a="${sp.tap?"tap":"shift"}" data-d="right">${sp.tap?"拍右边":"向右"} →</button>${sp.skip?`<button class="ghost" data-a="skip">${sp.skip}</button>`:""}</div>`;
       else if(sp.marksman){
@@ -623,11 +632,12 @@ document.addEventListener("click",e=>{
     case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
     case "roleInc": act("setRoles",{roles:state.roles.concat([b.dataset.k])}); break;
     case "roleDec": { const i=state.roles.indexOf(b.dataset.k); if(i>=0){ const r=state.roles.slice(); r.splice(i,1); act("setRoles",{roles:r}); } break; }
-    case "recommend": act("setRoles",{roles:DATA.defaultFill.slice(0,seatsArr().length+3)}); break;
+    case "recommend": act("recommendRoles"); break;
+    case "useLast": { const L=loadLast(); if(!L) break; act("setRoles",{roles:L.roles}); if(L.config) act("setConfig",{config:L.config}); toast("已沿用上次配置"+(L.seats!==seatsArr().length?"(上次 "+L.seats+" 人,注意座位数)":"")); break; }
     case "clearRoles": act("setRoles",{roles:[]}); break;
     case "roundDel": { const r=state.config.rounds.slice(); r.splice(+b.dataset.i,1); sendConfig({rounds:r}); break; }
     case "roundAdd": sendConfig({rounds:state.config.rounds.concat([{mode:"order"}])}); break;
-    case "start": if(!narrOn) setNarr(true); act("startGame"); break;
+    case "start": if(!narrOn) setNarr(true); saveLast(); act("startGame"); break;
     case "actSeat": actSeat=sn; sel={seats:[],center:[]}; voteSel=null; render(); break;
     case "seatClick": onSeatClick(sn); break;
     case "centerClick": onCenterClick(+b.dataset.c); break;

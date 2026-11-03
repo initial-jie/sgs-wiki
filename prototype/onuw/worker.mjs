@@ -7,7 +7,7 @@ import { ROLES, TEAMS, NIGHT_ORDER, ARTIFACTS, MARKS, PACKS, ART_BASE, NARR, DEF
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ONUW_HTML from "./client/onuw.html";
 
-const SEAT_COUNT = 5; // 3~10 人,开房默认 5 座
+const SEAT_COUNT = 8; // 3~16 人,开房默认 8 座(用户一般 8 人起)
 const DATA_JSON = JSON.stringify({ roles: ROLES, teams: TEAMS, nightOrder: NIGHT_ORDER, artifacts: ARTIFACTS, marks: MARKS, packs: PACKS, artBase: ART_BASE, defaultFill: DEFAULT_FILL,
   narr: { duskStart: NARR.duskStart, nightStart: NARR.nightStart, nightEnd: NARR.nightEnd, voteClosed: NARR.voteClosed } });
 

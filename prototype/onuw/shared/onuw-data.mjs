@@ -236,6 +236,14 @@ export const NARR = {
   voteClosed: "投票结束,请所有人翻开自己的牌。",
 };
 
-// 推荐配置:按人数从前往后取 人数+3 张
+// 推荐配置(用户 2026-11-03 定,一般 8 人起):
+//   8 人:头狼、神秘狼、守夜人×2、预言家、强盗、女巫、捣蛋鬼、酒鬼、侍从、皮匠(11 张)
+//   9 人 +失眠者;10 人 +猎人;11~14 人依次 +灵异侦探/馆长/哨兵/被诅咒者;15~16 人依次 +梦狼/旁观者(原话"梦狼/旁观者/模仿者/化身幽灵任选两位")
+//   8 人以下沿用早期简单配置(狼人×2、预言家、强盗、捣蛋鬼…)
 export const DEFAULT_FILL = ["werewolf", "werewolf", "seer", "robber", "troublemaker", "villager", "villager", "mason", "mason", "minion", "insomniac", "drunk", "villager", "hunter", "tanner"];
-export function defaultRoles(players) { return DEFAULT_FILL.slice(0, players + 3); }
+export const DEFAULT_8 = ["alphawolf", "mysticwolf", "mason", "mason", "seer", "robber", "witch", "troublemaker", "drunk", "squire", "tanner"];
+export const DEFAULT_EXTRA = ["insomniac", "hunter", "pi", "curator", "sentinel", "cursed", "dreamwolf", "beholder"]; // 9 人起每多一人加一张
+export function defaultRoles(players) {
+  if (players < 8) return DEFAULT_FILL.slice(0, players + 3);
+  return DEFAULT_8.concat(DEFAULT_EXTRA.slice(0, Math.min(players - 8, DEFAULT_EXTRA.length)));
+}

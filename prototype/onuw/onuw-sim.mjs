@@ -18,7 +18,9 @@ console.log("\n=== 数据 ===");
 check("46 个角色(含虚拟恋人阶段),键唯一", ROLES.length === 46 && new Set(ROLES.map((r) => r.key)).size === 46);
 check("唤醒顺序:黄昏 模仿者→吸血鬼→伯爵→仁菲尔德→病患→丘比特→煽动者→牧师→刺客→刺客学徒→恋人;夜晚 哨兵→…→馆长", NIGHT_ORDER.join(",") === "copycat,vampire,master,count,renfield,diseased,cupid,instigator,priest,assassin,apprenticeassassin,lovers,sentinel,doppelganger,werewolf,alphawolf,mysticwolf,minion,apprenticetanner,mason,thing,seer,apprenticeseer,pi,marksman,nostradamus,robber,witch,pickpocket,troublemaker,villageidiot,auraseer,gremlin,drunk,insomniac,squire,beholder,revealer,curator");
 check("每个睁眼角色都有播报文案(吸血鬼之主并入吸血鬼阶段)", ROLES.filter((r) => r.order != null && r.key !== "master").every((r) => r.narr && r.narr.open && r.narr.close));
-check("推荐配置 5 人 = 8 张", defaultRoles(5).length === 8 && defaultRoles(5).filter((k) => k === "werewolf").length === 2);
+check("推荐配置 5 人 = 8 张(旧简单配置)", defaultRoles(5).length === 8 && defaultRoles(5).filter((k) => k === "werewolf").length === 2);
+check("推荐配置 8 人 = 头狼/神秘狼/守夜人×2/预言家/强盗/女巫/捣蛋鬼/酒鬼/侍从/皮匠", defaultRoles(8).join(",") === "alphawolf,mysticwolf,mason,mason,seer,robber,witch,troublemaker,drunk,squire,tanner");
+check("9 人+失眠者,10 人+猎人,11~14 +灵异侦探/馆长/哨兵/被诅咒者,15~16 +梦狼/旁观者;张数恒为人数+3", [8, 9, 10, 11, 12, 13, 14, 15, 16].every((n) => defaultRoles(n).length === n + 3) && defaultRoles(9).at(-1) === "insomniac" && defaultRoles(10).at(-1) === "hunter" && defaultRoles(14).slice(-4).join(",") === "pi,curator,sentinel,cursed" && defaultRoles(16).slice(-2).join(",") === "dreamwolf,beholder");
 check("6 枚神器", ARTIFACTS.length === 6);
 
 // 工具:开局后强行摆一副已知的牌(测试各角色分支),再重进第 0 阶段
@@ -39,13 +41,14 @@ function mk(n, roles, seed = 1) {
 console.log("\n=== 准备阶段 ===");
 {
   const { room, act } = mk(5, defaultRoles(5));
-  check("3~10 座", OnuwCore.MIN_SEATS === 3 && OnuwCore.MAX_SEATS === 10);
+  check("3~16 座", OnuwCore.MIN_SEATS === 3 && OnuwCore.MAX_SEATS === 16);
   check("默认牌堆 = 人数+3", room.roles.length === 8 && room.deckSize() === 8);
   check("角色超上限拒绝(3 狼)", act(1, { op: "setRoles", roles: ["werewolf", "werewolf", "werewolf", "seer", "robber", "troublemaker", "villager", "villager"] }).error === "ROLE_MAX");
   check("未知角色拒绝", act(1, { op: "setRoles", roles: ["foo"] }).error === "BAD_ROLES");
   check("牌数不等于人数+3 不能开局", (act(1, { op: "setRoles", roles: ["werewolf", "seer"] }), act(1, { op: "startGame" }).error === "DECK_SIZE"));
   check("配置校验:voteSec 太小拒绝", act(1, { op: "setConfig", config: { voteSec: 1 } }).error === "BAD_CONFIG" && act(1, { op: "setConfig", config: { voteSec: 45, rounds: [{ mode: "free" }] } }).ok && room.config.voteSec === 45 && room.config.rounds.length === 1);
-  check("加减座位只在准备阶段", act(1, { op: "setRoles", roles: defaultRoles(5) }) && room.addSeat("p1").ok && room.removeSeat("p1").ok && act(1, { op: "startGame" }).ok && room.addSeat("p1").error === "NOT_SETUP");
+  check("牌堆=推荐配置时加减座位自动跟随;手动改过则不动", act(1, { op: "recommendRoles" }).ok && room.addSeat("p1").ok && room.roles.length === 9 && room.removeSeat("p1").ok && room.roles.length === 8 && act(1, { op: "setRoles", roles: ["werewolf", "seer", "robber", "troublemaker", "villager", "villager", "mason", "mason"] }).ok && room.addSeat("p1").ok && room.roles.length === 8 && room.removeSeat("p1").ok);
+  check("加减座位只在准备阶段", act(1, { op: "recommendRoles" }).ok && act(1, { op: "startGame" }).ok && room.addSeat("p1").error === "NOT_SETUP");
 }
 
 console.log("\n=== 场景 A:6 人 哨兵/化身幽灵/头狼/预言家/强盗/捣蛋鬼(含护盾与中央横牌)===");

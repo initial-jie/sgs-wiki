@@ -38,7 +38,7 @@ export function defaultConfig() {
 
 export class OnuwCore extends RoomBase {
   static MIN_SEATS = 3;
-  static MAX_SEATS = 10;
+  static MAX_SEATS = 16; // 规则 3~10 人,但扩展后用户常 8~16 人
 
   constructor(roomCode, seatCount, rng = Math.random, now = () => Date.now()) {
     super(roomCode, seatCount, rng);
@@ -82,9 +82,10 @@ export class OnuwCore extends RoomBase {
   }
   _log(msg) { this.log.unshift(msg); if (this.log.length > 200) this.log.pop(); }
 
-  // 座位只在准备阶段可增减
-  addSeat(id) { if (this.phase !== "setup") return { error: "NOT_SETUP" }; return super.addSeat(id); }
-  removeSeat(id) { if (this.phase !== "setup") return { error: "NOT_SETUP" }; return super.removeSeat(id); }
+  // 座位只在准备阶段可增减;若当前牌堆就是旧人数的推荐配置,增减后自动换成新人数的推荐配置(手动改过的不动)
+  addSeat(id) { if (this.phase !== "setup") return { error: "NOT_SETUP" }; const was = this._isDefault(); const r = super.addSeat(id); if (r.ok && was) this.roles = defaultRoles(this.seatNos().length); return r; }
+  removeSeat(id) { if (this.phase !== "setup") return { error: "NOT_SETUP" }; const was = this._isDefault(); const r = super.removeSeat(id); if (r.ok && was) this.roles = defaultRoles(this.seatNos().length); return r; }
+  _isDefault() { const d = defaultRoles(this.seatNos().length); return d.length === this.roles.length && d.slice().sort().join() === this.roles.slice().sort().join(); }
 
   players() { return this.seatNos(); }
   deckSize() { return this.players().length + 3; }
@@ -150,6 +151,7 @@ export class OnuwCore extends RoomBase {
     this.connect(id);
     switch (msg.op) {
       case "setRoles": return this._setRoles(msg.roles);
+      case "recommendRoles": return this.phase !== "setup" ? { error: "NOT_SETUP" } : (this.roles = defaultRoles(this.seatNos().length), { ok: true });
       case "setConfig": return this._setConfig(msg.config);
       case "startGame": return this._startGame();
       case "nightAct": return this._nightAct(id, msg);
