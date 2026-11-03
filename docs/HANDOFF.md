@@ -6,7 +6,7 @@
 - **唯一清单** `prototype/common/games.mjs`(GAMES:key/api/name/en/py/aliases/path/external/icon/color/tag/players/desc)。worker 下发 `room-client.js` 与 `hub.html` 时用 `injectGames()` 把 `/*GAMES*/[]/*/GAMES*/` 占位换成 JSON;`/common/games.json` 同清单。**加第五个游戏:注册表加一条 + wiki 首页 index.html 房间块手补一行**(Pages 静态页,不吃注册表)。
 - **大厅页** `prototype/common/client/hub.html` → `/hub`:搜索(名字包含/别名精确或包含/英文/拼音 `searchRank`,回车进第一个,`?q=` 预填)、游戏卡片(外链站点 noname/wiki 新开窗)、"最近去过的房间"(localStorage `rooms_recent`,7 天内,链接 `path?code=1234`)。
 - **room-client.js**:连上房间(ws.onopen)按 wsPath 的 `/api/<api>/` 段反推游戏记 `rooms_recent`(最多 8 条,同游戏同码去重);加入表单读 URL `?code=1234` 作默认房间码(可做分享链接);`RoomClient.gamesNav(curKey)` 生成"🎲 游戏大厅 · 其他房间"链接,四个房间页脚/加入页提示都改用它(不再手写)。
-- 卡片头像(注册表 `img`/`pos`):三国杀=费祎·指唤东风、线上牌桌=族钟琰·月满千街(OL 皮肤大图直链 `SKIN+<皮肤id>.png`,id 查 hero-skins.json,约 3MB/张,与座位立绘同源)、枪鸣锈语=孙鲁班 `assets/qmxy/art/6.jpg`、一夜狼=狼人卡、wiki=站点图标;风声用户定先用 📜(缺图自动退回表情,`assets/fengsheng/cover.jpg` 位留着)。
+- 卡片头像(注册表 `img`/`pos`):三国杀=费祎·指唤东风、线上牌桌=族钟琰·飞鸿惊雪(OL 皮肤大图直链 `SKIN+<皮肤id>.png`,id 查 hero-skins.json,约 3MB/张,与座位立绘同源)、枪鸣锈语=孙鲁班 `assets/qmxy/art/6.jpg`、一夜狼=狼人卡、wiki=站点图标;风声用户定先用 📜(缺图自动退回表情,`assets/fengsheng/cover.jpg` 位留着)。
 - 根路径 `/` 仍是三国杀(朋友有书签/二维码);想让大厅占根只需 index.js 路由改一行、三国杀走已有的 `/sgs`。
 - 验证:本地 8788 大厅搜索 lr/狼人/fs/sanguosha/手册 各命中;`/onuw?code=4821` 表单默认 4821,连上后大厅出现 chip;三国杀页脚链接 /hub /fs /qmxy /onuw。
 

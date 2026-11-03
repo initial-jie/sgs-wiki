@@ -20,7 +20,7 @@ export const GAMES = [
     path: "/onuw", icon: "🐺", img: A + "onuw/werewolf.jpg", pos: "50% 42%", color: "#7c8cff", tag: "系统发牌 + 语音主持", players: "3~16 人",
     desc: "46 个角色含扩展包;夜晚语音播报各角色行动,白天发言轮次与投票计时,一键结算。" },
   { key: "noname", name: "线上牌桌(无名杀)", en: "Noname Online", py: "wu ming sha", aliases: ["noname", "无名杀", "线上", "远程", "online"],
-    path: "https://private-sgs-initial-j.pages.dev", external: true, icon: "🌐", img: SKIN + "54803.png", pos: "52% 30%", tag: "人不在一起时", players: "联机",
+    path: "https://private-sgs-initial-j.pages.dev", external: true, icon: "🌐", img: SKIN + "54801.png", pos: "50% 30%", tag: "人不在一起时", players: "联机",
     desc: "朋友圈内测:打开后先取名,选「联机」进大厅建房 / 加入;手机建议横屏。将池与线下房间同步。" },
   { key: "wiki", name: "三国杀线下 Wiki", en: "Wiki", py: "wiki", aliases: ["wiki", "手册", "衍生技", "衍生牌", "工具", "速查"],
     path: "https://initial-jie.github.io/sgs-wiki/", external: true, icon: "📖", img: A + "icons/icon-512.png", pos: "50% 50%", tag: "速查手册 + 单人版工具", players: "",
