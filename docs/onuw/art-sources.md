@@ -70,5 +70,5 @@
 一键下载(在你自己的终端跑,浏览器 UA 下 CDN 通常放行):
 
 ```bash
-cd assets/onuw && while IFS='|' read -r _ fn url _; do fn=$(echo $fn | tr -d ' `'); url=$(echo $url | tr -d ' '); [ -n "$url" ] && curl -sL -A 'Mozilla/5.0' -o "$fn" "$url"; done < <(grep '^| `' ../../docs/onuw/art-sources.md)
+mkdir -p assets/onuw && cd assets/onuw && grep '^| `' ../../docs/onuw/art-sources.md | while IFS='|' read -r _ fn url _; do fn=$(echo "$fn" | tr -d ' `'); url=$(echo "$url" | tr -d ' '); [ -n "$url" ] && curl -sL -A 'Mozilla/5.0' -o "$fn" "$url"; done; ls | wc -l
 ```
