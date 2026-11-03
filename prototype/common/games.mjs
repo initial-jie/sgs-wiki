@@ -11,7 +11,7 @@ export const GAMES = [
     path: "/", icon: "⚔️", img: SKIN + "56802.png", pos: "60% 28%", color: "#a32e22", tag: "线下化工具房间", players: "2~10 人",
     desc: "牌桌出现需要工具的武将时开一桌:发将、暗牌 / 暗选、身份发放、历史对局,服务端按座位身份过滤。" },
   { key: "fs", api: "fs", name: "风声", en: "Fengsheng", py: "feng sheng", aliases: ["fs", "谍战", "风声典藏版", "fengsheng"],
-    path: "/fs", icon: "📜", img: A + "fengsheng/char/GuXiaoMeng.jpg", pos: "50% 25%", color: "#5d5242", tag: "谍战桌游典藏版", players: "3~9 人",
+    path: "/fs", icon: "📜", img: A + "fengsheng/char/ChengXiaoDie.jpg", pos: "65% 55%", color: "#5d5242", tag: "谍战桌游典藏版", players: "3~9 人",
     desc: "身份保密 / 情报区台账 / 宣胜校验,以实体卡牌文本为准。" },
   { key: "qmxy", api: "qmxy", name: "枪鸣锈语", en: "Gunfire & Rust", py: "qiang ming xiu yu", aliases: ["qmxy", "枪鸣", "锈语", "赛博三国杀"],
     path: "/qmxy", icon: "🔫", img: A + "qmxy/art/6.jpg", pos: "62% 16%", color: "#2aa8d8", tag: "赛博枪战版三国杀", players: "3~8 人",

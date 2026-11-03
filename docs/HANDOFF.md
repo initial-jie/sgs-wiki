@@ -4,7 +4,7 @@
 
 ## 📜 风声角色立绘(2026-11-03,待用户下载 + deploy)
 - 图源 = 风声文本本来就取自的开源客户端 Death-alter/TheMessage(`assets/resources/images/characters/`,47/49 个角色有图,文件名=拼音驼峰;孙守謨/王响没有)。清单 + 一键 curl 在 `docs/fengsheng/art-sources.md`,下载到 `assets/fengsheng/char/` 原名保存。
-- 接线:`fs-data.mjs` 加 `ART_BASE` + `CHAR_ART{id:文件}`;worker data.json 带 `artBase`、角色带 `art:"char/<文件>"`;`fs.html` 的 `avaHtml` 贴图(onerror 退回首字)、座位行公开角色前 `.sava` 小头像(点开技能)、技能/预览弹层技能上方 `.artimg` 大图;大厅卡片用顾小梦。盒子封面网上没找到可用图。
+- 接线:`fs-data.mjs` 加 `ART_BASE` + `CHAR_ART{id:文件}`;worker data.json 带 `artBase`、角色带 `art:"char/<文件>"`;`fs.html` 的 `avaHtml` 贴图(onerror 退回首字)、座位行公开角色前 `.sava` 小头像(点开技能)、技能/预览弹层技能上方 `.artimg` 大图;大厅卡片用程小蝶。盒子封面网上没找到可用图。
 - 隐私:座位行头像只在 charId 可见(公开或本人)时出现,与原来名字显示的条件一致,不泄露暗置角色。
 
 ## 🎲 游戏大厅 /hub + 游戏注册表(2026-11-03,待 deploy)
