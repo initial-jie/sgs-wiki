@@ -3,13 +3,13 @@
 // 定时:客户端到点发 {type:"action",op:"tick"};tick 没推进任何状态时不广播不落盘(onGameMessage 返回 undefined),避免多台手机每秒唤醒 DO。
 
 import { OnuwCore } from "./shared/onuw-logic.mjs";
-import { ROLES, TEAMS, NIGHT_ORDER, ARTIFACTS, NARR, DEFAULT_FILL } from "./shared/onuw-data.mjs";
+import { ROLES, TEAMS, NIGHT_ORDER, ARTIFACTS, MARKS, PACKS, ART_BASE, NARR, DEFAULT_FILL } from "./shared/onuw-data.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ONUW_HTML from "./client/onuw.html";
 
 const SEAT_COUNT = 5; // 3~10 人,开房默认 5 座
-const DATA_JSON = JSON.stringify({ roles: ROLES, teams: TEAMS, nightOrder: NIGHT_ORDER, artifacts: ARTIFACTS, defaultFill: DEFAULT_FILL,
-  narr: { nightStart: NARR.nightStart, nightEnd: NARR.nightEnd, voteClosed: NARR.voteClosed } });
+const DATA_JSON = JSON.stringify({ roles: ROLES, teams: TEAMS, nightOrder: NIGHT_ORDER, artifacts: ARTIFACTS, marks: MARKS, packs: PACKS, artBase: ART_BASE, defaultFill: DEFAULT_FILL,
+  narr: { duskStart: NARR.duskStart, nightStart: NARR.nightStart, nightEnd: NARR.nightEnd, voteClosed: NARR.voteClosed } });
 
 function fnv1a(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 const DATA_VER = fnv1a(DATA_JSON);

@@ -29,7 +29,7 @@ qmxy/                      枪鸣锈语(游卡 2026 赛博枪战三国杀,线下
   client/qmxy.html         枪鸣锈语房间前端(赛博霓虹风)
 onuw/                      一夜终极狼人(One Night Ultimate Werewolf,系统发牌 + 语音主持全流程,线上线下通用)——第四个游戏
   shared/onuw-logic.mjs    OnuwCore extends RoomBase:发牌/夜晚顺序状态机(客户端 tick 推进)/各角色行动/多轮发言/限时投票/结算
-  shared/onuw-data.mjs     23 角色图鉴(基础+Daybreak)+ 神器 + 夜晚顺序 + 播报文案
+  shared/onuw-data.mjs     45 角色图鉴(基础+Daybreak+Bonus Roles+Vampire)+ 印记 + 神器 + 黄昏/夜晚顺序 + 播报文案
   worker.mjs               /onuw 页面 + /onuw/data.json + OnuwRoomDO
   client/onuw.html         圆桌 UI(座位牌背围圈 + 中央牌堆)+ 行动面板 + speechSynthesis 播报
   qmxy-sim.mjs             node 断言:node prototype/qmxy/qmxy-sim.mjs

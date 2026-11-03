@@ -1,11 +1,11 @@
 # SGS-Wiki 线下房间 · 交接文档
 
-> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 87 passed)确认基线,即可继续。
+> 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 121 passed)确认基线,即可继续。
 
 ## 🐺 第四个游戏:一夜终极狼人(2026-11-02,`prototype/onuw/`,待 deploy)
 
 One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》的图鉴 + 语音主持。与前三个不同:**不是线下辅助,而是系统发牌、全流程主持**(线上线下都能用)。
-路由 `/onuw`、`/api/onuw/<码>/ws`,DO `OnuwRoomDO`(绑定 `ONUW_ROOM`,**wrangler 迁移 v6**)。基线 `node prototype/onuw/onuw-sim.mjs` **87**。
+路由 `/onuw`、`/api/onuw/<码>/ws`,DO `OnuwRoomDO`(绑定 `ONUW_ROOM`,**wrangler 迁移 v6**)。基线 `node prototype/onuw/onuw-sim.mjs` **121**。
 - **数据** `shared/onuw-data.mjs`:23 角色(基础 12 + Daybreak 11:哨兵/头狼/神秘狼/梦狼/预言家学徒/灵异侦探/女巫/村庄白痴/揭露者/馆长/保镖)+ 6 神器 + 夜晚顺序 `NIGHT_ORDER` + 每角色播报文案 `narr{open,close}` + 图鉴 desc。
   规则来源 rulespal / ultraboardgames 转录:头狼中央横牌可被其他中央牌角色看/换;保镖保护者得票最高时次高者出局;皮匠死狼必败,皮匠+狼同死则皮匠与村民同胜;场上无狼:无人死村民胜、非爪牙死爪牙胜。
 - **逻辑** `shared/onuw-logic.mjs` `OnuwCore`:`phase` setup→night→day→vote→over。
@@ -18,7 +18,15 @@ One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》�
   语音 `speechSynthesis` zh-CN,本机开关 🔊 存 localStorage `onuw_narr`,点「开始游戏」的那台自动开;所有设备算同一个播报 key,只有开了的出声。图鉴弹层 📖。
 - 验证:浏览器两标签(A机 1/2/3、B机 4/5)走完 哨兵→化身幽灵→狼人互认→头狼换牌(拒狼同伴)→预言家看两张中央→强盗→捣蛋鬼→酒鬼→天亮三轮顺序发言(含强制下一位、归票沉底)→投票(点牌背/输座位号/拒自投)→结算翻牌,无控制台错误。
   本地起 `.claude/launch.json` 的 `onuw-room`(8788,避开其他会话占着的 8787)。
-- **没做/可做**:气场预言家(Aura Seer,Bonus 包)/ 吸血鬼 / 外星人扩展;梦狼只做了"狼人互认时显示";神器只影响结算,缄默面具/羞耻裹布不强制;语音是系统 TTS,没有 app 那种配乐;每阶段固定时长不区分角色。
+- **扩展包(2026-11-02 第二批)**:Bonus Roles 8(气场预言家/王子/被诅咒者/那东西/旁观者/侍从/皮匠学徒/诺查丹玛斯)+ Vampire 14(模仿者/吸血鬼×2/吸血鬼之主/伯爵/仁菲尔德/病患/丘比特/煽动者/牧师/刺客/刺客学徒/神射手/扒手/小精灵)+ 虚拟「恋人」阶段;共 45 个可选角色,sim **121**。
+  规则文本来自 one-night.fandom.com 的角色模板(MediaWiki API `api.php?action=parse` 可 curl;页面本身有 Cloudflare 挑战)。
+  黄昏 = `order<0` 的阶段(模仿者 -8 → 吸血鬼 -6 → 伯爵 -5.8 → 仁菲尔德 -5.7 → 病患 -5 → 丘比特 -4 → 煽动者 -3 → 牧师 -2 → 刺客 -1 → 刺客学徒 -0.8 → 恋人 -0.5),之后才是哨兵 0 起的夜晚;**负数子阶段要比主阶段大**(-5.8 在 -6 之后),别写成 -6.2。
+  印记 `seat.mark`(一人一枚,新的替换旧的;内容对所有人保密,是否有印记公开):吸血鬼印记=变吸血鬼;恐惧=夜晚行动作废(`_enterPhase` 直接 acted);疾病=投他的人不能赢;爱=殉情;叛徒=同阵营另有人死才赢;清明/蝙蝠无效果;刺客=持有者死则刺客赢。
+  模仿者 `this.copycat`(看中央牌成为该角色,在该角色阶段一起行动)、化身幽灵 `this.dg` 与灵异侦探/诺查丹玛斯的附加结果挂在复制者身上(`_holderFor`);`_hasRole/_roleNow` 统一判"现在是谁"。
+  结算 `_resolve` 按 Epic Battle 泛化:在场的邪恶阵营(狼/吸血鬼)每个都得死人村民才赢;邪恶阵营要自己不死且对方死人;王子/吸血鬼之主(有同伴投)/保镖目标 受保护;被诅咒者按投他的人转阵营;猎人带人与恋人殉情连锁;侍从无狼时须存活且他人死;诺查丹玛斯须存活;刺客看印记持有者。
+  **卡图**:官方卡面扫图在 fandom,图片 CDN 拦脚本下载(没绕),清单与一键命令在 `docs/onuw/art-sources.md`,用户下载到 `assets/onuw/` 后页面自动用(`ART_BASE`,`img` 字段,加载失败退回表情)。
+  没做:外星人包(靠 app 随机指令)、超级反派包(基本是换皮)、Bonus 的共情者(Empath,社交指令)/夺舍者(Body Snatcher,外星人系)。
+- **早期没做清单(部分已补)**:气场预言家(Aura Seer,Bonus 包)/ 吸血鬼 / 外星人扩展;梦狼只做了"狼人互认时显示";神器只影响结算,缄默面具/羞耻裹布不强制;语音是系统 TTS,没有 app 那种配乐;每阶段固定时长不区分角色。
 
 ## 🔫 第三个游戏:枪鸣锈语(2026-11-02,`prototype/qmxy/`,待 deploy)
 
