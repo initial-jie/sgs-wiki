@@ -279,7 +279,7 @@ function render(){
   let h='<h1>枪鸣锈语<span class="st">RUSTY</span></h1><div class="sub">赛博枪战 · 线下房间</div>';
   if(!state){
     app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。桌上照常用实体牌,手机负责身份保密、血量/弹匣台账、命中判定和胜负。"})
-      +'<div class="hint" style="text-align:center">其他游戏:<a href="/">三国杀线下房间 →</a> · <a href="/fs">风声线下房间 →</a> · <a href="/onuw">一夜终极狼人 →</a></div>';
+      +'<div class="hint" style="text-align:center">其他游戏:'+RoomClient.gamesNav("qmxy")+'</div>';
     RoomClient.bindConnectForm(RC); return;
   }
   if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
@@ -291,7 +291,7 @@ function render(){
   h+=viewRef();
   h+=viewLog();
   h+=viewAdmin();
-  h+='<footer>枪鸣锈语 · 线下房间原型 · 以实体卡牌文本为准<br>其他房间:<a href="/">三国杀</a> · <a href="/fs">风声</a> · <a href="/onuw">一夜终极狼人</a></footer>';
+  h+='<footer>枪鸣锈语 · 线下房间原型 · 以实体卡牌文本为准<br>其他房间:'+RoomClient.gamesNav("qmxy")+'</footer>';
   const openK=[...document.querySelectorAll("details[data-k]")].filter(d=>d.open).map(d=>d.dataset.k);
   const focusId=document.activeElement&&document.activeElement.id, vals={};
   document.querySelectorAll("#app input[id],#app select[id]").forEach(el=>{ if(el.dataset.dirty) vals[el.id]=el.value; });

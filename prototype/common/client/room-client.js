@@ -10,6 +10,8 @@
  *     beforeConnect()  换房/初次连接前清游戏侧客户端态
  *   });
  *   rc.connect(base, code) / rc.send(obj) / rc.deviceId / rc.connected / rc.code / rc.reconnectNow()
+ *   RoomClient.gamesNav(curKey)  "其他游戏"链接 HTML(清单来自 common/games.mjs,worker 下发本文件时注入 GAMES 占位;file:// 下为空)
+ *   连上房间时记 localStorage rooms_recent [{key,code,at}](大厅 /hub 展示"最近去过的房间");页面 URL 带 ?code=1234 则加入表单默认该码。
  *
  * 连接生命周期(融合版断线重连,自三国杀房间沉淀):
  *   connect() = 初次加入/换房(调 beforeConnect 清客户端态);openSocket() = 建/重建 socket(不清态,供重连复用)。
@@ -20,6 +22,8 @@
 (function(){
   const DEVICE_KEY="sgs_device", BASE_KEY="sgs_base"; // 与三国杀房间共用:同一台手机在各游戏里是同一个名字
   const RC_MIN=800, RC_MAX=5000;
+  const GAMES=/*GAMES*/[]/*/GAMES*/; // 游戏注册表(worker 注入)
+  const RECENT_KEY="rooms_recent", RECENT_MAX=8;
 
   const $=(s,el=document)=>el.querySelector(s);
   function esc(t){return (t==null?"":String(t)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
@@ -67,7 +71,7 @@
       if(!rc.base||!rc.code)return;
       if(ws){try{ws.onopen=ws.onclose=ws.onerror=ws.onmessage=null;ws.close();}catch(e){}} // 拆旧 handler:旧 socket 的 close 不再触发重连
       ws=new WebSocket(rc.base.replace(/\/+$/,"")+o.wsPath(rc.code));
-      ws.onopen=()=>{rc.connected=true;reconnectDelay=0;clearTimeout(reconnectTimer);reconnectTimer=null;send({type:"hello",deviceId:rc.deviceId});updateConnBar();toast("已连接房间 "+rc.code);};
+      ws.onopen=()=>{rc.connected=true;reconnectDelay=0;clearTimeout(reconnectTimer);reconnectTimer=null;send({type:"hello",deviceId:rc.deviceId});updateConnBar();toast("已连接房间 "+rc.code);recordRecent(rc.code);};
       ws.onclose=()=>{rc.connected=false;updateConnBar();if(!rc.intentionalClose){toast("连接已断开,正在重连…");scheduleReconnect();}};
       ws.onerror=()=>{};                               // close 会随后触发,重连统一由 onclose 调度
       ws.onmessage=e=>{
@@ -87,6 +91,12 @@
       updateConnBar();openSocket();
     }
     function setDeviceId(nm){rc.deviceId=nm;lsSet(DEVICE_KEY,nm);}
+    // 最近房间:按 wsPath 的 /api/<api>/ 段反推当前游戏,记 {key,code,at},同游戏同码去重,最多 RECENT_MAX 条
+    function recordRecent(code){
+      try{ const api=(/^\/api\/([a-z0-9_-]+)\//i.exec(o.wsPath("0000"))||[])[1]; const g=GAMES.find(g=>g.api===api); if(!g) return;
+        const arr=(JSON.parse(lsGet(RECENT_KEY)||"[]")||[]).filter(r=>!(r.key===g.key&&r.code===code));
+        arr.unshift({key:g.key,code,at:Date.now()}); lsSet(RECENT_KEY,JSON.stringify(arr.slice(0,RECENT_MAX))); }catch(e){}
+    }
     // 改名:prompt → 服务端原子改键;回执 renamed 后更新本地
     function promptRename(){const nn=(prompt("改名(房内显示,不影响座位归属)",rc.deviceId)||"").trim();if(!nn||nn===rc.deviceId)return;send({type:"rename",newId:nn});}
 
@@ -102,12 +112,13 @@
   function connectFormHtml(rc,opts){
     opts=opts||{};
     const base=lsGet(BASE_KEY)||defaultBase();
+    let qc=""; try{ qc=new URLSearchParams(location.search).get("code")||""; }catch(e){} if(!/^\d{4}$/.test(qc)) qc=""; // 大厅"最近房间"/分享链接 ?code=1234
     return `<div class="card"><h2>${esc(opts.title||"加入房间")}</h2>
     <div class="row" style="margin-top:2px"><label class="grow">你的名字 / ID
       <input id="i-name" value="${esc(rc.deviceId)}" maxlength="12" placeholder="如:小明。留空则随机"></label>
       <button class="ghost" id="b-nrand" title="随机一个 ID" style="align-self:flex-end">🎲</button></div>
     <div class="hint">用来区分不同手机 —— <b>别和同房玩家重复</b>。可自定义,也可留空/点🎲随机。</div>
-    <div class="row" style="margin-top:12px"><label>房间码<input id="i-code" value="${esc(opts.defaultCode||"1234")}" maxlength="4" inputmode="numeric" style="width:90px"></label>
+    <div class="row" style="margin-top:12px"><label>房间码<input id="i-code" value="${esc(qc||opts.defaultCode||"1234")}" maxlength="4" inputmode="numeric" style="width:90px"></label>
       <button class="ghost" id="b-rand">随机</button><button class="primary grow" id="b-conn">连接</button></div>
     <div class="hint">${opts.hint||"同一房间码即进同一桌。"}</div>
     <details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;opacity:.7">高级:服务端地址</summary>
@@ -153,5 +164,10 @@
     return items.map((h,i)=>[h,searchRank(h,q),i]).filter(x=>x[1]>=0).sort((a,b)=>a[1]-b[1]||a[0].name.length-b[0].name.length||a[2]-b[2]).map(x=>x[0]);
   }
 
-  window.RoomClient={create,esc,toast,defaultBase,randomId,randomCode,connectFormHtml,bindConnectForm,lsGet,lsSet,$,searchRank,searchList};
+  // "其他游戏"链接:大厅在前,排除当前游戏与外链站点;页面自带 a 样式
+  function gamesNav(cur){
+    const links=GAMES.filter(g=>g.key!==cur&&!g.external).map(g=>`<a href="${esc(g.path)}">${esc(g.name)}</a>`);
+    return `<a href="/hub">🎲 游戏大厅</a>`+(links.length?" · "+links.join(" · "):"");
+  }
+  window.RoomClient={create,esc,toast,defaultBase,randomId,randomCode,connectFormHtml,bindConnectForm,lsGet,lsSet,$,searchRank,searchList,gamesNav,GAMES};
 })();

@@ -278,7 +278,7 @@ function render(){
   let h='<h1>风声<span class="st">绝密</span></h1><div class="sub">谍战桌游典藏版 · 线下房间</div>';
   if(!state){
     app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。桌上照常用实体牌,手机负责身份保密、情报台账与胜负判定。"})
-      +'<div class="hint" style="text-align:center">其他游戏:<a href="/">三国杀线下房间 →</a> · <a href="/qmxy">枪鸣锈语线下房间 →</a> · <a href="/onuw">一夜终极狼人 →</a></div>';
+      +'<div class="hint" style="text-align:center">其他游戏:'+RoomClient.gamesNav("fs")+'</div>';
     RoomClient.bindConnectForm(RC); return;
   }
   if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
@@ -291,7 +291,7 @@ function render(){
   h+=viewRef();
   h+=viewLog();
   h+=viewAdmin();
-  h+='<footer>风声 · 线下房间原型 · 以实体卡牌文本为准<br>其他房间:<a href="/">三国杀</a> · <a href="/qmxy">枪鸣锈语</a> · <a href="/onuw">一夜终极狼人</a></footer>';
+  h+='<footer>风声 · 线下房间原型 · 以实体卡牌文本为准<br>其他房间:'+RoomClient.gamesNav("fs")+'</footer>';
   // 整页重绘会收起 <details>、打断正在填的输入框:记下展开项与输入值,重绘后恢复
   const openK=[...document.querySelectorAll("details[data-k]")].filter(d=>d.open).map(d=>d.dataset.k);
   const focusId=document.activeElement&&document.activeElement.id, vals={};

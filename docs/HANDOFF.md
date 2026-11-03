@@ -2,6 +2,13 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 131 passed)确认基线,即可继续。
 
+## 🎲 游戏大厅 /hub + 游戏注册表(2026-11-03,待 deploy)
+- **唯一清单** `prototype/common/games.mjs`(GAMES:key/api/name/en/py/aliases/path/external/icon/color/tag/players/desc)。worker 下发 `room-client.js` 与 `hub.html` 时用 `injectGames()` 把 `/*GAMES*/[]/*/GAMES*/` 占位换成 JSON;`/common/games.json` 同清单。**加第五个游戏:注册表加一条 + wiki 首页 index.html 房间块手补一行**(Pages 静态页,不吃注册表)。
+- **大厅页** `prototype/common/client/hub.html` → `/hub`:搜索(名字包含/别名精确或包含/英文/拼音 `searchRank`,回车进第一个,`?q=` 预填)、游戏卡片(外链站点 noname/wiki 新开窗)、"最近去过的房间"(localStorage `rooms_recent`,7 天内,链接 `path?code=1234`)。
+- **room-client.js**:连上房间(ws.onopen)按 wsPath 的 `/api/<api>/` 段反推游戏记 `rooms_recent`(最多 8 条,同游戏同码去重);加入表单读 URL `?code=1234` 作默认房间码(可做分享链接);`RoomClient.gamesNav(curKey)` 生成"🎲 游戏大厅 · 其他房间"链接,四个房间页脚/加入页提示都改用它(不再手写)。
+- 根路径 `/` 仍是三国杀(朋友有书签/二维码);想让大厅占根只需 index.js 路由改一行、三国杀走已有的 `/sgs`。
+- 验证:本地 8788 大厅搜索 lr/狼人/fs/sanguosha/手册 各命中;`/onuw?code=4821` 表单默认 4821,连上后大厅出现 chip;三国杀页脚链接 /hub /fs /qmxy /onuw。
+
 ## 🐺 第四个游戏:一夜终极狼人(2026-11-02,`prototype/onuw/`,待 deploy)
 
 One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》的图鉴 + 语音主持。与前三个不同:**不是线下辅助,而是系统发牌、全流程主持**(线上线下都能用)。

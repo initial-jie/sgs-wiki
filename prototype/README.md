@@ -4,6 +4,7 @@
 
 ```
 common/                    ★ 公共房间库(游戏无关;新游戏直接复用)
+                           games.mjs 游戏注册表;client/hub.html 游戏大厅(/hub:搜索跳转 + 最近房间)
   room-base.mjs            RoomBase:座位即身份——认领/独占/替换/释放/改名/增删座位/序列化
   visibility.mjs           字段级保密原语(ownerSeatOnly/secretPick/seatKeyed…),按设备持有座位过滤
   room-do.mjs              RoomDOBase:Durable Object 外壳(WebSocket/持久化/2h TTL/解散/广播)+ 响应小工具
@@ -37,7 +38,7 @@ onuw/                      一夜终极狼人(One Night Ultimate Werewolf,系统
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由
 ```
 
-新增一个游戏 = 新建 `<game>/`:`XxxCore extends RoomBase` + `XxxRoomDO extends RoomDOBase` + 客户端页引 `/common/room-client.js`,
+新增一个游戏 = 在 `common/games.mjs` 注册表加一条(大厅 /hub、各房间页脚、/common/games.json 自动跟随;wiki 首页 index.html 房间块手补)+ 新建 `<game>/`:`XxxCore extends RoomBase` + `XxxRoomDO extends RoomDOBase` + 客户端页引 `/common/room-client.js`,
 再在 `worker/src/index.js` 挂路由、`wrangler.toml` 加 DO 绑定与迁移。
 
 ## 1. 跑逻辑测试(最快,不用装任何东西)

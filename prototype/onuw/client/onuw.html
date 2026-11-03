@@ -388,7 +388,7 @@ function render(){
   let h='<h1>一夜终极狼人<span class="st">ONE NIGHT</span></h1><div class="sub">ONE NIGHT ULTIMATE WEREWOLF · 房间</div>';
   if(!state){
     app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。系统发牌、语音播报夜晚顺序,行动在手机上完成;天亮后按配置发言、投票并自动结算。线下建议一台手机开语音播报,其余静音。"})
-      +'<div class="hint" style="text-align:center">其他游戏:<a href="/">三国杀</a> · <a href="/fs">风声</a> · <a href="/qmxy">枪鸣锈语</a></div>';
+      +'<div class="hint" style="text-align:center">其他游戏:'+RoomClient.gamesNav("onuw")+'</div>';
     RoomClient.bindConnectForm(RC); return;
   }
   if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
@@ -397,7 +397,7 @@ function render(){
   if(state.phase==="setup") h+=viewSetup();
   else h+=viewGame();
   h+=viewLog();
-  h+='<footer>一夜终极狼人 · 房间版原型<br>其他房间:<a href="/">三国杀</a> · <a href="/fs">风声</a> · <a href="/qmxy">枪鸣锈语</a></footer>';
+  h+='<footer>一夜终极狼人 · 房间版原型<br>其他房间:'+RoomClient.gamesNav("onuw")+'</footer>';
   app.innerHTML=h;
   layoutTable();
   if(modal&&modal.t==="codex") openCodex();
