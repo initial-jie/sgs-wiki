@@ -339,7 +339,7 @@ function viewMine(){
     // 角色(选角 / 查技能 / 暗置翻开都在「座位」区;这里只做摘要)
     if(s.charId!=null&&CHAR[s.charId]){
       const c=CHAR[s.charId];
-      h+=`<div class="row" style="margin-top:10px"><span class="grow">角色 <b style="font-family:var(--display)">${esc(c.name)}</b> <span class="hint">${esc(c.title)}</span>`
+      h+=`<div class="row" style="margin-top:10px">${avaHtml(c)}<span class="grow">角色 <b style="font-family:var(--display)">${esc(c.name)}</b> <span class="hint">${esc(c.title)}</span>`
         +(c.hidden?(s.faceUp?' <span class="badge hid">已翻开</span>':' <span class="badge hid">暗置 · 他人看不到</span>'):"")+`</span>`
         +`<button class="btn-skill" data-a="skill" data-s="${s.seatNo}">查看技能</button>`
         +(c.hidden&&state.phase!=="over"?(s.faceUp?`<button class="ghost sm" data-a="flip" data-s="${s.seatNo}" data-up="0">翻回暗置</button>`
