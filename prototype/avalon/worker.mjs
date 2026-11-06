@@ -2,12 +2,12 @@
 // 逻辑在 ./shared/avalon-logic.mjs(与 node 模拟 avalon-sim 同一份);DO 外壳见 common/room-do.mjs。全部事件驱动,没有 tick。
 
 import { AvalonCore } from "./shared/avalon-logic.mjs";
-import { ROLES, TEAMS, PACKS, PLAYERS, LANCELOT_MODES, ART_BASE } from "./shared/avalon-data.mjs";
+import { ROLES, TEAMS, PACKS, PLAYERS, LANCELOT_MODES, ART_BASE, CARDS, GOOD_MSG_MAX } from "./shared/avalon-data.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import AVALON_HTML from "./client/avalon.html";
 
 const SEAT_COUNT = 7; // 5~10 人,开房默认 7 座
-const DATA_JSON = JSON.stringify({ roles: ROLES, teams: TEAMS, packs: PACKS, players: PLAYERS, lancelotModes: LANCELOT_MODES, artBase: ART_BASE });
+const DATA_JSON = JSON.stringify({ roles: ROLES, teams: TEAMS, packs: PACKS, players: PLAYERS, lancelotModes: LANCELOT_MODES, artBase: ART_BASE, cards: CARDS, goodMsgMax: GOOD_MSG_MAX });
 
 function fnv1a(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 const DATA_VER = fnv1a(DATA_JSON);

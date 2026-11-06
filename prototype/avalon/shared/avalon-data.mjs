@@ -1,5 +1,5 @@
 // 阿瓦隆(The Resistance: Avalon)角色图鉴 + 人数表 + 推荐配置。
-// 来源:docs/avalon/README.md(基础版 + Avalon X + Big Box 规则书转录;任务人数表对照实体版图核过)。
+// 来源:docs/avalon/README.md(基础版 + Avalon X + Big Box 规则书转录 §4.2/§4.3;任务人数表对照实体版图核过)。
 // 被 avalon-logic.mjs(DO / node 模拟)与 client/avalon.html(经 /avalon/data.json)共用。
 //
 // 字段:key 内部键 / name 中文名 / en 英文名 / team good|evil(初始阵营;兰斯洛特可能中途互换)/ max 一局最多几张 / pack base|x|bigbox
@@ -48,9 +48,38 @@ export const ROLES = [
     desc: "坏人阵营,与其他坏人互认。被牧师、湖中仙女等任何效果验阵营时可以说谎——本房间里他一律显示为「好人」。只在有验人效果的局里使用。" },
   { key: "troublemaker", name: "捣蛋鬼", en: "Troublemaker", team: "good", max: 1, pack: "bigbox", icon: "😈", img: ["troublemaker.jpg"], short: "被验时显示为坏人",
     desc: "好人阵营。被牧师、湖中仙女等任何效果验阵营时必须说谎——他一律显示为「坏人」。只在有验人效果的局里使用。" },
+  // ───────── Big Box(进阶角色:要额外任务卡)─────────
+  { key: "untrustworthy", name: "不忠的仆人", en: "Untrustworthy Servant", team: "good", max: 1, pack: "bigbox2", icon: "🤝", img: ["untrustworthy.jpg"], short: "知道刺客;梅林眼里是坏人;可能被招募",
+    desc: "好人阵营,开局知道刺客是谁;在梅林眼里他是坏人;出任务只能出「成功」。好人三次任务成功后、刺杀前多一个「招募」阶段:刺客猜一次谁是不忠的仆人——猜中则他转为坏人并代替刺客执行刺杀,猜错刺客照常刺杀。必须有刺客。" },
+  { key: "messenger_senior", name: "资深信使", en: "Senior Messenger", team: "good", max: 1, pack: "bigbox2", icon: "💌", img: ["messenger_senior.jpg"], short: "可出「好信」(整局最多 2 次)",
+    desc: "好人阵营。出任务时可出「成功」或「好信」(好信=成功,整局最多出 2 张,每张在该任务上留下公开标记)。第 5 任务翻开后,场上 ≥3 张好信则第 5 任务去掉一张失败。好人胜后刺客可改为指认两名好信使(都对才赢)。可选规则:开局知道初级信使是谁。三张信使一起用。" },
+  { key: "messenger_junior", name: "初级信使", en: "Junior Messenger", team: "good", max: 1, pack: "bigbox2", icon: "💌", img: ["messenger_junior.jpg"], short: "可出「好信」(整局最多 2 次)",
+    desc: "好人阵营。出任务时可出「成功」或「好信」(好信=成功,整局最多出 2 张,每张在该任务上留下公开标记)。第 5 任务翻开后,场上 ≥3 张好信则第 5 任务去掉一张失败。好人胜后刺客可改为指认两名好信使(都对才赢)。三张信使一起用。" },
+  { key: "messenger_evil", name: "坏信使", en: "Evil Messenger", team: "evil", max: 1, pack: "bigbox2", icon: "📨", img: ["messenger_evil.jpg"], short: "可出「坏信」",
+    desc: "坏人阵营,与其他坏人互认。出任务时可出「成功」「失败」或「坏信」(坏信=失败,每张在该任务上留下公开标记)。第 5 任务翻开后,场上 ≥2 张坏信则第 5 任务多加一张失败(与 ≥3 好信同时满足则抵消)。三张信使一起用。" },
+  { key: "rogue_good", name: "好盗贼", en: "Good Rogue", team: "good", max: 1, pack: "bigbox2", icon: "🗝️", img: ["rogue_good.jpg"], short: "出「盗贼成功」争取个人胜",
+    desc: "好人阵营。只有他能出「盗贼成功」(效果同成功,翻开时公开可见)。队长每个任务把手表交给一名队员,持表者不能出盗贼卡(5~6 人前两任务没有手表)。若他在第 3 次任务成功时出了「盗贼成功」、且之前已出过至少 1 张,立即个人获胜(跳过刺杀,其他人都不算赢)。" },
+  { key: "rogue_evil", name: "坏盗贼", en: "Evil Rogue", team: "evil", max: 1, pack: "bigbox2", icon: "🔓", img: ["rogue_evil.jpg"], short: "出「盗贼失败」争取个人胜;不与坏人互认",
+    desc: "坏人阵营,但不与其他坏人互认(像奥伯伦;梅林看得到他)。只有他能出「盗贼失败」(效果同失败,翻开时公开可见)。队长每个任务把手表交给一名队员,持表者不能出盗贼卡。若他在第 3 次任务失败时出了「盗贼失败」、且之前已出过至少 1 张,立即个人获胜(其他人都不算赢)。" },
+  { key: "sorcerer_good", name: "好巫师", en: "Good Sorcerer", team: "good", max: 1, pack: "bigbox2", icon: "✨", img: ["sorcerer_good.jpg"], short: "可出「魔法」反转任务结果",
+    desc: "好人阵营。出任务时可出「成功」或「魔法」。任务翻开时若有奇数张魔法,任务结果反转(成功变失败、失败变成功);两张魔法互相抵消。" },
+  { key: "sorcerer_evil", name: "坏巫师", en: "Evil Sorcerer", team: "evil", max: 1, pack: "bigbox2", icon: "🪄", img: ["sorcerer_evil.jpg"], short: "可出「魔法」反转任务结果;不能出失败",
+    desc: "坏人阵营,与其他坏人互认。出任务时可出「成功」或「魔法」,不能出「失败」。任务翻开时若有奇数张魔法,任务结果反转;两张魔法互相抵消。可选规则(房间设置):他不在开局信息里亮相,梅林看不到他。" },
 ];
+
+// 任务卡种类:val 结算时按成功/失败计,magic 单独数(奇数张反转结果);who 只有这些角色能出(没有=所有队员按阵营)
+export const CARDS = {
+  success: { name: "成功", icon: "✓", val: "success" },
+  fail: { name: "失败", icon: "✗", val: "fail" },
+  goodMsg: { name: "好信", icon: "💌", val: "success", who: ["messenger_senior", "messenger_junior"] },
+  evilMsg: { name: "坏信", icon: "📨", val: "fail", who: ["messenger_evil"] },
+  rogueSuccess: { name: "盗贼成功", icon: "🗝️", val: "success", who: ["rogue_good"] },
+  rogueFail: { name: "盗贼失败", icon: "🔓", val: "fail", who: ["rogue_evil"] },
+  magic: { name: "魔法", icon: "✨", val: "magic", who: ["sorcerer_good", "sorcerer_evil"] },
+};
+export const GOOD_MSG_MAX = 2; // 每名好信使整局最多出几张好信
 export const ROLE_BY_KEY = Object.fromEntries(ROLES.map((r) => [r.key, r]));
-export const PACKS = { base: "基础版", x: "Avalon X(兰斯洛特)", bigbox: "Big Box" };
+export const PACKS = { base: "基础版", x: "Avalon X(兰斯洛特)", bigbox: "Big Box", bigbox2: "Big Box 进阶(信使 / 盗贼 / 巫师 / 不忠的仆人)" };
 
 // 人数 → 好/坏人数 与 5 个任务的队伍人数(对照实体版图)。7 人起第 4 任务需两张失败
 export const PLAYERS = {

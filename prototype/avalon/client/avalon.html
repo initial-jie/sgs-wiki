@@ -94,6 +94,10 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .qc{width:30px;height:42px;border-radius:4px;font-size:16px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#0a120f}
 .qc.s{background:var(--blue);border-color:var(--blue)} .qc.f{background:var(--red);border-color:var(--red)}
 .qc.back{background:repeating-linear-gradient(135deg,#243a33 0 4px,#1b2d28 4px 8px)}
+.qc.m{background:#6d4fc2;border-color:#8a6ff0;color:#fff}
+button.magic{background:#6d4fc2;border-color:#8a6ff0;color:#fff;font-weight:700}
+.pc .bd5{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:12px;background:#0f1a17;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc.recruited{border-color:var(--evil);box-shadow:0 0 0 2px rgba(229,72,77,.45)}
 
 /* 身份卡 */
 .rolebig{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(10,18,15,.6);margin-bottom:8px}
@@ -113,7 +117,7 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .panel .ti{font-weight:800;font-size:15px;color:#fff;margin-bottom:4px}
 .panel .tp{font-size:13px}
 .bigbtns{display:flex;gap:8px;margin-top:8px}
-.bigbtns button{flex:1;padding:14px 8px;font-size:16px}
+.bigbtns{flex-wrap:wrap}.bigbtns button{flex:1 1 40%;padding:14px 8px;font-size:16px}
 .tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .tabs button.on{background:var(--gold);color:#1a1405;border-color:var(--gold)}
 .seats-setup .seat{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:rgba(10,18,15,.5);display:flex;align-items:center;gap:8px}
@@ -171,22 +175,23 @@ footer{text-align:center;font-size:11px;color:var(--fg-soft);margin-top:18px;let
 
 <script src="/common/room-client.js"></script><!-- 公共房间客户端(连接/重连/改名/toast);见 prototype/common/client/ -->
 <script>
-/* 阿瓦隆房间:系统发身份 + 队长组队 + 全桌投票 + 任务卡匿名结算 + 湖中仙女 / 王者之剑 / 兰斯洛特 + 刺杀。
+/* 阿瓦隆房间:系统发身份 + 队长组队 + 全桌投票 + 任务卡匿名结算 + 湖中仙女 / 王者之剑 / 兰斯洛特 + 信使 / 盗贼(手表)/ 巫师 / 不忠的仆人(招募)+ 刺杀。
    权威逻辑在 DO(prototype/avalon/shared/avalon-logic.mjs);这里只渲染 roomState、发 action{op,…}。没有定时器。 */
 const {esc,toast,$}=RoomClient;
 let state=null, DATA=null, R={};
 let actSeat=null;           // 多座位代持时当前操作的座位
-let teamSel=[], exSel=null; // 队长组队点选
+let teamSel=[], exSel=null, watchSel=null; // 队长组队点选(队员 / 持剑者 / 手表)
+let dblSel=[], asDouble=false;              // 刺客改指认两名好信使 的点选
 let modal=null;
 
 const RC=RoomClient.create({
   wsPath: code=>"/api/avalon/"+code+"/ws",
   errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",DECK_SIZE:"角色张数必须等于人数",ROLE_MAX:"该角色数量超过上限",BAD_ROLES:"角色配置不合法",BAD_CONFIG:"配置不合法",PLAYER_COUNT:"只支持 5~10 人",
-    EVIL_COUNT:"坏人数量与人数表不符",LANCELOT_PAIR:"兰斯洛特必须好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜必须和派西维尔一起用",MERLIN_NEEDS_ASSASSIN:"有梅林就必须有刺客",
+    EVIL_COUNT:"坏人数量与人数表不符",LANCELOT_PAIR:"兰斯洛特必须好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜必须和派西维尔一起用",MERLIN_NEEDS_ASSASSIN:"有梅林就必须有刺客",MESSENGER_SET:"信使三张(资深/初级/坏)要一起用",UNTRUSTWORTHY_NEEDS_ASSASSIN:"不忠的仆人必须配刺客",BAD_WATCH:"手表必须交给队内一名队员",NOT_RECRUIT:"现在不是招募阶段",
     NOT_TEAMBUILD:"现在不是组队阶段",NOT_LEADER:"只有队长能提议",BAD_TEAM:"队伍人数不对",BAD_EXCALIBUR:"王者之剑必须给队内一名非队长队员",NOT_VOTE:"现在不是投票阶段",
     NOT_QUEST:"现在不是任务阶段",CARDS_LOCKED:"任务卡已收齐",NOT_ON_TEAM:"你不在队伍里",CARD_NOT_ALLOWED:"你的角色不能出这张卡",NOT_EXCALIBUR:"现在不能用王者之剑",BAD_TARGET:"目标不合法",
     NOT_LADY:"现在不是湖中仙女阶段",LADY_USED:"用过湖中仙女的人不能被验",NOT_ASSASSIN:"现在不是刺杀阶段"},
-  beforeConnect(){ state=null; closeModal(); teamSel=[]; exSel=null; },
+  beforeConnect(){ state=null; closeModal(); teamSel=[]; exSel=null; watchSel=null; dblSel=[]; asDouble=false; },
   onState(m){ const prev=state; state=m; afterState(prev); autoSeat(); render(); },
   onMessage(){},
   onClosed(){ state=null; closeModal(); render(); },
@@ -210,10 +215,15 @@ const tmHtml=t=>`<span class="tm ${t}">${esc(t==="good"?"好人":"坏人")}</spa
 const nameOf=s=>s.holderDevices[0]||"";
 const packName=p=>DATA.packs&&DATA.packs[p]||p;
 const curQ=()=>state.quests[state.questNo-1];
+const CARD=c=>(DATA.cards&&DATA.cards[c])||{name:c,icon:"?",val:c};
+const cval=c=>CARD(c).val;
+const cardCls=c=>cval(c)==="success"?"s":cval(c)==="fail"?"f":"m";
+const qcHtml=c=>`<div class="qc ${cardCls(c)}" title="${esc(CARD(c).name)}">${CARD(c).icon}</div>`;
+const cardTag=c=>`${CARD(c).icon}${esc(CARD(c).name)}`;
 function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
 function afterState(prev){
   const key=state.phase+":"+state.questNo+":"+(state.history||[]).length+":"+(curQ()&&curQ().sub);
-  if(prev&&(prev.phase!==state.phase||prev.questNo!==state.questNo)){ teamSel=[]; exSel=null; }
+  if(prev&&(prev.phase!==state.phase||prev.questNo!==state.questNo)){ teamSel=[]; exSel=null; watchSel=null; dblSel=[]; asDouble=false; modalSel=null; }
   afterState.k=key;
 }
 // 一机多座:自动切到"该行动"的座位
@@ -224,7 +234,7 @@ function autoSeat(){
     if(state.phase==="vote") return !s.voted;
     if(state.phase==="quest"){ const q=curQ(); if(q.sub==="play") return s.onTeam&&!s.played; if(q.sub==="excalibur") return q.excalibur===n; }
     if(state.phase==="lady") return state.lady&&state.lady.holder===n;
-    if(state.phase==="assassin") return state.assassin&&state.assassin.seat===n;
+    if(state.phase==="assassin"||state.phase==="recruit") return state.assassin&&state.assassin.seat===n;
     return false; };
   if(actSeat!=null&&need(actSeat)) return;
   const n=ms.find(need); if(n!=null) actSeat=n;
@@ -242,6 +252,9 @@ function openCodex(focus){
   h+=`<h3>🧝 湖中仙女</h3><div class="ce"><div class="ic">🧝</div><div class="cd">开局给队长右手边的人。第 2、3、4 任务结算后,持有者验一名玩家的阵营(只有自己看到结果),标记交给被验者;用过湖中仙女的人不能再被验。推荐 7 人以上,增强好人。</div></div>`;
   h+=`<h3>⚔️ 王者之剑</h3><div class="ce"><div class="ic">⚔️</div><div class="cd">队长组队时把剑给队内一名非队长队员。任务卡收齐、翻开前,持剑者可指定一名其他队员把已出的卡换成另一张,并只有持剑者看到被换掉的原卡。</div></div>`;
   h+=`<h3>🔄 兰斯洛特变体</h3><div class="ce"><div class="ic">🔄</div><div class="cd">${Object.values(DATA.lancelotModes).map(esc).join("<br>")}</div></div>`;
+  h+=`<h3>🃏 任务卡种类</h3><div class="ce"><div class="ic">🃏</div><div class="cd">${Object.entries(DATA.cards||{}).map(([k,c])=>`${c.icon} <b>${esc(c.name)}</b>:${c.val==="magic"?"单独计数,奇数张反转任务结果":"按「"+(c.val==="success"?"成功":"失败")+"」计"}${c.who?"(只有 "+c.who.map(rn).join("/")+" 能出)":""}`).join("<br>")}<br>翻开后所有卡种类公开(洗乱,不知谁出);每任务的好信/坏信张数是公开标记。</div></div>`;
+  h+=`<h3>⌚ 手表(盗贼)</h3><div class="ce"><div class="ic">⌚</div><div class="cd">局里有盗贼时,队长组队要把手表交给队内一名队员(可以是自己),持表者本任务不能出盗贼卡。5~6 人局前两个任务没有手表。</div></div>`;
+  h+=`<h3>🤝 招募(不忠的仆人)</h3><div class="ce"><div class="ic">🤝</div><div class="cd">好人三次任务成功后、刺杀前,刺客猜一次谁是不忠的仆人(结果公开)。猜中则他转为坏人并代替刺客刺杀;猜错刺客照常刺杀。</div></div>`;
   h+=`</div></div>`;
   $("#modal").innerHTML=h;
   if(focus){ const e=$("#cx-"+focus); e&&e.scrollIntoView({block:"center"}); }
@@ -291,7 +304,7 @@ function viewTopbar(){
 function loadLast(){ try{ return JSON.parse(RoomClient.lsGet("avalon_last")||"null"); }catch(e){ return null; } }
 function saveLast(){ RoomClient.lsSet("avalon_last",JSON.stringify({roles:state.roles,config:state.config,seats:seatsArr().length,at:Date.now()})); }
 function lastCfgBtn(){ const L=loadLast(); if(!L||!Array.isArray(L.roles)||!L.roles.length) return ""; const same=JSON.stringify(L.roles.slice().sort())===JSON.stringify(state.roles.slice().sort())&&JSON.stringify(L.config)===JSON.stringify(state.config); if(same) return ""; return `<button class="sm ghost" data-a="useLast" title="上一把:${esc(L.seats)} 人 ${esc(L.roles.map(rn).join("、"))}">沿用上次(${L.seats}人)</button>`; }
-const CHK_TXT={PLAYER_COUNT:"只支持 5~10 人",DECK_SIZE:"角色张数要等于人数",EVIL_COUNT:"坏人数量不对",LANCELOT_PAIR:"兰斯洛特要好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜要配派西维尔",MERLIN_NEEDS_ASSASSIN:"有梅林就要有刺客"};
+const CHK_TXT={PLAYER_COUNT:"只支持 5~10 人",DECK_SIZE:"角色张数要等于人数",EVIL_COUNT:"坏人数量不对",LANCELOT_PAIR:"兰斯洛特要好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜要配派西维尔",MERLIN_NEEDS_ASSASSIN:"有梅林就要有刺客",MESSENGER_SET:"信使三张要一起用",UNTRUSTWORTHY_NEEDS_ASSASSIN:"不忠的仆人要配刺客"};
 function viewSetup(){
   const seats=seatsArr(), N=seats.length, t=state.table;
   let h=`<div class="card"><h2>座位 <span class="tag">${N} 人 · 5~10</span></h2><div class="seats-setup">`;
@@ -307,7 +320,7 @@ function viewSetup(){
   h+=`<div class="card"><h2>本局角色 <span class="tag">点角色名看图鉴</span></h2>
     <div class="deckbar ${chk.ok?"ok":"bad"}"><b>${state.roles.length}</b>/${N} 张 · ${tmHtml("good")} ${good}${t?"/"+t.good:""} ${tmHtml("evil")} ${evil}${t?"/"+t.evil:""}${chk.error?` <span style="color:var(--red)">${esc(CHK_TXT[chk.error]||chk.error)}</span>`:""}<span class="grow"></span>${lastCfgBtn()}<button class="sm" data-a="recommend">推荐配置</button><button class="sm ghost" data-a="clearRoles">清空</button></div>
     <div class="rgrid">`;
-  for(const pk of ["base","x","bigbox"]){
+  for(const pk of Object.keys(DATA.packs||{base:1})){
     h+=`<h4>${esc(packName(pk))}</h4>`;
     for(const r of DATA.roles.filter(x=>x.pack===pk)){ const c=cnt[r.key]||0;
       h+=`<div class="rrow${c?" on":""}">${rimg(r.key)?`<img class="th" src="${esc(rimg(r.key))}" alt="" onerror="this.outerHTML='<span class=ic>${r.icon}</span>'"/>`:`<span class="ic">${r.icon}</span>`}<span class="grow"><div class="rn" data-a="codexOf" data-k="${r.key}">${esc(r.name)}</div><div class="ro">${tmHtml(r.team)} ${esc(r.short)}</div></span>
@@ -319,6 +332,8 @@ function viewSetup(){
   h+=`<div class="card cfg"><h2>房间设置</h2>
     <label class="inl"><input type="checkbox" id="cf-lady" ${c.lady?"checked":""} style="width:auto">🧝 湖中仙女(第 2/3/4 任务后验人;推荐 7 人以上)</label>
     <label class="inl"><input type="checkbox" id="cf-excalibur" ${c.excalibur?"checked":""} style="width:auto">⚔️ 王者之剑(队长指定持剑队员,可换一张已出的任务卡)</label>
+    <label class="inl"><input type="checkbox" id="cf-msgKnow" ${c.msgKnow?"checked":""} style="width:auto">💌 资深信使开局知道初级信使(有信使时生效)</label>
+    <label class="inl"><input type="checkbox" id="cf-sorcererHidden" ${c.sorcererHidden?"checked":""} style="width:auto">🪄 坏巫师不亮相:梅林看不到他(有坏巫师时生效)</label>
     <label>🏇 兰斯洛特规则(角色里有兰斯洛特时生效)<select id="cf-lancelot" style="margin-top:4px">${Object.entries(DATA.lancelotModes).map(([k,v])=>`<option value="${k}" ${c.lancelot===k?"selected":""}>${esc(v)}</option>`).join("")}</select></label>
     <div class="hint">本机改动即时同步给全房。</div></div>`;
   h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${chk.ok?"":"disabled"}>🗡️ 开始游戏(发身份)</button>
@@ -334,6 +349,7 @@ function viewGame(){
   else if(state.phase==="vote") h+=viewVote();
   else if(state.phase==="quest") h+=viewQuest();
   else if(state.phase==="lady") h+=viewLady();
+  else if(state.phase==="recruit") h+=viewRecruit();
   else if(state.phase==="assassin") h+=viewAssassin();
   else if(state.phase==="over") h+=viewResult();
   h+=viewMyRoles();
@@ -343,8 +359,9 @@ function viewGame(){
 function viewTracks(){
   let h=`<div class="track">`;
   for(const q of state.quests){ const cur=q.no===state.questNo&&state.phase!=="over";
-    h+=`<div class="q ${q.result||""}${cur?" cur":""}" title="第 ${q.no} 任务 ${q.size} 人${q.twoFails?",需两张失败":""}">${q.twoFails?`<span class="tf">2败</span>`:""}${q.result?(q.result==="success"?"✓":"✗"):q.size}<small>${q.result?`${q.fails} 失败`:q.size+" 人"}</small></div>`; }
-  h+=`</div><div class="vtrack"><span class="lb">否决</span>${[1,2,3,4,5].map(i=>`<i class="${i<=state.voteTrack?"done":""}${i===5?" five":""}">${i}</i>`).join("")}${state.lancelot&&state.lancelot.mode!=="know"?`<span class="chip" style="margin-left:6px" title="兰斯洛特阵营卡">🏇 ${state.lancelot.mode==="preset"?state.lancelot.preset.map((c,i)=>(i+1)+(c==="switch"?"换":"-")).join(" "):state.lancelot.drawn.map(c=>c==="switch"?"换":"-").join(" ")||"…"}${state.lancelot.switched?" · 已互换":""}</span>`:""}</div>`;
+    const sub=q.result?`${q.fails} 失败${q.flipped?" ✨":""}${q.letterEffect?" ✉️":""}`:q.size+" 人";
+    h+=`<div class="q ${q.result||""}${cur?" cur":""}" title="第 ${q.no} 任务 ${q.size} 人${q.twoFails?",需两张失败":""}${q.flipped?";魔法反转了结果":""}${q.letterEffect?";信件结算:"+({minus:"去掉一张失败",plus:"加一张失败",cancel:"抵消"})[q.letterEffect]:""}">${q.twoFails?`<span class="tf">2败</span>`:""}${q.result?(q.result==="success"?"✓":"✗"):q.size}<small>${sub}</small></div>`; }
+  h+=`</div><div class="vtrack"><span class="lb">否决</span>${[1,2,3,4,5].map(i=>`<i class="${i<=state.voteTrack?"done":""}${i===5?" five":""}">${i}</i>`).join("")}${state.lancelot&&state.lancelot.mode!=="know"?`<span class="chip" style="margin-left:6px" title="兰斯洛特阵营卡">🏇 ${state.lancelot.mode==="preset"?state.lancelot.preset.map((c,i)=>(i+1)+(c==="switch"?"换":"-")).join(" "):state.lancelot.drawn.map(c=>c==="switch"?"换":"-").join(" ")||"…"}${state.lancelot.switched?" · 已互换":""}</span>`:""}${state.letters?`<span class="chip" style="margin-left:6px" title="场上信件:第 5 任务翻开后 ≥3 好信去一张失败 / ≥2 坏信加一张失败 / 都满足抵消">💌 ${state.letters.good} · 📨 ${state.letters.evil}</span>`:""}</div>`;
   return h;
 }
 function selectable(){ // 当前我可点哪些座位
@@ -352,7 +369,7 @@ function selectable(){ // 当前我可点哪些座位
   const all=seatsArr().map(s=>s.seatNo);
   if(state.phase==="teamBuild"&&state.leader===n) return new Set(all);
   if(state.phase==="lady"&&state.lady.holder===n) return new Set(all.filter(x=>x!==n&&!state.lady.used.includes(x)));
-  if(state.phase==="assassin"&&state.assassin&&state.assassin.seat===n) return new Set(all.filter(x=>x!==n));
+  if((state.phase==="assassin"||state.phase==="recruit")&&state.assassin&&state.assassin.seat===n) return new Set(all.filter(x=>x!==n));
   if(state.phase==="quest"&&curQ().sub==="excalibur"&&curQ().excalibur===n) return new Set(curQ().team.filter(x=>x!==n));
   return new Set();
 }
@@ -363,15 +380,17 @@ function viewTable(){
   let h=`<div class="table" id="table">`;
   seats.forEach((s,i)=>{
     const mine=state.youHold.includes(s.seatNo);
-    const canSel=sets.has(s.seatNo), isSel=(state.phase==="teamBuild"&&teamSel.includes(s.seatNo))||(modalSel===s.seatNo);
+    const canSel=sets.has(s.seatNo), isSel=(state.phase==="teamBuild"&&teamSel.includes(s.seatNo))||(modalSel===s.seatNo)||(asDouble&&dblSel.includes(s.seatNo));
     const face=over?r.roles[s.seatNo]:s.revealedRole;
     const faceImg=over?(s.img?imgUrl(s.img):rimg(face)):(face?rimg(face):"");
-    const dead=over&&r.assassinTarget===s.seatNo;
-    let cls="pc"+(mine?" mine":"")+(s.onTeam?" team":"")+(canSel?" selectable":"")+(isSel?" sel":"")+(face?" face "+rteam(face):"")+(sets.size&&!canSel&&!isSel?" dim":"");
+    const dead=over&&(r.assassinTarget===s.seatNo||(r.assassinTargets||[]).includes(s.seatNo));
+    let cls="pc"+(mine?" mine":"")+(s.onTeam?" team":"")+(canSel?" selectable":"")+(isSel?" sel":"")+(face?" face "+rteam(face):"")+(sets.size&&!canSel&&!isSel?" dim":"")+(s.recruited&&!over?" recruited":"");
     let inner=face?`${cimg(faceImg)}<div class="fx"><div class="rn">${esc(rn(face))}</div><div class="nm">${s.seatNo}号 ${esc(nameOf(s))}</div></div>`:`<div class="no">${s.seatNo}</div><div class="nm">${esc(nameOf(s))||"空位"}</div>`;
     if(s.leader) inner+=`<div class="bd" title="队长">👑</div>`;
     if(s.lady) inner+=`<div class="bd2" title="湖中仙女">🧝</div>`;
     if(s.excalibur) inner+=`<div class="bd3" title="王者之剑">⚔️</div>`;
+    if(s.watch) inner+=`<div class="bd5" title="手表:本任务不能出盗贼卡">⌚</div>`;
+    if(s.recruited&&!over) inner+=`<div class="bd5" title="被招募:已转为坏人,代替刺客刺杀">🤝</div>`;
     if(state.phase==="vote"&&s.voted) inner+=`<div class="bd4" title="已投票">✓</div>`;
     if(q&&q.sub==="play"&&s.onTeam) inner+=`<div class="bd4" title="${s.played?"已出卡":"未出卡"}">${s.played?"🂠":"…"}</div>`;
     if(lastVote) inner+=`<div class="vt ${lastVote.votes[s.seatNo]?"y":"n"}" title="上次投票">${lastVote.votes[s.seatNo]?"赞":"反"}</div>`;
@@ -381,12 +400,13 @@ function viewTable(){
   // 中央:当前任务信息 / 上一任务结果卡
   const last=state.quests.slice().reverse().find(x=>x.result);
   let c="";
-  if(state.phase==="over") c=`<div class="big">${r.winner==="good"?"好人获胜":"坏人获胜"}</div>${esc(r.reason)}`;
+  if(state.phase==="over") c=`<div class="big">${r.winner==="good"?"好人获胜":r.winner==="evil"?"坏人获胜":`盗贼 ${r.rogue}号 个人获胜`}</div>${esc(r.reason)}`;
   else if(state.phase==="quest"){ c=`<div class="big">第 ${state.questNo} 任务执行中</div>${q.sub==="excalibur"?`等 ${q.excalibur}号 决定王者之剑`:`已出卡 ${q.playedCount}/${q.team.length}`}<div class="cards">${q.team.map(n=>{ const p=state.seats[n].played||q.sub==="excalibur"; return `<div class="qc ${p?"back":""}">${p?"":"·"}</div>`; }).join("")}</div>`; }
   else if(state.phase==="vote") c=`<div class="big">投票中</div>已投 ${state.proposal.votedCount}/${N}`;
-  else if(state.phase==="assassin") c=`<div class="big">🎯 刺杀阶段</div>坏人商量后由刺客指认梅林`;
+  else if(state.phase==="assassin") c=`<div class="big">🎯 刺杀阶段</div>${state.recruited!=null?`被招募的 ${state.recruited}号 代替刺客指认`:"坏人商量后由刺客指认"}${state.assassin&&state.assassin.double?"梅林或两名好信使":"梅林"}`;
+  else if(state.phase==="recruit") c=`<div class="big">🤝 招募阶段</div>刺客猜一次谁是不忠的仆人`;
   else if(state.phase==="lady") c=`<div class="big">🧝 湖中仙女</div>${state.lady.holder}号 验人中`;
-  else if(last) c=`<div class="big">第 ${last.no} 任务${last.result==="success"?"成功":"失败"}</div><div class="cards">${last.cards.map(x=>`<div class="qc ${x==="success"?"s":"f"}">${x==="success"?"✓":"✗"}</div>`).join("")}</div><div style="margin-top:3px">第 ${state.questNo} 任务:${state.leader}号 组队</div>`;
+  else if(last) c=`<div class="big">第 ${last.no} 任务${last.result==="success"?"成功":"失败"}${last.flipped?" ✨":""}</div><div class="cards">${last.cards.map(qcHtml).join("")}</div><div style="margin-top:3px">${last.flipped?"魔法反转了结果 · ":""}第 ${state.questNo} 任务:${state.leader}号 组队</div>`;
   else c=`<div class="big">第 ${state.questNo} 任务</div>${state.leader}号 组队(${curQ().size} 人)`;
   h+=`<div class="center">${c}</div></div>`;
   return h;
@@ -406,14 +426,16 @@ function viewTeamBuild(){
   if(state.leader!==n){ h+=`<div class="hint">队长 <b>${state.leader}号</b> 正在组队。${state.voteTrack?`本任务已否决 ${state.voteTrack} 次,第 5 次否决坏人直接获胜。`:""}</div></div>`; return h; }
   h+=`<div class="panel"><div class="ti">你是队长 👑</div><div class="tp">点圆桌上的座位选 ${q.size} 名队员(可含自己)。已选:${teamSel.length?teamSel.map(x=>x+"号").join("、"):"—"}</div>`;
   if(state.config.excalibur) h+=`<div class="tp" style="margin-top:6px">⚔️ 王者之剑给:${teamSel.filter(x=>x!==n).map(x=>`<button class="xs ${exSel===x?"on":""}" data-a="exSel" data-s="${x}">${x}号</button>`).join(" ")||"(先选队员;不能给自己)"}</div>`;
-  h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="propose" ${teamSel.length===q.size&&(!state.config.excalibur||(exSel!=null&&teamSel.includes(exSel)))?"":"disabled"}>提议这支队伍,开始投票</button><button class="ghost" data-a="clearTeam">清空</button></div></div></div>`;
+  if(state.watchNeeded) h+=`<div class="tp" style="margin-top:6px">⌚ 手表给(持表者不能出盗贼卡):${teamSel.map(x=>`<button class="xs ${watchSel===x?"on":""}" data-a="watchSel" data-s="${x}">${x}号</button>`).join(" ")||"(先选队员;可以给自己)"}</div>`;
+  const ready=teamSel.length===q.size&&(!state.config.excalibur||(exSel!=null&&teamSel.includes(exSel)))&&(!state.watchNeeded||(watchSel!=null&&teamSel.includes(watchSel)));
+  h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="propose" ${ready?"":"disabled"}>提议这支队伍,开始投票</button><button class="ghost" data-a="clearTeam">清空</button></div></div></div>`;
   return h;
 }
 function viewVote(){
   const ms=mySeats(); if(!ms.length) return noSeat();
   const n=curActSeat(), s=state.seats[n], p=state.proposal;
   let h=`<div class="card secret"><h2>🗳️ 投票 <span class="tag">${n}号</span></h2>`+seatTabs();
-  h+=`<div class="panel"><div class="ti">${state.leader}号 提议:${p.team.map(x=>x+"号").join("、")}${p.excalibur!=null?` · ⚔️ ${p.excalibur}号`:""}</div><div class="tp">赞成过半才通过,平票=否决。本任务已否决 ${state.voteTrack} 次。${s.vote!=null?`<b style="color:var(--amber)">你已投「${s.vote?"赞成":"反对"}」</b>(全员投完一起亮票,投完前可改)`:""}</div>
+  h+=`<div class="panel"><div class="ti">${state.leader}号 提议:${p.team.map(x=>x+"号").join("、")}${p.excalibur!=null?` · ⚔️ ${p.excalibur}号`:""}${p.watch!=null?` · ⌚ ${p.watch}号`:""}</div><div class="tp">赞成过半才通过,平票=否决。本任务已否决 ${state.voteTrack} 次。${s.vote!=null?`<b style="color:var(--amber)">你已投「${s.vote?"赞成":"反对"}」</b>(全员投完一起亮票,投完前可改)`:""}</div>
     <div class="bigbtns"><button class="ok ${s.vote===true?"":"ghost"}" data-a="vote" data-v="1">👍 赞成</button><button class="danger ${s.vote===false?"":"ghost"}" data-a="vote" data-v="0">👎 反对</button></div></div>`;
   h+=`<div class="hint">已投 ${p.votedCount}/${seatsArr().length}。</div></div>`;
   return h;
@@ -431,8 +453,13 @@ function viewQuest(){
   if(!s.onTeam) h+=`<div class="hint">你不在本次队伍里。队员:${q.team.map(x=>x+"号").join("、")},已出卡 ${q.playedCount}/${q.team.length}。</div>`;
   else {
     const allowed=s.allowed||["success"];
-    h+=`<div class="panel"><div class="ti">你在队伍里,请出任务卡</div><div class="tp">${allowed.length===1?(allowed[0]==="success"?"你只能出「成功」。":"你(疯子)必须出「失败」。"):"坏人可出成功或失败。"}${q.twoFails?" 本任务需两张失败才算失败。":""}${s.card?`<br><b style="color:var(--amber)">已出「${s.card==="success"?"成功":"失败"}」</b>(收齐前可改)`:""}</div>
-      <div class="bigbtns"><button class="ok ${s.card==="success"?"":"ghost"}" data-a="qcard" data-c="success" ${allowed.includes("success")?"":"disabled"}>✓ 成功</button><button class="danger ${s.card==="fail"?"":"ghost"}" data-a="qcard" data-c="fail" ${allowed.includes("fail")?"":"disabled"}>✗ 失败</button></div></div>`;
+    let tip=allowed.length===1?(allowed[0]==="success"?"你只能出「成功」。":"你(疯子)必须出「失败」。"):"你可出:"+allowed.map(c=>"「"+CARD(c).name+"」").join("")+"。";
+    if(s.goodMsgUsed!=null) tip+=` 好信已出 ${s.goodMsgUsed}/${DATA.goodMsgMax||2} 张。`;
+    if(q.watch===n) tip+=" 你持有手表 ⌚,本任务不能出盗贼卡。";
+    if(allowed.includes("magic")) tip+=" 魔法:奇数张反转任务结果,两张抵消。";
+    if(q.twoFails) tip+=" 本任务需两张失败才算失败。";
+    h+=`<div class="panel"><div class="ti">你在队伍里,请出任务卡</div><div class="tp">${esc(tip)}${s.card?`<br><b style="color:var(--amber)">已出「${esc(CARD(s.card).name)}」</b>(收齐前可改)`:""}</div>
+      <div class="bigbtns">${allowed.map(c=>`<button class="${cval(c)==="fail"?"danger":cval(c)==="magic"?"magic":"ok"} ${s.card===c?"":"ghost"}" data-a="qcard" data-c="${c}">${CARD(c).icon} ${esc(CARD(c).name)}</button>`).join("")}</div></div>`;
   }
   return h+`</div>`;
 }
@@ -445,21 +472,42 @@ function viewLady(){
     <div class="row" style="margin-top:8px"><button class="primary" data-a="ladyGo" ${modalSel!=null?"":"disabled"}>查验 ${modalSel!=null?modalSel+"号":"…"}</button></div></div>`;
   return h+`</div>`;
 }
-function viewAssassin(){
+function viewRecruit(){
   const ms=mySeats(); if(!ms.length) return noSeat();
   const n=curActSeat(), a=state.assassin&&state.assassin.seat;
+  let h=`<div class="card secret"><h2>🤝 招募 <span class="tag">${n}号</span></h2>`+seatTabs();
+  if(a===n) h+=`<div class="panel"><div class="ti">你是刺客 🗡️ · 先招募</div><div class="tp">刺杀前你可以猜一次谁是「不忠的仆人」(结果公开):猜中他转为坏人并代替你刺杀,猜错你照常刺杀。点圆桌上一名玩家。已选:${modalSel!=null?modalSel+"号":"—"}</div>
+    <div class="row" style="margin-top:8px"><button class="primary" data-a="recruitGo" ${modalSel!=null?"":"disabled"}>招募 ${modalSel!=null?modalSel+"号":"…"}</button></div></div>`;
+  else if(a!=null) h+=`<div class="hint">三次任务成功。刺杀前,刺客 <b>${a}号</b> 先猜一次谁是不忠的仆人。</div>`;
+  else h+=`<div class="hint">三次任务成功!刺杀前,刺客正在猜谁是不忠的仆人(结果会公开)。</div>`;
+  return h+`</div>`;
+}
+function viewAssassin(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), a=state.assassin&&state.assassin.seat, dbl=state.assassin&&state.assassin.double, who=state.recruited!=null?"被招募者":"刺客";
   let h=`<div class="card secret"><h2>🎯 刺杀 <span class="tag">${n}号</span></h2>`+seatTabs();
-  if(a===n) h+=`<div class="panel"><div class="ti">你是刺客 🗡️</div><div class="tp">和坏人同伴商量后,点圆桌上一名玩家指认为梅林。指中坏人胜,指错好人胜。已选:${modalSel!=null?modalSel+"号":"—"}</div>
-    <div class="row" style="margin-top:8px"><button class="danger" data-a="assassinGo" ${modalSel!=null?"":"disabled"}>指认 ${modalSel!=null?modalSel+"号":"…"} 是梅林</button></div></div>`;
-  else if(a!=null) h+=`<div class="hint">三次任务成功。坏人请公开商量,由刺客 <b>${a}号</b> 指认梅林。</div>`;
-  else h+=`<div class="hint">三次任务成功!坏人正在商量,刺客将指认一名好人为梅林。</div>`;
+  if(state.recruit) h+=`<div class="hint">🤝 招募:刺客猜 ${state.recruit.target}号 ${state.recruit.hit?"<b>猜中</b>,他转为坏人并代替刺客刺杀":"猜错,刺客照常刺杀"}。</div>`;
+  if(a===n){
+    h+=`<div class="panel"><div class="ti">${state.recruited===n?"你被招募了,代替刺客刺杀 🗡️":"你是刺客 🗡️"}</div>`;
+    if(dbl) h+=`<div class="tabs"><button class="sm ${asDouble?"":"on"}" data-a="asMode" data-m="1">指认梅林</button><button class="sm ${asDouble?"on":""}" data-a="asMode" data-m="2">改为指认两名好信使</button></div>`;
+    if(asDouble) h+=`<div class="tp">点圆桌上两名玩家,指认他们是资深信使与初级信使——两个都对坏人胜,否则好人胜。已选:${dblSel.length?dblSel.map(x=>x+"号").join("、"):"—"}</div>
+      <div class="row" style="margin-top:8px"><button class="danger" data-a="assassinGo2" ${dblSel.length===2?"":"disabled"}>指认 ${dblSel.map(x=>x+"号").join("、")||"…"} 是两名好信使</button></div></div>`;
+    else h+=`<div class="tp">和坏人同伴商量后,点圆桌上一名玩家指认为梅林。指中坏人胜,指错好人胜。已选:${modalSel!=null?modalSel+"号":"—"}</div>
+      <div class="row" style="margin-top:8px"><button class="danger" data-a="assassinGo" ${modalSel!=null?"":"disabled"}>指认 ${modalSel!=null?modalSel+"号":"…"} 是梅林</button></div></div>`;
+  }
+  else if(a!=null) h+=`<div class="hint">三次任务成功。坏人请公开商量,由${who} <b>${a}号</b> 指认梅林${dbl?"(或改为指认两名好信使)":""}。</div>`;
+  else h+=`<div class="hint">三次任务成功!坏人正在商量,${who}将指认一名好人为梅林${dbl?"(或改为指认两名好信使)":""}。</div>`;
   return h+`</div>`;
 }
 function viewResult(){
   const r=state.result;
-  let h=`<div class="card result"><div class="big ${r.winner}">${r.winner==="good"?"🏆 好人获胜":"🏆 坏人获胜"}</div><div class="ln" style="text-align:center">${esc(r.reason)}</div>`;
-  h+=`<table class="vt">${seatsArr().map(s=>`<tr><td><b>${s.seatNo}号</b> ${esc(nameOf(s))}</td><td>${s.img?`<img class="rimg sm" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" onerror="this.remove()"/>`:""}</td><td>${ric(s.role)} ${esc(rn(s.role))}${s.team!==rteam(s.role)?"(互换后)":""}</td><td>${tmHtml(s.team)}${r.winners.includes(s.seatNo)?" 🏆":""}${r.assassinTarget===s.seatNo?" 🗡️被指认":""}</td></tr>`).join("")}</table>`;
-  h+=`<details style="margin-top:8px"><summary>⚔️ 每个任务谁出了什么</summary>${state.quests.filter(q=>q.result).map(q=>`<div class="ln">第 ${q.no} 任务(${q.result==="success"?"成功":"失败"},队长 ${q.leader}号):${Object.entries(q.played||{}).map(([n,c])=>`${n}号${c==="fail"?"✗":"✓"}`).join(" ")}${q.excaliburUse?` · ⚔️ ${q.excaliburUse.by}号 换了 ${q.excaliburUse.target}号(原 ${q.excaliburUse.original==="fail"?"✗":"✓"})`:""}</div>`).join("")}</details>`;
+  const title=r.winner==="good"?"🏆 好人获胜":r.winner==="evil"?"🏆 坏人获胜":`🏆 盗贼 ${r.rogue}号 个人获胜`;
+  let h=`<div class="card result"><div class="big ${r.winner==="rogue"?(rteam(r.roles[r.rogue])):r.winner}">${title}</div><div class="ln" style="text-align:center">${esc(r.reason)}</div>`;
+  if(r.recruit) h+=`<div class="ln" style="text-align:center">🤝 招募:刺客 ${r.recruit.by}号 猜 ${r.recruit.target}号 → ${r.recruit.hit?"猜中,他转为坏人并代替刺客刺杀":"猜错"}</div>`;
+  const hitBy=s=>r.assassinTarget===s.seatNo?" 🗡️被指认":(r.assassinTargets||[]).includes(s.seatNo)?" 🗡️被指认为信使":"";
+  h+=`<table class="vt">${seatsArr().map(s=>`<tr><td><b>${s.seatNo}号</b> ${esc(nameOf(s))}</td><td>${s.img?`<img class="rimg sm" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" onerror="this.remove()"/>`:""}</td><td>${ric(s.role)} ${esc(rn(s.role))}${s.team!==rteam(s.role)?(r.recruit&&r.recruit.hit&&r.recruit.target===s.seatNo?"(被招募)":"(互换后)"):""}</td><td>${tmHtml(s.team)}${r.winners.includes(s.seatNo)?" 🏆":""}${hitBy(s)}</td></tr>`).join("")}</table>`;
+  const EF={minus:"≥3 好信去掉一张失败",plus:"≥2 坏信加一张失败",cancel:"信件抵消"};
+  h+=`<details style="margin-top:8px"><summary>⚔️ 每个任务谁出了什么</summary>${state.quests.filter(q=>q.result).map(q=>`<div class="ln">第 ${q.no} 任务(${q.result==="success"?"成功":"失败"},队长 ${q.leader}号${q.watch!=null?",⌚ "+q.watch+"号":""}):${Object.entries(q.played||{}).map(([n,c])=>`${n}号${cardTag(c)}`).join(" ")}${q.excaliburUse?` · ⚔️ ${q.excaliburUse.by}号 换了 ${q.excaliburUse.target}号(原 ${cardTag(q.excaliburUse.original)})`:""}${q.flipped?" · ✨ 魔法反转":""}${q.letterEffect?" · ✉️ "+EF[q.letterEffect]:""}</div>`).join("")}</details>`;
   h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="newGame">再来一局(保留配置)</button><button class="ghost" data-a="hist">🗳️ 投票记录</button></div></div>`;
   return h;
 }
@@ -467,8 +515,8 @@ function viewMyRoles(){
   const ms=mySeats(); if(!ms.length) return "";
   let h=`<div class="card secret"><h2>🪪 我的身份 <span class="tag">只有本机可见</span></h2>`;
   for(const n of ms){ const s=state.seats[n]; const r=R[s.role]; if(!r) continue;
-    const team=state.lancelot&&state.lancelot.switched&&(s.role==="lancelot_good"||s.role==="lancelot_evil")?(r.team==="good"?"evil":"good"):r.team;
-    h+=`<div class="rolebig ${team}">${s.img?`<img class="rimg" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" data-t="${esc(r.name)}" onerror="this.outerHTML='<div class=ic>${r.icon}</div>'"/>`:`<div class="ic">${r.icon}</div>`}<div class="grow"><div class="rn">${n}号 · ${esc(r.name)} ${tmHtml(team)}${team!==r.team?' <span class="chip">阵营已互换</span>':""}</div><div class="re">${esc(r.desc)}</div></div></div>`;
+    const team=s.teamNow||r.team;
+    h+=`<div class="rolebig ${team}">${s.img?`<img class="rimg" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" data-t="${esc(r.name)}" onerror="this.outerHTML='<div class=ic>${r.icon}</div>'"/>`:`<div class="ic">${r.icon}</div>`}<div class="grow"><div class="rn">${n}号 · ${esc(r.name)} ${tmHtml(team)}${team!==r.team?` <span class="chip">${s.recruited?"已被招募,转为坏人":"阵营已互换"}</span>`:""}</div><div class="re">${esc(r.desc)}</div></div></div>`;
     if(s.knows&&s.knows.length) h+=`<div class="knows">${s.knows.map(k=>`<span class="kn"><b>${k.seat}</b>号 ${esc(k.tag)}</span>`).join("")}</div>`;
     if(s.info) h+=`<div class="note">${esc(s.info)}</div>`;
     for(const t of (s.notes||[])) h+=`<div class="note">${esc(t)}</div>`;
@@ -480,8 +528,10 @@ function viewLog(){ return `<div class="card"><details><summary>📜 日志(公�
 /* ============ 交互 ============ */
 function onSeatClick(n){
   const me=curActSeat(); if(me==null) return;
-  if(state.phase==="teamBuild"&&state.leader===me){ const q=curQ(); if(teamSel.includes(n)) teamSel=teamSel.filter(x=>x!==n); else if(teamSel.length<q.size) teamSel.push(n); else toast(`最多 ${q.size} 人`); if(exSel!=null&&!teamSel.includes(exSel)) exSel=null; render(); return; }
-  if(selectable().has(n)){ modalSel=modalSel===n?null:n; render(); }
+  if(state.phase==="teamBuild"&&state.leader===me){ const q=curQ(); if(teamSel.includes(n)) teamSel=teamSel.filter(x=>x!==n); else if(teamSel.length<q.size) teamSel.push(n); else toast(`最多 ${q.size} 人`); if(exSel!=null&&!teamSel.includes(exSel)) exSel=null; if(watchSel!=null&&!teamSel.includes(watchSel)) watchSel=null; render(); return; }
+  if(selectable().has(n)){
+    if(state.phase==="assassin"&&asDouble){ if(dblSel.includes(n)) dblSel=dblSel.filter(x=>x!==n); else if(dblSel.length<2) dblSel.push(n); else toast("只能选两个"); render(); return; }
+    modalSel=modalSel===n?null:n; render(); }
 }
 function sendConfig(patch){ act("setConfig",{config:patch}); }
 document.addEventListener("click",e=>{
@@ -507,24 +557,28 @@ document.addEventListener("click",e=>{
     case "useLast": { const L=loadLast(); if(!L) break; act("setRoles",{roles:L.roles}); if(L.config) act("setConfig",{config:L.config}); toast("已沿用上次配置"+(L.seats!==seatsArr().length?"(上次 "+L.seats+" 人,注意座位数)":"")); break; }
     case "clearRoles": act("setRoles",{roles:[]}); break;
     case "start": saveLast(); act("startGame"); break;
-    case "actSeat": actSeat=sn; teamSel=[]; exSel=null; modalSel=null; render(); break;
+    case "actSeat": actSeat=sn; teamSel=[]; exSel=null; watchSel=null; modalSel=null; dblSel=[]; render(); break;
     case "seatClick": onSeatClick(sn); break;
     case "exSel": exSel=exSel===sn?null:sn; render(); break;
-    case "clearTeam": teamSel=[]; exSel=null; render(); break;
-    case "propose": act("propose",{seatNo:curActSeat(),team:teamSel,excalibur:exSel}); break;
+    case "watchSel": watchSel=watchSel===sn?null:sn; render(); break;
+    case "clearTeam": teamSel=[]; exSel=null; watchSel=null; render(); break;
+    case "propose": act("propose",{seatNo:curActSeat(),team:teamSel,excalibur:exSel,watch:watchSel}); break;
     case "vote": act("vote",{seatNo:curActSeat(),approve:b.dataset.v==="1"}); break;
     case "qcard": act("questCard",{seatNo:curActSeat(),card:b.dataset.c}); break;
     case "exUse": if(modalSel!=null&&confirm(`用王者之剑换掉 ${modalSel}号 的任务卡?`)){ act("excalibur",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
     case "exSkip": act("excalibur",{seatNo:curActSeat(),target:null}); modalSel=null; break;
     case "ladyGo": if(modalSel!=null){ act("ladyCheck",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
     case "assassinGo": if(modalSel!=null&&confirm(`指认 ${modalSel}号 是梅林?指错好人直接获胜。`)){ act("assassinate",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
+    case "assassinGo2": if(dblSel.length===2&&confirm(`指认 ${dblSel.join("号、")}号 是两名好信使?没全对好人直接获胜。`)){ act("assassinate",{seatNo:curActSeat(),targets:dblSel.slice()}); dblSel=[]; } break;
+    case "asMode": asDouble=b.dataset.m==="2"; modalSel=null; dblSel=[]; render(); break;
+    case "recruitGo": if(modalSel!=null&&confirm(`招募 ${modalSel}号?猜中他转为坏人并代替你刺杀,猜错你照常刺杀(结果公开)。`)){ act("recruit",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
     case "newGame": if(state.phase==="over"||confirm("终止本局回到准备阶段?")) act("newGame"); break;
   }
 });
 document.addEventListener("change",e=>{
   const t=e.target; if(!t.id||!t.id.startsWith("cf-")) return;
   const k=t.id.slice(3);
-  if(k==="lady"||k==="excalibur") return sendConfig({[k]:t.checked});
+  if(t.type==="checkbox") return sendConfig({[k]:t.checked});
   if(k==="lancelot") return sendConfig({lancelot:t.value});
 });
 document.getElementById("rcNow").onclick=()=>RC.reconnectNow();

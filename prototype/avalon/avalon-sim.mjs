@@ -1,4 +1,4 @@
-// 阿瓦隆房间 "可执行规格" —— 人数表/配置校验/开局信息/投票与否决/任务卡约束/王者之剑/湖中仙女/揭示者/刺杀/兰斯洛特变体/保密/持久化
+// 阿瓦隆房间 "可执行规格" —— 人数表/配置校验/开局信息/投票与否决/任务卡约束/王者之剑/湖中仙女/揭示者/刺杀/兰斯洛特变体/信使/盗贼+手表/巫师/不忠的仆人招募/保密/持久化
 // 复用与真实 Workers 同一份核心逻辑(./shared/avalon-logic.mjs)。
 // node prototype/avalon/avalon-sim.mjs
 
@@ -26,14 +26,15 @@ function layout(room, seatRoles, leader = 1) {
   room.leader = leader;
   if (room.lady) room.lady = { holder: room._prev(leader), used: [], history: [] };
   if (room.lancelot) { room.lancelot.drawn = []; room.lancelot.switched = false; if (room.lancelot.mode === "random") room.lancelot.deck = ["no", "switch", "no", "no", "no", "switch"]; if (room.lancelot.mode === "preset") room.lancelot.deck = ["no", "switch", "no", "switch", "no"]; }
-  for (const q of room.quests) Object.assign(q, { leader: null, team: [], excalibur: null, sub: null, cards: null, fails: null, result: null, played: null, excaliburUse: null });
-  room.history = []; room.result = null;
+  for (const q of room.quests) Object.assign(q, { leader: null, team: [], excalibur: null, watch: null, sub: null, cards: null, fails: null, rawFails: null, goodMsg: null, evilMsg: null, magic: null, flipped: false, letterEffect: null, result: null, played: null, excaliburUse: null });
+  room.history = []; room.result = null; room.recruited = null; room.recruit = null;
   room._computeKnows();
   room._beginQuest(1);
 }
-// 一次完整的"提议→全员赞成→出卡"
+// 一次完整的"提议→全员赞成→出卡"(有盗贼且需要手表时,opts.watch 没给就交给队伍里第一个人)
 function runQuest(room, act, team, cards, opts = {}) {
-  const r0 = act(room.leader, { op: "propose", team, excalibur: opts.excalibur ?? null }); if (r0.error) return r0;
+  const watch = opts.watch !== undefined ? opts.watch : room._watchNeeded() ? team[0] : null;
+  const r0 = act(room.leader, { op: "propose", team, excalibur: opts.excalibur ?? null, watch }); if (r0.error) return r0;
   for (const n of room.seatNos()) act(n, { op: "vote", seatNo: n, approve: !(opts.reject || []).includes(n) });
   if (room.phase !== "quest") return { phase: room.phase };
   for (const n of team) { const r = act(n, { op: "questCard", seatNo: n, card: cards[n] || "success" }); if (r.error) return r; }
@@ -43,7 +44,7 @@ function runQuest(room, act, team, cards, opts = {}) {
 }
 
 console.log("\n=== 数据 ===");
-check("16 个角色,键唯一", ROLES.length === 16 && new Set(ROLES.map((r) => r.key)).size === 16);
+check("24 个角色,键唯一", ROLES.length === 24 && new Set(ROLES.map((r) => r.key)).size === 24);
 check("人数表 5~10:好/坏 3:2 4:2 4:3 5:3 6:3 6:4", [5, 6, 7, 8, 9, 10].map((n) => PLAYERS[n].good + ":" + PLAYERS[n].evil).join(" ") === "3:2 4:2 4:3 5:3 6:3 6:4");
 check("任务人数表(对照实体版图)", [5, 6, 7, 8, 9, 10].map((n) => PLAYERS[n].quests.join("")).join(" ") === "23233 23434 23344 34455 34455 34455");
 check("7 人起第 4 任务需两张失败", !twoFails(6, 4) && twoFails(7, 4) && twoFails(10, 4) && !twoFails(10, 3));
@@ -210,6 +211,123 @@ console.log("\n=== 兰斯洛特:默认互知 / 变体 1 随机互换 / 变体 2 
   check("第 2 任务互换", room.lancelot.switched === true);
   runQuest(room, act, [5, 2, 3], { 5: "fail" }); runQuest(room, act, [1, 2, 3], {});
   check("第 3 任务不变(仍互换态)、第 4 任务再换回来", room.questNo === 4 && room.lancelot.switched === false && room.allowedCards(4).join() === "success");
+}
+
+console.log("\n=== 信使:好信/坏信卡 + 第 5 任务信件结算 + 刺客改指认两名好信使 ===");
+{
+  const MSG = ["merlin", "messenger_senior", "messenger_junior", "servant", "messenger_evil", "minion", "assassin"];
+  const { room, act, V } = mk(7, null, 11, { msgKnow: true });
+  check("信使三张要一起用", act(1, { op: "setRoles", roles: ["merlin", "messenger_senior", "servant", "servant", "minion", "minion", "assassin"] }).ok && act(1, { op: "startGame" }).error === "MESSENGER_SET");
+  act(1, { op: "setRoles", roles: MSG }); check("信使配置可开局", act(1, { op: "startGame" }).ok);
+  layout(room, MSG, 1);
+  check("可选规则:资深信使知道初级信使;其他人不知道", V(2).seats[2].knows.some((k) => k.seat === 3 && k.tag === "初级信使") && V(3).seats[3].knows.length === 0);
+  runQuest(room, act, [2, 3], { 2: "goodMsg", 3: "goodMsg" });
+  check("好信使出好信=成功;信件种类公开、该任务好信张数公开标记;信件台账", room.quests[0].result === "success" && V(5).quests[0].goodMsg === 2 && V(5).quests[0].cards.filter((c) => c === "goodMsg").length === 2 && V(5).letters.good === 2 && V(5).quests[0].played === null);
+  check("好信使/坏信使/忠臣 可出的卡", room.allowedCards(2).join() === "success,goodMsg" && room.allowedCards(5).join() === "success,fail,evilMsg" && room.allowedCards(4).join() === "success");
+  runQuest(room, act, [2, 3, 4], { 2: "goodMsg", 3: "goodMsg" });
+  check("每名好信使整局最多 2 张好信:第 3 张不让出", room.allowedCards(2).join() === "success" && V(2).seats[2].goodMsgUsed === 2 && act(room.leader, { op: "propose", team: [2, 3, 4] }).ok);
+  for (const n of room.seatNos()) act(n, { op: "vote", seatNo: n, approve: true });
+  check("第 3 张好信被拒", act(2, { op: "questCard", seatNo: 2, card: "goodMsg" }).error === "CARD_NOT_ALLOWED");
+  act(2, { op: "questCard", seatNo: 2, card: "success" }); act(3, { op: "questCard", seatNo: 3, card: "success" }); act(4, { op: "questCard", seatNo: 4, card: "success" });
+  check("第 3 任务成功 → 三胜 → 刺杀阶段(刺客可改为指认两名好信使)", room.phase === "assassin" && V(5).assassin.double === true && V(1).assassin.seat === null && V(7).assassin.seat === 7);
+  check("指认两名好信使:必须两个不同座位", act(7, { op: "assassinate", targets: [2] }).error === "BAD_TARGET" && act(7, { op: "assassinate", targets: [2, 2] }).error === "BAD_TARGET");
+  check("两名好信使没全对 → 好人胜", act(7, { op: "assassinate", targets: [2, 4] }).ok && room.result.winner === "good" && room.result.assassinTargets.join() === "2,4" && room.result.reason.includes("没全对"));
+  // 全对
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, MSG, 1);
+  runQuest(room, act, [2, 3], {}); runQuest(room, act, [1, 2, 3], {}); runQuest(room, act, [1, 2, 3], {});
+  check("两名好信使全对 → 坏人胜", room.phase === "assassin" && act(7, { op: "assassinate", targets: [3, 2] }).ok && room.result.winner === "evil" && room.result.winners.join() === "5,6,7");
+  // 第 5 任务信件结算:≥3 好信 去一张失败
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, MSG, 1);
+  runQuest(room, act, [2, 3], { 2: "goodMsg", 3: "goodMsg" }); runQuest(room, act, [2, 3, 4], { 2: "goodMsg" });
+  runQuest(room, act, [5, 6, 1], { 5: "evilMsg", 6: "fail" }); runQuest(room, act, [5, 6, 1, 4], { 5: "fail", 6: "fail" });
+  check("2 胜 2 败,场上 好信 3 / 坏信 1", room.questNo === 5 && V(1).letters.good === 3 && V(1).letters.evil === 1 && room.quests[2].evilMsg === 1 && room.quests[2].result === "fail");
+  runQuest(room, act, [1, 2, 3, 6], { 6: "fail" });
+  check("第 5 任务 1 张失败,≥3 好信去掉一张 → 成功 → 刺杀阶段", room.quests[4].rawFails === 1 && room.quests[4].fails === 0 && room.quests[4].letterEffect === "minus" && room.quests[4].result === "success" && room.phase === "assassin");
+  // ≥2 坏信 加一张失败
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, MSG, 1);
+  runQuest(room, act, [2, 3], {}); runQuest(room, act, [1, 2, 3], {});
+  runQuest(room, act, [5, 6, 1], { 5: "evilMsg", 6: "fail" }); runQuest(room, act, [5, 6, 1, 4], { 5: "evilMsg", 6: "fail" });
+  runQuest(room, act, [1, 2, 3, 4], {});
+  check("第 5 任务全成功,≥2 坏信加一张失败 → 失败 → 三败坏人胜", room.quests[4].rawFails === 0 && room.quests[4].fails === 1 && room.quests[4].letterEffect === "plus" && room.quests[4].result === "fail" && room.result.winner === "evil");
+  // 都满足抵消
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, MSG, 1);
+  runQuest(room, act, [2, 3], { 2: "goodMsg", 3: "goodMsg" }); runQuest(room, act, [2, 3, 4], { 2: "goodMsg", 3: "goodMsg" });
+  runQuest(room, act, [5, 6, 1], { 5: "evilMsg", 6: "fail" }); runQuest(room, act, [5, 6, 1, 4], { 5: "evilMsg", 6: "fail" });
+  runQuest(room, act, [1, 2, 3, 6], { 6: "fail" });
+  check("好信 4 / 坏信 2 都满足 → 抵消,第 5 任务按原样 1 张失败 → 失败", room.quests[4].letterEffect === "cancel" && room.quests[4].fails === 1 && room.quests[4].result === "fail" && room.result.winner === "evil");
+}
+
+console.log("\n=== 盗贼:盗贼卡 / 手表 / 个人胜 / 坏盗贼不互认 ===");
+{
+  const RG = ["merlin", "percival", "rogue_good", "servant", "morgana", "rogue_evil", "assassin"];
+  const { room, act, V } = mk(7, RG, 13);
+  act(1, { op: "startGame" }); layout(room, RG, 1);
+  const knows = (n) => V(n).seats[n].knows.map((k) => k.seat).join(",");
+  check("坏盗贼不与其他坏人互认:他谁都不认识,莫甘娜/刺客也看不到他;梅林看得到", knows(6) === "" && knows(5) === "7" && knows(7) === "5" && knows(1) === "5,6,7" && V(5).seats[5].info.includes("坏盗贼"));
+  check("7 人第 1 任务就要手表:不给/给非队员 → BAD_WATCH", V(1).watchNeeded === true && act(1, { op: "propose", team: [3, 1] }).error === "BAD_WATCH" && act(1, { op: "propose", team: [3, 1], watch: 2 }).error === "BAD_WATCH");
+  check("手表给队员(可以是队长自己)→ 提议公开手表持有者", act(1, { op: "propose", team: [3, 1], watch: 1 }).ok && V(4).proposal.watch === 1 && V(4).seats[1].watch === true);
+  for (const n of room.seatNos()) act(n, { op: "vote", seatNo: n, approve: true });
+  check("好盗贼可出盗贼成功;坏盗贼可出盗贼失败;持表者不能出盗贼卡", room.allowedCards(3).join() === "success,rogueSuccess" && room.allowedCards(6).join() === "success,fail,rogueFail" && V(4).quests[0].watch === 1);
+  act(3, { op: "questCard", seatNo: 3, card: "rogueSuccess" }); act(1, { op: "questCard", seatNo: 1, card: "success" });
+  check("第 1 任务:盗贼成功=成功,卡面公开可见是盗贼卡", room.quests[0].result === "success" && V(5).quests[0].cards.includes("rogueSuccess"));
+  check("第 2 任务手表给好盗贼 → 他只能出成功", runQuest(room, act, [3, 1, 2], { 3: "rogueSuccess" }, { watch: 3 }).error === "CARD_NOT_ALLOWED" && room.allowedCards(3).join() === "success");
+  act(3, { op: "questCard", seatNo: 3, card: "success" }); act(1, { op: "questCard", seatNo: 1, card: "success" }); act(2, { op: "questCard", seatNo: 2, card: "success" });
+  check("第 2 任务成功", room.quests[1].result === "success" && room.questNo === 3);
+  runQuest(room, act, [3, 1, 2], { 3: "rogueSuccess" }, { watch: 1 });
+  check("第 3 次成功时出盗贼成功、之前出过 1 张 → 好盗贼立即个人胜,跳过刺杀,只有他赢", room.phase === "over" && room.result.winner === "rogue" && room.result.rogue === 3 && room.result.winners.join() === "3" && room.result.reason.includes("个人获胜") && V(1).seats[3].role === "rogue_good");
+  // 没有"之前出过" → 不触发
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, RG, 1);
+  runQuest(room, act, [3, 1], {}, { watch: 1 }); runQuest(room, act, [3, 1, 2], {}, { watch: 1 }); runQuest(room, act, [3, 1, 2], { 3: "rogueSuccess" }, { watch: 1 });
+  check("第 3 次成功出盗贼成功但之前没出过 → 不是个人胜,正常进刺杀", room.phase === "assassin" && room.quests[2].result === "success");
+  // 坏盗贼
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, RG, 1);
+  runQuest(room, act, [6, 1], { 6: "rogueFail" }, { watch: 1 }); runQuest(room, act, [6, 1, 2], { 6: "fail" }, { watch: 1 });
+  check("坏盗贼:盗贼失败=失败;两败", room.quests[0].result === "fail" && room.quests[1].result === "fail" && room.questNo === 3);
+  runQuest(room, act, [6, 1, 2], { 6: "rogueFail" }, { watch: 2 });
+  check("第 3 次失败时出盗贼失败、之前出过 → 坏盗贼个人胜(不是坏人团队胜)", room.result.winner === "rogue" && room.result.rogue === 6 && room.result.winners.join() === "6");
+  // 5~6 人前两任务无手表
+  const g5 = mk(5, ["merlin", "rogue_good", "servant", "rogue_evil", "assassin"], 17);
+  g5.act(1, { op: "startGame" }); layout(g5.room, ["merlin", "rogue_good", "servant", "rogue_evil", "assassin"], 1);
+  check("5 人:前两任务不需要手表,第 3 任务起需要", g5.V(1).watchNeeded === false && g5.act(1, { op: "propose", team: [2, 1] }).ok && g5.room._watchNeeded(2) === false && g5.room._watchNeeded(3) === true);
+}
+
+console.log("\n=== 巫师:魔法卡奇数张反转 / 坏巫师不能出失败 / 可选不亮相 ===");
+{
+  const SC = ["merlin", "percival", "sorcerer_good", "servant", "morgana", "sorcerer_evil", "assassin"];
+  const { room, act, V } = mk(7, SC, 19);
+  act(1, { op: "startGame" }); layout(room, SC, 1);
+  check("默认:梅林看到坏巫师;巫师可出 成功/魔法,坏巫师不能出失败", V(1).seats[1].knows.map((k) => k.seat).join() === "5,6,7" && room.allowedCards(3).join() === "success,magic" && room.allowedCards(6).join() === "success,magic");
+  runQuest(room, act, [3, 1], { 3: "magic" });
+  check("1 张魔法 → 本该成功的任务反转为失败;魔法张数公开", room.quests[0].result === "fail" && room.quests[0].rawFails === 0 && room.quests[0].flipped === true && V(4).quests[0].magic === 1 && V(4).quests[0].cards.includes("magic"));
+  runQuest(room, act, [3, 6, 1], { 3: "magic", 6: "magic" });
+  check("2 张魔法互相抵消 → 成功", room.quests[1].result === "success" && room.quests[1].flipped === false && room.quests[1].magic === 2);
+  runQuest(room, act, [6, 5, 1], { 5: "fail", 6: "magic" });
+  check("1 张失败 + 1 张魔法 → 失败反转为成功", room.quests[2].result === "success" && room.quests[2].rawFails === 1 && room.quests[2].flipped === true);
+  const g2 = mk(7, SC, 23, { sorcererHidden: true });
+  g2.act(1, { op: "startGame" }); layout(g2.room, SC, 1);
+  check("可选:坏巫师不亮相 → 梅林看不到他(其他坏人仍互认)", g2.V(1).seats[1].knows.map((k) => k.seat).join() === "5,7" && g2.V(1).seats[1].info.includes("坏巫师") && g2.V(5).seats[5].knows.map((k) => k.seat).join() === "6,7" && g2.V(6).seats[6].info.includes("亮相"));
+}
+
+console.log("\n=== 不忠的仆人:知道刺客 / 梅林眼里是坏人 / 招募阶段 ===");
+{
+  const UT = ["merlin", "percival", "untrustworthy", "servant", "morgana", "minion", "assassin"];
+  const { room, act, V } = mk(7, null, 29, { lady: true });
+  check("不忠的仆人需要刺客", act(1, { op: "setRoles", roles: ["percival", "untrustworthy", "servant", "servant", "morgana", "minion", "minion"] }).ok && act(1, { op: "startGame" }).error === "UNTRUSTWORTHY_NEEDS_ASSASSIN");
+  act(1, { op: "setRoles", roles: UT }); act(1, { op: "startGame" }); layout(room, UT, 1);
+  check("他知道刺客;梅林把他当坏人(看到 4 个);他只能出成功", V(3).seats[3].knows.map((k) => k.seat + k.tag).join() === "7刺客" && V(1).seats[1].knows.map((k) => k.seat).join() === "3,5,6,7" && V(1).seats[1].info.includes("不忠") && room.allowedCards(3).join() === "success");
+  runQuest(room, act, [3, 1], {}); runQuest(room, act, [1, 2, 3], {});
+  check("湖中仙女验他:招募前显示为好人", room.phase === "lady" && act(room.lady.holder, { op: "ladyCheck", target: 3 }).ok && V(room.lady.used[0]).seats[room.lady.used[0]].notes[0].includes("好人"));
+  runQuest(room, act, [1, 2, 3], {});
+  check("三胜 → 招募阶段(刺杀前);坏人看到刺客,好人看不到;此时不能刺杀", room.phase === "recruit" && V(5).assassin.seat === 7 && V(1).assassin.seat === null && act(7, { op: "assassinate", target: 1 }).error === "NOT_ASSASSIN" && act(5, { op: "recruit", target: 3 }).error === "NOT_HOLDER");
+  check("招募猜错 → 公开结果,刺客照常刺杀", act(7, { op: "recruit", target: 4 }).ok && room.phase === "assassin" && V(1).recruit.hit === false && V(1).recruit.target === 4 && V(1).recruited === null && V(5).assassin.seat === 7);
+  check("刺客指错 → 好人胜,结算带招募记录;3 号仍是好人", act(7, { op: "assassinate", target: 2 }).ok && room.result.winner === "good" && room.result.recruit.hit === false && room.result.teams[3] === "good" && room.result.winners.includes(3));
+  // 猜中
+  act(1, { op: "newGame" }); act(1, { op: "startGame" }); layout(room, UT, 1);
+  runQuest(room, act, [3, 1], {}); runQuest(room, act, [1, 2, 3], {}); act(room.lady.holder, { op: "ladyCheck", target: 1 }); runQuest(room, act, [1, 2, 3], {});
+  check("招募猜中 → 他转为坏人(公开),代替刺客", room.phase === "recruit" && act(7, { op: "recruit", target: 3 }).ok && room.phase === "assassin" && V(1).recruited === 3 && V(1).seats[3].recruited === true && room.teamNow(3) === "evil" && V(3).seats[3].teamNow === "evil" && V(3).assassin.seat === 3 && V(5).assassin.seat === 3 && V(1).assassin.seat === null);
+  const back = AvalonCore.hydrate(JSON.parse(JSON.stringify(room.serialize())));
+  check("招募结果可持久化", back.recruited === 3 && back.recruit.hit === true && back._assassinSeat() === 3);
+  check("原刺客不能再刺杀;被招募者刺中梅林 → 坏人胜,他算坏人赢家", act(7, { op: "assassinate", target: 1 }).error === "NOT_HOLDER" && act(3, { op: "assassinate", target: 1 }).ok && room.result.winner === "evil" && room.result.teams[3] === "evil" && room.result.winners.join() === "3,5,6,7");
 }
 
 console.log("\n=== 持久化 / 新一局 ===");
