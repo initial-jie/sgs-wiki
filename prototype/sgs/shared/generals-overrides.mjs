@@ -233,14 +233,14 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
     tool: null, offline: true,
   },
-  // 界钟会 —— OL 2026-09 新上(olwiki 真 id=758,官方花名册暂未收录;用户线下买到实体卡)。魏/4血/界一将-2。衍生技「排异」在 derived-skills-room.json。⚠ graduate 后删。
+  // 界钟会 —— OL 2026-09 测试上线、2026-11-06 正式版(技能按 olwiki 758 正式文本更新;官方花名册/API 仍未收录)。魏/4血/界一将-2。衍生技「排异」在 derived-skills-room.json。⚠ graduate 后删。
   {
     id: 9018, name: "界钟会", genre: "界限突破", series: "界", faction: "魏",
     factionSelectable: false, quality: null, hp: 4, initialHp: null,
     tags: ["卖血", "进攻"],
     skills: [
-      { name: "权计", effect: "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。你每有一张“权”，你的手牌上限便+1。" },
-      { name: "自立", effect: "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后减少1点体力上限，获得“排异”。" },
+      { name: "权计", effect: "当你造成或受到1点伤害后，你可以摸一张牌，当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你手牌数最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。" },
+      { name: "自立", effect: "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得“排异”。" },
     ],
     characteristic: "造成伤害可权计，排异可两项都执行。",
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75800.png",
@@ -354,6 +354,19 @@ export const OFFLINE_HEROES = [
     characteristic: "可灵活的对敌方角色手牌进行破坏并印杀。",
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77600.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77600.png",
+    tool: null, offline: true,
+  },
+  // 王皑 —— OL 2026-11-06 正式上线(olwiki 真 id 768,官网花名册/API 仍未收录);graduate 候选。技能抄自 olwiki(⚠ 原文「你摸一张牌」后疑似丢了「将其置为“勤励”牌」的图标位,待官网文本核对)
+  {
+    id: 9029, name: "王皑", genre: "其他", series: "璀璨星河", faction: "魏",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["卖血"],
+    skills: [
+      { name: "勤励", effect: "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害。若你因此失去所有手牌，改为对其造成等量伤害。" },
+    ],
+    characteristic: "有灵活的防守反击能力，调整手牌可以打出较高上限。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76800.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76800.png",
     tool: null, offline: true,
   },
   // 谋田丰 —— olwiki 真 id 659(官网花名册 2026-10-16 仍未收录),用户报 OL 当日上线;graduate 候选。技能文本抄自 olwiki(去掉"爆发/卖血"定位角标)

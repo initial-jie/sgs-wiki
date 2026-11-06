@@ -21420,11 +21420,11 @@
     "skills": [
       {
         "name": "权计",
-        "effect": "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。你每有一张“权”，你的手牌上限便+1。"
+        "effect": "当你造成或受到1点伤害后，你可以摸一张牌，当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你手牌数最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。"
       },
       {
         "name": "自立",
-        "effect": "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后减少1点体力上限，获得“排异”。"
+        "effect": "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得“排异”。"
       }
     ],
     "characteristic": "造成伤害可权计，排异可两项都执行。",
@@ -21630,6 +21630,31 @@
     "characteristic": "可灵活的对敌方角色手牌进行破坏并印杀。",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77600.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77600.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9029,
+    "name": "王皑",
+    "genre": "其他",
+    "series": "璀璨星河",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": null,
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "卖血"
+    ],
+    "skills": [
+      {
+        "name": "勤励",
+        "effect": "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害。若你因此失去所有手牌，改为对其造成等量伤害。"
+      }
+    ],
+    "characteristic": "有灵活的防守反击能力，调整手牌可以打出较高上限。",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76800.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76800.png",
     "tool": null,
     "offline": true
   }
