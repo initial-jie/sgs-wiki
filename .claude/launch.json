@@ -44,7 +44,7 @@
       "runtimeExecutable": "/opt/homebrew/bin/pnpm",
       "runtimeArgs": [
         "--dir",
-        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname/apps/core",
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname-new/apps/core",
         "dev"
       ],
       "port": 8081
@@ -69,7 +69,7 @@
       "runtimeArgs": [
         "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/static-nocache.py",
         "8096",
-        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname/dist"
+        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname-new/dist"
       ],
       "port": 8096
     }
