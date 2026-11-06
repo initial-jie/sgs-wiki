@@ -320,6 +320,7 @@ One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》�
 7. **同名可替换前缀**:新前缀类型(如「教主」「移动版」)要同时加 `shared/deal.mjs` 与 `room.html` 的 `heroBaseName`。
 8. 按需:`cardWarn`(手录将直接写在 OFFLINE_HEROES 条目)、`derived-skills-room.json` / `derived-cards-room.json`、线下立绘 `assets/heroes/`、graduate 候选记录。
 9. **deploy**:`cd prototype/worker && npx wrangler deploy`(所有 shared/*.json 都是 worker import,改完必须 deploy;老浏览器 generals.json 还有 1h 缓存)。
+10. **线上牌桌跟进(用户 2026-11-06 定的流程)**:每次录新将都跑 `prototype/noname/check-upstream.sh <新将名…>`,看无名杀上游是否已实现 + 基线落后多少;已实现就提议(或顺手)重 clone 上游 + 套补丁 + 重打包发布,让线上牌桌能选到;没实现就记进 graduate/待跟进,下次再查。
 
 **常用流程速查**:
 - **官网已收录的将(新将 / graduate)**:`node prototype/sgs/scrape-generals.mjs --ids 744,763`(增量抓取合并,新 id 插在 9000+ 段前;graduate 时先删 OFFLINE_HEROES 条目,`applyOverrides` 会清掉库里残留孤儿)→ `node prototype/sgs/build-pinyin.mjs`。新将 API 给的是 `…/m/general/big/static/{id}00.png`,头像由 scraper 自动派生 `skinShop/{id}00.png`。
