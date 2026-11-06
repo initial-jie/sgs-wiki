@@ -33,6 +33,12 @@ onuw/                      一夜终极狼人(One Night Ultimate Werewolf,系统
   shared/onuw-data.mjs     45 角色图鉴(基础+Daybreak+Bonus Roles+Vampire)+ 印记 + 神器 + 黄昏/夜晚顺序 + 播报文案
   worker.mjs               /onuw 页面 + /onuw/data.json + OnuwRoomDO
   client/onuw.html         圆桌 UI(座位牌背围圈 + 中央牌堆)+ 行动面板 + speechSynthesis 播报
+avalon/                    阿瓦隆(The Resistance: Avalon,系统发身份 + 全流程,无定时器)——第五个游戏
+  shared/avalon-logic.mjs  AvalonCore extends RoomBase:发身份与开局信息/组队投票/任务卡/王者之剑/湖中仙女/揭示者/刺杀/兰斯洛特变体/结算
+  shared/avalon-data.mjs   16 角色图鉴(基础 + 兰斯洛特 + Big Box 简单角色)+ 人数表 + 推荐配置
+  worker.mjs               /avalon 页面 + /avalon/data.json + AvalonRoomDO
+  client/avalon.html       圆桌 UI + 任务轨/投票轨 + 身份卡(官方卡面)+ 各阶段面板 + 投票历史
+  avalon-sim.mjs           node 断言(node prototype/avalon/avalon-sim.mjs)
   qmxy-sim.mjs             node 断言:node prototype/qmxy/qmxy-sim.mjs
   build-pinyin.mjs         角色名拼音 → shared/hero-pinyin.json
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由

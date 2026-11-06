@@ -22,6 +22,11 @@ class_name = "QmxyRoomDO"
 name = "ONUW_ROOM"
 class_name = "OnuwRoomDO"
 
+# 阿瓦隆房间(prototype/avalon/):同一个 worker,独立 DO 命名空间
+[[durable_objects.bindings]]
+name = "AVALON_ROOM"
+class_name = "AvalonRoomDO"
+
 # 三国杀全局配置(将池白名单):单例,不随房间销毁
 [[durable_objects.bindings]]
 name = "SGS_CONFIG"
@@ -56,6 +61,10 @@ new_sqlite_classes = ["QmxyRoomDO"]
 [[migrations]]
 tag = "v6"
 new_sqlite_classes = ["OnuwRoomDO"]
+
+[[migrations]]
+tag = "v7"
+new_sqlite_classes = ["AvalonRoomDO"]
 
 # 注:各游戏的 *.html 以文本模块打进 worker(.html 默认即 Text),worker 直接吐客户端页(手机可直接开)。
 # 公共客户端脚本 common/client/*.js 也按文本打包,由 worker 在 /common/ 下发(否则会被当成 ES 模块)。

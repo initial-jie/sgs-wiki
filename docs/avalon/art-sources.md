@@ -1,5 +1,7 @@
 # 阿瓦隆 · 立绘来源清单(2026-11-06)
 
+> **2026-11-06 用户选了 B 路线(官方卡面)**:Big Box 30 张已按网格从 BGG 三张白底平铺照(pic7228835 / 7229354 / 7229355)裁出,入库 `assets/avalon/*.jpg`(各约 190×300,共 650KB),文件名 = 角色 key(忠臣 servant1~5、爪牙 minion1~3、信使 messenger_junior/senior/evil、盗贼 rogue_good/evil、巫师 sorcerer_good/evil、兰斯洛特 lancelot_good/evil)。裁切坐标法:非白底投影找行/列区间(scratchpad 脚本,PIL+numpy),每张内缩 3px。A 路线公版画清单保留在下面备用。
+
 两条路线都给全了,文件统一放 `assets/avalon/`,Pages 直链 `ART_BASE` + 角色 `img` 字段,缺图退回表情(同 onuw)。
 
 | 路线 | 来源 | 法律 | 获取 | 画风 |

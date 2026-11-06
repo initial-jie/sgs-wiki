@@ -40,6 +40,20 @@
       "port": 8788
     },
     {
+      "name": "avalon-room",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--config",
+        "prototype/worker/wrangler.toml",
+        "--port",
+        "8789",
+        "--local"
+      ],
+      "port": 8789
+    },
+    {
       "name": "noname-dev",
       "runtimeExecutable": "/opt/homebrew/bin/pnpm",
       "runtimeArgs": [

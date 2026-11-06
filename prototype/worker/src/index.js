@@ -6,12 +6,14 @@
 //   /fs、/fs/data.json、/api/fs/<码>/ws  风声(prototype/fengsheng/worker.mjs,DO 类 FsRoomDO)
 //   /qmxy、/qmxy/data.json、/api/qmxy/<码>/ws  枪鸣锈语(prototype/qmxy/worker.mjs,DO 类 QmxyRoomDO)
 //   /onuw、/onuw/data.json、/api/onuw/<码>/ws  一夜终极狼人(prototype/onuw/worker.mjs,DO 类 OnuwRoomDO)
+//   /avalon、/avalon/data.json、/api/avalon/<码>/ws  阿瓦隆(prototype/avalon/worker.mjs,DO 类 AvalonRoomDO)
 // 本地跑:cd prototype/worker && npx wrangler dev      部署:npx wrangler deploy
 
 import { handleSgs, RoomDO, SgsConfigDO } from "../../sgs/worker.mjs";
 import { handleFengsheng, FsRoomDO } from "../../fengsheng/worker.mjs";
 import { handleQmxy, QmxyRoomDO } from "../../qmxy/worker.mjs";
 import { handleOnuw, OnuwRoomDO } from "../../onuw/worker.mjs";
+import { handleAvalon, AvalonRoomDO } from "../../avalon/worker.mjs";
 import { jsResponse, htmlResponse, jsonResponse } from "../../common/room-do.mjs";
 import { GAMES_JSON, injectGames } from "../../common/games.mjs";
 import HUB_HTML_RAW from "../../common/client/hub.html";
@@ -19,7 +21,7 @@ import { NonameHallDO } from "../../noname/hall-do.mjs"; // 无名杀联机大�
 import ROOM_CLIENT_JS_RAW from "../../common/client/room-client.js"; // Text 模块(见 wrangler.toml [[rules]])
 const ROOM_CLIENT_JS = injectGames(ROOM_CLIENT_JS_RAW), HUB_HTML = injectGames(HUB_HTML_RAW);
 
-export { RoomDO, FsRoomDO, QmxyRoomDO, OnuwRoomDO, SgsConfigDO, NonameHallDO }; // 三国杀 DO(类名固定,绑定 ROOM)/ 风声 DO(绑定 FS_ROOM)/ 枪鸣锈语 DO(绑定 QMXY_ROOM)/ 一夜狼 DO(绑定 ONUW_ROOM)/ 三国杀全局配置 DO(绑定 SGS_CONFIG,存将池)
+export { RoomDO, FsRoomDO, QmxyRoomDO, OnuwRoomDO, AvalonRoomDO, SgsConfigDO, NonameHallDO }; // 三国杀 DO(类名固定,绑定 ROOM)/ 风声 DO(绑定 FS_ROOM)/ 枪鸣锈语 DO(绑定 QMXY_ROOM)/ 一夜狼 DO(绑定 ONUW_ROOM)/ 阿瓦隆 DO(绑定 AVALON_ROOM)/ 三国杀全局配置 DO(绑定 SGS_CONFIG,存将池)
 
 export default {
   async fetch(request, env) {
@@ -31,7 +33,7 @@ export default {
     // 无名杀联机大厅:客户端「联机大厅」填 wss://<worker>/noname/(末尾斜杠可有可无)
     if (url.pathname === "/noname" || url.pathname === "/noname/") return env.NONAME_HALL.get(env.NONAME_HALL.idFromName("hall")).fetch(request);
 
-    const r = handleFengsheng(request, env, url) || handleQmxy(request, env, url) || handleOnuw(request, env, url) || handleSgs(request, env, url);
+    const r = handleFengsheng(request, env, url) || handleQmxy(request, env, url) || handleOnuw(request, env, url) || handleAvalon(request, env, url) || handleSgs(request, env, url);
     if (r) return r;
 
     // 兜底:其余 GET 吐三国杀房间页(历史行为:任何路径都能打开房间)

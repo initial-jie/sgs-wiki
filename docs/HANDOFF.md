@@ -2,11 +2,21 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 131 passed)确认基线,即可继续。
 
-## 🗡️ 第五个游戏候选:阿瓦隆(2026-11-06,只做了研究,代码未动)
-- 研究综述 **`docs/avalon/README.md`**(规则骨架 / 夜晚脚本中英 / 系统发身份时的信息表 / 基础 8 角色 + Big Box 20 角色 + 湖中仙女·王者之剑·兰斯洛特·信使·盗贼·巫师·猎手·剧情牌 / 人数配置 / 产品形态建议 / 接入草案);立绘 **`docs/avalon/art-sources.md`**(A 公版画 Wikimedia Commons 一键 curl 已实跑 32/32,总览 `art-contact-sheet.jpg`;B 官方卡面 = BGG 图库平铺照直链,Big Box 30 张两张照片裁完就是整套)。
-- 任务人数表逐一对照 BGG 上 5~10 人实体版图照片核过:5 人 2/3/2/3/3、6 人 2/3/4/3/4、7 人 2/3/3/4*/4、8~10 人 3/4/4/5*/5(* 第 4 任务需 2 张失败);好/坏 3:2、4:2、4:3、5:3、6:3、6:4。
-- 形态建议:同一夜狼「系统发牌 + 全流程」(发身份替代闭眼脚本;投票公开、任务卡匿名计数、湖中仙女验人、刺杀指认全在手机上);v1 范围 基础 8 角色 + 兰斯洛特 + 湖中仙女 + 王者之剑。注册表 key `avalon`、路由 `/avalon`、DO `AvalonRoomDO`(`AVALON_ROOM`,wrangler 迁移 v7)。
-- 待用户定:立绘走公版画(默认)还是官方卡面;Big Box 译名(拟:疯子/蛮兵/揭示者/牧师/骗子/捣蛋鬼/不忠的仆人/信使/盗贼/巫师/猎手)。
+## 🗡️ 第五个游戏:阿瓦隆(2026-11-06,`prototype/avalon/`,待 deploy)
+
+The Resistance: Avalon 房间。形态同一夜狼:**系统发身份 + 全流程**(线上线下都能用),但**没有定时器/tick**,全部事件驱动。研究综述 `docs/avalon/README.md`、立绘 `docs/avalon/art-sources.md`。
+路由 `/avalon`、`/api/avalon/<码>/ws`,DO `AvalonRoomDO`(绑定 `AVALON_ROOM`,**wrangler 迁移 v7**)。基线 `node prototype/avalon/avalon-sim.mjs` **82**。本地起 `.claude/launch.json` 的 `avalon-room`(8789)。
+- **数据** `shared/avalon-data.mjs`:16 角色(基础 8 + 兰斯洛特对 + Big Box 简单角色 疯子/蛮兵/揭示者/牧师/骗子/捣蛋鬼)、`PLAYERS` 人数表(好/坏 + 5 任务人数,对照实体版图核过;7 人起第 4 任务两张失败 `twoFails`)、`LANCELOT_MODES` know/random/preset、推荐配置 `defaultRoles`。角色 `img` 是数组(忠臣 5 张/爪牙 3 张按发牌顺序轮用,座位记 `img`)。
+- **逻辑** `shared/avalon-logic.mjs` `AvalonCore`:`phase` setup→teamBuild→vote→quest(sub play/excalibur)→(lady)→…→assassin→over。
+  开局 `checkRoles()`(张数=人数、坏人数对表、兰斯洛特成对、莫甘娜需派西维尔、梅林需刺客)→ 发身份 → `_computeKnows()` 写每座位 `knows[{seat,tag}]`+`info`(梅林看坏人除莫德雷德;派西维尔看梅林+莫甘娜不分;坏人互认除奥伯伦、变体下坏兰斯洛特只被看不看人;默认模式两兰斯洛特互知;牧师看首任队长 `loyaltyShown`)。
+  队长随机,之后**每个任务结算后顺时针传**(`_beginQuest` k>1),否决也传;`voteTrack` 同一任务连续否决,5 次坏人胜;平票=否决;全员投完自动开票,票面进 `history` 公开。
+  任务卡 `allowedCards(n)`:好人只能成功、疯子只能失败、蛮兵第 4/5 任务只能成功、兰斯洛特按 `teamNow`(互换后对调);队员全出 → 有王者之剑则 `sub:"excalibur"` 等持剑者 `excalibur{target|null}`(翻对方卡,原卡写进持剑者 `notes`)→ `_resolveQuest`:洗乱公开 `cards`,`played{seat:card}` 结算后才公开;第二次失败揭示者 `revealedRole` 公开;3 败坏人胜;3 胜有梅林+刺客 → `assassin` 阶段(坏人视图里 `assassin.seat`,好人 null),否则直接好人胜;第 2/3/4 任务后有湖中仙女 → `lady` 阶段(持有者验人,结果只写持有者 `notes`,标记交给被验者,`used` 不能回验)。
+  兰斯洛特 `this.lancelot{mode,deck,drawn,switched}`:random 每任务 `_beginQuest` 抽一张(6 张 4 不变 2 互换)、preset 开局抽 5 张公开;`switched` 翻转时 `teamNow`/出卡/结算胜负全跟着变。骗子被验显示好、捣蛋鬼显示坏(简化:骗子不选,固定说谎)。
+- **保密**(`_seatView`):`role/img/knows/info/notes/vote/card/allowed` 本人可见;`leader/onTeam/voted/played/excalibur/lady/revealedRole` 公开;结算后全公开含 `team`。
+- **前端** `client/avalon.html`:任务轨(5 圆,2败 标记)+ 否决轨 + 兰斯洛特阵营卡 chip;圆桌(1 号正上方顺时针,👑 队长 / 🧝 湖中仙女 / ⚔️ 持剑 / ✓ 已投 / 🂠 已出卡 / 上次投票 赞·反 小标签;揭示者与结算后翻面显示卡图);中央区当前阶段文字或上一任务结果卡;各阶段面板(队长点座位组队 + 选持剑者;投票大按钮可改票;出卡按 `allowed` 禁用;持剑者点队员换卡;湖中仙女/刺客点座位);「🪪 我的身份」卡图 + 开局信息 chip + 私密笔记(点卡图看大图);🗳️ 记录弹层(所有投票按座位表格,蓝圈队员金边队长 + 湖中仙女记录);结算表 + 每任务谁出了什么。一机多座 `autoSeat()` 自动切到该行动的座位。本机 localStorage `avalon_last` 沿用上次配置。
+- **卡图**:Big Box 官方卡面 30 张已裁切进 `assets/avalon/`(本次一起 push),Pages 直链 `ART_BASE`,加载失败退回表情。
+- 验证:sim 82;浏览器两标签(A机 1~4、B机 5~7,7 人 兰斯洛特变体 1 + 湖中仙女 + 王者之剑)走完 组队→投票→出卡→王者之剑翻卡→兰斯洛特互换(坏兰斯洛特变好后不能出失败)→湖中仙女三次验人(不能验自己/回验)→三胜→刺客刺中梅林→结算→再来一局,无控制台错误。
+- **没做(第二批)**:不忠的仆人(招募阶段)、信使/盗贼/巫师(要额外任务卡)、猎手、剧情牌、Targeting;骗子被验"可以选说谎"做成固定说谎;没有语音播报(阿瓦隆不需要);投票/出卡没有计时。
 
 ## 📜 风声角色立绘(2026-11-03,待用户下载 + deploy)
 - 图源 = 风声文本本来就取自的开源客户端 Death-alter/TheMessage(`assets/resources/images/characters/`,47/49 个角色有图,文件名=拼音驼峰;孙守謨/王响没有)。清单 + 一键 curl 在 `docs/fengsheng/art-sources.md`,下载到 `assets/fengsheng/char/` 原名保存。

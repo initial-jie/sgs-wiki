@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>阿瓦隆房间</title>
+<style>
+/* 卡美洛夜色:深墨绿底 + 鎏金 + 阵营色 好 蓝 / 坏 红(沿 Big Box 卡面:好人蓝绿底、坏人橙红底) */
+:root{
+  --bg:#0f1a17; --bg2:#172622; --card:rgba(23,38,34,.94); --line:rgba(217,164,65,.22);
+  --fg:#efe9d8; --fg-soft:#a7b3a9; --gold:#d9a441; --red:#e5484d; --blue:#4f8ef7; --green:#4fbf7a; --amber:#e8b84a;
+  --good:#4f8ef7; --evil:#e5484d;
+  --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);background-image:radial-gradient(circle at 85% -5%,rgba(217,164,65,.16),transparent 40%),radial-gradient(circle at 10% 110%,rgba(79,142,247,.1),transparent 45%);
+  color:var(--fg);font-family:var(--body);line-height:1.6;padding:12px 16px 60px;max-width:560px;margin:0 auto}
+h1{font-weight:900;font-size:22px;letter-spacing:.18em;text-align:center;margin:4px 0 0;color:var(--gold);text-shadow:0 0 14px rgba(217,164,65,.4)}
+h1 .st{display:inline-block;font-size:11px;letter-spacing:.08em;color:var(--red);border:2px solid var(--red);border-radius:4px;padding:0 5px;margin-left:6px;transform:rotate(-8deg);vertical-align:middle;font-weight:700;text-shadow:none}
+.sub{text-align:center;color:var(--fg-soft);font-size:12px;letter-spacing:.14em;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:11px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.card.secret{border-left-color:var(--red)}
+.card h2{font-weight:900;font-size:16px;letter-spacing:.08em;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:10px;color:#fff}
+.card h2 .tag{float:right;font-size:11px;color:var(--fg-soft);letter-spacing:0;font-weight:400}
+label{font-size:13px;color:var(--fg-soft)}
+input,select{font-family:inherit;font-size:14px;background:#0a120f;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+select option{background:#0a120f}
+button{font-family:inherit;font-size:14px;border-radius:7px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--gold);border-color:var(--gold);color:#1a1405;font-weight:700}
+button.danger{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+button.ok{background:var(--green);border-color:var(--green);color:#06130b;font-weight:700}
+button.ghost{background:transparent;color:var(--fg-soft)}
+button.sm{font-size:12px;padding:4px 9px}
+button.xs{font-size:12px;padding:2px 7px;line-height:1.4}
+button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+.hint{font-size:12px;color:var(--fg-soft);margin-top:6px}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:1px 9px;color:var(--fg-soft)}
+.chip.good{border-color:var(--good);color:var(--good)} .chip.evil{border-color:var(--evil);color:var(--evil)}
+a{color:var(--blue)}
+#connbar{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;align-items:center;justify-content:center;gap:12px;padding:9px 14px;background:var(--red);color:#fff;font-size:13px;font-weight:600}
+#connbar button{background:#fff;color:var(--red);border:none;padding:5px 14px;font-weight:700}
+body.disconnected #connbar{display:flex}
+body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#fff;color:#1a1405;padding:9px 16px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:10000;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.topbar{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.topbar .who{font-size:12px;color:var(--fg-soft)}
+.tm{display:inline-block;font-weight:700;border-radius:4px;padding:0 7px;color:#fff;font-size:12px}
+.tm.good{background:var(--good)} .tm.evil{background:var(--evil)}
+
+/* 任务轨 / 投票轨 */
+.track{display:flex;justify-content:center;gap:8px;margin:6px 0 4px}
+.q{width:54px;height:54px;border-radius:50%;border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,15,.7);position:relative;font-weight:900;font-size:20px;color:#fff}
+.q small{font-size:9px;font-weight:400;color:var(--fg-soft);line-height:1}
+.q.cur{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,164,65,.35)}
+.q.success{background:var(--blue);border-color:var(--blue)} .q.fail{background:var(--red);border-color:var(--red)}
+.q.success small,.q.fail small{color:#fff}
+.q .tf{position:absolute;top:-9px;right:-6px;font-size:9px;background:var(--amber);color:#1a1405;border-radius:8px;padding:0 4px;font-weight:700}
+.vtrack{display:flex;justify-content:center;gap:6px;margin:4px 0 6px;align-items:center}
+.vtrack i{display:inline-block;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);font-style:normal;font-size:11px;text-align:center;line-height:20px;color:var(--fg-soft)}
+.vtrack i.done{background:var(--fg-soft);color:#0f1a17} .vtrack i.five{border-color:var(--red);color:var(--red)} .vtrack i.five.done{background:var(--red);color:#fff}
+.vtrack .lb{font-size:11px;color:var(--fg-soft);margin-right:4px}
+
+/* 圆桌 */
+.table{position:relative;width:min(92vw,440px);aspect-ratio:1;margin:6px auto 4px}
+.pc{position:absolute;width:60px;height:82px;margin-left:-30px;margin-top:-41px;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:visible;
+  background:repeating-linear-gradient(135deg,#243a33 0 5px,#1b2d28 5px 10px);border:2px solid #3f5a51;box-shadow:0 4px 10px rgba(0,0,0,.45);color:#fff;transition:transform .15s,box-shadow .15s}
+.pc .no{font-weight:900;font-size:22px;line-height:1.1;text-shadow:0 1px 3px #000}
+.pc .nm{font-size:10px;color:#cfe0d6;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 2px}
+.pc.mine{border-color:var(--gold);box-shadow:0 0 0 2px rgba(217,164,65,.35),0 4px 10px rgba(0,0,0,.45)}
+.pc.team{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,142,247,.45),0 4px 10px rgba(0,0,0,.45)}
+.pc.sel{transform:scale(1.1);border-color:var(--green);box-shadow:0 0 0 3px rgba(79,191,122,.5)}
+.pc.selectable{animation:glow 1.3s infinite}
+@keyframes glow{50%{box-shadow:0 0 0 3px rgba(79,191,122,.35),0 4px 10px rgba(0,0,0,.45)}}
+.pc.dim{opacity:.5}
+.pc.face img.cimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;border-radius:5px;opacity:.95}
+.pc.face .fx{position:relative;z-index:1;text-shadow:0 1px 3px #000,0 0 6px #000;text-align:center}
+.pc.face .rn{font-size:10px;font-weight:700;color:#fff;line-height:1.1}
+.pc.face.good{border-color:var(--good)} .pc.face.evil{border-color:var(--evil)}
+.pc .bd{position:absolute;top:-9px;right:-9px;font-size:13px;background:#0f1a17;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--gold)}
+.pc .bd2{position:absolute;top:-9px;left:-9px;font-size:12px;background:#0f1a17;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc .bd3{position:absolute;bottom:-9px;right:-9px;font-size:12px;background:#0f1a17;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc .bd4{position:absolute;bottom:-9px;left:-9px;font-size:12px;background:#0f1a17;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.pc .vt{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:11px;border-radius:10px;padding:0 6px;font-weight:700;line-height:1.5;color:#fff}
+.pc .vt.y{background:var(--green);color:#06130b} .pc .vt.n{background:var(--red)}
+.pc .dead-x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--red);text-shadow:0 0 6px #000;z-index:2}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:12px;color:var(--fg-soft);width:150px}
+.center .big{font-size:15px;font-weight:800;color:var(--gold);line-height:1.3}
+.center .cards{display:flex;justify-content:center;gap:4px;margin-top:4px;flex-wrap:wrap}
+.qc{width:30px;height:42px;border-radius:4px;font-size:16px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#0a120f}
+.qc.s{background:var(--blue);border-color:var(--blue)} .qc.f{background:var(--red);border-color:var(--red)}
+.qc.back{background:repeating-linear-gradient(135deg,#243a33 0 4px,#1b2d28 4px 8px)}
+
+/* 身份卡 */
+.rolebig{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(10,18,15,.6);margin-bottom:8px}
+.rolebig .ic{font-size:40px;line-height:1}
+.rolebig .rn{font-weight:900;font-size:20px;letter-spacing:.08em;color:#fff}
+.rolebig .re{font-size:12px;color:var(--fg-soft)}
+.rolebig.good{border-color:rgba(79,142,247,.5)} .rolebig.evil{border-color:rgba(229,72,77,.6)}
+.rimg{width:64px;height:92px;object-fit:cover;border-radius:5px;border:1px solid var(--line);background:#0a120f;flex:none;cursor:pointer}
+.rimg.sm{width:44px;height:62px}
+.knows{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.kn{border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;background:rgba(10,18,15,.5)}
+.kn b{font-size:15px;color:var(--gold)}
+.note{border-left:3px solid var(--gold);padding:4px 10px;margin:5px 0;background:rgba(10,18,15,.5);border-radius:0 6px 6px 0;font-size:13px}
+
+/* 面板 */
+.panel{border:1px solid rgba(217,164,65,.5);border-radius:10px;padding:10px 12px;background:rgba(217,164,65,.07);margin-bottom:8px}
+.panel .ti{font-weight:800;font-size:15px;color:#fff;margin-bottom:4px}
+.panel .tp{font-size:13px}
+.bigbtns{display:flex;gap:8px;margin-top:8px}
+.bigbtns button{flex:1;padding:14px 8px;font-size:16px}
+.tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.tabs button.on{background:var(--gold);color:#1a1405;border-color:var(--gold)}
+.seats-setup .seat{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:rgba(10,18,15,.5);display:flex;align-items:center;gap:8px}
+.seats-setup .seat.mine{border-color:var(--gold);background:rgba(217,164,65,.07)}
+.seats-setup .st{font-weight:900;font-size:16px}
+.seats-setup .who{font-size:12px;color:var(--fg-soft)}
+.rgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.rgrid h4{grid-column:1/-1;font-size:12px;letter-spacing:.15em;color:var(--fg-soft);margin:6px 0 0}
+.rrow{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:rgba(10,18,15,.5)}
+.rrow.on{border-color:rgba(217,164,65,.5);background:rgba(217,164,65,.07)}
+.rrow .ic{font-size:20px;line-height:1}
+.rrow .th{width:34px;height:46px;border-radius:5px;object-fit:cover;object-position:50% 15%;border:1px solid var(--line);background:#0a120f;flex:none}
+.rrow .rn{font-weight:700;font-size:13px;color:#fff;cursor:pointer}
+.rrow .ro{font-size:10px;color:var(--fg-soft)}
+.rrow .cnt{font-family:var(--mono);font-weight:700;min-width:14px;text-align:center}
+.rrow button{padding:2px 7px;font-size:14px;line-height:1.2}
+.deckbar{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;flex-wrap:wrap}
+.deckbar b{font-size:18px}
+.deckbar.ok b{color:var(--green)} .deckbar.bad b{color:var(--red)}
+.mask{position:fixed;inset:0;background:rgba(5,10,8,.8);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:11px;width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.sheet h2{font-weight:900;font-size:17px;letter-spacing:.06em;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#fff}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--fg-soft);cursor:pointer;padding:0 4px}
+.sheet img.full{width:100%;max-width:360px;display:block;margin:0 auto;border-radius:8px}
+.codex .ce{display:flex;gap:10px;padding:8px 4px;border-bottom:1px dashed var(--line)}
+.codex .ce .ic{font-size:28px;line-height:1.2;flex:none;width:36px;text-align:center}
+.codex .ce .cn{font-weight:800;font-size:15px;color:#fff}
+.codex .ce .cm{font-size:11px;color:var(--fg-soft)}
+.codex .ce .cd{font-size:13px;margin-top:2px}
+.codex h3{font-size:13px;letter-spacing:.15em;color:var(--fg-soft);margin:10px 0 2px}
+.result{border-left-color:var(--gold);background:rgba(217,164,65,.08)}
+.result .big{font-weight:900;font-size:22px;text-align:center;letter-spacing:.15em;margin-bottom:6px}
+.result .big.good{color:var(--good)} .result .big.evil{color:var(--evil)}
+.result .ln{font-size:13px;margin:3px 0}
+.vt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.vt td{padding:3px 6px;border-bottom:1px dotted var(--line);vertical-align:middle}
+.hist{font-size:12px}
+.hist .hr{border-bottom:1px dotted var(--line);padding:5px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hist .hr .q{width:auto;height:auto;border-radius:6px;font-size:11px;padding:0 6px;border-width:1px}
+.hist .v{display:inline-block;width:22px;height:22px;border-radius:50%;font-size:11px;line-height:22px;text-align:center;font-weight:700}
+.hist .v.y{background:var(--green);color:#06130b} .hist .v.n{background:var(--red);color:#fff} .hist .v.t{box-shadow:0 0 0 2px var(--blue)} .hist .v.l{outline:2px solid var(--gold);outline-offset:-1px}
+.log{font-size:12px;color:var(--fg-soft);max-height:220px;overflow:auto;font-family:var(--mono)}
+.log div{padding:2px 0;border-bottom:1px dotted var(--line)}
+details summary{cursor:pointer;font-size:13px;color:var(--fg-soft)}
+footer{text-align:center;font-size:11px;color:var(--fg-soft);margin-top:18px;letter-spacing:.1em}
+.cfg label{display:block;margin-top:6px}
+.cfg .inl{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div id="connbar"><span>⚠ 连接已断开,正在重连…操作已暂停</span><button id="rcNow" type="button">立即重连</button></div>
+<div id="app"></div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/common/room-client.js"></script><!-- 公共房间客户端(连接/重连/改名/toast);见 prototype/common/client/ -->
+<script>
+/* 阿瓦隆房间:系统发身份 + 队长组队 + 全桌投票 + 任务卡匿名结算 + 湖中仙女 / 王者之剑 / 兰斯洛特 + 刺杀。
+   权威逻辑在 DO(prototype/avalon/shared/avalon-logic.mjs);这里只渲染 roomState、发 action{op,…}。没有定时器。 */
+const {esc,toast,$}=RoomClient;
+let state=null, DATA=null, R={};
+let actSeat=null;           // 多座位代持时当前操作的座位
+let teamSel=[], exSel=null; // 队长组队点选
+let modal=null;
+
+const RC=RoomClient.create({
+  wsPath: code=>"/api/avalon/"+code+"/ws",
+  errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",DECK_SIZE:"角色张数必须等于人数",ROLE_MAX:"该角色数量超过上限",BAD_ROLES:"角色配置不合法",BAD_CONFIG:"配置不合法",PLAYER_COUNT:"只支持 5~10 人",
+    EVIL_COUNT:"坏人数量与人数表不符",LANCELOT_PAIR:"兰斯洛特必须好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜必须和派西维尔一起用",MERLIN_NEEDS_ASSASSIN:"有梅林就必须有刺客",
+    NOT_TEAMBUILD:"现在不是组队阶段",NOT_LEADER:"只有队长能提议",BAD_TEAM:"队伍人数不对",BAD_EXCALIBUR:"王者之剑必须给队内一名非队长队员",NOT_VOTE:"现在不是投票阶段",
+    NOT_QUEST:"现在不是任务阶段",CARDS_LOCKED:"任务卡已收齐",NOT_ON_TEAM:"你不在队伍里",CARD_NOT_ALLOWED:"你的角色不能出这张卡",NOT_EXCALIBUR:"现在不能用王者之剑",BAD_TARGET:"目标不合法",
+    NOT_LADY:"现在不是湖中仙女阶段",LADY_USED:"用过湖中仙女的人不能被验",NOT_ASSASSIN:"现在不是刺杀阶段"},
+  beforeConnect(){ state=null; closeModal(); teamSel=[]; exSel=null; },
+  onState(m){ const prev=state; state=m; afterState(prev); autoSeat(); render(); },
+  onMessage(){},
+  onClosed(){ state=null; closeModal(); render(); },
+  onRenamed(){ render(); },
+});
+function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
+
+fetch("/avalon/data.json?v=__AVALON_DATA_VER__").then(r=>r.json()).then(d=>{ DATA=d; R=Object.fromEntries(d.roles.map(r=>[r.key,r])); render(); }).catch(()=>toast("角色数据加载失败,刷新重试"));
+
+/* ============ 小工具 ============ */
+const seatsArr=()=>Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
+const mySeats=()=>state.youHold.slice().sort((a,b)=>a-b);
+const rn=k=>R[k]?R[k].name:(k||"?");
+const ric=k=>R[k]?R[k].icon:"❔";
+const rteam=k=>R[k]?R[k].team:"good";
+const imgUrl=f=>f&&DATA.artBase?DATA.artBase+f:"";
+const rimg=k=>R[k]&&R[k].img&&R[k].img[0]?imgUrl(R[k].img[0]):"";
+const cimg=f=>f?`<img class="cimg" src="${esc(f)}" alt="" onerror="this.remove()"/>`:"";
+const teamName=t=>DATA.teams[t]?DATA.teams[t].name:t;
+const tmHtml=t=>`<span class="tm ${t}">${esc(t==="good"?"好人":"坏人")}</span>`;
+const nameOf=s=>s.holderDevices[0]||"";
+const packName=p=>DATA.packs&&DATA.packs[p]||p;
+const curQ=()=>state.quests[state.questNo-1];
+function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
+function afterState(prev){
+  const key=state.phase+":"+state.questNo+":"+(state.history||[]).length+":"+(curQ()&&curQ().sub);
+  if(prev&&(prev.phase!==state.phase||prev.questNo!==state.questNo)){ teamSel=[]; exSel=null; }
+  afterState.k=key;
+}
+// 一机多座:自动切到"该行动"的座位
+function autoSeat(){
+  const ms=mySeats(); if(ms.length<2) return;
+  const need=n=>{ const s=state.seats[n];
+    if(state.phase==="teamBuild") return state.leader===n;
+    if(state.phase==="vote") return !s.voted;
+    if(state.phase==="quest"){ const q=curQ(); if(q.sub==="play") return s.onTeam&&!s.played; if(q.sub==="excalibur") return q.excalibur===n; }
+    if(state.phase==="lady") return state.lady&&state.lady.holder===n;
+    if(state.phase==="assassin") return state.assassin&&state.assassin.seat===n;
+    return false; };
+  if(actSeat!=null&&need(actSeat)) return;
+  const n=ms.find(need); if(n!=null) actSeat=n;
+}
+
+/* ============ 弹层 ============ */
+function closeModal(){ modal=null; $("#modal").innerHTML=""; }
+function openCodex(focus){
+  modal={t:"codex",focus};
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 角色图鉴<span class="x" data-a="close">×</span></h2>`;
+  for(const [t,tn] of [["good","好人 · 亚瑟的忠臣"],["evil","坏人 · 莫德雷德的爪牙"]]){
+    h+=`<h3>${tmHtml(t)} ${esc(tn)}</h3>`;
+    for(const r of DATA.roles.filter(x=>x.team===t)) h+=`<div class="ce" id="cx-${r.key}" ${focus===r.key?'style="background:rgba(217,164,65,.08);border-radius:6px"':""}>${rimg(r.key)?`<img class="rimg sm" src="${esc(rimg(r.key))}" alt="" data-a="bigimg" data-f="${esc(R[r.key].img[0])}" onerror="this.outerHTML='<div class=ic>${r.icon}</div>'"/>`:`<div class="ic">${r.icon}</div>`}<div><div class="cn">${esc(r.name)} <span class="cm">${esc(r.en)} · ${esc(packName(r.pack))} · 最多 ${r.max} 张</span></div><div class="cd">${esc(r.desc)}</div></div></div>`;
+  }
+  h+=`<h3>🧝 湖中仙女</h3><div class="ce"><div class="ic">🧝</div><div class="cd">开局给队长右手边的人。第 2、3、4 任务结算后,持有者验一名玩家的阵营(只有自己看到结果),标记交给被验者;用过湖中仙女的人不能再被验。推荐 7 人以上,增强好人。</div></div>`;
+  h+=`<h3>⚔️ 王者之剑</h3><div class="ce"><div class="ic">⚔️</div><div class="cd">队长组队时把剑给队内一名非队长队员。任务卡收齐、翻开前,持剑者可指定一名其他队员把已出的卡换成另一张,并只有持剑者看到被换掉的原卡。</div></div>`;
+  h+=`<h3>🔄 兰斯洛特变体</h3><div class="ce"><div class="ic">🔄</div><div class="cd">${Object.values(DATA.lancelotModes).map(esc).join("<br>")}</div></div>`;
+  h+=`</div></div>`;
+  $("#modal").innerHTML=h;
+  if(focus){ const e=$("#cx-"+focus); e&&e.scrollIntoView({block:"center"}); }
+}
+function openBigImg(f,title){ modal={t:"img"}; $("#modal").innerHTML=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>${esc(title||"")}<span class="x" data-a="close">×</span></h2><img class="full" src="${esc(imgUrl(f))}" alt=""/></div></div>`; }
+function openHistory(){
+  modal={t:"hist"};
+  const seats=seatsArr();
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>🗳️ 投票记录<span class="x" data-a="close">×</span></h2><div class="hist">`;
+  h+=`<div class="hr" style="color:var(--fg-soft)"><span style="width:58px"></span>${seats.map(s=>`<span class="v" style="border:1px solid var(--line)">${s.seatNo}</span>`).join("")}</div>`;
+  for(const e of state.history) h+=`<div class="hr"><span class="q ${e.approved?"success":"fail"}" title="第 ${e.quest} 任务第 ${e.attempt} 次">Q${e.quest}·${e.attempt}</span>${seats.map(s=>`<span class="v ${e.votes[s.seatNo]?"y":"n"}${e.team.includes(s.seatNo)?" t":""}${e.leader===s.seatNo?" l":""}" title="${s.seatNo}号${e.leader===s.seatNo?" 队长":""}${e.team.includes(s.seatNo)?" 队员":""}">${e.votes[s.seatNo]?"✓":"✗"}</span>`).join("")}${e.excalibur!=null?`<span class="chip">⚔️${e.excalibur}</span>`:""}</div>`;
+  if(!state.history.length) h+=`<div class="hint">还没有投票。</div>`;
+  h+=`</div><div class="hint">绿✓赞成 / 红✗反对;蓝圈=队员,金边=队长。</div>`;
+  if(state.lady&&state.lady.history.length) h+=`<h2 style="margin-top:12px">🧝 湖中仙女</h2>`+state.lady.history.map(x=>`<div class="ln" style="font-size:13px">第 ${x.quest} 任务后:${x.by}号 验了 ${x.target}号</div>`).join("");
+  h+=`</div></div>`;
+  $("#modal").innerHTML=h;
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  const app=$("#app");
+  let h='<h1>阿瓦隆<span class="st">AVALON</span></h1><div class="sub">THE RESISTANCE: AVALON · 房间</div>';
+  if(!state){
+    app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。开局在手机上看自己的身份信息(不用闭眼脚本);队长组队、全桌投票、任务卡匿名结算、刺杀梅林都在手机上完成,不需要实体版图。"})
+      +'<div class="hint" style="text-align:center">其他游戏:'+RoomClient.gamesNav("avalon")+'</div>';
+    RoomClient.bindConnectForm(RC); return;
+  }
+  if(!DATA){ app.innerHTML=h+'<div class="card">加载角色数据…</div>'; return; }
+  h+=viewTopbar();
+  if(state.phase==="setup") h+=viewSetup();
+  else h+=viewGame();
+  h+=viewLog();
+  h+='<footer>阿瓦隆 · 房间版原型<br>其他房间:'+RoomClient.gamesNav("avalon")+'</footer>';
+  app.innerHTML=h;
+  layoutTable();
+  if(modal&&modal.t==="codex") openCodex(modal.focus);
+  if(modal&&modal.t==="hist") openHistory();
+}
+function viewTopbar(){
+  const ms=mySeats();
+  return `<div class="topbar"><span class="who">房间 <b>${esc(RC.code||state.roomCode)}</b> · ${esc(RC.deviceId)}${ms.length?" · 座位 "+ms.join("/"):""}</span>
+    <button class="xs ghost" data-a="rename">改名</button><button class="xs ghost" data-a="codex">📖 图鉴</button>${state.phase!=="setup"?`<button class="xs ghost" data-a="hist">🗳️ 记录</button>`:""}
+    <button class="xs ghost" data-a="disband">解散</button></div>`;
+}
+
+/* ---- 准备阶段 ---- */
+function loadLast(){ try{ return JSON.parse(RoomClient.lsGet("avalon_last")||"null"); }catch(e){ return null; } }
+function saveLast(){ RoomClient.lsSet("avalon_last",JSON.stringify({roles:state.roles,config:state.config,seats:seatsArr().length,at:Date.now()})); }
+function lastCfgBtn(){ const L=loadLast(); if(!L||!Array.isArray(L.roles)||!L.roles.length) return ""; const same=JSON.stringify(L.roles.slice().sort())===JSON.stringify(state.roles.slice().sort())&&JSON.stringify(L.config)===JSON.stringify(state.config); if(same) return ""; return `<button class="sm ghost" data-a="useLast" title="上一把:${esc(L.seats)} 人 ${esc(L.roles.map(rn).join("、"))}">沿用上次(${L.seats}人)</button>`; }
+const CHK_TXT={PLAYER_COUNT:"只支持 5~10 人",DECK_SIZE:"角色张数要等于人数",EVIL_COUNT:"坏人数量不对",LANCELOT_PAIR:"兰斯洛特要好坏成对",MORGANA_NEEDS_PERCIVAL:"莫甘娜要配派西维尔",MERLIN_NEEDS_ASSASSIN:"有梅林就要有刺客"};
+function viewSetup(){
+  const seats=seatsArr(), N=seats.length, t=state.table;
+  let h=`<div class="card"><h2>座位 <span class="tag">${N} 人 · 5~10</span></h2><div class="seats-setup">`;
+  for(const s of seats){
+    const mine=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
+    h+=`<div class="seat${mine?" mine":""}"><span class="st">${s.seatNo}</span><span class="grow"><span class="who">${held?esc(nameOf(s))+(mine?" (我)":""):"空位"}</span></span>
+      ${mine?`<button class="xs ghost" data-a="release" data-s="${s.seatNo}">离座</button>`:held?`<button class="xs ghost" data-a="takeover" data-s="${s.seatNo}">替换</button>`:`<button class="xs primary" data-a="claim" data-s="${s.seatNo}">落座</button>`}</div>`;
+  }
+  h+=`</div><div class="row" style="margin-top:6px"><button class="sm ghost" data-a="addSeat">＋ 加座位</button><button class="sm ghost" data-a="removeSeat">－ 减座位</button><span class="hint">座位号顺时针排;一台手机可代持多个座位。</span></div></div>`;
+  // 角色配置
+  const cnt={}; for(const k of state.roles) cnt[k]=(cnt[k]||0)+1;
+  const evil=state.roles.filter(k=>rteam(k)==="evil").length, good=state.roles.length-evil, chk=state.rolesCheck||{};
+  h+=`<div class="card"><h2>本局角色 <span class="tag">点角色名看图鉴</span></h2>
+    <div class="deckbar ${chk.ok?"ok":"bad"}"><b>${state.roles.length}</b>/${N} 张 · ${tmHtml("good")} ${good}${t?"/"+t.good:""} ${tmHtml("evil")} ${evil}${t?"/"+t.evil:""}${chk.error?` <span style="color:var(--red)">${esc(CHK_TXT[chk.error]||chk.error)}</span>`:""}<span class="grow"></span>${lastCfgBtn()}<button class="sm" data-a="recommend">推荐配置</button><button class="sm ghost" data-a="clearRoles">清空</button></div>
+    <div class="rgrid">`;
+  for(const pk of ["base","x","bigbox"]){
+    h+=`<h4>${esc(packName(pk))}</h4>`;
+    for(const r of DATA.roles.filter(x=>x.pack===pk)){ const c=cnt[r.key]||0;
+      h+=`<div class="rrow${c?" on":""}">${rimg(r.key)?`<img class="th" src="${esc(rimg(r.key))}" alt="" onerror="this.outerHTML='<span class=ic>${r.icon}</span>'"/>`:`<span class="ic">${r.icon}</span>`}<span class="grow"><div class="rn" data-a="codexOf" data-k="${r.key}">${esc(r.name)}</div><div class="ro">${tmHtml(r.team)} ${esc(r.short)}</div></span>
+        <button data-a="roleDec" data-k="${r.key}" ${c?"":"disabled"}>−</button><span class="cnt">${c}</span><button data-a="roleInc" data-k="${r.key}" ${c>=r.max?"disabled":""}>+</button></div>`;
+    }
+  }
+  h+=`</div>${t?`<div class="hint">${N} 人:任务人数 ${t.quests.join(" / ")}${N>=7?"(第 4 任务需两张失败)":""}。</div>`:""}</div>`;
+  const c=state.config;
+  h+=`<div class="card cfg"><h2>房间设置</h2>
+    <label class="inl"><input type="checkbox" id="cf-lady" ${c.lady?"checked":""} style="width:auto">🧝 湖中仙女(第 2/3/4 任务后验人;推荐 7 人以上)</label>
+    <label class="inl"><input type="checkbox" id="cf-excalibur" ${c.excalibur?"checked":""} style="width:auto">⚔️ 王者之剑(队长指定持剑队员,可换一张已出的任务卡)</label>
+    <label>🏇 兰斯洛特规则(角色里有兰斯洛特时生效)<select id="cf-lancelot" style="margin-top:4px">${Object.entries(DATA.lancelotModes).map(([k,v])=>`<option value="${k}" ${c.lancelot===k?"selected":""}>${esc(v)}</option>`).join("")}</select></label>
+    <div class="hint">本机改动即时同步给全房。</div></div>`;
+  h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${chk.ok?"":"disabled"}>🗡️ 开始游戏(发身份)</button>
+    <div class="hint">开局后每人在自己手机上看身份与开局信息,不需要闭眼脚本。队长随机产生。</div></div>`;
+  return h;
+}
+
+/* ---- 对局 ---- */
+function viewGame(){
+  let h=viewTracks();
+  h+=viewTable();
+  if(state.phase==="teamBuild") h+=viewTeamBuild();
+  else if(state.phase==="vote") h+=viewVote();
+  else if(state.phase==="quest") h+=viewQuest();
+  else if(state.phase==="lady") h+=viewLady();
+  else if(state.phase==="assassin") h+=viewAssassin();
+  else if(state.phase==="over") h+=viewResult();
+  h+=viewMyRoles();
+  if(state.phase!=="over") h+=`<div class="card"><div class="row"><button class="sm ghost" data-a="newGame">终止本局,回到准备</button></div></div>`;
+  return h;
+}
+function viewTracks(){
+  let h=`<div class="track">`;
+  for(const q of state.quests){ const cur=q.no===state.questNo&&state.phase!=="over";
+    h+=`<div class="q ${q.result||""}${cur?" cur":""}" title="第 ${q.no} 任务 ${q.size} 人${q.twoFails?",需两张失败":""}">${q.twoFails?`<span class="tf">2败</span>`:""}${q.result?(q.result==="success"?"✓":"✗"):q.size}<small>${q.result?`${q.fails} 失败`:q.size+" 人"}</small></div>`; }
+  h+=`</div><div class="vtrack"><span class="lb">否决</span>${[1,2,3,4,5].map(i=>`<i class="${i<=state.voteTrack?"done":""}${i===5?" five":""}">${i}</i>`).join("")}${state.lancelot&&state.lancelot.mode!=="know"?`<span class="chip" style="margin-left:6px" title="兰斯洛特阵营卡">🏇 ${state.lancelot.mode==="preset"?state.lancelot.preset.map((c,i)=>(i+1)+(c==="switch"?"换":"-")).join(" "):state.lancelot.drawn.map(c=>c==="switch"?"换":"-").join(" ")||"…"}${state.lancelot.switched?" · 已互换":""}</span>`:""}</div>`;
+  return h;
+}
+function selectable(){ // 当前我可点哪些座位
+  const n=curActSeat(); if(n==null) return new Set();
+  const all=seatsArr().map(s=>s.seatNo);
+  if(state.phase==="teamBuild"&&state.leader===n) return new Set(all);
+  if(state.phase==="lady"&&state.lady.holder===n) return new Set(all.filter(x=>x!==n&&!state.lady.used.includes(x)));
+  if(state.phase==="assassin"&&state.assassin&&state.assassin.seat===n) return new Set(all.filter(x=>x!==n));
+  if(state.phase==="quest"&&curQ().sub==="excalibur"&&curQ().excalibur===n) return new Set(curQ().team.filter(x=>x!==n));
+  return new Set();
+}
+function viewTable(){
+  const seats=seatsArr(), N=seats.length, over=state.phase==="over", r=state.result, q=state.phase==="quest"?curQ():null;
+  const sets=selectable();
+  const lastVote=state.phase==="teamBuild"&&state.history.length&&state.history[state.history.length-1].quest===state.questNo?state.history[state.history.length-1]:null;
+  let h=`<div class="table" id="table">`;
+  seats.forEach((s,i)=>{
+    const mine=state.youHold.includes(s.seatNo);
+    const canSel=sets.has(s.seatNo), isSel=(state.phase==="teamBuild"&&teamSel.includes(s.seatNo))||(modalSel===s.seatNo);
+    const face=over?r.roles[s.seatNo]:s.revealedRole;
+    const faceImg=over?(s.img?imgUrl(s.img):rimg(face)):(face?rimg(face):"");
+    const dead=over&&r.assassinTarget===s.seatNo;
+    let cls="pc"+(mine?" mine":"")+(s.onTeam?" team":"")+(canSel?" selectable":"")+(isSel?" sel":"")+(face?" face "+rteam(face):"")+(sets.size&&!canSel&&!isSel?" dim":"");
+    let inner=face?`${cimg(faceImg)}<div class="fx"><div class="rn">${esc(rn(face))}</div><div class="nm">${s.seatNo}号 ${esc(nameOf(s))}</div></div>`:`<div class="no">${s.seatNo}</div><div class="nm">${esc(nameOf(s))||"空位"}</div>`;
+    if(s.leader) inner+=`<div class="bd" title="队长">👑</div>`;
+    if(s.lady) inner+=`<div class="bd2" title="湖中仙女">🧝</div>`;
+    if(s.excalibur) inner+=`<div class="bd3" title="王者之剑">⚔️</div>`;
+    if(state.phase==="vote"&&s.voted) inner+=`<div class="bd4" title="已投票">✓</div>`;
+    if(q&&q.sub==="play"&&s.onTeam) inner+=`<div class="bd4" title="${s.played?"已出卡":"未出卡"}">${s.played?"🂠":"…"}</div>`;
+    if(lastVote) inner+=`<div class="vt ${lastVote.votes[s.seatNo]?"y":"n"}" title="上次投票">${lastVote.votes[s.seatNo]?"赞":"反"}</div>`;
+    if(dead) inner+=`<div class="dead-x" title="被刺">🗡️</div>`;
+    h+=`<div class="${cls}" data-a="seatClick" data-s="${s.seatNo}" data-i="${i}" data-n="${N}">${inner}</div>`;
+  });
+  // 中央:当前任务信息 / 上一任务结果卡
+  const last=state.quests.slice().reverse().find(x=>x.result);
+  let c="";
+  if(state.phase==="over") c=`<div class="big">${r.winner==="good"?"好人获胜":"坏人获胜"}</div>${esc(r.reason)}`;
+  else if(state.phase==="quest"){ c=`<div class="big">第 ${state.questNo} 任务执行中</div>${q.sub==="excalibur"?`等 ${q.excalibur}号 决定王者之剑`:`已出卡 ${q.playedCount}/${q.team.length}`}<div class="cards">${q.team.map(n=>{ const p=state.seats[n].played||q.sub==="excalibur"; return `<div class="qc ${p?"back":""}">${p?"":"·"}</div>`; }).join("")}</div>`; }
+  else if(state.phase==="vote") c=`<div class="big">投票中</div>已投 ${state.proposal.votedCount}/${N}`;
+  else if(state.phase==="assassin") c=`<div class="big">🎯 刺杀阶段</div>坏人商量后由刺客指认梅林`;
+  else if(state.phase==="lady") c=`<div class="big">🧝 湖中仙女</div>${state.lady.holder}号 验人中`;
+  else if(last) c=`<div class="big">第 ${last.no} 任务${last.result==="success"?"成功":"失败"}</div><div class="cards">${last.cards.map(x=>`<div class="qc ${x==="success"?"s":"f"}">${x==="success"?"✓":"✗"}</div>`).join("")}</div><div style="margin-top:3px">第 ${state.questNo} 任务:${state.leader}号 组队</div>`;
+  else c=`<div class="big">第 ${state.questNo} 任务</div>${state.leader}号 组队(${curQ().size} 人)`;
+  h+=`<div class="center">${c}</div></div>`;
+  return h;
+}
+let modalSel=null; // 湖中仙女/刺客/王者之剑 的点选
+function layoutTable(){
+  const t=$("#table"); if(!t) return;
+  for(const el of t.querySelectorAll(".pc")){ const i=+el.dataset.i, N=+el.dataset.n; const a=-Math.PI/2+2*Math.PI*i/N; el.style.left=(50+41*Math.cos(a))+"%"; el.style.top=(50+41*Math.sin(a))+"%"; }
+}
+function seatTabs(){ const ms=mySeats(); if(ms.length<2) return ""; return `<div class="tabs">${ms.map(x=>`<button class="sm ${x===actSeat?"on":""}" data-a="actSeat" data-s="${x}">${x}号</button>`).join("")}</div>`; }
+function noSeat(){ return `<div class="card"><div class="hint">你没有座位,只能围观。</div></div>`; }
+
+function viewTeamBuild(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), q=curQ();
+  let h=`<div class="card"><h2>🏰 第 ${state.questNo} 任务 · 组队 <span class="tag">${q.size} 人${q.twoFails?" · 需两张失败":""}</span></h2>`+seatTabs();
+  if(state.leader!==n){ h+=`<div class="hint">队长 <b>${state.leader}号</b> 正在组队。${state.voteTrack?`本任务已否决 ${state.voteTrack} 次,第 5 次否决坏人直接获胜。`:""}</div></div>`; return h; }
+  h+=`<div class="panel"><div class="ti">你是队长 👑</div><div class="tp">点圆桌上的座位选 ${q.size} 名队员(可含自己)。已选:${teamSel.length?teamSel.map(x=>x+"号").join("、"):"—"}</div>`;
+  if(state.config.excalibur) h+=`<div class="tp" style="margin-top:6px">⚔️ 王者之剑给:${teamSel.filter(x=>x!==n).map(x=>`<button class="xs ${exSel===x?"on":""}" data-a="exSel" data-s="${x}">${x}号</button>`).join(" ")||"(先选队员;不能给自己)"}</div>`;
+  h+=`<div class="row" style="margin-top:8px"><button class="primary" data-a="propose" ${teamSel.length===q.size&&(!state.config.excalibur||(exSel!=null&&teamSel.includes(exSel)))?"":"disabled"}>提议这支队伍,开始投票</button><button class="ghost" data-a="clearTeam">清空</button></div></div></div>`;
+  return h;
+}
+function viewVote(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), s=state.seats[n], p=state.proposal;
+  let h=`<div class="card secret"><h2>🗳️ 投票 <span class="tag">${n}号</span></h2>`+seatTabs();
+  h+=`<div class="panel"><div class="ti">${state.leader}号 提议:${p.team.map(x=>x+"号").join("、")}${p.excalibur!=null?` · ⚔️ ${p.excalibur}号`:""}</div><div class="tp">赞成过半才通过,平票=否决。本任务已否决 ${state.voteTrack} 次。${s.vote!=null?`<b style="color:var(--amber)">你已投「${s.vote?"赞成":"反对"}」</b>(全员投完一起亮票,投完前可改)`:""}</div>
+    <div class="bigbtns"><button class="ok ${s.vote===true?"":"ghost"}" data-a="vote" data-v="1">👍 赞成</button><button class="danger ${s.vote===false?"":"ghost"}" data-a="vote" data-v="0">👎 反对</button></div></div>`;
+  h+=`<div class="hint">已投 ${p.votedCount}/${seatsArr().length}。</div></div>`;
+  return h;
+}
+function viewQuest(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), s=state.seats[n], q=curQ();
+  let h=`<div class="card secret"><h2>⚔️ 第 ${state.questNo} 任务 <span class="tag">${n}号</span></h2>`+seatTabs();
+  if(q.sub==="excalibur"){
+    if(q.excalibur===n) h+=`<div class="panel"><div class="ti">⚔️ 你持有王者之剑</div><div class="tp">任务卡已收齐。你可以点圆桌上一名其他队员,把他出的卡换成另一张(只有你会看到他原本出了什么);也可以不用。已选:${modalSel!=null?modalSel+"号":"—"}</div>
+      <div class="row" style="margin-top:8px"><button class="primary" data-a="exUse" ${modalSel!=null?"":"disabled"}>换掉 ${modalSel!=null?modalSel+"号":"…"} 的卡</button><button class="ghost" data-a="exSkip">不使用</button></div></div>`;
+    else h+=`<div class="hint">任务卡已收齐,等 ${q.excalibur}号 决定是否使用王者之剑。</div>`;
+    return h+`</div>`;
+  }
+  if(!s.onTeam) h+=`<div class="hint">你不在本次队伍里。队员:${q.team.map(x=>x+"号").join("、")},已出卡 ${q.playedCount}/${q.team.length}。</div>`;
+  else {
+    const allowed=s.allowed||["success"];
+    h+=`<div class="panel"><div class="ti">你在队伍里,请出任务卡</div><div class="tp">${allowed.length===1?(allowed[0]==="success"?"你只能出「成功」。":"你(疯子)必须出「失败」。"):"坏人可出成功或失败。"}${q.twoFails?" 本任务需两张失败才算失败。":""}${s.card?`<br><b style="color:var(--amber)">已出「${s.card==="success"?"成功":"失败"}」</b>(收齐前可改)`:""}</div>
+      <div class="bigbtns"><button class="ok ${s.card==="success"?"":"ghost"}" data-a="qcard" data-c="success" ${allowed.includes("success")?"":"disabled"}>✓ 成功</button><button class="danger ${s.card==="fail"?"":"ghost"}" data-a="qcard" data-c="fail" ${allowed.includes("fail")?"":"disabled"}>✗ 失败</button></div></div>`;
+  }
+  return h+`</div>`;
+}
+function viewLady(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), L=state.lady;
+  let h=`<div class="card secret"><h2>🧝 湖中仙女 <span class="tag">${n}号</span></h2>`+seatTabs();
+  if(L.holder!==n) h+=`<div class="hint">${L.holder}号 正在验人。</div>`;
+  else h+=`<div class="panel"><div class="ti">你持有湖中仙女</div><div class="tp">点圆桌上一名玩家查验阵营(结果只有你看到;用过湖中仙女的 ${L.used.length?L.used.map(x=>x+"号").join("、"):"—"} 不能验)。已选:${modalSel!=null?modalSel+"号":"—"}</div>
+    <div class="row" style="margin-top:8px"><button class="primary" data-a="ladyGo" ${modalSel!=null?"":"disabled"}>查验 ${modalSel!=null?modalSel+"号":"…"}</button></div></div>`;
+  return h+`</div>`;
+}
+function viewAssassin(){
+  const ms=mySeats(); if(!ms.length) return noSeat();
+  const n=curActSeat(), a=state.assassin&&state.assassin.seat;
+  let h=`<div class="card secret"><h2>🎯 刺杀 <span class="tag">${n}号</span></h2>`+seatTabs();
+  if(a===n) h+=`<div class="panel"><div class="ti">你是刺客 🗡️</div><div class="tp">和坏人同伴商量后,点圆桌上一名玩家指认为梅林。指中坏人胜,指错好人胜。已选:${modalSel!=null?modalSel+"号":"—"}</div>
+    <div class="row" style="margin-top:8px"><button class="danger" data-a="assassinGo" ${modalSel!=null?"":"disabled"}>指认 ${modalSel!=null?modalSel+"号":"…"} 是梅林</button></div></div>`;
+  else if(a!=null) h+=`<div class="hint">三次任务成功。坏人请公开商量,由刺客 <b>${a}号</b> 指认梅林。</div>`;
+  else h+=`<div class="hint">三次任务成功!坏人正在商量,刺客将指认一名好人为梅林。</div>`;
+  return h+`</div>`;
+}
+function viewResult(){
+  const r=state.result;
+  let h=`<div class="card result"><div class="big ${r.winner}">${r.winner==="good"?"🏆 好人获胜":"🏆 坏人获胜"}</div><div class="ln" style="text-align:center">${esc(r.reason)}</div>`;
+  h+=`<table class="vt">${seatsArr().map(s=>`<tr><td><b>${s.seatNo}号</b> ${esc(nameOf(s))}</td><td>${s.img?`<img class="rimg sm" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" onerror="this.remove()"/>`:""}</td><td>${ric(s.role)} ${esc(rn(s.role))}${s.team!==rteam(s.role)?"(互换后)":""}</td><td>${tmHtml(s.team)}${r.winners.includes(s.seatNo)?" 🏆":""}${r.assassinTarget===s.seatNo?" 🗡️被指认":""}</td></tr>`).join("")}</table>`;
+  h+=`<details style="margin-top:8px"><summary>⚔️ 每个任务谁出了什么</summary>${state.quests.filter(q=>q.result).map(q=>`<div class="ln">第 ${q.no} 任务(${q.result==="success"?"成功":"失败"},队长 ${q.leader}号):${Object.entries(q.played||{}).map(([n,c])=>`${n}号${c==="fail"?"✗":"✓"}`).join(" ")}${q.excaliburUse?` · ⚔️ ${q.excaliburUse.by}号 换了 ${q.excaliburUse.target}号(原 ${q.excaliburUse.original==="fail"?"✗":"✓"})`:""}</div>`).join("")}</details>`;
+  h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="newGame">再来一局(保留配置)</button><button class="ghost" data-a="hist">🗳️ 投票记录</button></div></div>`;
+  return h;
+}
+function viewMyRoles(){
+  const ms=mySeats(); if(!ms.length) return "";
+  let h=`<div class="card secret"><h2>🪪 我的身份 <span class="tag">只有本机可见</span></h2>`;
+  for(const n of ms){ const s=state.seats[n]; const r=R[s.role]; if(!r) continue;
+    const team=state.lancelot&&state.lancelot.switched&&(s.role==="lancelot_good"||s.role==="lancelot_evil")?(r.team==="good"?"evil":"good"):r.team;
+    h+=`<div class="rolebig ${team}">${s.img?`<img class="rimg" src="${esc(imgUrl(s.img))}" alt="" data-a="bigimg" data-f="${esc(s.img)}" data-t="${esc(r.name)}" onerror="this.outerHTML='<div class=ic>${r.icon}</div>'"/>`:`<div class="ic">${r.icon}</div>`}<div class="grow"><div class="rn">${n}号 · ${esc(r.name)} ${tmHtml(team)}${team!==r.team?' <span class="chip">阵营已互换</span>':""}</div><div class="re">${esc(r.desc)}</div></div></div>`;
+    if(s.knows&&s.knows.length) h+=`<div class="knows">${s.knows.map(k=>`<span class="kn"><b>${k.seat}</b>号 ${esc(k.tag)}</span>`).join("")}</div>`;
+    if(s.info) h+=`<div class="note">${esc(s.info)}</div>`;
+    for(const t of (s.notes||[])) h+=`<div class="note">${esc(t)}</div>`;
+  }
+  return h+`</div>`;
+}
+function viewLog(){ return `<div class="card"><details><summary>📜 日志(公开)</summary><div class="log">${(state.log||[]).map(l=>`<div>${esc(l)}</div>`).join("")}</div></details></div>`; }
+
+/* ============ 交互 ============ */
+function onSeatClick(n){
+  const me=curActSeat(); if(me==null) return;
+  if(state.phase==="teamBuild"&&state.leader===me){ const q=curQ(); if(teamSel.includes(n)) teamSel=teamSel.filter(x=>x!==n); else if(teamSel.length<q.size) teamSel.push(n); else toast(`最多 ${q.size} 人`); if(exSel!=null&&!teamSel.includes(exSel)) exSel=null; render(); return; }
+  if(selectable().has(n)){ modalSel=modalSel===n?null:n; render(); }
+}
+function sendConfig(patch){ act("setConfig",{config:patch}); }
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]"); if(!b) return;
+  const a=b.dataset.a, sn=+b.dataset.s;
+  switch(a){
+    case "close": closeModal(); break;
+    case "closeMask": if(e.target===b) closeModal(); break;
+    case "rename": RC.promptRename(); break;
+    case "codex": openCodex(); break;
+    case "codexOf": openCodex(b.dataset.k); break;
+    case "hist": openHistory(); break;
+    case "bigimg": openBigImg(b.dataset.f,b.dataset.t||""); break;
+    case "disband": if(confirm("解散房间?所有人都会被踢出,房间数据清空。")) RC.send({type:"disbandRoom"}); break;
+    case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
+    case "takeover": { const s=state.seats[sn]; if(confirm(`座位 ${sn} 当前由「${nameOf(s)}」持有,替换成你?`)) RC.send({type:"takeoverSeat",seatNo:sn}); break; }
+    case "release": RC.send({type:"releaseSeat",seatNo:sn}); break;
+    case "addSeat": RC.send({type:"addSeat"}); break;
+    case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
+    case "roleInc": act("setRoles",{roles:state.roles.concat([b.dataset.k])}); break;
+    case "roleDec": { const i=state.roles.indexOf(b.dataset.k); if(i>=0){ const r=state.roles.slice(); r.splice(i,1); act("setRoles",{roles:r}); } break; }
+    case "recommend": act("recommendRoles"); break;
+    case "useLast": { const L=loadLast(); if(!L) break; act("setRoles",{roles:L.roles}); if(L.config) act("setConfig",{config:L.config}); toast("已沿用上次配置"+(L.seats!==seatsArr().length?"(上次 "+L.seats+" 人,注意座位数)":"")); break; }
+    case "clearRoles": act("setRoles",{roles:[]}); break;
+    case "start": saveLast(); act("startGame"); break;
+    case "actSeat": actSeat=sn; teamSel=[]; exSel=null; modalSel=null; render(); break;
+    case "seatClick": onSeatClick(sn); break;
+    case "exSel": exSel=exSel===sn?null:sn; render(); break;
+    case "clearTeam": teamSel=[]; exSel=null; render(); break;
+    case "propose": act("propose",{seatNo:curActSeat(),team:teamSel,excalibur:exSel}); break;
+    case "vote": act("vote",{seatNo:curActSeat(),approve:b.dataset.v==="1"}); break;
+    case "qcard": act("questCard",{seatNo:curActSeat(),card:b.dataset.c}); break;
+    case "exUse": if(modalSel!=null&&confirm(`用王者之剑换掉 ${modalSel}号 的任务卡?`)){ act("excalibur",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
+    case "exSkip": act("excalibur",{seatNo:curActSeat(),target:null}); modalSel=null; break;
+    case "ladyGo": if(modalSel!=null){ act("ladyCheck",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
+    case "assassinGo": if(modalSel!=null&&confirm(`指认 ${modalSel}号 是梅林?指错好人直接获胜。`)){ act("assassinate",{seatNo:curActSeat(),target:modalSel}); modalSel=null; } break;
+    case "newGame": if(state.phase==="over"||confirm("终止本局回到准备阶段?")) act("newGame"); break;
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target; if(!t.id||!t.id.startsWith("cf-")) return;
+  const k=t.id.slice(3);
+  if(k==="lady"||k==="excalibur") return sendConfig({[k]:t.checked});
+  if(k==="lancelot") return sendConfig({lancelot:t.value});
+});
+document.getElementById("rcNow").onclick=()=>RC.reconnectNow();
+render();
+</script>
+</body>
+</html>
