@@ -2,6 +2,12 @@
 
 > 给新对话接续用。新会话可直接让我 **读 `docs/room-protocol.md` + 本文件 + `prototype/`**,并跑 `node prototype/sgs/room-sim.mjs`(应 **863 passed**)+ `node prototype/sgs/deck-test.mjs`(应 26 passed)+ `node prototype/fengsheng/fs-sim.mjs`(应 72 passed)+ `node prototype/qmxy/qmxy-sim.mjs`(应 100 passed)+ `node prototype/onuw/onuw-sim.mjs`(应 131 passed)确认基线,即可继续。
 
+## 🗡️ 第五个游戏候选:阿瓦隆(2026-11-06,只做了研究,代码未动)
+- 研究综述 **`docs/avalon/README.md`**(规则骨架 / 夜晚脚本中英 / 系统发身份时的信息表 / 基础 8 角色 + Big Box 20 角色 + 湖中仙女·王者之剑·兰斯洛特·信使·盗贼·巫师·猎手·剧情牌 / 人数配置 / 产品形态建议 / 接入草案);立绘 **`docs/avalon/art-sources.md`**(A 公版画 Wikimedia Commons 一键 curl 已实跑 32/32,总览 `art-contact-sheet.jpg`;B 官方卡面 = BGG 图库平铺照直链,Big Box 30 张两张照片裁完就是整套)。
+- 任务人数表逐一对照 BGG 上 5~10 人实体版图照片核过:5 人 2/3/2/3/3、6 人 2/3/4/3/4、7 人 2/3/3/4*/4、8~10 人 3/4/4/5*/5(* 第 4 任务需 2 张失败);好/坏 3:2、4:2、4:3、5:3、6:3、6:4。
+- 形态建议:同一夜狼「系统发牌 + 全流程」(发身份替代闭眼脚本;投票公开、任务卡匿名计数、湖中仙女验人、刺杀指认全在手机上);v1 范围 基础 8 角色 + 兰斯洛特 + 湖中仙女 + 王者之剑。注册表 key `avalon`、路由 `/avalon`、DO `AvalonRoomDO`(`AVALON_ROOM`,wrangler 迁移 v7)。
+- 待用户定:立绘走公版画(默认)还是官方卡面;Big Box 译名(拟:疯子/蛮兵/揭示者/牧师/骗子/捣蛋鬼/不忠的仆人/信使/盗贼/巫师/猎手)。
+
 ## 📜 风声角色立绘(2026-11-03,待用户下载 + deploy)
 - 图源 = 风声文本本来就取自的开源客户端 Death-alter/TheMessage(`assets/resources/images/characters/`,47/49 个角色有图,文件名=拼音驼峰;孙守謨/王响没有)。清单 + 一键 curl 在 `docs/fengsheng/art-sources.md`,下载到 `assets/fengsheng/char/` 原名保存。
 - 接线:`fs-data.mjs` 加 `ART_BASE` + `CHAR_ART{id:文件}`;worker data.json 带 `artBase`、角色带 `art:"char/<文件>"`;`fs.html` 的 `avaHtml` 贴图(onerror 退回首字)、座位行公开角色前 `.sava` 小头像(点开技能)、技能/预览弹层技能上方 `.artimg` 大图;大厅卡片用程小蝶。盒子封面网上没找到可用图。
