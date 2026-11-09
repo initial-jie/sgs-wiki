@@ -156,7 +156,7 @@ export class FsCore extends RoomBase {
         // 同一角色只有一张实体牌:只拦「别人已公开」的同名(面朝下的不查,否则拒绝本身就泄露了别人的隐藏角色)
         if (this.seatNos().some((n) => n !== seatNo && this.seats[n].charId === cid && this.seats[n].faceUp)) return { error: "CHAR_TAKEN" };
         const up = ch.hidden ? !!msg.faceUp : true;
-        s.charId = cid; s.faceUp = up; s.offers = [];
+        s.charId = cid; s.faceUp = up; // 候选保留:选定后仍可在自己的候选里改选(重新发角色/再来一局才清)
         this._log(`${this._name(seatNo)}选定角色` + (up ? `:${ch.name}` : "(隐藏角色,暗置)"));
         return { ok: true };
       }

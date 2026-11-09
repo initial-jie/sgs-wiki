@@ -43,6 +43,11 @@ check("本人看得到自己的隐藏角色", V(1).seats[1].charId === 28);
 check("他人看不到面朝下的隐藏角色", V(2).seats[1].charId === null && V(2).seats[1].hasChar === true);
 check("日志不泄露隐藏角色名", !room.log.some((l) => l.includes("李宁玉")));
 for (let i = 2; i <= N; i++) act(i, { op: "pickChar", seatNo: i, charId: V(i).seats[i].offers[0] });
+{ const o2 = room.seats[2].offers.slice();
+  check("选定后候选仍保留(可改选)", o2.length === 2 && V(2).seats[2].offers.length === 2);
+  check("可在自己的候选里改选", act(2, { op: "pickChar", seatNo: 2, charId: o2[1] }).ok && room.seats[2].charId === o2[1]);
+  check("改选仍不能超出候选", act(2, { op: "pickChar", seatNo: 2, charId: CHARACTERS.find((c) => !o2.includes(c.id)).id }).error === "NOT_OFFERED");
+  act(2, { op: "pickChar", seatNo: 2, charId: o2[0] }); }
 { const pub = [2, 3, 4, 5].filter((n) => !CHAR_BY_ID[room.seats[n].charId].hidden), hid = [2, 3, 4, 5].filter((n) => CHAR_BY_ID[room.seats[n].charId].hidden);
   check("公开角色他人可见", pub.every((n) => V(1).seats[n].charId === room.seats[n].charId), JSON.stringify(pub));
   check("候选里的隐藏角色选定后他人不可见", hid.every((n) => V(1).seats[n].charId === null)); }
