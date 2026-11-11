@@ -1,5 +1,5 @@
 diff --git a/packages/jit/src/service-worker/index.ts b/packages/jit/src/service-worker/index.ts
-index 2b834d0..4c24f01 100644
+index 2b834d0d4..4c24f01fb 100644
 --- a/packages/jit/src/service-worker/index.ts
 +++ b/packages/jit/src/service-worker/index.ts
 @@ -61,7 +61,8 @@ worker.addEventListener("fetch", (event: FetchEvent) => {

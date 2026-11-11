@@ -1,5 +1,5 @@
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..4b68a1f 100644
+index 99aaa7989..4b68a1fe0 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -53,7 +53,7 @@ index 99aaa79..4b68a1f 100644
  	"extensions": [],
  	"banned": [],
 diff --git a/apps/core/game/package.js b/apps/core/game/package.js
-index 753d0a0..4734abc 100644
+index 753d0a02d..4734abc66 100644
 --- a/apps/core/game/package.js
 +++ b/apps/core/game/package.js
 @@ -49,6 +49,7 @@ window.noname_package = {
@@ -76,10 +76,10 @@ index 753d0a0..4734abc 100644
  		guozhan: {
  			normal: "国战模式",
 diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
-index f67cd1d..f64217b 100644
+index b7a3c124c..2bb343782 100644
 --- a/apps/core/layout/default/layout.css
 +++ b/apps/core/layout/default/layout.css
-@@ -3998,6 +3998,7 @@ div:hover > .intro {
+@@ -4063,6 +4063,7 @@ div:hover > .intro {
  	-webkit-animation: identity 0.8s;
  }
  .player .identity[data-color="zhu"],
@@ -87,7 +87,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="truezhu"],
  .player .identity[data-color="enemy"],
  div[data-nature="zhu"],
-@@ -4023,6 +4024,7 @@ span[data-nature="firemm"] {
+@@ -4088,6 +4089,7 @@ span[data-nature="firemm"] {
  }
  
  .player .identity[data-color="mingzhong"],
@@ -95,7 +95,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="rZhu"],
  .player .identity[data-color="rZhong"],
  .player .identity[data-color="rNei"],
-@@ -4045,6 +4047,7 @@ span[data-nature="firemx"] {
+@@ -4110,6 +4112,7 @@ span[data-nature="firemx"] {
  }
  
  .player .identity[data-color="zhong"],
@@ -103,7 +103,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="qun"],
  .player .identity[data-color="neutral"],
  .player .identity[data-color="friend2"],
-@@ -4115,6 +4118,8 @@ span[data-nature="qunmm"] {
+@@ -4180,6 +4183,8 @@ span[data-nature="qunmm"] {
  }
  
  .player .identity[data-color="nei"],
@@ -112,7 +112,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="ye"],
  .player .identity[data-color="rYe"],
  .player .identity[data-color="bYe"],
-@@ -4149,6 +4154,8 @@ span[data-nature="kamimm"] {
+@@ -4214,6 +4219,8 @@ span[data-nature="kamimm"] {
  }
  
  .player .identity[data-color="fan"],
@@ -121,7 +121,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="wu"],
  div[data-nature="fan"],
  span[data-nature="fan"],
-@@ -4171,6 +4178,9 @@ span[data-nature="commoner"] {
+@@ -4236,6 +4243,9 @@ span[data-nature="commoner"] {
  }
  
  .player .identity[data-color="cai"],
@@ -132,7 +132,7 @@ index f67cd1d..f64217b 100644
  .player .identity[data-color="bZhong"],
  .player .identity[data-color="bNei"],
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
-index 943d3f9..80fd87b 100644
+index 943d3f929..80fd87bf6 100644
 --- a/apps/core/mode/connect.js
 +++ b/apps/core/mode/connect.js
 @@ -85,6 +85,7 @@ export default {
@@ -197,7 +197,7 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..8e74502 100644
+index 67fb1b58b..8e7450259 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
 @@ -3,6 +3,202 @@ import html from "dedent";
@@ -1144,7 +1144,7 @@ index 67fb1b5..8e74502 100644
  		stratagem_gain: {
  			trigger: {
 diff --git a/apps/core/noname/game/check.js b/apps/core/noname/game/check.js
-index 34e2315..c661597 100644
+index 34e2315a3..c66159738 100644
 --- a/apps/core/noname/game/check.js
 +++ b/apps/core/noname/game/check.js
 @@ -181,6 +181,11 @@ export class Check {
@@ -1202,7 +1202,7 @@ index 34e2315..c661597 100644
  		ui.arena.classList.add("selecting");
  		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
 diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
-index 7335b5c..75aa4c7 100644
+index 7335b5c7f..75aa4c72d 100644
 --- a/apps/core/noname/game/index.js
 +++ b/apps/core/noname/game/index.js
 @@ -7196,16 +7196,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
@@ -1275,7 +1275,7 @@ index 7335b5c..75aa4c7 100644
  		_status.multitarget = false;
  		const skillinfo = get.info(event.skill) || {};
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
-index 10da4f2..0864b56 100644
+index 10da4f224..0864b5678 100644
 --- a/apps/core/noname/init/browser.js
 +++ b/apps/core/noname/init/browser.js
 @@ -10,15 +10,17 @@ import { FileSystem, FileSystemError, FileSystemErrorCode, installLegacyFileSyst
@@ -1392,7 +1392,7 @@ index 10da4f2..0864b56 100644
   * @implements { FileSystemAdapter }
   */
 diff --git a/apps/core/noname/init/index.ts b/apps/core/noname/init/index.ts
-index 2aacae2..45f4c6a 100644
+index 2aacae291..45f4c6a9d 100644
 --- a/apps/core/noname/init/index.ts
 +++ b/apps/core/noname/init/index.ts
 @@ -84,6 +84,11 @@ export async function boot() {
@@ -1417,7 +1417,7 @@ index 2aacae2..45f4c6a 100644
  
  	if (autoImport) {
 diff --git a/apps/core/noname/init/polyfill.ts b/apps/core/noname/init/polyfill.ts
-index dc294b9..6e89446 100644
+index dc294b901..6e894463e 100644
 --- a/apps/core/noname/init/polyfill.ts
 +++ b/apps/core/noname/init/polyfill.ts
 @@ -249,9 +249,10 @@ HTMLDivElement.prototype.setBackgroundDB = async function (img) {
@@ -1433,7 +1433,7 @@ index dc294b9..6e89446 100644
  	} else if (URL.canParse(img)) {
  		this.style.backgroundImage = `url("${img}")`;
 diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
-index bbc3353..dc07928 100644
+index bbc335357..dc07928fa 100644
 --- a/apps/core/noname/library/element/content.ts
 +++ b/apps/core/noname/library/element/content.ts
 @@ -1669,7 +1669,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
@@ -1455,7 +1455,7 @@ index bbc3353..dc07928 100644
  			},
  			event.videoId,
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..2537507 100644
+index 08f9718b5..25375071a 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -1616,7 +1616,7 @@ index 08f9718..2537507 100644
  					intro: "读取剪贴板以解析邀请链接自动加入联机房间",
  				},
 diff --git a/apps/core/noname/ui/click/index.js b/apps/core/noname/ui/click/index.js
-index add63cd..ac77751 100644
+index add63cd56..ac777511e 100644
 --- a/apps/core/noname/ui/click/index.js
 +++ b/apps/core/noname/ui/click/index.js
 @@ -413,6 +413,8 @@ export class Click {
@@ -1629,7 +1629,7 @@ index add63cd..ac77751 100644
  						ui.create.div(".name", button.info[i][0] || "无名玩家", node);
  					} else {
 diff --git a/apps/core/noname/ui/create/index.js b/apps/core/noname/ui/create/index.js
-index 6af9480..cd63704 100644
+index 6af9480e3..cd637040a 100644
 --- a/apps/core/noname/ui/create/index.js
 +++ b/apps/core/noname/ui/create/index.js
 @@ -2435,7 +2435,7 @@ export class Create {
