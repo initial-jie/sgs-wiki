@@ -112,7 +112,7 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 // 大类(包名「-」前的部分)展示顺序;没列到的排在「国战」之前。国战默认折叠(一般不进身份局将池)
 const FAM_ORDER=["标准","神话再临","界限突破","一将成名","界一将","SP","璀璨星河","门阀士族","谋","魔","祈福","文德武备","闪","限定","不臣之君","线下","移动版","其他"];
 const FAM_LAST=["国战"];
-const FCLS={"魏":"wei","蜀":"shu","吴":"wu","群":"qun","晋":"jin","神":"shen"};
+const FCLS={"魏":"wei","蜀":"shu","吴":"wu","群":"qun","晋":"jin","神":"shen","魔":"shen"};
 let HEROES=[],KEYS=[],CFG={},seen=new Set(),hasSaved=false,savedSnap="",filter="all",q="";
 let env="",list="white"; // 当前环境 / 当前名单(white|ban|temp)
 const closed=new Set(FAM_LAST);

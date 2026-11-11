@@ -22,7 +22,8 @@ const out = {};
 for (const name of [...new Set(generals.map((h) => h.name))].sort((a, b) => a.localeCompare(b, "zh"))) {
   // surname:"head" 让首字按姓氏读音(乐进=yue、张郃=he、单福=shan、尉迟=yuchi);nonZh 让 "SP" 这类整段保留
   const syl = pinyin(name, { toneType: "none", type: "array", surname: "head", nonZh: "consecutive" })
-    .map((s) => s.toLowerCase().replace(/ü/g, "v"));
+    .map((s) => s.toLowerCase().replace(/ü/g, "v"))
+    .filter((s) => /[a-z0-9]/.test(s)); // 名字里的「·」等标点不成音节(疑·魔曹操 → yi mo cao cao)
   out[name] = FIX[name] || syl.join(" ");
 }
 writeFileSync(new URL("./shared/hero-pinyin.json", import.meta.url), JSON.stringify(out, null, 1) + "\n");

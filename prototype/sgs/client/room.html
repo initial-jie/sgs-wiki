@@ -155,7 +155,7 @@ footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:20px;le
 .fc{display:inline-block;font-size:11px;border-radius:4px;padding:0 5px;border:1px solid var(--line);color:var(--ink-soft);margin-left:5px}
 .fc.wei{color:#2b5fa5;border-color:#2b5fa5}.fc.shu{color:#a33322;border-color:#a33322}
 .fc.wu{color:#2f7d4f;border-color:#2f7d4f}.fc.qun{color:#7a6320;border-color:#7a6320}
-.fc.jin{color:#6b4a86;border-color:#6b4a86}.fc.shen{color:#a06a1a;border-color:#a06a1a;background:rgba(160,106,26,.08)}
+.fc.jin{color:#6b4a86;border-color:#6b4a86}.fc.shen{color:#a06a1a;border-color:#a06a1a;background:rgba(160,106,26,.08)}.fc.mo{color:#7a1f3d;border-color:#7a1f3d;background:rgba(122,31,61,.08)}
 /* 全场状态面板 */
 .pnl-tab{font-size:12px;padding:4px 12px}
 .pnl-tab.on{background:var(--seal);border-color:var(--seal);color:#f6ecd8}
@@ -313,7 +313,9 @@ function banPoolKey(){ const n=state?Object.keys(state.seats).length:0; return n
 function banPoolIds(){ const p=BAN_POOLS[banPoolKey()]; return (p&&p.ids)||[]; }
 function banOn(){ return !state||state.banEnabled!==false; }  // 房内总开关(默认开)
 function isBanned(id){ return banOn()&&banPoolIds().includes(Number(id)); }
-const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
+const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen",魔:"mo"};
+const selF=h=>h&&h.faction==="魔"?"魔":"神"; // 势力自选武将的本势力字(神将 / 蚀心入魔的魔势力)
+const selC=h=>h&&h.faction==="魔"?"mo":"shen";
 const SUIT_CH={S:"♠",H:"♥",C:"♣",D:"♦"}; // 纯字符(用于 <option> 文本,不能用返回 HTML 的 suitGlyph)
 function loadHeroes(){
   fetch("/generals.json").then(r=>r.ok?r.json():Promise.reject(r.status)).then(list=>{
@@ -428,7 +430,7 @@ function renderPickerList(qstr){
   const shown=list.slice(0,60);
   let h=shown.map(hero=>{
     const fc=FCLS[hero.faction]||"";
-    const fname=hero.factionSelectable?"神·自选":(hero.faction||"?");
+    const fname=hero.factionSelectable?selF(hero)+"·自选":(hero.faction||"?");
     const banned=isBanned(hero.id);
     return `<div class="grow-item" data-pickid="${hero.id}"${banned?' style="opacity:.6"':''}>
       <img class="ava" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>
@@ -454,7 +456,7 @@ function choosePick(id){
 // ① 技能修正提示:该将技能经校正(线下版/线上增强/补全),与你手上的实体卡版本可能不同→查将时弹⚠
 function cardWarnHtml(hero){ return (hero&&hero.cardWarn)?`<div style="background:rgba(178,34,34,.08);border:1px solid var(--seal);border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:var(--seal)"><b>⚠ 技能修正</b> ${esc(hero.cardWarn)}</div>`:""; }
 // ③ 同名可替换:OL 规则=同名武将只能选其一落座,神版为独立武将(可与一个非神版共存)。基名=剥版本前缀(神/界/谋/魔/SP);分组审计确认无假阳性
-function heroBaseName(name){ return (name||"").replace(/^(?:移动版|线下)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/,""); } // 移动版=版本来源标记,可再叠系列前缀(移动版谋韩当→韩当);与 shared/deal.mjs 同步 // 梦=线下系列(梦貂蝉);教主/暴君/昏君=《不臣之心》模式专属将,与同名标准将互斥
+function heroBaseName(name){ return (name||"").replace(/^(?:移动版|线下)?(?:[疑慢嗔贪痴]·)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/,""); } // 移动版=版本来源标记,可再叠系列前缀(移动版谋韩当→韩当);与 shared/deal.mjs 同步 // 梦=线下系列(梦貂蝉);教主/暴君/昏君=《不臣之心》模式专属将,与同名标准将互斥
 function sameNameVersions(hero){
   if(!hero||!hero.name||!Array.isArray(HEROES)) return null;
   const base=heroBaseName(hero.name);
@@ -474,8 +476,8 @@ function openSkillView(general,seatNo){
   if(!hero){toast("该武将暂无技能资料(线下/手输)");return;}
   const mine=state.youHold.includes(seatNo);
   const chosen=state.seats[seatNo]?.chosenFaction||null;
-  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||"shen"):"shen"):(FCLS[chosen||hero.faction]||"");
-  const fname=hero.factionSelectable?(chosen?("神 → "+chosen):"神 · 势力自选"):(chosen&&chosen!==hero.faction?hero.faction+" → "+chosen:(hero.faction||"?"));
+  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||selC(hero)):selC(hero)):(FCLS[chosen||hero.faction]||"");
+  const fname=hero.factionSelectable?(chosen?(selF(hero)+" → "+chosen):selF(hero)+" · 势力自选"):(chosen&&chosen!==hero.faction?hero.faction+" → "+chosen:(hero.faction||"?"));
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
   const skills=skillsHtml(hero.skills);
@@ -501,8 +503,8 @@ function previewHero(id,opt){ // opt.viewOnly:图鉴/禁将池里只看不选(�
   const hero=HERO_BY_ID.get(id); if(!hero){toast("该武将暂无技能资料");return;}
   const viewOnly=!!(opt&&opt.viewOnly);
   const banned=isBanned(id); // ② 禁将:可查看技能,但「选定」禁用
-  const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
-  const fname=hero.factionSelectable?"神 · 势力自选":(hero.faction||"?");
+  const fc=hero.factionSelectable?selC(hero):(FCLS[hero.faction]||"");
+  const fname=hero.factionSelectable?selF(hero)+" · 势力自选":(hero.faction||"?");
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
   const skills=skillsHtml(hero.skills);
@@ -726,9 +728,9 @@ function renderDeal(){
       +(s.src==="init"&&!locked&&!callPhase?`<button class="ghost" data-dswap="${i}" data-dkey="${esc(s.key)}" style="font-size:12px;padding:3px 10px">换一张</button>`:"")+`</div>`;
     for(const o of s.opts){
       const hero=HERO_BY_ID.get(o.id), picked=on&&me.pick.heroId===o.id, open=dealOpen===o.id;
-      const fc=hero?(hero.factionSelectable?"shen":(FCLS[hero.faction]||"")):"";
+      const fc=hero?(hero.factionSelectable?selC(hero):(FCLS[hero.faction]||"")):"";
       h+=`<div class="dopt${picked?" picked":""}"><img class="dava" src="${esc(hero&&hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
-        +`<span class="grow"><b>${esc(o.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血${o.lord?" · 主公技":""}${hero.tool?" · 有工具":""}</span>`:""}</span>`
+        +`<span class="grow"><b>${esc(o.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?selF(hero):hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血${o.lord?" · 主公技":""}${hero.tool?" · 有工具":""}</span>`:""}</span>`
         +`<button class="gold btn-skill" data-dskill="${o.id}">${open?"收起":"技能"}</button>`
         +(locked||callPhase?"":`<button class="${picked?"":"primary"}" data-dpick="${i}" data-dhero="${o.id}" data-dname="${esc(o.name)}"${waitLord?" disabled":""} style="padding:5px 12px">${picked?"已选":"选定"}</button>`)+`</div>`;
       if(open&&hero) h+=`<div class="dskills">${hero.characteristic?`<div class="hint" style="margin:0 0 6px">特点:${esc(hero.characteristic)}</div>`:""}${cardWarnHtml(hero)}${skillsHtml(hero.skills)}${derivedSkillsHtml(hero)}${derivedCardsHtml(hero)}</div>`;
@@ -740,9 +742,9 @@ function renderDeal(){
   for(const fn of firsts){
     const fs=d.seats[fn]; if(!fs||!fs.pick||!fs.final||fn===dealSeat) continue;
     const hero=HERO_BY_ID.get(fs.pick.heroId), open=dealOpen===-fn; // 用负座位号当展开 key,避免与候选里同一武将的展开状态撞车
-    const fc=hero?(hero.factionSelectable?"shen":(FCLS[hero.faction]||"")):"";
+    const fc=hero?(hero.factionSelectable?selC(hero):(FCLS[hero.faction]||"")):"";
     firstHtml+=`<div class="dopt" style="border-color:var(--seal)"><img class="dava" src="${esc(hero&&hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
-      +`<span class="grow"><span style="font-size:12px;color:var(--seal)">${esc(lt)} · 座位 ${fn} 已亮出</span><br><b>${esc(fs.pick.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血</span>`:""}</span>`
+      +`<span class="grow"><span style="font-size:12px;color:var(--seal)">${esc(lt)} · 座位 ${fn} 已亮出</span><br><b>${esc(fs.pick.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?selF(hero):hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血</span>`:""}</span>`
       +(hero?`<button class="gold btn-skill" data-dfirst="${fn}">${open?"收起":"技能"}</button>`:"")+`</div>`
       +(open&&hero?`<div class="dskills">${hero.characteristic?`<div class="hint" style="margin:0 0 6px">特点:${esc(hero.characteristic)}</div>`:""}${cardWarnHtml(hero)}${skillsHtml(hero.skills)}${derivedSkillsHtml(hero)}${derivedCardsHtml(hero)}</div>`:"");
   }
@@ -789,8 +791,8 @@ function renderArt(){
   const curSkin=list.find(x=>x[0]===cur);
   const img=cur?skinBig(cur):(hero.cover||hero.avatar||"");
   const chosen=s.chosenFaction||null;
-  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||"shen"):"shen"):(FCLS[chosen||hero.faction]||"");
-  const fname=hero.factionSelectable?(chosen||"神"):(chosen&&chosen!==hero.faction?hero.faction+"→"+chosen:(hero.faction||"?"));
+  const fc=hero.factionSelectable?(chosen?(FCLS[chosen]||selC(hero)):selC(hero)):(FCLS[chosen||hero.faction]||"");
+  const fname=hero.factionSelectable?(chosen||selF(hero)):(chosen&&chosen!==hero.faction?hero.faction+"→"+chosen:(hero.faction||"?"));
   const cap=hero.hp||0,start=hero.initialHp||hero.hp||0;
   let dots="";for(let i=0;i<cap;i++)dots+=`<span class="hp-dot ${i<start?'full':'empty'}"></span>`;
   const strip=$("#modal .artstrip"), keep=strip?strip.scrollLeft:0;
@@ -985,9 +987,9 @@ function renderWikiGrid(){ // 只刷网格与计数(搜索打字时不整页 ren
   g.innerHTML=list.map(hero=>{
     const ban=isBanned(hero.id), inp=W&&W.has(hero.id);
     if(ban)nban++; else if(inp)nin++;
-    const fc=hero.factionSelectable?"shen":(FCLS[hero.faction]||"");
+    const fc=hero.factionSelectable?selC(hero):(FCLS[hero.faction]||"");
     return `<div class="wk-cell${ban?" ban":inp?" in":""}" data-wikiview="${hero.id}"><img loading="lazy" src="${esc(hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
-      +`<span class="wk-mark">${ban?"禁":inp?"池":""}</span><span class="wk-nm">${esc(hero.name)}</span><span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span></div>`;
+      +`<span class="wk-mark">${ban?"禁":inp?"池":""}</span><span class="wk-nm">${esc(hero.name)}</span><span class="fc ${fc}">${esc(hero.factionSelectable?selF(hero):hero.faction||"?")}</span></div>`;
   }).join("")||`<div class="hint">没有匹配的武将</div>`;
   const c=$("#wiki-cnt"); if(c) c.innerHTML=`${wikiQ?"搜到 ":""}<b>${list.length}</b> 将${W?` · 在池 <b class="wk-in">${nin}</b> · 禁 <b class="wk-ban">${nban}</b>`:" · 将池读取中…"}${banOn()?"":" · <span style='color:var(--seal)'>房内禁将已关,禁标仅供参考</span>"}`;
   g.querySelectorAll("[data-wikiview]").forEach(el=>el.onclick=()=>previewHero(+el.dataset.wikiview,{viewOnly:true}));
@@ -1013,9 +1015,9 @@ function renderDealBan(d,me){
     <div class="dslot">`;
   for(const o of me.banCands){
     const hero=HERO_BY_ID.get(o.id), open=dealOpen===o.id, isB=!!(me.ban&&me.ban.some(b=>b.heroId===o.id));
-    const fc=hero?(hero.factionSelectable?"shen":(FCLS[hero.faction]||"")):"";
+    const fc=hero?(hero.factionSelectable?selC(hero):(FCLS[hero.faction]||"")):"";
     h+=`<div class="dopt${isB?" picked":""}"><img class="dava" src="${esc(hero&&hero.avatar||"")}" onerror="this.style.visibility='hidden'"/>`
-      +`<span class="grow"><b>${esc(o.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?"神":hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血</span>`:""}</span>`
+      +`<span class="grow"><b>${esc(o.name)}</b>${hero?`<span class="fc ${fc}">${esc(hero.factionSelectable?selF(hero):hero.faction||"?")}</span> <span style="font-size:12px;color:var(--ink-soft)">${hero.hp||"?"}血</span>`:""}</span>`
       +`<button class="gold btn-skill" data-dskill="${o.id}">${open?"收起":"技能"}</button>`
       +(isB?`<span class="lb">已 ban</span>`:me.picked?"":`<button data-dban="${o.id}" data-dname="${esc(o.name)}" style="padding:5px 12px;border-color:var(--seal);color:var(--seal)">ban</button>`)+`</div>`;
     if(open&&hero) h+=`<div class="dskills">${hero.characteristic?`<div class="hint" style="margin:0 0 6px">特点:${esc(hero.characteristic)}</div>`:""}${cardWarnHtml(hero)}${skillsHtml(hero.skills)}${derivedSkillsHtml(hero)}${derivedCardsHtml(hero)}</div>`;
@@ -1135,7 +1137,7 @@ function viewSeats(){
     else if(s.general&&s.general!=="none") label=`<span class="kb">${esc(nm)}</span>`;
     if(s.hidden&&s.general!=="hidden") label+=`<span class="kb" style="background:#2a241c;color:#f3ead8;border-color:#2a241c">🙈 隐匿中(仅你可见)</span>`;
     if(hero){
-      if(hero.factionSelectable) label+=`<span class="fc ${chosen?(FCLS[chosen]||'shen'):'shen'}">${chosen?"神→"+esc(chosen):"神·自选"}</span>`;
+      if(hero.factionSelectable) label+=`<span class="fc ${chosen?(FCLS[chosen]||selC(hero)):selC(hero)}">${chosen?selF(hero)+"→"+esc(chosen):selF(hero)+"·自选"}</span>`;
       else if(chosen&&chosen!==hero.faction) label+=`<span class="fc ${FCLS[chosen]||''}">${esc(hero.faction||"?")}→${esc(chosen)}</span>`; // 孟达苟得变更势力
       else label+=`<span class="fc ${FCLS[hero.faction]||''}">${esc(hero.faction||"?")}</span>`;
     }
@@ -1183,7 +1185,7 @@ function viewSeats(){
       if(iv&&iv.mine) ctl+=`<button class="gold" data-myident="${s.seatNo}" style="font-size:13px">🪪 我的身份</button>`;
       if(ctl) h+=`<div class="row" style="margin-top:6px">${ctl}</div>`;
       if(hero&&hero.factionSelectable){
-        h+=`<div class="row" style="margin-top:5px"><label style="font-size:12px;color:var(--ink-soft)">神·自选势力</label>`
+        h+=`<div class="row" style="margin-top:5px"><label style="font-size:12px;color:var(--ink-soft)">${selF(hero)}·自选势力</label>`
           +["魏","蜀","吴","群","晋"].map(f=>`<button class="pick ${chosen===f?'sel':''}" data-fac="${s.seatNo}:${f}" style="min-width:34px;padding:5px 0">${f}</button>`).join("")
           +(chosen?`<button class="ghost" data-fac="${s.seatNo}:" style="font-size:12px">清</button>`:"")+`</div>`;
       }

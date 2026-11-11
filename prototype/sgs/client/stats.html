@@ -30,7 +30,7 @@ td:first-child,th:first-child{text-align:left}td:nth-child(2),th:nth-child(2){te
 <script>
 "use strict";
 const $=s=>document.querySelector(s), esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen"};
+const FCLS={魏:"wei",蜀:"shu",吴:"wu",群:"qun",晋:"jin",神:"shen",魔:"shen"};
 const GROUPS=[["big","5 人以上",n=>n>=5],["four","4 人",n=>n===4],["three","3 人 · 斗地主",n=>n===3]];
 let HEROES=[],BY_ID=new Map(),BY_NAME=new Map(),LIST=[],group="big",sortK="offered",sortD=-1,q="",show="any";
 function players(r){return (r.seats||[]).filter(s=>s.player||s.general).length;}
@@ -51,7 +51,7 @@ function compute(){
     const any=s.offered||s.picked||s.banCand||s.banned;
     if(show==="any"&&!any)continue; if(show==="picked"&&!s.picked)continue; if(show==="banned"&&!s.banned)continue;
     if(q&&!h.name.includes(q)&&!(h.py||"").replace(/ /g,"").startsWith(q.toLowerCase()))continue;
-    rows.push({id:h.id,name:h.name,fac:h.factionSelectable?"神":(h.faction||"?"),...s,offRate:recs.length?s.offered/recs.length:0,pickRate:s.offered?s.picked/s.offered:(s.picked?1:0),banRate:s.banCand?s.banned/s.banCand:0});
+    rows.push({id:h.id,name:h.name,fac:h.factionSelectable?(h.faction==="魔"?"魔":"神"):(h.faction||"?"),...s,offRate:recs.length?s.offered/recs.length:0,pickRate:s.offered?s.picked/s.offered:(s.picked?1:0),banRate:s.banCand?s.banned/s.banCand:0});
   }
   rows.sort((a,b)=>{const x=a[sortK],y=b[sortK];if(typeof x==="string")return sortD*x.localeCompare(y,"zh");return sortD*((x-y)||(b.offered-a.offered)||(b.picked-a.picked))||a.name.localeCompare(b.name,"zh");});
   const pct=v=>(v*100).toFixed(0)+"%", bar=(v,c)=>`<span class="bar ${c||""}" style="width:${Math.round(Math.min(1,v)*40)}px"></span>`;

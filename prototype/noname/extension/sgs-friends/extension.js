@@ -16,6 +16,9 @@ const PLATFORM = { "": "", "OL": "", "新杀": "", "手杀": "移动版", "标":
 const KIND = { "": "", "界": "界", "谋": "谋", "神": "神", "族": "族", "SP": "SP", "★SP": "SP", "☆SP": "SP", "J.SP": "SP", "魔": "魔", "闪": "闪", "梦": "梦", "晋": "" };
 // 我们叫法 ≠ 无名杀叫法的个别武将
 const ALIAS = { "冯方女": "冯方" };
+// 线下《蚀心入魔》魔将:无名杀放在 sxrm 包,显示名同为「魔X」,会和 OL 魔系列(onlyOL 包 dm_*)撞名 → 我们的名字按 id 直连;
+// 反过来 sxrm_* 不参与按名匹配(否则白名单里的 OL「魔曹操」会把线下版也放进来)。无名杀还没实现的(魔吕布)先列着,上游有了自动生效。
+const DIRECT = { "疑·魔曹操": ["sxrm_caocao"], "慢·魔关羽": ["sxrm_guanyu"], "嗔·魔周瑜": ["sxrm_zhouyu"], "贪·魔吕布": ["sxrm_lvbu"] };
 function parsePrefix(p) {
 	for (const plat of Object.keys(PLATFORM).sort((a, b) => b.length - a.length)) {
 		if (!p.startsWith(plat)) continue;
@@ -41,6 +44,7 @@ function buildIndex() {
 	for (const id of Object.keys(lib.character)) {
 		const ch = lib.character[id];
 		if (!ch || ch.isUnseen || (lib.characterFilter[id] && !lib.characterFilter[id]("identity"))) continue;
+		if (id.startsWith("sxrm_")) continue; // 蚀心入魔包只走 DIRECT
 		const d = nonameDisplay(id);
 		if (!d) continue;
 		if (!byOurs.has(d.ours)) byOurs.set(d.ours, []);
@@ -84,6 +88,13 @@ export function computeAllowed(pool, byOurs) {
 	const unmatched = [];
 	const chosen = new Map(); // 我们的名字 → 选中的无名杀 id 列表(皮肤映射用)
 	for (const name of white) {
+		if (DIRECT[name]) {
+			const direct = DIRECT[name].filter(id => lib.character[id]);
+			if (!direct.length) { unmatched.push(name); continue; }
+			for (const id of direct) allowed.add(id);
+			chosen.set(name, direct);
+			continue;
+		}
 		const key = ALIAS[name] || name;
 		const cands = byOurs.get(key);
 		const m = key.match(/^(移动版|线下|标)?/);

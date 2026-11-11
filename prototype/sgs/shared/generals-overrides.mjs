@@ -383,6 +383,65 @@ export const OFFLINE_HEROES = [
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/65900.png",
     tool: null, offline: true,
   },
+  {
+    // 线下《蚀心入魔·疑》魔武将。来源:萌娘百科「三国杀:曹操」蚀心入魔·疑 节简略描述(2026-11-11 抓);OL 无此将(与 OL 魔系列无关)。
+    id: 9030, name: "疑·魔曹操", genre: "蚀心入魔", series: "魔", faction: "魔",
+    factionSelectable: true, quality: "线下", hp: 3, initialHp: null,
+    tags: ["卖血", "控制", "过牌"],
+    skills: [
+      { name: "枯心", effect: "当你受到伤害后，你可以令所有其他角色依次展示任意张手牌，你选择获得所有角色展示的牌或一名其他角色未展示的所有手牌并展示之，若你未因此获得红桃牌，你弃置获得的牌并翻面。" },
+      { name: "似故", effect: "出牌阶段限一次，你可以令一名其他角色进行判定并对其造成两次1点伤害，期间其根据判定结果视为拥有对应的“受到伤害后”的技能。判定结果对应的技能——A〖智迟〗、2〖刚烈〗、3〖反馈〗、4〖遗计〗、5〖节命〗、6〖放逐〗、7〖矢北〗、8〖称象〗、9〖智愚〗、10〖鸡肋〗、J〖贲育〗、Q〖筹策〗、K〖武魂〗。" },
+    ],
+    characteristic: "线下《蚀心入魔·疑》的核心魔武将（称号“一目窥九州”，编号 DE 001）。魔势力：与神将一样，游戏开始时任选一个势力。枯心卖血收全场手牌，似故令目标判定并挨两次伤害、期间临时拥有对应的卖血技（十三个技能原文见衍生技）。",
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-caocao-yi.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-caocao-yi-s.jpg",
+    tool: null, offline: true,
+  },
+  {
+    // 线下《蚀心入魔·慢》魔武将。来源:萌娘百科「三国杀:关羽」蚀心入魔·慢 节简略描述(2026-11-11 抓);OL 无此将(与 OL 魔系列无关)。
+    id: 9031, name: "慢·魔关羽", genre: "蚀心入魔", series: "魔", faction: "魔",
+    factionSelectable: true, quality: "线下", hp: 5, initialHp: null,
+    tags: ["进攻", "控制", "辅助"],
+    skills: [
+      { name: "撼国", effect: "每轮开始时，你可以扣置一名上轮未选择过的其他角色所有牌直到本轮结束，本轮内：当你对其使用的【杀】对其造成伤害后，其死亡；其可以令除其外的角色选择是否替其使用或打出【闪】且响应的角色获得你一张牌。" },
+      { name: "唯我", effect: "限定技，结束阶段，你可以令至多三名其他角色获得〖仁德〗、〖青囊〗、〖龙吟〗中各不同的一个技能（这些技能只能对你发动），然后你获得〖武神〗。" },
+    ],
+    characteristic: "线下《蚀心入魔·慢》的核心魔武将（称号“四海仰鼻息”，编号 DE 002）。魔势力：与神将一样，游戏开始时任选一个势力。撼国每轮扣置一名角色的所有牌并可用【杀】令其即死，唯我给至多三名其他角色各发一个只能对你发动的辅助技并获得武神。",
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-guanyu-man.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-guanyu-man-s.jpg",
+    tool: null, offline: true,
+  },
+  {
+    // 线下《蚀心入魔·嗔》魔武将。来源:萌娘百科「三国杀:周瑜」蚀心入魔·嗔 节简略描述(2026-11-11 抓);OL 无此将(与 OL 魔系列无关)。
+    id: 9032, name: "嗔·魔周瑜", genre: "蚀心入魔", series: "魔", faction: "魔",
+    factionSelectable: true, quality: "线下", hp: 4, initialHp: null,
+    tags: ["爆发", "控制"],
+    skills: [
+      { name: "劫火", effect: "使命技，回合开始时，你可以令场上下次出现的伤害改为3点火焰伤害。失败：此伤害被造成时，若造成此伤害的角色不为你，你减1点体力上限。" },
+      { name: "香饵", effect: "使命技，出牌阶段限一次，你可以令一名角色于其下个结束阶段回复2点体力，期间其不能使用点数大于6的牌。失败：此回复体力流程结束后，若期间其受到的伤害值小于2，你减1点体力上限。" },
+      { name: "灭虢", effect: "使命技，额定回合结束后，你可以获得一名其他角色至多三张牌并令其选择等量的角色，然后你执行一个不能对其选择角色使用牌的额外回合。失败：此额外回合结束时，若此额外回合你未使用过牌，你减1点体力上限。" },
+    ],
+    characteristic: "线下《蚀心入魔·嗔》的核心魔武将（称号“哀弦万耳惊”，编号 DE 003）。魔势力：与神将一样，游戏开始时任选一个势力。三个使命技都只有失败条件：效果夸张，但每失败一个减1点体力上限且该技能本局失效。",
+    cover: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-zhouyu-chen.jpg",
+    avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-zhouyu-chen-s.jpg",
+    tool: null, offline: true,
+  },
+  {
+    // 线下《蚀心入魔·贪》魔武将。来源:萌娘百科「三国杀:吕布」蚀心入魔·贪 节简略描述(2026-11-11 抓);OL 无此将(与 OL 魔系列无关)。
+    id: 9033, name: "贪·魔吕布", genre: "蚀心入魔", series: "魔", faction: "魔",
+    factionSelectable: true, quality: "线下", hp: 5, initialHp: null,
+    tags: ["爆发", "过牌", "困难"],
+    skills: [
+      { name: "无厌", effect: "游戏开始时，你获得〖无前〗、〖神愤〗和至多五个由你选择的不同限定技，然后将获得的所有限定技改为每轮限一次并减等量的体力上限。" },
+      { name: "拘魔", effect: "锁定技，蓄力技（2/2），回合开始时，你减少2点蓄力值，将本回合的出牌和弃牌阶段均改为摸牌阶段。" },
+      { name: "乞宽", effect: "未受伤其他角色的结束阶段，其可以弃置两张基本牌，然后你获得1点蓄力值，最后你可以令其加1点体力上限。" },
+      { name: "噬啮", effect: "每回合限一次，当你需要弃“暴怒”时，你可以将一名其他角色等量的体力上限当“暴怒”来弃。" },
+    ],
+    characteristic: "线下《蚀心入魔·贪》的核心魔武将（称号“口吞三世佛”，编号 DE 004）。魔势力：与神将一样，游戏开始时任选一个势力。无厌开局拿无前、神愤和至多五个限定技（每拿一个减1点体力上限，限定技改为每轮限一次），噬啮用其他角色的体力上限代替“暴怒”；拘魔会把出牌和弃牌阶段改成摸牌阶段。（立绘暂借 OL 魔吕布，待实卡图。）",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/71400.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/71400.png",
+    tool: null, offline: true,
+  },
 ];
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
