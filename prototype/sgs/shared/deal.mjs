@@ -32,7 +32,9 @@ const MODE_EXCLUSIVE_GENRE = "不臣之君";
 // 与 room.html heroBaseName 同一前缀集(改一处要同步另一处)。
 // 用户 2026-10-02:(标)界/谋/族/闪/SP 同名都算同一位武将。2026-10-02 审计:库里 族34/闪5/标1 全是前缀写法,无误伤。
 // 「移动版」是版本来源标记,可再叠一个系列前缀(移动版谋韩当 → 韩当;用户 2026-10-02:与 OL 各版韩当同名可替换)。
-export function heroBaseName(name) { return (name || "").replace(/^(?:移动版|线下)?(?:[疑慢嗔贪痴]·)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/, ""); }
+// BASE_ALIAS:同一人的别名并进同一个坑(《蚀心入魔》实卡名 寇封=刘封、伏寿=伏皇后)。
+const BASE_ALIAS = { 寇封: "刘封", 伏寿: "伏皇后" };
+export function heroBaseName(name) { const b = (name || "").replace(/^(?:移动版|线下)?(?:[疑慢嗔贪痴]·)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/, ""); return BASE_ALIAS[b] || b; }
 // 坑的 key:神版独立(神关羽 ≠ 关羽),其余按基名合并
 export function groupKey(h) { return h.name.startsWith("神") ? h.name : heroBaseName(h.name); }
 export function hasLordSkill(h) { return (h.skills || []).some((s) => /^主公技/.test(s.effect || "")); }

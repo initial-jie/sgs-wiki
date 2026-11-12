@@ -21792,5 +21792,955 @@
     "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/mo-lvbu-tan-s.jpg",
     "tool": null,
     "offline": true
+  },
+  {
+    "id": 9034,
+    "name": "疑·蒋干",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "防御",
+      "拼点"
+    ],
+    "skills": [
+      {
+        "name": "纵横",
+        "effect": "准备阶段，你可以观看两名其他角色的手牌，你展示并获得其中一名角色一张手牌，然后你弃置另一名角色与展示牌类别、花色、点数相同的至多各一张手牌。"
+      },
+      {
+        "name": "对辩",
+        "effect": "当你每回合首次受到伤害时，你可以与伤害来源延时拼点并防止此伤害，然后其可以令你弃置其一张牌并公开结果：若其赢，你失去1点体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“舌锁千帆”，编号 WEI 075）。纵横看两名角色的手牌，拿走一张并拆掉另一人同类别、花色、点数的牌；对辩用延时拼点防止每回合首次受到的伤害。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-jianggan-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-jianggan-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9035,
+    "name": "疑·曹丕",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "回复",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "争嗣",
+        "effect": "出牌阶段，你可以选择包含你在内三名有手牌的角色，令其中一名角色先展示一张手牌，其余角色再同时展示一张手牌：点数最大的角色弃置两张手牌；点数最小的角色失去1点体力。"
+      },
+      {
+        "name": "承命",
+        "effect": "出牌阶段结束时，若你是本阶段〖争嗣〗角色中手牌数/体力值最大的，你可以回复2点体力/获得这些角色各一张牌。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“兄友弟恭”，编号 WEI 014）。争嗣拉两名角色一起比点数，最大者弃两张手牌、最小者失去体力；出牌阶段结束时按手牌数或体力值领先用承命回血或拿牌。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caopi-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caopi-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9036,
+    "name": "疑·王垕",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "聚谷",
+        "effect": "准备阶段，你可以依次选择任意角色的共计至多五张牌，将这些牌按你选择的顺序正面朝上置于牌堆顶，此回合结束时，这些角色获得牌堆顶各自被放置的牌（没有则跳过），然后各摸一张牌。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“一刀斩讫”，编号 WEI 198）。聚谷把任意角色共计至多五张牌明置于牌堆顶，回合结束时各自拿回并各摸一张——期间牌堆顶的牌可能被别人摸走。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-wanghou-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-wanghou-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9037,
+    "name": "疑·荀彧",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "拼点",
+      "防御"
+    ],
+    "skills": [
+      {
+        "name": "回策",
+        "effect": "出牌阶段限一次，你可以依次进行两次拼点（目标不能相同），均结束后，赢的角色各对另一次拼点中没赢的角色造成1点伤害。"
+      },
+      {
+        "name": "异合",
+        "effect": "锁定技，你的回合内各限一次，当一名角色受到伤害时，若其和伤害来源的体力值与手牌数大小关系：不同，此伤害+1；相同，双方各摸两张牌。"
+      },
+      {
+        "name": "赍志",
+        "effect": "锁定技，其他角色不能对你使用【桃】；当你每回合首次进入濒死状态时，你回复1点体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“末路见疑”，编号 WEI 013）。回策连拼两次点让赢家打另一场的输家；异合在自己回合内按双方体力与手牌的大小关系加伤或各摸两张；赍志不能被【桃】救，但每回合首次濒死自己回复1点。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-xunyu-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-xunyu-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9038,
+    "name": "疑·吕伯奢",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "请君",
+        "effect": "每轮结束时，你可以选择一名其他角色，然后你与攻击范围内包含其的角色各摸两张牌并将一张牌扣置于武将牌上（称为“伏兵”，有“伏兵”的角色可以于不为自己的角色使用手牌时移去一张颜色和类别均与此牌相同的“伏兵”以令此牌无效），其获得一个额外回合。此回合结束时，移去以此法扣置的所有“伏兵”，以此法扣置“伏兵”且此回合未受到伤害的角色各视为对其使用一张【杀】。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“碧血东流”，编号 QUN 212）。请君每轮结束时送一名其他角色一个额外回合，自己与能打到他的角色各摸两张并扣一张“伏兵”（可用来无效同色同类别的牌），该回合没受伤的扣牌者再各砍他一刀。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvboshe-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvboshe-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9039,
+    "name": "疑·华佗",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "回复",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "灭害",
+        "effect": "你可以将两张牌当无距离和次数限制的刺【杀】使用。此牌结算结束后，于此牌结算流程中正面朝上失去过黑桃牌且已受伤的角色各摸两张牌并回复1点体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“上医医国”，编号 QUN 001）。灭害把两张牌当无距离次数限制的刺【杀】用，结算中正面朝上失去过黑桃牌的已受伤角色各摸两张并回复1点体力。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-huatuo-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-huatuo-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9040,
+    "name": "疑·伏寿",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": 3,
+    "tags": [
+      "辅助",
+      "过牌",
+      "拼点"
+    ],
+    "skills": [
+      {
+        "name": "密图",
+        "effect": "准备阶段，你可以令至多三名已受伤角色各摸一张牌并展示之，这些角色可以与你指定的另一名角色拼点，赢的角色视为对没赢的角色使用一张【杀】，然后你减X点体力上限（X为其中未用展示牌拼点的角色数）。"
+      },
+      {
+        "name": "潜流",
+        "effect": "当与你距离1以内的角色成为【杀】的目标后，你可以观看牌堆底的四张牌并将这些牌以任意顺序置于牌堆顶或牌堆底，若这些牌花色各不同，你可以展示并获得之。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“白绫蔽月”，编号 QUN 031）。体力上限4、起始体力3。密图让至多三名已受伤角色摸牌并去拼点砍人，没用展示牌拼点的人数会扣自己体力上限；潜流在身边角色被【杀】时观星牌堆底四张，花色各不同可全拿。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-fushou-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-fushou-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9041,
+    "name": "疑·刘备",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "拼点",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "乘变",
+        "effect": "准备阶段和结束阶段，你可以与一名角色延时拼点并视为对其使用一张【决斗】，结算中双方可以将至少一半数量的手牌当【杀】打出；结算后公开结果，拼点赢的角色将手牌摸至体力上限。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·疑》武将（称号“潜隐波涛”，编号 QUN 150）。乘变在准备和结束阶段先延时拼点再视为【决斗】，双方可把至少半数手牌当【杀】打出，结算后拼点赢的角色把手牌摸至体力上限。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-liubei-yi.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-liubei-yi-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9042,
+    "name": "慢·庞德",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "爆发"
+    ],
+    "skills": [
+      {
+        "name": "搦战",
+        "effect": "准备阶段，你可以摸一张牌并令一名其他角色声明一种伤害类牌，然后你选择你或其视为对对方使用伤害+1的声明牌，若此牌未对目标造成伤害，使用者失去1点体力且你可以对相同角色重复此流程。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“狂徒”，编号 WEI 045）。搦战摸一张牌后让对方声明一种伤害类牌，由你决定谁对谁视为使用伤害+1的该牌；没造成伤害则使用者失去1点体力且可以重复。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-pangde-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-pangde-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9043,
+    "name": "慢·寇封",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "怀兵",
+        "effect": "准备阶段，你可以选择两名角色，获得这些角色各一张手牌，然后你展示所有手牌，令其中体力值较小的角色下个摸牌阶段摸牌数、出牌阶段使用【杀】的次数上限、弃牌阶段手牌上限改为其中红色牌的数量。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“不动如山”，编号 SHU 030）。即刘封（实卡名寇封）。怀兵拿两名角色各一张手牌后展示全部手牌，其中体力较小者下个摸牌阶段的摸牌数、出牌阶段出【杀】的次数上限、弃牌阶段的手牌上限都改为你手里红色牌的数量。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-koufeng-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-koufeng-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9044,
+    "name": "慢·关银屏",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "姻谋",
+        "effect": "男性角色的结束阶段，其可以连接你与其各一张未被连接的手牌。当你每回合首次失去连接牌后，本次一同失去连接牌的角色各摸X张牌（X为这些角色数且至多为5）。"
+      },
+      {
+        "name": "驱斥",
+        "effect": "出牌阶段限一次，你可以对一名角色造成1点火焰伤害，若其有连接牌，你重置其连接牌，令此伤害+1。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“天骄虎女”，编号 SHU 039）。姻谋让男性角色在结束阶段与你各连接一张手牌，连接牌一起失去时相关角色各摸牌；驱斥出牌阶段限一次打1点火焰伤害，目标有连接牌则重置之并加1点伤害。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-guanyinping-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-guanyinping-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9045,
+    "name": "慢·糜芳",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "火厄",
+        "effect": "结束阶段，你可以视为对至多四名其他角色使用一张【火攻】，结算流程中若你：能造成伤害，你须造成伤害并取消其余目标；不能造成伤害，当前目标角色观看你的手牌。然后你分配因此展示的牌，若这些牌的点数之和小于13，你失去1点体力。"
+      },
+      {
+        "name": "贪惰",
+        "effect": "锁定技，若你的手牌数大于手牌上限，你的弃牌阶段改为摸牌阶段。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“负荆之臣”，编号 SHU 071A）。火厄结束阶段对至多四人视为【火攻】，能烧就必须烧并取消其余目标，烧不了则被看手牌；展示牌点数之和小于13自己掉血。贪惰在手牌超上限时把弃牌阶段改成摸牌阶段。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-mifang-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-mifang-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9046,
+    "name": "慢·于禁",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "强命",
+      "回复"
+    ],
+    "skills": [
+      {
+        "name": "肃伍",
+        "effect": "准备阶段，你可以连接至多四名角色各一张手牌。若你有连接牌，有连接牌的角色每回合首次使用的伤害类牌不能被响应且结算结束后其摸两张牌。"
+      },
+      {
+        "name": "仁王",
+        "effect": "每回合限一次，你可以将一张连接牌当【桃】使用。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“立地成佛”，编号 SHU 112）。蜀势力于禁。肃伍连接至多四名角色各一张手牌，自己有连接牌时，有连接牌的角色每回合首张伤害牌不能被响应且之后摸两张；仁王每回合可把一张连接牌当【桃】。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yujin-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yujin-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9047,
+    "name": "慢·吕蒙",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": 3,
+    "tags": [
+      "进攻",
+      "拼点",
+      "困难"
+    ],
+    "skills": [
+      {
+        "name": "空志",
+        "effect": "锁定技，当你使用【杀】指定一名角色为唯一目标后，你获得其至多三张牌。若你已受伤，普通锦囊牌对你无效且你的基本牌均视为【闪】。"
+      },
+      {
+        "name": "鄙诈",
+        "effect": "结束阶段，你可以摸一张牌并与一名角色拼点：若其没赢，其失去2点体力并令你观看其手牌，然后你可以使用其中至多两张点数小于其拼点牌的牌；若你没赢，你减1点体力上限。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“病入膏肓”，编号 WU 003）。体力上限4、起始体力3。空志出【杀】指定唯一目标后拿其至多三张牌，但受伤后普通锦囊对自己无效、基本牌全当【闪】；鄙诈结束阶段拼点，对方没赢失去2点体力并被你用掉手里的小牌，你没赢则减体力上限。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvmeng-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvmeng-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9048,
+    "name": "慢·陆逊",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌",
+      "拼点"
+    ],
+    "skills": [
+      {
+        "name": "谄谀",
+        "effect": "出牌阶段限一次，你可以令一名其他角色摸其体力值张牌并与其用各自点数最小的手牌拼点，然后双方展示手牌：赢的角色可以交换双方一种颜色或类别的所有手牌。"
+      },
+      {
+        "name": "从风",
+        "effect": "转换技，当你使用牌指定目标或成为牌的目标后，你可以：阳：与使用者各摸一张牌；阴：弃置使用者两张牌。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“孺子为将”，编号 WU 007）。谄谀让对方摸其体力值张牌后双方用最小点数的手牌拼点，赢家可交换双方一种颜色或类别的全部手牌；从风是转换技，用牌或成为目标后轮流“各摸一张 / 弃使用者两张”。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-luxun-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-luxun-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9049,
+    "name": "慢·颜良文丑",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 5,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "过牌",
+      "防御"
+    ],
+    "skills": [
+      {
+        "name": "骇变",
+        "effect": "每回合开始时，若你上回合使用过手牌，上回合最后一张黑色牌和红色牌的使用者各可以视为使用一张【决斗】。"
+      },
+      {
+        "name": "怯亡",
+        "effect": "锁定技，当与你距离1以内的角色受到伤害后，你摸一张牌且你的手牌本回合均视为【无懈可击】。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·慢》武将（称号“土鸡瓦犬”，编号 QUN 005）。骇变在每个回合开始时结算：只要你上回合用过手牌，上回合最后一张黑色牌和红色牌的使用者各可以视为使用一张【决斗】；怯亡是锁定技，身边角色受伤后你摸一张牌，且你的手牌本回合都视为【无懈可击】。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yanliangwenchou-man.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yanliangwenchou-man-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9050,
+    "name": "嗔·曹操",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "揽娇",
+        "effect": "出牌阶段对每名角色限一次，你可以展示一名其他角色两张手牌，然后你获得展示的牌；其可以于展示时失去1点体力并摸一张牌，令你重新展示。若你于一回合内因此获得过红桃和方块牌，此技能本回合失效。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“铜雀囚凤”，编号 WEI 001）。揽娇对每名角色每阶段一次，展示其两张手牌并拿走；对方可以失去1点体力摸一张牌让你重新展示。一回合内拿到过红桃和方块后本回合失效。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caocao-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caocao-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9051,
+    "name": "嗔·曹仁",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "防御",
+      "过牌",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "佯北",
+        "effect": "准备阶段或结束阶段，你可以翻面并摸三张牌。当你使用【杀】或普通锦囊牌指定一名角色为唯一目标后，其可以弃置所有手牌，令此技能本回合失效。"
+      },
+      {
+        "name": "阴锋",
+        "effect": "锁定技，当你每回合首次造成伤害后，直到你下回合开始，受伤角色的体力上限减至其体力值且其即将造成或受到的伤害均视为失去体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“坚壳之蚌”，编号 WEI 011）。佯北在准备或结束阶段翻面摸三张，被你单体指定的角色可以弃光手牌让它本回合失效；阴锋令每回合首次被你打伤的角色体力上限减至体力值，且其造成和受到的伤害都视为失去体力，直到你下回合开始。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caoren-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-caoren-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9052,
+    "name": "嗔·诸葛亮",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌",
+      "辅助"
+    ],
+    "skills": [
+      {
+        "name": "并驱",
+        "effect": "准备阶段，你可以与一名其他角色各声明一种普通锦囊牌，然后双方依次将半数手牌（向上取整）当对方声明的牌使用。"
+      },
+      {
+        "name": "燔心",
+        "effect": "游戏开始时或当“燔心”角色死亡后，你可以令一名其他角色获得〖狂暴〗和〖无谋〗；其回合开始时，你可以弃其至多5枚“暴怒”并摸等量的牌。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“人也神也”，编号 LESHU 004）。实卡势力标为“蜀主”。并驱与一名角色各声明一种普通锦囊，双方把半数手牌当对方声明的牌使用；燔心给一名其他角色〖狂暴〗和〖无谋〗，其回合开始时你可以弃其至多5枚“暴怒”并摸等量的牌。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhugeliang-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhugeliang-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9053,
+    "name": "嗔·赵云",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "诈夺",
+        "effect": "结束阶段，你可以获得两名其他角色各一张牌，视为对其中一名角色使用一张【杀】，然后另一名角色视为对你使用一张【决斗】；与其中一名角色的结算流程中，你视为拥有另一名角色的所有技能。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“坐收渔利”，编号 SHU 005）。诈夺结束阶段拿两名其他角色各一张牌，视为对其中一人出【杀】、另一人对你【决斗】；与其中一人结算时，你视为拥有另一人的所有技能。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhaoyun-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhaoyun-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9054,
+    "name": "嗔·贾华",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 5,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "加伤",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "伏备",
+        "effect": "出牌阶段限一次，你可以将手牌摸至体力上限，然后将两张牌正面朝上置于牌堆顶前十张的任意位置；一名角色回合结束时，若牌堆顶的牌正面朝上，你对其造成1点伤害。"
+      },
+      {
+        "name": "殚瘁",
+        "effect": "契定技，当你造成伤害时，你可以弃置两张牌（无牌则不弃），令此伤害+1。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“拔剑四顾”，编号 WU 114）。伏备把手牌摸至体力上限后将两张牌明置于牌堆顶前十张里，谁的回合结束时牌堆顶是明牌就挨1点伤害；殚瘁是契定技，弃两张牌令伤害+1，发动过一次后变成强制。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-jiahua-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-jiahua-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9055,
+    "name": "嗔·鲁肃",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "发育",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "万利",
+        "effect": "首轮开始时，你可以交给一名其他角色任意张牌；第四轮结束时，其交给你三倍数量的牌（此前其称为“万利”角色；不足则全给并失去所有技能）；若其不为“万利”角色或已死亡，摸牌阶段，你多摸三张牌。"
+      },
+      {
+        "name": "理说",
+        "effect": "当你成为黑色牌的目标后，你可以摸一张牌并与“万利”角色拼点：若你赢，其交给你牌的时机提前一轮。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“养虺成蛇”，编号 WU 014）。万利首轮借出任意张牌，第四轮结束时对方要还三倍（不够则全给并失去所有技能）；对方死了或不再是“万利”角色则你摸牌阶段多摸三张。理说在成为黑色牌目标后拼点，赢了把还款提前一轮。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lusu-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lusu-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9056,
+    "name": "嗔·孙尚香",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "辅助",
+      "防御"
+    ],
+    "skills": [
+      {
+        "name": "骄纵",
+        "effect": "准备阶段或当你成为【杀】的目标后，你可以将场上的一张装备牌移动至一名角色的装备区，其本回合不能使用与之颜色相同的牌且受到的伤害+1。"
+      },
+      {
+        "name": "妇随",
+        "effect": "限定技，出牌阶段，你可以令一名男性角色失去一个无标签技能，然后你与其获得〖比翼〗且防止你与其本轮受到的伤害。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“生死相随”，编号 WU 008）。骄纵在准备阶段或被【杀】时移动场上一张装备，接收者本回合不能用同色牌且受伤+1；妇随是限定技，令一名男性角色失去一个无标签技能，你与其获得转换技〖比翼〗并免疫本轮伤害。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-sunshangxiang-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-sunshangxiang-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9057,
+    "name": "嗔·张昭",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "吴",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "挟众",
+        "effect": "准备阶段，你可以令场上半数角色（向上取整）依次选择一项：1.摸两张牌，失去1点体力；2.将两张牌当【杀】使用。然后你可以令另一名角色执行两次被选择次数较多的一项。"
+      },
+      {
+        "name": "乞施",
+        "effect": "契定技，结束阶段，你可以获得本回合弃牌堆中其他角色置入的至多五张牌，然后你跳过下个摸牌阶段。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·嗔》武将（称号“迂儒”，编号 WU 015A）。挟众让半数角色各选“摸两张并失去1点体力”或“两张牌当【杀】”，再令另一名角色执行两次被选得多的那项；乞施是契定技，结束阶段捡本回合其他角色进弃牌堆的至多五张牌并跳过下个摸牌阶段。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhangzhao-chen.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-zhangzhao-chen-s.jpg",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9058,
+    "name": "贪·梦吕布",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 5,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "爆发",
+      "困难"
+    ],
+    "skills": [
+      {
+        "name": "辘辘",
+        "effect": "若你没有手牌，你可以将其他角色的一张牌当【决斗】使用；此牌指定目标后，所有角色同时选择是否展示并交给你一张手牌。"
+      },
+      {
+        "name": "择主",
+        "effect": "若你的手牌数全场最大，你可以将所有手牌当一张无距离次数限制的【杀】对至少半数角色使用；此牌于结算中被第二次抵消后，抵消角色获得之。"
+      },
+      {
+        "name": "累勋",
+        "effect": "限定技，结束阶段，你可以将你使用【杀】的次数上限改为你本回合使用的【杀】数。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“饥鹰饱虎”，编号 WEI 404?）。对标江山如故梦武将的“if 线”吕布（乞降成功、为曹操所用，魏势力，实卡编号 WEI 404?）。辘辘空城时把别人的牌当【决斗】并收全场的牌；择主手牌最多时把所有手牌当【杀】砍至少半数角色；累勋限定技把出【杀】次数上限改为本回合出【杀】数。（实卡插画暂缺，立绘暂借 OL 吕布。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/2300.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/2300.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9059,
+    "name": "贪·丁原",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "过牌",
+      "困难"
+    ],
+    "skills": [
+      {
+        "name": "羁缚",
+        "effect": "每轮开始时，你可以获得一名其他角色所有手牌并占有其装备区直到本轮结束；期间其使用牌无距离次数限制且当其摸牌时，改为获得你等量的牌（不足则改为对你造成等量的伤害）。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“虎子无犬父”，编号 QUN 093）。羁缚每轮开始时拿走一名其他角色所有手牌并占有其装备区直到本轮结束；期间其用牌无距离次数限制，其摸牌改为从你这里拿等量的牌，你牌不够就改为对你造成等量伤害。（实卡插画暂缺，立绘暂借 OL 丁原。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/43700.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/43700.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9060,
+    "name": "贪·李肃",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "挥断",
+        "effect": "其他角色出牌阶段开始时，你可以交给其一张牌令其整肃；当其选择整肃奖励时，其可以背水：减1点体力上限且你获得相同奖励，此技能本轮失效。"
+      },
+      {
+        "name": "善诱",
+        "effect": "结束阶段，你可以选择一项执行并移除，然后将之作为选项加入本局整肃奖励：1.造成1点伤害；2.获得一名角色一张手牌；3.弃置场上两张牌。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“拨云见日”，编号 QUN 077）。挥断在其他角色出牌阶段开始时给一张牌令其整肃，其领奖时可背水（减1点体力上限）让你也拿同样的奖励；善诱每个结束阶段执行并移除“伤害 / 拿牌 / 拆场上两张”之一，并把它加进本局整肃奖励。（实卡插画暂缺，立绘暂借 OL 李肃。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/701000.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/701000.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9061,
+    "name": "贪·貂蝉",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "过牌",
+      "拼点",
+      "辅助"
+    ],
+    "skills": [
+      {
+        "name": "秘会",
+        "effect": "每轮结束时，你可以选择一名男性角色。你执行一个含三个你选择的阶段的额外回合，然后其执行一个含剩余三个阶段的额外回合。"
+      },
+      {
+        "name": "死志",
+        "effect": "准备阶段或当你受到伤害后，你可以摸两张牌并与一名角色拼点：除非赢的拼点牌为红色，否则你重复此流程。若如此做，本回合结束阶段，你失去没赢次数点体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“受困仙子”，编号 QUN 003）。秘会每轮结束时选一名男性角色，你先执行一个只含三个自选阶段的额外回合，他再执行含其余三个阶段的额外回合；死志摸两张后拼点，直到赢的那张拼点牌是红色才停，结束阶段按没赢次数失去体力。（实卡插画暂缺，立绘暂借 OL 貂蝉。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/2400.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/2400.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9062,
+    "name": "贪·陈宫",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "狭策",
+        "effect": "准备阶段，你可以令一名角色于其下个出牌阶段仅能使用一张手牌（此牌额外结算两次）。"
+      },
+      {
+        "name": "莽伏",
+        "effect": "其他角色准备阶段，你可以获得其至多两张手牌并将等量的牌扣置于武将牌上（称为“伏兵”，你可以于其他角色使用手牌时移去一张颜色和类别均与此牌相同的“伏兵”以令此牌无效），本回合结束时，你移去你的剩余“伏兵”并失去等量的体力。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“暴怒的军师”，编号 QUN 028）。狭策令一名角色下个出牌阶段只能用一张手牌，但这张牌额外结算两次；莽伏在其他角色准备阶段拿其至多两张手牌并扣等量“伏兵”（可无效同色同类别的牌），回合结束没用掉的伏兵每张让你失去1点体力。（实卡插画暂缺，立绘暂借 OL 陈宫。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/15300.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/15300.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9063,
+    "name": "贪·陈珪陈登",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "防御",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "鬻主",
+        "effect": "每轮开始时，你可以选择两名角色，你令其中一名角色本轮视为同时装备着【仁王盾】、【八卦阵】和【藤甲】且受到1点伤害后交给你与伤害来源各一张牌，另一名角色本轮视为装备着【青釭剑】。"
+      },
+      {
+        "name": "请丧",
+        "effect": "结束阶段，你可以令一名其他角色视为对你指定的一名角色使用一张【决斗】，目标角色打出【杀】响应此牌时，此牌对使用者造成的伤害+1。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“股掌戏虎”，编号 QUN 125&095）。鬻主每轮开始时给一名角色仁王盾+八卦阵+藤甲三合一（其受伤后要分别交给你和伤害来源各一张牌），给另一名角色青釭剑；请丧结束阶段指挥一名其他角色对你指定的人【决斗】，目标出【杀】响应时对使用者的伤害+1。（实卡插画暂缺。）",
+    "cover": null,
+    "avatar": null,
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9064,
+    "name": "贪·吕玲绮",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "过牌",
+      "辅助"
+    ],
+    "skills": [
+      {
+        "name": "嫁衣",
+        "effect": "准备阶段，你可以摸两张牌，然后使用游戏外或弃牌堆中拥有〖绝情〗的【女装】。"
+      },
+      {
+        "name": "饲骨",
+        "effect": "出牌阶段限一次，你可以令一名男性角色占有你的装备区，然后你获得其至多X张牌并将其中任意张牌交给其他角色（X为你装备区里牌的花色数）。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“落花逐流”，编号 QUN 089）。嫁衣准备阶段摸两张并装上带〖绝情〗的【女装】（伤害改为失去体力）；饲骨让一名男性角色占有你的装备区，你拿其至多X张牌并可分给别人（X为你装备区里牌的花色数）。（实卡插画暂缺，立绘暂借 OL 吕玲绮。）",
+    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/71600.png",
+    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/71600.png",
+    "tool": null,
+    "offline": true
+  },
+  {
+    "id": 9065,
+    "name": "贪·严夫人",
+    "genre": "蚀心入魔",
+    "series": "蚀心入魔",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "线下",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "辅助",
+      "进攻"
+    ],
+    "skills": [
+      {
+        "name": "保城",
+        "effect": "当与你距离1以内的角色每回合首次成为【杀】的唯一目标后，你可以将之改为【兵临城下】；当牌因此【兵临城下】的效果而被亮出后，若这些牌中有红桃牌，你可以令其获得这些红桃牌，然后使用者再亮出两倍获得牌数的牌（视为因此【兵临城下】的效果而被亮出的）。"
+      },
+      {
+        "name": "长醉",
+        "effect": "你的【酒】对一回合内的【杀】均生效。你可以将一张装备牌当【酒】使用。"
+      }
+    ],
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“醉生梦死”，编号 QUN 133）。保城把身边角色每回合首次单体挨的【杀】改成【兵临城下】，亮出的红桃牌可以给目标，使用者再多亮两倍的牌；长醉让【酒】对一回合内所有【杀】生效，装备牌可当【酒】。（实卡插画暂缺。）",
+    "cover": null,
+    "avatar": null,
+    "tool": null,
+    "offline": true
   }
 ]
