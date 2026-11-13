@@ -22529,9 +22529,9 @@
         "effect": "限定技，结束阶段，你可以将你使用【杀】的次数上限改为你本回合使用的【杀】数。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“饥鹰饱虎”，编号 WEI 404?）。对标江山如故梦武将的“if 线”吕布（乞降成功、为曹操所用，魏势力，实卡编号 WEI 404?）。辘辘空城时把别人的牌当【决斗】并收全场的牌；择主手牌最多时把所有手牌当【杀】砍至少半数角色；累勋限定技把出【杀】次数上限改为本回合出【杀】数。（实卡插画暂缺，立绘暂借 OL 吕布。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/2300.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/2300.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“饥鹰饱虎”，编号 WEI 404?）。对标江山如故梦武将的“if 线”吕布（乞降成功、为曹操所用，魏势力，实卡编号 WEI 404?）。辘辘空城时把别人的牌当【决斗】并收全场的牌；择主手牌最多时把所有手牌当【杀】砍至少半数角色；累勋限定技把出【杀】次数上限改为本回合出【杀】数。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvbu-meng-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvbu-meng-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22556,9 +22556,9 @@
         "effect": "每轮开始时，你可以获得一名其他角色所有手牌并占有其装备区直到本轮结束；期间其使用牌无距离次数限制且当其摸牌时，改为获得你等量的牌（不足则改为对你造成等量的伤害）。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“虎子无犬父”，编号 QUN 093）。羁缚每轮开始时拿走一名其他角色所有手牌并占有其装备区直到本轮结束；期间其用牌无距离次数限制，其摸牌改为从你这里拿等量的牌，你牌不够就改为对你造成等量伤害。（实卡插画暂缺，立绘暂借 OL 丁原。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/43700.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/43700.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“虎子无犬父”，编号 QUN 093）。羁缚每轮开始时拿走一名其他角色所有手牌并占有其装备区直到本轮结束；期间其用牌无距离次数限制，其摸牌改为从你这里拿等量的牌，你牌不够就改为对你造成等量伤害。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-dingyuan-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-dingyuan-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22586,9 +22586,9 @@
         "effect": "结束阶段，你可以选择一项执行并移除，然后将之作为选项加入本局整肃奖励：1.造成1点伤害；2.获得一名角色一张手牌；3.弃置场上两张牌。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“拨云见日”，编号 QUN 077）。挥断在其他角色出牌阶段开始时给一张牌令其整肃，其领奖时可背水（减1点体力上限）让你也拿同样的奖励；善诱每个结束阶段执行并移除“伤害 / 拿牌 / 拆场上两张”之一，并把它加进本局整肃奖励。（实卡插画暂缺，立绘暂借 OL 李肃。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/701000.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/701000.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“拨云见日”，编号 QUN 077）。挥断在其他角色出牌阶段开始时给一张牌令其整肃，其领奖时可背水（减1点体力上限）让你也拿同样的奖励；善诱每个结束阶段执行并移除“伤害 / 拿牌 / 拆场上两张”之一，并把它加进本局整肃奖励。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lisu-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lisu-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22617,9 +22617,9 @@
         "effect": "准备阶段或当你受到伤害后，你可以摸两张牌并与一名角色拼点：除非赢的拼点牌为红色，否则你重复此流程。若如此做，本回合结束阶段，你失去没赢次数点体力。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“受困仙子”，编号 QUN 003）。秘会每轮结束时选一名男性角色，你先执行一个只含三个自选阶段的额外回合，他再执行含其余三个阶段的额外回合；死志摸两张后拼点，直到赢的那张拼点牌是红色才停，结束阶段按没赢次数失去体力。（实卡插画暂缺，立绘暂借 OL 貂蝉。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/2400.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/2400.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“受困仙子”，编号 QUN 003）。秘会每轮结束时选一名男性角色，你先执行一个只含三个自选阶段的额外回合，他再执行含其余三个阶段的额外回合；死志摸两张后拼点，直到赢的那张拼点牌是红色才停，结束阶段按没赢次数失去体力。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-diaochan-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-diaochan-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22646,9 +22646,9 @@
         "effect": "其他角色准备阶段，你可以获得其至多两张手牌并将等量的牌扣置于武将牌上（称为“伏兵”，你可以于其他角色使用手牌时移去一张颜色和类别均与此牌相同的“伏兵”以令此牌无效），本回合结束时，你移去你的剩余“伏兵”并失去等量的体力。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“暴怒的军师”，编号 QUN 028）。狭策令一名角色下个出牌阶段只能用一张手牌，但这张牌额外结算两次；莽伏在其他角色准备阶段拿其至多两张手牌并扣等量“伏兵”（可无效同色同类别的牌），回合结束没用掉的伏兵每张让你失去1点体力。（实卡插画暂缺，立绘暂借 OL 陈宫。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/15300.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/15300.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“暴怒的军师”，编号 QUN 028）。狭策令一名角色下个出牌阶段只能用一张手牌，但这张牌额外结算两次；莽伏在其他角色准备阶段拿其至多两张手牌并扣等量“伏兵”（可无效同色同类别的牌），回合结束没用掉的伏兵每张让你失去1点体力。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-chengong-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-chengong-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22677,9 +22677,9 @@
         "effect": "结束阶段，你可以令一名其他角色视为对你指定的一名角色使用一张【决斗】，目标角色打出【杀】响应此牌时，此牌对使用者造成的伤害+1。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“股掌戏虎”，编号 QUN 125&095）。鬻主每轮开始时给一名角色仁王盾+八卦阵+藤甲三合一（其受伤后要分别交给你和伤害来源各一张牌），给另一名角色青釭剑；请丧结束阶段指挥一名其他角色对你指定的人【决斗】，目标出【杀】响应时对使用者的伤害+1。（实卡插画暂缺。）",
-    "cover": null,
-    "avatar": null,
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“股掌戏虎”，编号 QUN 125&095）。鬻主每轮开始时给一名角色仁王盾+八卦阵+藤甲三合一（其受伤后要分别交给你和伤害来源各一张牌），给另一名角色青釭剑；请丧结束阶段指挥一名其他角色对你指定的人【决斗】，目标出【杀】响应时对使用者的伤害+1。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-chenguichendeng-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-chenguichendeng-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22707,9 +22707,9 @@
         "effect": "出牌阶段限一次，你可以令一名男性角色占有你的装备区，然后你获得其至多X张牌并将其中任意张牌交给其他角色（X为你装备区里牌的花色数）。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“落花逐流”，编号 QUN 089）。嫁衣准备阶段摸两张并装上带〖绝情〗的【女装】（伤害改为失去体力）；饲骨让一名男性角色占有你的装备区，你拿其至多X张牌并可分给别人（X为你装备区里牌的花色数）。（实卡插画暂缺，立绘暂借 OL 吕玲绮。）",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/xingxiang/71600.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/activity/shequshow/dianjiang/71600.png",
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“落花逐流”，编号 QUN 089）。嫁衣准备阶段摸两张并装上带〖绝情〗的【女装】（伤害改为失去体力）；饲骨让一名男性角色占有你的装备区，你拿其至多X张牌并可分给别人（X为你装备区里牌的花色数）。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvlingqi-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-lvlingqi-tan-s.jpg",
     "tool": null,
     "offline": true
   },
@@ -22737,9 +22737,9 @@
         "effect": "你的【酒】对一回合内的【杀】均生效。你可以将一张装备牌当【酒】使用。"
       }
     ],
-    "characteristic": "线下《蚀心入魔·贪》武将（称号“醉生梦死”，编号 QUN 133）。保城把身边角色每回合首次单体挨的【杀】改成【兵临城下】，亮出的红桃牌可以给目标，使用者再多亮两倍的牌；长醉让【酒】对一回合内所有【杀】生效，装备牌可当【酒】。（实卡插画暂缺。）",
-    "cover": null,
-    "avatar": null,
+    "characteristic": "线下《蚀心入魔·贪》武将（称号“醉生梦死”，编号 QUN 133）。保城把身边角色每回合首次单体挨的【杀】改成【兵临城下】，亮出的红桃牌可以给目标，使用者再多亮两倍的牌；长醉让【酒】对一回合内所有【杀】生效，装备牌可当【酒】。",
+    "cover": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yanfuren-tan.jpg",
+    "avatar": "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yanfuren-tan-s.jpg",
     "tool": null,
     "offline": true
   }
