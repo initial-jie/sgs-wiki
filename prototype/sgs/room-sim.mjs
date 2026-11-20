@@ -1460,22 +1460,23 @@ console.log("\n=== 场景 20:线上发将 ===");
     check(`发将按坑等概率:曹操坑(${grp(pools, "曹操").opts.length} 个版本、勾了 3 个)出现率 ${cc.toFixed(3)} ≈ 费祎坑(1 个版本)${fy.toFixed(3)} ≈ ${exp.toFixed(2)}`,
       pools.normal.length === 10 && Math.abs(cc - exp) < 0.04 && Math.abs(fy - exp) < 0.04);
   }
-  // —— 将池套组:每套一份独立的白名单 ——
+  // —— 将池套组:每套一份独立的黑白名单 ——
   {
     const { applyPoolSet, normPoolSets, POOL_SET_MAX } = await import("./shared/deal.mjs");
     const base = { white: [idOf("黄盖"), idOf("界曹操"), idOf("关羽")], ban: [idOf("SP关羽")] };
     let e = applyPoolSet(base, null);
-    check("没选套组 = 默认白名单原样", e.white.length === 3 && e.ban.length === 1);
-    e = applyPoolSet(base, { id: "su", name: "素将", white: [idOf("费祎"), idOf("关羽")] });
+    check("没选套组 = 默认黑白名单原样", e.white.length === 3 && e.ban.join() === String(idOf("SP关羽")));
+    e = applyPoolSet(base, { id: "su", name: "素将", white: [idOf("费祎"), idOf("关羽"), idOf("曹操")], ban: [idOf("界曹操")] });
     p = P({ whitelist: e.white, banned: e.ban });
-    check("选了套组 → 白名单整份换成套组的:默认名单里的黄盖 / 曹操不在池,套组里的费祎 / 关羽在",
-      !grp(p, "黄盖") && !grp(p, "曹操") && !!grp(p, "费祎") && !!grp(p, "关羽") && p.normal.length === 2);
-    check("黑名单不分套:套组里的关羽坑照样剔掉被禁的 SP关羽", !names(grp(p, "关羽")).includes("SP关羽") && e.ban.join() === String(idOf("SP关羽")));
-    check("空套组 → 生效白名单为空(worker 报 POOL_NOT_SET,不会悄悄退回默认名单)", applyPoolSet(base, { id: "x", name: "空", white: [] }).white.length === 0);
-    const ns = normPoolSets([{ id: "a1", name: "  素将  ", white: [5, "6", 6, -1, "x"] }, { id: "a1", name: "重复id" }, { id: "bad id", name: "x" }, { id: "b2", name: "" }, null,
+    check("选了套组 → 白名单整份换成套组的:默认名单里的黄盖不在池,套组里的费祎 / 关羽 / 曹操在",
+      !grp(p, "黄盖") && !!grp(p, "费祎") && !!grp(p, "关羽") && !!grp(p, "曹操") && p.normal.length === 3);
+    check("选了套组 → 黑名单也整份换成套组的:本套禁的界曹操不可选(标曹操照常);默认黑名单里的 SP关羽 在这一套里可选",
+      !names(grp(p, "曹操")).includes("界曹操") && names(grp(p, "曹操")).includes("曹操") && names(grp(p, "关羽")).includes("SP关羽"));
+    check("空套组 → 生效白名单为空(worker 报 POOL_NOT_SET,不会悄悄退回默认名单)", applyPoolSet(base, { id: "x", name: "空", white: [], ban: [] }).white.length === 0);
+    const ns = normPoolSets([{ id: "a1", name: "  素将  ", white: [5, "6", 6, -1, "x"], ban: [7, 7, 0] }, { id: "a1", name: "重复id" }, { id: "bad id", name: "x" }, { id: "b2", name: "" }, null,
       { id: "c3", name: "一二三四五六七八九十十一" }]);
-    check("normPoolSets:去非法/重复 id/空名;名字截 10 字;武将 id 去重去非法;没带 white → 空名单",
-      ns.length === 2 && ns[0].name === "素将" && ns[0].white.join() === "5,6" && ns[1].name.length === 10 && ns[1].white.length === 0 && !("plus" in ns[0]));
+    check("normPoolSets:去非法/重复 id/空名;名字截 10 字;武将 id 去重去非法;没带 white / ban → 空名单",
+      ns.length === 2 && ns[0].name === "素将" && ns[0].white.join() === "5,6" && ns[0].ban.join() === "7" && ns[1].name.length === 10 && ns[1].white.length === 0 && ns[1].ban.length === 0);
     check("normPoolSets:最多 " + POOL_SET_MAX + " 套;非数组 → 空", normPoolSets(Array.from({ length: 12 }, (_, i) => ({ id: "s" + i, name: "n" + i }))).length === POOL_SET_MAX && normPoolSets("x").length === 0);
   }
   p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")] });

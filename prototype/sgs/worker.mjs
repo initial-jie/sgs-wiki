@@ -189,8 +189,8 @@ export function handleSgs(request, env, url) {
 }
 
 // 三国杀全局配置 DO(单例 idFromName("global")):各环境的白名单(可发将)+ 黑名单(禁将)。
-//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,white:[id]}]} }, seen:[id], updatedAt }
-//   sets = 将池套组(2026-11-20):每套一份独立的白名单,发将时选用哪一套(不选 = 上面的默认 white;语义见 shared/deal.mjs applyPoolSet)。
+//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,white:[id],ban:[id]}]} }, seen:[id], updatedAt }
+//   sets = 将池套组(2026-11-20):每套一份独立的黑白名单,发将时选用哪一套(不选 = 上面的默认 white / ban;语义见 shared/deal.mjs applyPoolSet)。
 //   旧格式 {ids,seen,updatedAt}(2026-10-01 首版只有一份白名单)读取时自动迁移:ids → 军争白名单,黑名单取文件种子。
 // 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
 export class SgsConfigDO {
@@ -347,8 +347,8 @@ export class RoomDO extends RoomDOBase {
   }
   // 发将开局:名单从 SgsConfigDO 现读(/pool 页保存的那份)。
   //   环境 = msg.pool(发将设置里手选)或按座位数自动;该环境白名单为空 → 沿用军争白名单;黑名单用该环境自己的(房内禁将开关关着则不禁)。
-  //   套组 = msg.set(该环境的某个套组 id;空 = 默认白名单):白名单整份换成该套组的。白名单沿用军争时,套组也沿用军争的。
-  //   黑名单不分套(所有套组共用该环境的黑名单)。
+  //   套组 = msg.set(该环境的某个套组 id;空 = 默认名单):白名单、黑名单都整份换成该套组的。白名单沿用军争时,套组也沿用军争的。
+  //   房内禁将开关关着 → 不管默认黑名单还是套组黑名单都不禁。发到手的将落座不过 setGeneral 的禁将校验(那里只认环境默认黑名单)。
   async dealStart(id, msg, core) {
     const cfg = await this.syncConfig(true);
     if (!cfg) return { error: "POOL_UNAVAILABLE" };
@@ -360,8 +360,8 @@ export class RoomDO extends RoomDOBase {
       set = (cfg.pools[src].sets || []).find((s) => s.id === String(msg.set)) || null;
       if (!set) return { error: "POOL_SET_UNKNOWN" };
     }
-    const eff = applyPoolSet({ white: cfg.pools[src].white, ban: core.banEnabled !== false ? cfg.pools[key].ban : [] }, set);
-    const wl = eff.white, banned = eff.ban;
+    const eff = applyPoolSet({ white: cfg.pools[src].white, ban: cfg.pools[key].ban }, set);
+    const wl = eff.white, banned = core.banEnabled !== false ? eff.ban : [];
     if (!wl.length) return { error: "POOL_NOT_SET" };
     let pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode });
     const poolIds = () => new Set([...pools.normal, ...pools.lord, ...(pools.forced ? [pools.forced] : [])].flatMap((g) => g.opts.map((o) => o.id)));

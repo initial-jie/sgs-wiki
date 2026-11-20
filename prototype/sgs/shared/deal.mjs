@@ -34,14 +34,16 @@ const EXPLICIT_ONLY_GENRE = "蚀心入魔";
 export function needsExplicit(h) { return !!h && h.genre === EXPLICIT_ONLY_GENRE; }
 
 // 将池套组(用户 2026-11-20:同一环境里分「素将 / 荤将」等几套,发将时一键切换,不用来回重勾)。
-//   套组 = 一份独立的白名单:{ id, name, white:[武将id] }。发将时选了套组 → 白名单整份换成它的;没选 → 用环境的默认白名单。
-//   (首版做成「默认名单上的增减」,用户当天定:要每套独立的名单 —— 各套互不影响,默认名单加了新将不会自动进套组。)
-//   黑名单、临时 ban 池仍是环境级,所有套组共用。线上牌桌(无名杀)只认默认白名单。
+//   套组 = 一套独立的黑白名单:{ id, name, white:[武将id], ban:[武将id] }。
+//   发将时选了套组 → 白名单、黑名单都整份换成它的;没选 → 用环境的默认白名单 + 黑名单。
+//   (首版做成「默认名单上的增减」→ 用户当天定「每套独立的名单」→ 再定「每个套组有自己的黑白名单,方便管理」:
+//    同名整坑可选的规则下,想在某一套里只去掉强力版本、留弱版本,只能靠这一套自己的黑名单。)
+//   临时 ban 池仍是环境级。房间里的「禁将池」面板与手动选将只认环境默认黑名单;线上牌桌(无名杀)只认默认白名单。
 export const POOL_SET_MAX = 8;       // 每个环境最多几套
 export const POOL_SET_NAME_MAX = 10; // 套组名最长字数
 export function applyPoolSet({ white, ban }, set) {
   const ids = (a) => [...new Set([...(a || [])].map(Number))];
-  return { white: ids(set ? set.white : white), ban: ids(ban) };
+  return set ? { white: ids(set.white), ban: ids(set.ban) } : { white: ids(white), ban: ids(ban) };
 }
 // 存盘前的规整:丢掉非法项;套组 id / 武将 id 去重;名字截断
 export function normPoolSets(raw) {
@@ -52,7 +54,7 @@ export function normPoolSets(raw) {
     const id = String(s.id || "").trim(), name = String(s.name || "").trim().slice(0, POOL_SET_NAME_MAX);
     if (!/^[A-Za-z0-9_-]{1,16}$/.test(id) || !name || seen.has(id)) continue;
     seen.add(id);
-    out.push({ id, name, white: ids(s.white) });
+    out.push({ id, name, white: ids(s.white), ban: ids(s.ban) });
     if (out.length >= POOL_SET_MAX) break;
   }
   return out;
