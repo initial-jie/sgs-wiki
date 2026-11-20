@@ -41,7 +41,7 @@ avalon/                    阿瓦隆(The Resistance: Avalon,系统发身份 + �
   avalon-sim.mjs           node 断言(node prototype/avalon/avalon-sim.mjs)
 loveletter/                情书(Love Letter,线上牌桌:系统洗牌发牌、抽一打一、效果即时结算、轮末比点发标记)——第六个游戏
   shared/ll-logic.mjs      LoveLetterCore extends RoomBase:开局/开轮/打牌与目标校验/各牌效果/大臣子阶段/轮末结算/间谍加成/终局
-  shared/ll-data.mjs       10 种牌 + 两个版本(原版 16 张 2~4 人 / 2019 新版 21 张 2~6 人)+ 所需标记表
+  shared/ll-data.mjs       10 种牌 + 两个版本(原版 16 张 2~4 人 / 2019 新版 21 张 2~6 人)+ 所需标记表 + 组队赛(6/8/9 人分队,29 张)
   worker.mjs               /loveletter 页面 + /loveletter/data.json + LoveLetterRoomDO
   client/loveletter.html   信纸风 UI:计分条 / 牌堆 / 每人弃牌堆 / 我的手牌出牌面板(目标 + 侍卫猜牌)/ 大臣选牌 / 私密笔记 / 轮末结算
   ll-sim.mjs               node 断言(node prototype/loveletter/ll-sim.mjs)

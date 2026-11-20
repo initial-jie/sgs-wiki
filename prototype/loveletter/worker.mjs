@@ -2,12 +2,12 @@
 // 逻辑在 ./shared/ll-logic.mjs(与 node 模拟 ll-sim 同一份);DO 外壳见 common/room-do.mjs。全部事件驱动,没有 tick。
 
 import { LoveLetterCore } from "./shared/ll-logic.mjs";
-import { CARDS, EDITIONS, DEFAULT_EDITION, ART_BASE } from "./shared/ll-data.mjs";
+import { CARDS, EDITIONS, DEFAULT_EDITION, ART_BASE, TEAM, MODES } from "./shared/ll-data.mjs";
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import LL_HTML from "./client/loveletter.html";
 
-const SEAT_COUNT = 4; // 2~6 人,开房默认 4 座
-const DATA_JSON = JSON.stringify({ cards: CARDS, editions: EDITIONS, defaultEdition: DEFAULT_EDITION, artBase: ART_BASE });
+const SEAT_COUNT = 4; // 2~6 人(组队 6/8/9),开房默认 4 座
+const DATA_JSON = JSON.stringify({ cards: CARDS, editions: EDITIONS, defaultEdition: DEFAULT_EDITION, artBase: ART_BASE, team: TEAM, modes: MODES });
 
 function fnv1a(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 const DATA_VER = fnv1a(DATA_JSON);

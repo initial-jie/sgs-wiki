@@ -3,7 +3,7 @@
 // node prototype/loveletter/ll-sim.mjs
 
 import { LoveLetterCore } from "./shared/ll-logic.mjs";
-import { CARDS, EDITIONS, buildDeck, cardsOf, tokensToWin } from "./shared/ll-data.mjs";
+import { CARDS, EDITIONS, TEAM, buildDeck, cardsOf, tokensToWin } from "./shared/ll-data.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -34,7 +34,7 @@ check("原版 2~4 人,新版 2~6 人", EDITIONS.classic.minPlayers === 2 && EDIT
 console.log("\n=== 准备阶段 / 配置 ===");
 {
   const { room, act, V } = mk(5);
-  check("2~6 座", LoveLetterCore.MIN_SEATS === 2 && LoveLetterCore.MAX_SEATS === 6);
+  check("2~9 座(组队 9 人)", LoveLetterCore.MIN_SEATS === 2 && LoveLetterCore.MAX_SEATS === 9);
   check("默认原版;5 人不能开原版", room.config.edition === "classic" && act(1, { op: "startGame" }).error === "PLAYER_COUNT" && V(1).check.error === "PLAYER_COUNT");
   check("非法版本/标记数拒绝", act(1, { op: "setConfig", config: { edition: "x" } }).error === "BAD_CONFIG" && act(1, { op: "setConfig", config: { tokens: 0 } }).error === "BAD_CONFIG");
   check("切 2019 版后 5 人可开;所需 3 枚", act(1, { op: "setConfig", config: { edition: "v2019" } }).ok && V(1).check.ok && V(1).need === 3);
@@ -168,6 +168,35 @@ console.log("\n=== 2019 新版:间谍 / 大臣 ===");
   check("牌堆空时大臣无效果,直接结算", act(1, { op: "play", seatNo: 1, card: "chancellor" }).ok && room.phase === "roundEnd");
 }
 
+console.log("\n=== 组队模式(6 / 8 / 9 人随机分队,队内一人集 3 枚全队胜,29 张牌)===");
+check("组队牌组 29 张:侍卫 9、2~6 点各 3,0/7/8/9 不变", buildDeck("v2019", "team").length === 29 && cardsOf("v2019", "team").map((c) => c.rank + ":" + c.count).join(" ") === "0:2 1:9 2:3 3:3 4:3 5:3 6:3 7:1 8:1 9:1");
+check("分队表 6→3×2 / 8→4×2 / 9→3×3,3 枚胜", TEAM.players[6].teams === 3 && TEAM.players[8].teams === 4 && TEAM.players[9].size === 3 && TEAM.tokensToWin === 3);
+{
+  const { room, act, V } = mk(7);
+  check("切组队:版本自动变 2019;7 人不能开", act(1, { op: "setConfig", config: { mode: "team" } }).ok && room.config.edition === "v2019" && V(1).check.error === "TEAM_COUNT" && act(1, { op: "startGame" }).error === "TEAM_COUNT");
+  check("非法模式拒绝", act(1, { op: "setConfig", config: { mode: "x" } }).error === "BAD_CONFIG");
+  room.removeSeat("p1");
+  check("6 人可开;need 3;牌堆 29-1-6-1=21", V(1).check.ok && V(1).need === 3 && act(1, { op: "startGame" }).ok && room.deck.length === 21);
+  const teams = room.seatNos().map((n) => room.seats[n].team);
+  check("随机分 3 队每队 2 人", new Set(teams).size === 3 && [1, 2, 3].every((t) => teams.filter((x) => x === t).length === 2));
+  const mate = room.teammates(1)[0], other = room.seatNos().find((n) => n !== 1 && n !== mate);
+  check("队号只对本队可见:我看到自己和队友的队号,看不到别队的;别队看不到我的", V(1).seats[1].team === room.seats[1].team && V(1).seats[mate].team === room.seats[1].team && V(1).seats[other].team === undefined && V(other).seats[1].team === undefined);
+  check("可以对队友出牌(目标池含队友)", room.targets().other.includes(room.teammates(room.turn)[0]));
+  // 让 1 号集满 3 枚:先摆两枚,再赢一轮
+  room.seats[1].tokens = 2;
+  layout(room, [["guard", "princess"], "guard", "guard", "guard", "guard", "guard"], [], 1);
+  for (const n of [2, 3, 4, 5, 6]) { room.seats[n].out = true; room.seats[n].hand = []; }
+  room.seats[2].out = false; room.seats[2].hand = ["guard"];
+  act(1, { op: "play", seatNo: 1, card: "guard", target: 2, guess: "priest" });
+  check("1 号第 3 枚 → 终局,全队(1 号 + 队友)获胜,队号全部公开", room.phase === "over" && room.result.winners.slice().sort().join() === [1, mate].sort().join() && room.result.teams.join() === String(room.seats[1].team) && V(other).seats[1].team === room.seats[1].team && V(other).result.teamOf[mate] === room.seats[1].team);
+  check("newGame 清队号", act(1, { op: "newGame" }).ok && room.seats[1].team === null);
+  room.addSeat("p1"); room.addSeat("p1");
+  check("8 人 → 4 队", act(1, { op: "startGame" }).ok && new Set(room.seatNos().map((n) => room.seats[n].team)).size === 4);
+  act(1, { op: "newGame" }); room.addSeat("p1");
+  check("9 人 → 3 队每队 3 人", act(1, { op: "startGame" }).ok && [1, 2, 3].every((t) => room.seatNos().filter((n) => room.seats[n].team === t).length === 3));
+  check("切回个人赛:队号不再分配,版本保留 2019,9 人超上限", act(1, { op: "newGame" }).ok && act(1, { op: "setConfig", config: { mode: "ffa" } }).ok && room.config.edition === "v2019" && V(1).check.error === "PLAYER_COUNT");
+}
+
 console.log("\n=== 持久化 ===");
 {
   const { room, act } = mk(4, 7);
@@ -175,6 +204,8 @@ console.log("\n=== 持久化 ===");
   const t = room.turn, hand = room.seats[t].hand.slice();
   const saved = JSON.parse(JSON.stringify(room.serialize()));
   const back = LoveLetterCore.hydrate(saved, lcg(9));
+  room.seats[1].team = 2; const saved2 = LoveLetterCore.hydrate(JSON.parse(JSON.stringify(room.serialize())));
+  check("队号随座位序列化", saved2.seats[1].team === 2 && saved2.config.mode === "ffa");
   check("序列化/回灌:阶段、牌堆、手牌、盖牌、持有者一致", back.phase === "play" && back.turn === t && back.seats[t].hand.join() === hand.join() && back.deck.join() === room.deck.join() && back.removed === room.removed && back.isHolder("p1", 1) && back.config.edition === "classic");
   const tg = back.targets().other[0];
   check("回灌后可继续出牌", back.action(`p${t}`, { op: "play", seatNo: t, card: hand[0], target: tg, guess: "priest" }).ok || back.action(`p${t}`, { op: "play", seatNo: t, card: hand[1], target: tg, guess: "priest" }).ok);

@@ -8,11 +8,12 @@
 //   - 开局移出的那张 removed 不公开(王子在牌堆空时抽它才进手牌)。
 // 没有定时器:全部事件驱动。
 //
-// 动作:core.action(deviceId, {op, ...}):setConfig{config:{edition,tokens}} / startGame / play{seatNo,card,target?,guess?} / chancellor{seatNo,keep,bottom:[…]} / nextRound / newGame
+// 组队模式(config.mode="team",用户线下玩法):6/8/9 人开局随机分队(seat.team),队友只对本队可见(终局公开),可对队友出牌;队内任一人集满 3 枚全队胜;牌组 29 张(见 ll-data TEAM)。
+// 动作:core.action(deviceId, {op, ...}):setConfig{config:{edition,tokens,mode}} / startGame / play{seatNo,card,target?,guess?} / chancellor{seatNo,keep,bottom:[…]} / nextRound / newGame
 // 阶段 phase:setup → play(sub "play" 等当前玩家打牌 | "chancellor" 等他从三张里留一张)→ roundEnd(本轮结算,等 nextRound)→ … → over
 
 import { RoomBase, clone } from "../../common/room-base.mjs";
-import { EDITIONS, DEFAULT_EDITION, CARD_BY_KEY, buildDeck, rankOf, tokensToWin } from "./ll-data.mjs";
+import { EDITIONS, DEFAULT_EDITION, CARD_BY_KEY, TEAM, MODES, buildDeck, rankOf, tokensToWin } from "./ll-data.mjs";
 
 function shuffle(arr, rng) {
   const a = arr.slice();
@@ -21,11 +22,11 @@ function shuffle(arr, rng) {
 }
 const cn = (k) => (CARD_BY_KEY[k] ? CARD_BY_KEY[k].name : k);
 
-export function defaultConfig() { return { edition: DEFAULT_EDITION, tokens: null }; } // tokens:null=按人数表;数字=房规覆盖
+export function defaultConfig() { return { edition: DEFAULT_EDITION, tokens: null, mode: "ffa" }; } // tokens:null=按人数表;数字=房规覆盖;mode ffa|team
 
 export class LoveLetterCore extends RoomBase {
   static MIN_SEATS = 2;
-  static MAX_SEATS = 6;
+  static MAX_SEATS = 9;
 
   constructor(roomCode, seatCount, rng = Math.random) {
     super(roomCode, seatCount, rng);
@@ -40,6 +41,7 @@ export class LoveLetterCore extends RoomBase {
       out: false,        // 本轮出局
       protected: false,  // 侍女保护中(到自己下个回合开始)
       tokens: 0,         // 爱慕标记
+      team: null,        // 组队模式的队号 1..k(本队可见;终局公开)
       notes: [] };       // 私密笔记 [{round,text}]
   }
   _clearRoundSeat(s) { Object.assign(s, { hand: [], discards: [], out: false, protected: false, notes: [] }); }
@@ -56,7 +58,7 @@ export class LoveLetterCore extends RoomBase {
     this.history = [];       // 每轮结算摘要
     this.result = null;      // 终局 {winners,need}
     this.log = [];
-    for (const s of Object.values(this.seats)) { this._clearRoundSeat(s); s.tokens = 0; }
+    for (const s of Object.values(this.seats)) { this._clearRoundSeat(s); s.tokens = 0; s.team = null; }
   }
   _log(msg) { this.log.unshift(msg); if (this.log.length > 300) this.log.pop(); }
 
@@ -65,7 +67,10 @@ export class LoveLetterCore extends RoomBase {
 
   edition() { return EDITIONS[this.config.edition] || EDITIONS[DEFAULT_EDITION]; }
   rank(k) { return rankOf(this.config.edition, k); }
-  need() { return this.config.tokens || tokensToWin(this.config.edition, this.seatNos().length) || null; }
+  isTeam() { return this.config.mode === "team"; }
+  need() { return this.config.tokens || (this.isTeam() ? TEAM.tokensToWin : tokensToWin(this.config.edition, this.seatNos().length)) || null; }
+  teamOf(n) { return this.seats[n] ? this.seats[n].team : null; }
+  teammates(n) { const t = this.teamOf(n); return t == null ? [] : this.seatNos().filter((m) => m !== n && this.seats[m].team === t); }
   players() { return this.seatNos(); }
   alive() { return this.seatNos().filter((n) => !this.seats[n].out); }
   _nextAlive(n) { const s = this.seatNos(); let i = s.indexOf(n); for (let k = 0; k < s.length; k++) { i = (i + 1) % s.length; if (!this.seats[s[i]].out) return s[i]; } return n; }
@@ -73,6 +78,7 @@ export class LoveLetterCore extends RoomBase {
   // 开局前检查(准备页也用它显示问题)
   check() {
     const N = this.seatNos().length, ed = this.edition();
+    if (this.isTeam()) return TEAM.players[N] ? { ok: true, teams: TEAM.players[N].teams, size: TEAM.players[N].size } : { error: "TEAM_COUNT" };
     if (N < ed.minPlayers || N > ed.maxPlayers) return { error: "PLAYER_COUNT", min: ed.minPlayers, max: ed.maxPlayers };
     return { ok: true };
   }
@@ -105,6 +111,8 @@ export class LoveLetterCore extends RoomBase {
     const cfg = { ...this.config };
     if (c.edition !== undefined) { if (!EDITIONS[c.edition]) return { error: "BAD_CONFIG" }; cfg.edition = c.edition; }
     if (c.tokens !== undefined) { if (c.tokens !== null && !(Number.isInteger(c.tokens) && c.tokens >= 1 && c.tokens <= 20)) return { error: "BAD_CONFIG" }; cfg.tokens = c.tokens; }
+    if (c.mode !== undefined) { if (!MODES[c.mode]) return { error: "BAD_CONFIG" }; cfg.mode = c.mode; }
+    if (cfg.mode === "team") cfg.edition = TEAM.edition; // 组队牌组按 2019 版点数
     this.config = cfg;
     return { ok: true };
   }
@@ -113,11 +121,15 @@ export class LoveLetterCore extends RoomBase {
   _startGame() {
     if (this.phase !== "setup") return { error: "NOT_SETUP" };
     const chk = this.check(); if (chk.error) return chk;
-    for (const s of Object.values(this.seats)) { this._clearRoundSeat(s); s.tokens = 0; }
+    for (const s of Object.values(this.seats)) { this._clearRoundSeat(s); s.tokens = 0; s.team = null; }
     this.round = 0; this.history = []; this.result = null; this.roundResult = null;
     const seats = this.seatNos();
     this.starter = seats[Math.floor(this.rng() * seats.length)];
-    this._log(`开局:${this.edition().name},${seats.length} 人,先集满 ${this.need()} 枚爱慕标记者胜;随机 ${this.starter}号 先手`);
+    if (this.isTeam()) { // 落座后随机分队:洗乱座位按队伍人数切块
+      const { size } = TEAM.players[seats.length];
+      shuffle(seats, this.rng).forEach((n, i) => { this.seats[n].team = Math.floor(i / size) + 1; });
+      this._log(`开局:组队赛,${seats.length} 人随机分成 ${chk.teams} 队(每队 ${size} 人,队友只对本队可见),队内任一人集满 ${this.need()} 枚爱慕标记全队胜;随机 ${this.starter}号 先手`);
+    } else this._log(`开局:${this.edition().name},${seats.length} 人,先集满 ${this.need()} 枚爱慕标记者胜;随机 ${this.starter}号 先手`);
     this._startRound();
     return { ok: true };
   }
@@ -130,7 +142,7 @@ export class LoveLetterCore extends RoomBase {
     this.round++;
     for (const s of Object.values(this.seats)) this._clearRoundSeat(s);
     const N = this.seatNos().length;
-    this.deck = shuffle(buildDeck(this.config.edition), this.rng);
+    this.deck = shuffle(buildDeck(this.config.edition, this.config.mode), this.rng);
     this.removed = this.deck.shift();
     this.faceUp = N === 2 ? [this.deck.shift(), this.deck.shift(), this.deck.shift()] : [];
     for (const n of this.seatNos()) this.seats[n].hand = [this.deck.shift()];
@@ -291,9 +303,16 @@ export class LoveLetterCore extends RoomBase {
     const champs = this.seatNos().filter((n) => this.seats[n].tokens >= need);
     if (champs.length) {
       const top = Math.max(...champs.map((n) => this.seats[n].tokens));
-      this.result = { winners: champs.filter((n) => this.seats[n].tokens === top), need };
+      const best = champs.filter((n) => this.seats[n].tokens === top);
+      if (this.isTeam()) { // 队内任一人集满 → 全队胜(多队同时集满则都算赢)
+        const teams = [...new Set(best.map((n) => this.teamOf(n)))];
+        this.result = { winners: this.seatNos().filter((n) => teams.includes(this.teamOf(n))), need, teams, by: best, teamOf: Object.fromEntries(this.seatNos().map((n) => [n, this.teamOf(n)])) };
+        this._log(`🏆 ${best.join("/")}号 集满 ${need} 枚爱慕标记,第 ${teams.join("/")} 队(${this.result.winners.join("/")}号)全队获胜!`);
+      } else {
+        this.result = { winners: best, need };
+        this._log(`🏆 ${best.join("/")}号 集满 ${need} 枚爱慕标记,获胜!`);
+      }
       this.phase = "over";
-      this._log(`🏆 ${this.result.winners.join("/")}号 集满 ${need} 枚爱慕标记,获胜!`);
     } else this.phase = "roundEnd";
   }
 
@@ -302,11 +321,14 @@ export class LoveLetterCore extends RoomBase {
     const mine = holds.has(s.seatNo), revealed = this.phase === "roundEnd" || this.phase === "over";
     const v = { seatNo: s.seatNo, holderDevices: s.holderDevices, discards: s.discards, out: s.out, protected: s.protected, tokens: s.tokens, handCount: s.hand.length, isTurn: this.turn === s.seatNo };
     if (mine || revealed) v.hand = s.hand.slice();
+    // 队号:本队(我持有的任一座位同队)可见;终局公开
+    if (s.team != null && (this.phase === "over" || [...holds].some((h) => this.seats[h] && this.seats[h].team === s.team))) v.team = s.team;
     if (mine) { v.notes = s.notes.slice(); if (this.phase === "play" && this.turn === s.seatNo) v.countessForced = this.countessForced(s.seatNo); }
     return clone(v);
   }
   _roomView() {
     return clone({ phase: this.phase, sub: this.sub, round: this.round, turn: this.turn, starter: this.starter, config: this.config, need: this.need(), check: this.check(),
+      teamTable: this.isTeam() ? TEAM.players[this.seatNos().length] || null : null,
       deckCount: this.deck.length, removedTaken: this.removed == null && this.phase === "play", faceUp: this.faceUp, targets: this.targets(),
       roundResult: this.roundResult, history: this.history, result: this.result, log: this.log });
   }

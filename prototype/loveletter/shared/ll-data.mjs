@@ -39,17 +39,29 @@ export const EDITIONS = {
 };
 export const DEFAULT_EDITION = "classic";
 
+// 组队模式(用户线下玩法,无官方规则;2026-11-20):6 / 8 / 9 人开局随机分队,队内任一人集满 3 枚标记全队胜;
+// 牌组在 2019 新版基础上扩充到 29 张:侍卫 9、神父/男爵/侍女/王子/大臣各 3,间谍/国王/伯爵夫人/公主不变。队友只对本队可见;可以对队友出牌。
+export const TEAM = {
+  edition: "v2019",                                   // 点数表沿用 2019 版
+  players: { 6: { teams: 3, size: 2 }, 8: { teams: 4, size: 2 }, 9: { teams: 3, size: 3 } },
+  tokensToWin: 3,
+  deck: { spy: 2, guard: 9, priest: 3, baron: 3, handmaid: 3, prince: 3, chancellor: 3, king: 1, countess: 1, princess: 1 },
+};
+export const MODES = { ffa: "个人赛", team: "组队赛(6 / 8 / 9 人)" };
+
 // 某版本的整副牌(按 key 展开成数组)
-export function buildDeck(editionKey) {
+export function buildDeck(editionKey, mode = "ffa") {
   const ed = EDITIONS[editionKey] || EDITIONS[DEFAULT_EDITION];
+  const deck = mode === "team" ? TEAM.deck : ed.deck;
   const out = [];
-  for (const [k, n] of Object.entries(ed.deck)) for (let i = 0; i < n; i++) out.push(k);
+  for (const [k, n] of Object.entries(deck)) for (let i = 0; i < n; i++) out.push(k);
   return out;
 }
 export function rankOf(editionKey, cardKey) { const ed = EDITIONS[editionKey] || EDITIONS[DEFAULT_EDITION]; return ed.ranks[cardKey] ?? -1; }
 export function tokensToWin(editionKey, players) { const ed = EDITIONS[editionKey] || EDITIONS[DEFAULT_EDITION]; return ed.tokensToWin[players] ?? null; }
 // 该版本按点数排好的卡牌清单(图鉴 / 侍卫猜牌列表用)
-export function cardsOf(editionKey) {
+export function cardsOf(editionKey, mode = "ffa") {
   const ed = EDITIONS[editionKey] || EDITIONS[DEFAULT_EDITION];
-  return CARDS.filter((c) => ed.deck[c.key]).map((c) => ({ ...c, rank: ed.ranks[c.key], count: ed.deck[c.key] })).sort((a, b) => a.rank - b.rank);
+  const deck = mode === "team" ? TEAM.deck : ed.deck;
+  return CARDS.filter((c) => deck[c.key]).map((c) => ({ ...c, rank: ed.ranks[c.key], count: deck[c.key] })).sort((a, b) => a.rank - b.rank);
 }

@@ -112,6 +112,7 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .pl .ph .bd.on{border-color:var(--rose);color:var(--rose)}
 .pl .ph .bd.prot{border-color:var(--blue);color:var(--blue)}
 .pl .ph .bd.out{border-color:var(--red);color:var(--red)}
+.pl .ph .bd.team{border-color:var(--gold);color:var(--gold);font-weight:700}
 .pl .lb{font-size:11px;color:var(--fg-soft);margin-top:4px}
 .pl .hd{display:flex;gap:4px;flex:none}
 .pl .hearts{color:var(--rose);letter-spacing:1px;font-size:13px}
@@ -169,7 +170,7 @@ const RC=RoomClient.create({
   wsPath: code=>"/api/loveletter/"+code+"/ws",
   errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",BAD_CONFIG:"配置不合法",PLAYER_COUNT:"人数不在该版本支持范围内",NOT_PLAY:"现在不能出牌",NOT_YOUR_TURN:"还没轮到这个座位",
     NOT_IN_HAND:"这张牌不在手里",COUNTESS_FORCED:"手里有国王/王子时必须打出伯爵夫人",BAD_TARGET:"目标不合法(出局或受侍女保护)",BAD_GUESS:"侍卫不能猜侍卫,且只能猜本版本有的牌",
-    NOT_CHANCELLOR:"现在不是大臣选牌阶段",BAD_BOTTOM:"放回牌堆底的必须是其余两张",NOT_ROUND_END:"本轮还没结束"},
+    NOT_CHANCELLOR:"现在不是大臣选牌阶段",BAD_BOTTOM:"放回牌堆底的必须是其余两张",NOT_ROUND_END:"本轮还没结束",TEAM_COUNT:"组队赛只支持 6 / 8 / 9 人"},
   beforeConnect(){ state=null; closeModal(); resetPick(); },
   onState(m){ const prev=state; state=m; afterState(prev); autoSeat(); render(); },
   onMessage(){},
@@ -191,7 +192,10 @@ const cn=k=>C[k]?C[k].name:(k||"?");
 const imgUrl=k=>DATA.artBase?DATA.artBase+k+".jpg":"";
 const hearts=(n,need)=>"❤".repeat(n)+"♡".repeat(Math.max(0,(need||0)-n));
 // 该版本按点数排好的卡牌清单
-function edCards(){ const e=ED(); return DATA.cards.filter(c=>e.deck[c.key]).map(c=>Object.assign({},c,{rank:e.ranks[c.key],count:e.deck[c.key]})).sort((a,b)=>a.rank-b.rank); }
+const isTeam=()=>!!state&&state.config.mode==="team";
+function edCards(){ const e=ED(), deck=isTeam()?DATA.team.deck:e.deck; return DATA.cards.filter(c=>deck[c.key]).map(c=>Object.assign({},c,{rank:e.ranks[c.key],count:deck[c.key]})).sort((a,b)=>a.rank-b.rank); }
+const teamOf=n=>state.seats[n]&&state.seats[n].team;
+function myTeammates(){ const ms=mySeats(); const ts=new Set(ms.map(teamOf).filter(t=>t!=null)); return seatsArr().filter(s=>s.team!=null&&ts.has(s.team)&&!ms.includes(s.seatNo)).map(s=>s.seatNo); }
 function cardHtml(k,opt){
   opt=opt||{};
   const cls="cd"+(opt.big?" big":"")+(opt.mini?" mini":"")+(opt.sel?" sel":"")+(opt.dim?" dim":"")+(opt.click?" clickable":"");
@@ -216,13 +220,14 @@ function closeModal(){ modal=null; $("#modal").innerHTML=""; }
 function openCodex(focus){
   modal={t:"codex",focus};
   const e=ED();
-  let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 卡牌图鉴 · ${esc(e.name)}<span class="x" data-a="close">×</span></h2>`;
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 卡牌图鉴 · ${esc(isTeam()?"组队赛 29 张":e.name)}<span class="x" data-a="close">×</span></h2>`;
   for(const c of edCards()) h+=`<div class="ce" id="cx-${c.key}" ${focus===c.key?'style="background:rgba(178,58,90,.07);border-radius:6px"':""}>${cardHtml(c.key,{})}<div><div class="cn">${c.rank} · ${esc(c.name)} <span class="cm">${esc(c.en)} · ${c.count} 张</span></div><div class="cdsc">${esc(c.desc)}</div></div></div>`;
   h+=`<h3>📜 规则速记</h3>
     <div class="rule">· 每人起手 1 张;开局盖掉 1 张不看(2 人局再翻开 3 张)。轮到你:系统自动抽 1 张,从两张里<b>打出一张</b>并结算效果,另一张留手。</div>
     <div class="rule">· 受侍女保护的人不能被选为目标;若其他人全受保护,侍卫/神父/男爵/国王打出无效果,王子只能选自己。</div>
     <div class="rule">· 出局者手牌翻开进弃牌堆。只剩一人,或某人回合结束时牌堆已空 → 本轮结束:在局者比手牌点数,最高者得 1 枚爱慕标记;同点比各自弃牌点数总和,再同则都得。</div>
-    <div class="rule">· 先集满所需标记者胜:${Object.entries(e.tokensToWin).map(([n,t])=>n+"人 "+t+"枚").join(" / ")}。上一轮赢家下一轮先手。</div>
+    <div class="rule">· 先集满所需标记者胜:${isTeam()?"组队赛 3 枚":Object.entries(e.tokensToWin).map(([n,t])=>n+"人 "+t+"枚").join(" / ")}。上一轮赢家下一轮先手。</div>
+    ${isTeam()?`<div class="rule">· <b>组队赛</b>:6 人 3 队、8 人 4 队、9 人 3 队,开局随机分队,只有本队看得到队友;可以对队友出牌;队内任一人集满 3 枚全队获胜。牌组在 2019 版基础上扩到 29 张(侍卫 9、神父/男爵/侍女/王子/大臣各 3)。</div>`:""}
     ${e.deck.spy?`<div class="rule">· <b>间谍</b>:轮末,仍在局内且是唯一打出/弃过间谍的人额外 +1 枚。<b>大臣</b>:抽两张后从三张里留一张,其余按你选的顺序放回牌堆底。</div>`:""}
   </div></div>`;
   $("#modal").innerHTML=h;
@@ -270,15 +275,21 @@ function viewTopbar(){
 /* ---- 准备 ---- */
 function viewSetup(){
   const seats=seatsArr(), N=seats.length, e=ED(), chk=state.check||{};
-  let h=`<div class="card"><h2>座位 <span class="tag">${N} 人 · 本版本 ${e.minPlayers}~${e.maxPlayers} 人</span></h2><div class="seats-setup">`;
+  let h=`<div class="card"><h2>座位 <span class="tag">${N} 人 · ${isTeam()?"组队赛 6 / 8 / 9 人":`本版本 ${e.minPlayers}~${e.maxPlayers} 人`}</span></h2><div class="seats-setup">`;
   for(const s of seats){
     const mine=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
     h+=`<div class="seat${mine?" mine":""}"><span class="st">${s.seatNo}</span><span class="grow"><span class="who">${held?esc(nameOf(s))+(mine?" (我)":""):"空位"}</span></span>
       ${mine?`<button class="xs ghost" data-a="release" data-s="${s.seatNo}">离座</button>`:held?`<button class="xs ghost" data-a="takeover" data-s="${s.seatNo}">替换</button>`:`<button class="xs primary" data-a="claim" data-s="${s.seatNo}">落座</button>`}</div>`;
   }
   h+=`</div><div class="row" style="margin-top:6px"><button class="sm ghost" data-a="addSeat">＋ 加座位</button><button class="sm ghost" data-a="removeSeat">－ 减座位</button><span class="hint">座位号即出牌顺序(顺时针)。一台手机可代持多个座位。</span></div></div>`;
-  h+=`<div class="card"><h2>版本</h2>`;
-  for(const ed of Object.values(DATA.editions)){
+  h+=`<div class="card"><h2>模式</h2>`;
+  const MODE_DESC={ffa:"每人为自己打,按人数表集满标记者胜。",team:"6 / 8 / 9 人,开局随机分队(6 人 3 队、8 人 4 队、9 人 3 队),只有本队看得到队友,可以对队友出牌;队内任一人集满 3 枚全队胜。牌组固定 2019 版点数扩到 29 张。"};
+  for(const [k,nm] of Object.entries(DATA.modes)){
+    const on=(state.config.mode||"ffa")===k;
+    h+=`<label class="edopt${on?" on":""}"><input type="radio" name="mode" data-a="mode" data-k="${k}" ${on?"checked":""}><span><b>${esc(nm)}</b><small>${esc(MODE_DESC[k]||"")}</small></span></label>`;
+  }
+  h+=`</div><div class="card"><h2>版本${isTeam()?' <span class="tag">组队赛固定 2019 版点数</span>':""}</h2>`;
+  if(!isTeam()) for(const ed of Object.values(DATA.editions)){
     const on=state.config.edition===ed.key;
     h+=`<label class="edopt${on?" on":""}"><input type="radio" name="ed" data-a="edition" data-k="${ed.key}" ${on?"checked":""}><span><b>${esc(ed.name)}</b> <span class="chip">${ed.minPlayers}~${ed.maxPlayers} 人</span><small>${esc(ed.en)} · ${Object.values(ed.deck).reduce((a,b)=>a+b,0)} 张 · 所需标记 ${Object.entries(ed.tokensToWin).map(([n,t])=>n+"人"+t).join(" / ")}</small></span></label>`;
   }
@@ -287,7 +298,7 @@ function viewSetup(){
     <div class="row" style="margin-top:8px"><label>所需爱慕标记<select id="cf-tokens" style="margin-top:4px;width:auto">${[["", "按人数表("+(state.need||"?")+" 枚)"]].concat([1,2,3,4,5,6,7,8,9,10].map(n=>[n,n+" 枚(房规)"])).map(([v,t])=>`<option value="${v}" ${(state.config.tokens||"")==v?"selected":""}>${t}</option>`).join("")}</select></label></div>
     <div class="hint">本机改动即时同步给全房。</div></div>`;
   h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${chk.ok?"":"disabled"}>💌 开始游戏(系统发牌)</button>
-    <div class="hint">${chk.ok?"随机一人先手;之后每轮由上一轮赢家先手。":`现在 ${N} 人,${esc(e.name)}支持 ${e.minPlayers}~${e.maxPlayers} 人,请增减座位或换版本。`}</div></div>`;
+    <div class="hint">${chk.ok?(isTeam()?`开局随机分成 ${chk.teams} 队(每队 ${chk.size} 人),只有本队看得到队友;`:"")+"随机一人先手;之后每轮由上一轮赢家先手。":isTeam()?`现在 ${N} 人,组队赛只支持 6 / 8 / 9 人,请增减座位。`:`现在 ${N} 人,${esc(e.name)}支持 ${e.minPlayers}~${e.maxPlayers} 人,请增减座位或换版本。`}</div></div>`;
   return h;
 }
 
@@ -308,7 +319,7 @@ function viewDeck(){
   return `<div class="deckbar"><div class="dk">${backHtml(false,state.deckCount)}牌堆</div><div class="dk">${state.removedTaken?`<div class="cd" style="border-style:dashed;background:transparent;box-shadow:none;cursor:default"></div>`:backHtml(false)}盖牌${state.removedTaken?"(已被王子抽走)":""}</div>${state.faceUp.length?`<div class="dk"><div class="hand" style="gap:4px">${state.faceUp.map(k=>cardHtml(k,{mini:true})).join("")}</div>2 人局翻开</div>`:""}</div>`;
 }
 function viewStatus(){
-  if(state.phase==="over") return `<div class="status">🏆 ${state.result.winners.join("/")}号 集满 ${state.result.need} 枚爱慕标记,获胜!</div>`;
+  if(state.phase==="over") return isTeam()?`<div class="status">🏆 第 ${state.result.teams.join("/")} 队(${state.result.winners.join("/")}号)全队获胜!<small>${state.result.by.join("/")}号 集满 ${state.result.need} 枚爱慕标记</small></div>`:`<div class="status">🏆 ${state.result.winners.join("/")}号 集满 ${state.result.need} 枚爱慕标记,获胜!</div>`;
   if(state.phase==="roundEnd") return `<div class="status">第 ${state.round} 轮结束<small>任何人点「下一轮」继续,${state.starter}号 先手</small></div>`;
   const t=state.seats[state.turn], mine=state.youHold.includes(state.turn);
   if(state.sub==="chancellor") return `<div class="status">${state.turn}号 ${esc(nameOf(t))} 正在用大臣选牌${mine?"(你)":""}</div>`;
@@ -354,7 +365,7 @@ function viewPlayers(){
   for(const s of seatsArr()){
     const mine=state.youHold.includes(s.seatNo);
     h+=`<div class="pl${s.isTurn?" turn":""}${mine?" mine":""}${s.out?" out":""}"><div class="grow"><div class="ph"><span class="no">${s.seatNo}</span><span class="nm">${esc(nameOf(s))||"空位"}</span>
-      ${s.isTurn&&state.phase==="play"?`<span class="bd on">▶ 出牌中</span>`:""}${s.protected?`<span class="bd prot">🧺 保护中</span>`:""}${s.out?`<span class="bd out">✖ 出局</span>`:""}${state.starter===s.seatNo&&state.phase!=="over"?`<span class="bd">先手</span>`:""}<span class="hearts">${hearts(s.tokens,state.need)}</span></div>
+      ${s.team!=null?`<span class="bd team">${state.phase==="over"?`第 ${s.team} 队`:mine?`第 ${s.team} 队`:"🤝 队友"}</span>`:""}${s.isTurn&&state.phase==="play"?`<span class="bd on">▶ 出牌中</span>`:""}${s.protected?`<span class="bd prot">🧺 保护中</span>`:""}${s.out?`<span class="bd out">✖ 出局</span>`:""}${state.starter===s.seatNo&&state.phase!=="over"?`<span class="bd">先手</span>`:""}<span class="hearts">${hearts(s.tokens,state.need)}</span></div>
       <div class="lb">弃牌 ${s.discards.length?"(合计 "+s.discards.reduce((a,k)=>a+(+rank(k)||0),0)+")":""}</div><div class="strip">${s.discards.length?s.discards.map(k=>cardHtml(k,{mini:true})).join(""):`<span class="hint" style="margin:0">—</span>`}</div></div>
       <div class="hd">${s.hand&&(mine||revealed)?s.hand.map(k=>cardHtml(k,{})).join(""):Array.from({length:s.handCount}).map(()=>backHtml(false)).join("")}</div></div>`;
   }
@@ -363,6 +374,7 @@ function viewPlayers(){
 function viewNotes(){
   const ms=mySeats(); if(!ms.length) return "";
   let h="";
+  if(isTeam()&&state.phase!=="over"){ for(const n of ms){ const t=teamOf(n); if(t==null) continue; const mates=seatsArr().filter(s=>s.team===t&&s.seatNo!==n).map(s=>`${s.seatNo}号 ${esc(nameOf(s))}`); h+=`<div class="card secret"><h2>🤝 ${n}号 的队伍 <span class="tag">第 ${t} 队 · 只有本队看得到</span></h2><div>队友:${mates.join("、")||"—"}</div><div class="hint">队内任一人集满 ${state.need} 枚爱慕标记,全队获胜;可以对队友出牌。</div></div>`; } }
   for(const n of ms){ const s=state.seats[n], notes=(s.notes||[]).filter(x=>x.round===state.round);
     if(notes.length) h+=`<div class="card secret"><h2>🔒 ${n}号 的私密情报 <span class="tag">只有你看得到</span></h2>${notes.map(x=>`<div class="note">${esc(x.text)}</div>`).join("")}</div>`; }
   return h;
@@ -370,10 +382,10 @@ function viewNotes(){
 function viewRoundEnd(){
   const r=state.roundResult; if(!r) return "";
   const over=state.phase==="over";
-  let h=`<div class="card result"><div class="big">${over?`🏆 ${state.result.winners.join("/")}号 获胜`:`第 ${r.round} 轮 · ${r.winners.join("/")}号 得标记`}</div>
+  let h=`<div class="card result"><div class="big">${over?(isTeam()?`🏆 第 ${state.result.teams.join("/")} 队全队获胜`:`🏆 ${state.result.winners.join("/")}号 获胜`):`第 ${r.round} 轮 · ${r.winners.join("/")}号 得标记`}</div>
     <div class="hint" style="text-align:center">${r.reason==="last"?"其他人都出局了":"牌堆抽完,比手牌点数"}${r.spyBonus!=null?` · ${r.spyBonus}号 是唯一打出间谍的在局者,额外 +1`:""}</div>
-    <table class="vt"><tr><th>座位</th><th>手牌</th><th>弃牌合计</th><th>标记</th></tr>`;
-  for(const s of seatsArr()) h+=`<tr class="${r.winners.includes(s.seatNo)?"win":""}"><td>${s.seatNo}号 ${esc(nameOf(s))}</td><td>${r.hands[s.seatNo]?`${rank(r.hands[s.seatNo])} ${esc(cn(r.hands[s.seatNo]))}`:"<span style='color:var(--red)'>出局</span>"}</td><td>${r.sums[s.seatNo]}</td><td class="hearts" style="color:var(--rose)">${hearts(r.tokens[s.seatNo],state.need)}</td></tr>`;
+    <table class="vt"><tr><th>座位</th>${isTeam()&&over?"<th>队</th>":""}<th>手牌</th><th>弃牌合计</th><th>标记</th></tr>`;
+  for(const s of seatsArr()) h+=`<tr class="${(over?state.result.winners:r.winners).includes(s.seatNo)?"win":""}"><td>${s.seatNo}号 ${esc(nameOf(s))}</td>${isTeam()&&over?`<td>第 ${state.result.teamOf[s.seatNo]} 队</td>`:""}<td>${r.hands[s.seatNo]?`${rank(r.hands[s.seatNo])} ${esc(cn(r.hands[s.seatNo]))}`:"<span style='color:var(--red)'>出局</span>"}</td><td>${r.sums[s.seatNo]}</td><td class="hearts" style="color:var(--rose)">${hearts(r.tokens[s.seatNo],state.need)}</td></tr>`;
   h+=`</table><div class="row" style="margin-top:10px">${over?`<button class="primary grow" data-a="newGame" style="padding:12px;font-size:15px">再来一局</button>`:`<button class="primary grow" data-a="nextRound" style="padding:12px;font-size:15px">下一轮(${state.starter}号 先手)</button>`}</div></div>`;
   return h;
 }
@@ -398,6 +410,7 @@ document.addEventListener("click",e=>{
     case "addSeat": RC.send({type:"addSeat"}); break;
     case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
     case "edition": act("setConfig",{config:{edition:b.dataset.k}}); break;
+    case "mode": act("setConfig",{config:{mode:b.dataset.k}}); break;
     case "start": act("startGame"); break;
     case "actSeat": actSeat=sn; resetPick(); render(); break;
     case "pick": { const i=+b.dataset.i, s=state.seats[curActSeat()]; if(s.countessForced&&s.hand[i]!=="countess"){ toast("必须打出伯爵夫人"); break; } pick=pick===i?null:i; tgtSel=null; guessSel=null; render(); break; }
