@@ -1534,6 +1534,18 @@ console.log("\n=== 场景 20:线上发将 ===");
       ns.length === 2 && ns[0].name === "素将" && ns[0].white.join() === "5,6" && ns[0].ban.join() === "7" && ns[1].name.length === 10 && ns[1].white.length === 0 && ns[1].ban.length === 0);
     check("normPoolSets:最多 " + POOL_SET_MAX + " 套;非数组 → 空", normPoolSets(Array.from({ length: 12 }, (_, i) => ({ id: "s" + i, name: "n" + i }))).length === POOL_SET_MAX && normPoolSets("x").length === 0);
   }
+  // —— 同名并坑:晋势力版(晋司马懿 / 晋张春华)与其它各版一个坑;蚀心入魔各将并进本体的坑(用户 2026-11-20 再次确认) ——
+  {
+    const gk = (n) => groupKey(HEROES.find((h) => h.name === n));
+    check("晋司马懿 与 司马懿 / 界司马懿 / 魔司马懿 同坑;神司马懿仍独立", gk("晋司马懿") === "司马懿" && gk("界司马懿") === "司马懿" && gk("魔司马懿") === "司马懿" && gk("神司马懿") === "神司马懿");
+    check("晋张春华 与 张春华 / 界张春华 同坑", gk("晋张春华") === "张春华" && gk("界张春华") === "张春华");
+    p = P({ whitelist: [idOf("司马懿"), idOf("张春华")] });
+    check("只勾标司马懿 / 标张春华 → 晋版跟着同坑可选,全场只算一个坑", names(grp(p, "司马懿")).includes("晋司马懿") && names(grp(p, "张春华")).includes("晋张春华") && p.normal.length === 2);
+    const sx = HEROES.filter((h) => h.genre === "蚀心入魔"), base = new Set(HEROES.filter((h) => h.genre !== "蚀心入魔" && h.genre !== "国战").map((h) => groupKey(h)));
+    const solo = sx.filter((h) => !base.has(groupKey(h))).map((h) => h.name);
+    check(`蚀心入魔 ${sx.length} 将:名字都剥成本体坑名(没有「·」「魔」「梦」残留);库里有本体的全部并坑,只有 ${solo.length} 个本体没录的独占一坑`,
+      sx.length === 36 && sx.every((h) => !/[·魔梦]/.test(groupKey(h))) && solo.length <= 6 && gk("疑·魔曹操") === "曹操" && gk("贪·梦吕布") === "吕布" && gk("慢·寇封") === "刘封" && gk("疑·伏寿") === "伏皇后");
+  }
   // —— 特殊规则可配(仅主公候选 / 仅身份局):不传 rules = 改成可配之前写死的行为(曹丕各版本 / 董昭) ——
   {
     const { defaultPoolRules, normPoolRules } = await import("./shared/deal.mjs");

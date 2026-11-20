@@ -76,8 +76,9 @@ export function normPoolSets(raw) {
 // 与 room.html heroBaseName 同一前缀集(改一处要同步另一处)。
 // 用户 2026-10-02:(标)界/谋/族/闪/SP 同名都算同一位武将。2026-10-02 审计:库里 族34/闪5/标1 全是前缀写法,无误伤。
 // 「移动版」是版本来源标记,可再叠一个系列前缀(移动版谋韩当 → 韩当;用户 2026-10-02:与 OL 各版韩当同名可替换)。
-// BASE_ALIAS:同一人的别名并进同一个坑(《蚀心入魔》实卡名 寇封=刘封、伏寿=伏皇后)。
-const BASE_ALIAS = { 寇封: "刘封", 伏寿: "伏皇后" };
+// BASE_ALIAS:同一人的别名并进同一个坑(《蚀心入魔》实卡名 寇封=刘封、伏寿=伏皇后;晋势力版 晋司马懿 / 晋张春华 与其它各版同名,用户 2026-11-20)。
+//   「晋」不做成通用前缀 —— 真有姓晋的人(晋宗),逐个列在这里更稳。以后再录「晋XX」同名版本,往这张表加一行(room.html 同步)。
+const BASE_ALIAS = { 寇封: "刘封", 伏寿: "伏皇后", 晋司马懿: "司马懿", 晋张春华: "张春华" };
 export function heroBaseName(name) { const b = (name || "").replace(/^(?:移动版|线下)?(?:[疑慢嗔贪痴]·)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/, ""); return BASE_ALIAS[b] || b; }
 // 坑的 key:神版独立(神关羽 ≠ 关羽),其余按基名合并
 export function groupKey(h) { return h.name.startsWith("神") ? h.name : heroBaseName(h.name); }
