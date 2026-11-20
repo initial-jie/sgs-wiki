@@ -830,8 +830,9 @@ export const OFFLINE_HEROES = [
   },
   // 皇甫嵩 —— OL 2026-11-20 公告、11-21 小雪祈福上线(olwiki 真 id 743;官网花名册/API 仍未收录)。graduate 候选。
   // 势力/体力/性别/技能抄自官方公告 sanguosha.com/news/20261117_1218_3314;品质(传说)/特点按用户 2026-11-20 游戏内武将信息截图(技能文本与公告一致)。⚠ graduate 后删。
+  // 将灯:用户 2026-11-20 说在璀璨星河、子包印象是虎贲(同为汉末三杰的朱儁也在虎贲);当时 olwiki 504 没法核对 —— olwiki 恢复后看 /743/wiki.html 的 .lamp-attribute 订正 hero-packs.json。
   {
-    id: 9066, name: "皇甫嵩", genre: "其他", series: "祈福", faction: "群",
+    id: 9066, name: "皇甫嵩", genre: "璀璨星河", series: "标", faction: "群",
     factionSelectable: false, quality: "传说", hp: 4, initialHp: null,
     tags: ["进攻", "控制", "过牌"],
     skills: [
