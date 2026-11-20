@@ -607,7 +607,7 @@ export class RoomCore extends RoomBase {
     for (const n of players) this.seats[n].genLocked = false; // 重新发将 → 解锁上一局发的武将
     if (!this.ident || this.seatNos().some((n) => this.seats[n].general)) this._newGame(); // 发将=新一局(刚发完身份的那局除外,沿用同一条记录)
 
-    // 本局临时 ban(用户 2026-10-17):每人从临时 ban 池里随机看 k 个(k=min(5, floor(池/人数)),至少 DEAL_TEMPBAN_MIN=2 才能开),各 ban n 个(人数 ≤6 → 2 个,否则 1 个;按版本),
+    // 本局临时 ban(用户 2026-10-17):每人从临时 ban 池里随机看 k 个(k=min(5, floor(池/人数)),至少 DEAL_TEMPBAN_MIN=3 才能开),各 ban n 个(人数 ≤6 → 2 个,否则 1 个;按版本),
     // 全员 ban 完再发手牌。目的是压一压高频出场的强将,而不用进黑名单永久禁。
     if (tempBan && tempBan.length) {
       const k = Math.min(DEAL_TEMPBAN_MAX, Math.floor(tempBan.length / players.length));

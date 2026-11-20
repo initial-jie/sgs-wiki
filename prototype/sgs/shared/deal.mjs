@@ -85,7 +85,7 @@ export function groupKey(h) { return h.name.startsWith("神") ? h.name : heroBas
 export function hasLordSkill(h) { return (h.skills || []).some((s) => /^主公技/.test(s.effect || "")); }
 
 export const opt = (h) => ({ id: h.id, name: h.name, gid: h.tool || String(h.id), lord: hasLordSkill(h) });
-export const DEAL_TEMPBAN_MIN = 2; // 临时 ban:候选(临时 ban 池 ∩ 本局将池)至少 人数×2 张才能开(用户 2026-11-20:分了套组后候选会变少,原「每人至少 3 选 1」放宽到人数×2;不够则发将设置里开关直接禁用)
+export const DEAL_TEMPBAN_MIN = 3; // 临时 ban:每人至少 3 选 1 → 候选(临时 ban 池 ∩ 本局将池)至少 人数×3 张才能开;不够则发将设置里开关直接禁用(用户 2026-11-20:分了套组后候选会变少,要开局前校验;一度想放宽到人数×2,但 ≤6 人每人 ban 2 个会变成「看 2 ban 2」没得选,定回人数×3)
 export const DEAL_TEMPBAN_MAX = 5; // 每人最多看 5 个候选
 export const DEAL_TEMPBAN_SMALL = 6; // 人数 ≤ 此值每人 ban 2 个,否则 1 个(用户 2026-10-18)
 // 从组池里剔除指定武将 id(按版本:SP刘备被 ban,其它版本刘备照旧);整坑没版本了就删坑;专属君主被剔则 forced=null

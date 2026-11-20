@@ -1983,10 +1983,10 @@ console.log("\n=== 场景 20:线上发将 ===");
     // 池太小不能开
     {
       const rm = room(4, 1);
-      const small = rm.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb([100, 101, 102, 103, 104, 105, 106]) });
-      check("临时 ban 候选 < 人数×2(4 人 7 张)→ TEMPBAN_TOO_SMALL(need 8),发将没开始", small.error === "TEMPBAN_TOO_SMALL" && small.need === 8 && small.have === 7 && rm.deal === null);
-      const edge = room(4, 9); const er = edge.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb([100, 101, 102, 103, 104, 105, 106, 107]) });
-      check("刚好 人数×2(4 人 8 张)→ 能开:每人看 2 个、各 ban 2 个", er.phase === "ban" && edge.deal.ban.k === 2 && edge.deal.ban.n === 2);
+      const small = rm.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]) });
+      check("临时 ban 候选 < 人数×3(4 人 11 张)→ TEMPBAN_TOO_SMALL(need 12),发将没开始", small.error === "TEMPBAN_TOO_SMALL" && small.need === 12 && small.have === 11 && rm.deal === null);
+      const edge = room(4, 9); const er = edge.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]) });
+      check("刚好 人数×3(4 人 12 张)→ 能开:每人看 3 个、各 ban 2 个(总有得选)", er.phase === "ban" && edge.deal.ban.k === 3 && edge.deal.ban.n === 2);
     }
     // 4 人 × 12 候选 → 每人 3 个;20 候选 → 每人 5;30 → 仍 5
     {
@@ -2012,7 +2012,7 @@ console.log("\n=== 场景 20:线上发将 ===");
       check("ban 阶段结束后 dealBan 拒绝", rm.dealBan("b1", { seatNo: 1, heroId: 100 }).error === "NOT_BAN_PHASE");
       check("ban 阶段的 deal 进 serialize/hydrate", (() => { const r2 = room(4, 3); r2.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb(Array.from({ length: 20 }, (_, i) => 100 + i)) }); const h = RoomCore.hydrate(JSON.parse(JSON.stringify(r2.serialize()))); return h.deal.phase === "ban" && h.deal.ban.k === 5 && h.dealBan("b1", { seatNo: 1, heroId: h.deal.ban.cands[1][0].id }).ok; })());
       const r3 = room(4, 4); r3.dealStart("b1", { mode: "normal", lordSeat: null, pools: mkPools(), tempBan: tb(Array.from({ length: 30 }, (_, i) => 100 + i)) });
-      check("候选数封顶 5;门槛 = 每人 2 张", r3.deal.ban.k === DEAL_TEMPBAN_MAX && DEAL_TEMPBAN_MIN === 2);
+      check("候选数封顶 5;门槛 = 每人 3 张", r3.deal.ban.k === DEAL_TEMPBAN_MAX && DEAL_TEMPBAN_MIN === 3);
       check("ban 阶段可中止", r3.dealCancel("b1").ok && r3.deal === null);
     }
     // 同名版本:ban 掉 SP刘备(664)后 刘备/界刘备 仍可发出

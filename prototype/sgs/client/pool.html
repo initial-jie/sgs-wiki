@@ -275,7 +275,7 @@ function refresh(){
   } else if(list==="temp"){
     const n=effTemp(env).size, inh=env!==DEF()&&!s.size;
     tip=(inh?`这个环境没单独设 → 发将时<b>沿用「${esc(CFG[DEF()].label)}」的 ${CFG[DEF()].temp.size} 将</b>。`:"")
-      +`临时 ban 池 = 出场太频繁、想压一压但又不想永久禁的强将。发将时勾「本局临时 ban」,每人从这里随机看 min(5, 池÷人数) 个,各 ban 1~2 个(≤6 人每人 2 个;只 ban 那个版本,同名其它版本照常),本局不出现。<b>在本局将池里的至少要 人数×2 张才能开</b>(不够时发将设置里的开关会直接禁用):按默认名单算现在 ${n} 张,够 ${Math.floor(n/2)} 人局;换了套组按那一套的将池另算。带<span style="text-decoration:line-through;text-decoration-color:#6b4a86">删除线</span>的不在本环境将池里,勾了也不会抽到。`;
+      +`临时 ban 池 = 出场太频繁、想压一压但又不想永久禁的强将。发将时勾「本局临时 ban」,每人从这里随机看 min(5, 池÷人数) 个,各 ban 1~2 个(≤6 人每人 2 个;只 ban 那个版本,同名其它版本照常),本局不出现。<b>每人至少 3 选 1,所以在本局将池里的至少要 人数×3 张才能开</b>(不够时发将设置里的开关会直接禁用):按默认名单算现在 ${n} 张,够 ${Math.floor(n/3)} 人局;换了套组按那一套的将池另算。带<span style="text-decoration:line-through;text-decoration-color:#6b4a86">删除线</span>的不在本环境将池里,勾了也不会抽到。`;
   } else if(st) tip=`套组「${esc(st.name)}」自己的黑名单:<b>只在线上发将选了这一套时生效</b>(发将不会发出这些版本;房内「禁将」开关关着则不禁),和默认黑名单互不影响。`
     +`房间里的「禁将池」面板、手动选将拦的仍是默认黑名单。<span style="border-bottom:1px dashed var(--ink);color:var(--ink)">虚线框</span>的是本套白名单里的将。`;
   else tip=`黑名单 = 当前环境禁用的强将:发将时不会发出,手动选将会被拒,房间里的「禁将池」展示的就是这份。<span style="border-bottom:1px dashed var(--ink);color:var(--ink)">虚线框</span>的是本环境将池里的将。`;
