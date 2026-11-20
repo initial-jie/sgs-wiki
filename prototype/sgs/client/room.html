@@ -259,8 +259,8 @@ const lbManual=new Set(); // 吕布登记:哪些槽位(seat:ci)切到"手填牌�
 const draft={}; // seat -> [{s,r,n}]  登记草稿
 
 /* ============ 武将 / 工具注册表 ============ */
-const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"}, caoying:{name:"曹婴"}, wangmingshan:{name:"族王明山"}, jiachong:{name:"贾充"}, zuluyusheng:{name:"族陆郁生"}, mouchengyu:{name:"谋程昱"}, shenzhangjiao:{name:"神张角"}, xielingyu:{name:"谢灵毓"}, mouxiaoqiao:{name:"谋小乔"}, zuxuncai:{name:"族荀采"}, moudongzhuo:{name:"谋董卓"}, jinsimayi:{name:"晋司马懿"}, simazhao:{name:"司马昭"}, jielvmeng:{name:"界吕蒙"}, xizhicai:{name:"戏志才"}, mengda:{name:"孟达"}, zhouqun:{name:"周群"} };
-const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan"||g==="caoying"||g==="wangmingshan"||g==="jiachong"||g==="zuluyusheng"||g==="mouchengyu"||g==="shenzhangjiao"||g==="xielingyu"||g==="mouxiaoqiao"||g==="zuxuncai"||g==="moudongzhuo"||g==="jinsimayi"||g==="simazhao"||g==="jielvmeng"||g==="xizhicai"||g==="mengda"||g==="zhouqun";
+const GENERALS={ lvbu:{name:"魔吕布"}, nanhua:{name:"南华老仙"}, xunyou:{name:"族荀攸"}, huangyueying:{name:"谋黄月英"}, caocao:{name:"魔曹操"}, yuanji:{name:"袁姬"}, zhongyan:{name:"钟琰"}, simayi:{name:"魔司马懿"}, dongzhao:{name:"谋董昭"}, shensunquan:{name:"神孙权"}, diaochan:{name:"魔貂蝉"}, sunquan:{name:"魔孙权"}, dianwei:{name:"神典韦"}, lijue:{name:"李傕"}, xurong:{name:"徐荣"}, xushi:{name:"SP徐氏"}, guozhao:{name:"郭照"}, peixiu:{name:"裴秀"}, puyuan:{name:"蒲元"}, caoying:{name:"曹婴"}, wangmingshan:{name:"族王明山"}, jiachong:{name:"贾充"}, zuluyusheng:{name:"族陆郁生"}, mouchengyu:{name:"谋程昱"}, shenzhangjiao:{name:"神张角"}, xielingyu:{name:"谢灵毓"}, mouxiaoqiao:{name:"谋小乔"}, zuxuncai:{name:"族荀采"}, moudongzhuo:{name:"谋董卓"}, jinsimayi:{name:"晋司马懿"}, simazhao:{name:"司马昭"}, jielvmeng:{name:"界吕蒙"}, xizhicai:{name:"戏志才"}, mengda:{name:"孟达"}, zhouqun:{name:"周群"}, jiezuoci:{name:"界左慈"} };
+const hasTool=g=>g==="lvbu"||g==="nanhua"||g==="xunyou"||g==="huangyueying"||g==="caocao"||g==="yuanji"||g==="zhongyan"||g==="simayi"||g==="dongzhao"||g==="shensunquan"||g==="diaochan"||g==="sunquan"||g==="dianwei"||g==="lijue"||g==="xurong"||g==="xushi"||g==="guozhao"||g==="peixiu"||g==="puyuan"||g==="caoying"||g==="wangmingshan"||g==="jiachong"||g==="zuluyusheng"||g==="mouchengyu"||g==="shenzhangjiao"||g==="xielingyu"||g==="mouxiaoqiao"||g==="zuxuncai"||g==="moudongzhuo"||g==="jinsimayi"||g==="simazhao"||g==="jielvmeng"||g==="xizhicai"||g==="mengda"||g==="zhouqun"||g==="jiezuoci";
 // 每个工具:view(seat)->HTML,bind(seat,q)->挂事件。TOOLS 在下方函数声明后其引用已 hoist。
 const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              nanhua:{view:s=>viewNanhuaTool(s),bind:(s,q)=>bindNanhua(s,q)},
@@ -291,6 +291,7 @@ const TOOLS={ lvbu:{view:s=>viewLvbuTool(s),bind:(s,q)=>bindLvbu(s,q)},
              jielvmeng:{view:s=>viewSuitTool(s),bind:(s,q)=>bindSuit(s,q)},
              xizhicai:{view:s=>viewXzTool(s),bind:(s,q)=>bindXz(s,q)},
              mengda:{view:s=>viewMdTool(s),bind:(s,q)=>bindMd(s,q)},
+             jiezuoci:{view:s=>viewZcTool(s),bind:(s,q)=>bindZc(s,q)},
              zhouqun:{view:s=>viewZqTool(s),bind:(s,q)=>bindZq(s,q)},
              xurong:{view:s=>viewXrTool(s),bind:(s,q)=>bindXr(s,q)},
              xushi:{view:s=>viewXsTool(s),bind:(s,q)=>bindXs(s,q)},
@@ -589,6 +590,7 @@ function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80
 const RC=RoomClient.create({
   wsPath: code=>"/api/room/"+code+"/ws",
   errorText: {BANNED:"该武将在禁将池,不能落座",
+    NOT_ZC_ACTION:"只有界左慈本人(或代持)能操作化身",HUASHEN_EMPTY:"化身将池已经抽空了",NOT_YOUR_HUASHEN:"这张不在你的化身牌里",BAD_HUASHEN_SKILL:"这个技能不能通过化身获得",SAME_HUASHEN:"已经是这张化身的这个技能了",BAD_HUASHEN_COUNT:"一次移去 1~2 张",HUASHEN_SHOWN:"展示中的化身不能移去",
     DEAL_ACTIVE:"已有发将在进行中",POOL_NOT_SET:"将池白名单还没设置(房间设置 → 将池编辑)",POOL_SET_UNKNOWN:"选的将池套组不存在了(可能刚被删),重新打开发将设置再选",POOL_TOO_SMALL:"将池不够发:可发的坑数少于 人数×6",POOL_UNAVAILABLE:"读取将池失败,稍后再试",
     BAD_LORD:"君主座位必须是已入座的座位",NO_PLAYERS:"还没有人入座",LORD_FIRST:"等君主先选定并亮出",ALREADY_PICKED:"已选定并亮出,不能再改",CANT_SWAP:"这个坑不能换(已换过,或是君主候选)",
     POOL_EMPTY:"将池里没有可换的了",TEMPBAN_TOO_SMALL:"临时 ban 池太小:每人至少要 3 选 1(将池编辑 → 临时 ban 池 多勾一些)",TEMPBAN_EMPTY:"临时 ban 池里没有在本局将池里的武将(将池编辑 → 临时 ban 池)",
@@ -3136,6 +3138,72 @@ function bindXz(xz,q){
   q("[data-xzgo]").forEach(b=>b.onclick=()=>{if(!xzTarget)return toast("先选目标座位");if(confirm("秘密选定座位 "+xzTarget+" 为先辅目标?只有你看得到。"))act({type:"xfChoose",targetSeat:+xzTarget});});
   q("[data-xzreveal]").forEach(b=>b.onclick=()=>{if(confirm("公开先辅目标?全场都会看到,不能撤回。"))act({type:"xfReveal"});});
   q("[data-xzclear]").forEach(b=>b.onclick=()=>{if(confirm("清除当前选定(纠错)?"))act({type:"xfClear"});});
+}
+
+/* ---------- 界左慈:化身(半私密生成器)。化身牌明细仅左慈本人/代持可见(他人只见张数);展示中的化身 + 所获技能 + 势力/性别全场公开。抽牌在 DO 跑 ---------- */
+const ZC_BANNED=["主公技","限定技","觉醒技","隐匿技","使命技"]; // 与 room-logic HUASHEN_BANNED_TAGS 一致(这里只管置灰,服务端仍会校验)
+let zcMode=false, zcSel=new Set(); // 本机暂存:是否在「移去换新」勾选模式 / 勾了哪几张
+function zcBannedTag(s){ const e=(s&&s.effect)||"", m=/^((?:[^，,。\s]{1,6}技[，,])+)/.exec(e); const tags=m?m[1].split(/[，,]/).filter(Boolean):[]; return tags.find(t=>ZC_BANNED.includes(t))||(/^隐匿/.test(e)?"隐匿技":null); }
+function zcHeroHead(h,big){
+  const sz=big?54:40;
+  return `<img class="ava" src="${esc(h.avatar||"")}" onerror="this.style.visibility='hidden'" style="width:${sz}px;height:${sz}px;border-radius:8px;flex:none;object-fit:cover"/>`
+    +`<div style="flex:1 1 0;min-width:0"><div style="font-weight:800;font-size:${big?18:15}px">${esc(h.name)}<span class="fc ${FCLS[h.faction]||""}">${esc(h.faction||"")}</span><span class="fc">${esc(h.gender||"男")}</span></div>`;
+}
+function viewZcTool(zc){
+  const ts=zc.toolState||{}, iAm=state.youHold.includes(zc.seatNo);
+  const mine=Array.isArray(ts.cards)?ts.cards:null, cnt=mine?mine.length:((ts.cards&&ts.cards.count)||0);
+  const sh=ts.shown!=null?HERO_BY_ID.get(Number(ts.shown)):null;
+  if(!mine||!zcMode) zcSel=new Set(); else for(const x of [...zcSel]) if(!mine.includes(x)||x===ts.shown) zcSel.delete(x);
+  let h=`<div class="card"><h2>界左慈 · 化身<span class="tag">化身牌 ${cnt} 张 · 明细仅左慈可见</span></h2>`;
+  h+=`<div class="hint">游戏开始时随机获得三张武将牌作为「化身」,展示其中一张并获得其上一个技能,<b>性别和势力视为与之相同</b>。回合开始时和回合结束后二选一:①替换展示的化身及技能;②移去至多两张化身并获得等量新化身。<b>新生</b>:受到 1 点伤害后获得一张新化身。化身从「界限突破 + 界一将成名」里抽,不含在场武将;主公技 / 限定技 / 觉醒技 / 隐匿技 / 使命技不能获得。</div>`;
+  // 公开区:展示中的化身
+  if(sh){
+    const sk=(sh.skills||[]).find(s=>s.name===ts.skill);
+    h+=`<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0 4px;background:rgba(255,252,244,.7)"><div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px">展示中的化身(全场可见)</div>`
+      +`<div style="display:flex;gap:10px;align-items:center">${zcHeroHead(sh,true)}<div style="margin-top:2px;font-family:var(--display);font-weight:800;font-size:17px;color:var(--seal)">〖${esc(ts.skill||"")}〗</div></div></div>`
+      +(sk?`<div style="font-size:13px;line-height:1.55;margin-top:7px">${esc(sk.effect||"")}</div>`:"")+`</div>`;
+  }else h+=`<div style="text-align:center;margin:12px 0;font-size:13px;color:var(--ink-soft)">${cnt?"还没有展示化身":"还没有化身牌"}</div>`;
+  if(!iAm){ h+=`<div class="hint">${cnt?`左慈手里有 ${cnt} 张化身牌(暗置,只有左慈看得到是谁)。`:""}界左慈本人操作,你只读。</div></div>`; }
+  else{
+    // 操作区
+    if(!cnt) h+=`<div class="row"><button class="primary grow" data-zcdraw="3">游戏开始 · 获得 3 张化身</button></div>`;
+    else if(zcMode) h+=`<div class="row" style="gap:6px"><button class="primary grow" data-zcswapgo="1"${zcSel.size?"":" disabled"}>移去勾选的 ${zcSel.size} 张 · 换等量新化身</button><button class="ghost" data-zcswapoff="1">取消</button></div><div class="hint" style="margin-top:4px">在下面勾至多两张(展示中的那张不能移去)。</div>`;
+    else h+=`<div class="row" style="gap:6px"><button class="primary grow" data-zcdraw="1">新生 · 受到 1 点伤害 → 获得 1 张</button><button class="ghost" data-zcswapon="1"${cnt>(sh?1:0)?"":" disabled"}>移去换新(至多 2 张)</button></div>`;
+    h+=`</div>`;
+    // 私密区:我的化身牌
+    if(cnt){
+      h+=`<div class="card"><h2>我的化身牌<span class="tag">🔒 仅你可见 · ${cnt} 张</span></h2>`;
+      for(const id of mine){
+        const hero=HERO_BY_ID.get(Number(id)); if(!hero){ h+=`<div class="hint">未知武将 #${esc(id)}</div>`; continue; }
+        const isShown=sh&&sh.id===hero.id, sel=zcSel.has(id);
+        h+=`<div style="border:1px solid ${isShown?"var(--seal)":sel?"#6b4a86":"var(--line)"};border-radius:10px;padding:9px 10px;margin-top:8px${isShown?";background:rgba(163,46,34,.05)":sel?";background:#efe9f6":""}">`
+          +`<div style="display:flex;gap:9px;align-items:center">${zcHeroHead(hero,false)}${isShown?`<div style="font-size:12px;color:var(--seal);font-weight:600">展示中</div>`:""}</div>`
+          +(zcMode?(isShown?`<span class="hint" style="margin:0;flex:none">不能移去</span>`:`<button class="${sel?"primary":"ghost"}" data-zcsel="${hero.id}" style="flex:none;font-size:12px">${sel?"✓ 已勾":"勾选移去"}</button>`):"")+`</div>`;
+        for(const s of hero.skills||[]){
+          const bt=zcBannedTag(s), cur=isShown&&ts.skill===s.name;
+          h+=`<div style="display:flex;gap:8px;align-items:flex-start;margin-top:7px${bt?";opacity:.5":""}">`
+            +(bt?`<span style="flex:none;font-size:12px;border:1px dashed var(--line);border-radius:6px;padding:3px 7px;white-space:nowrap">${esc(s.name)} · ${bt}</span>`
+               :`<button class="${cur?"primary":"ghost"}" data-zcshow="${hero.id}" data-zcskill="${esc(s.name)}"${cur||zcMode?" disabled":""} style="flex:none;font-size:13px;white-space:nowrap">${cur?"✓ ":""}〖${esc(s.name)}〗</button>`)
+            +`<div style="flex:1 1 0;min-width:0;font-size:12.5px;line-height:1.5;color:var(--ink-soft)">${esc(s.effect||"")}</div></div>`;
+        }
+        h+=`</div>`;
+      }
+      h+=`<div class="row" style="margin-top:10px"><span class="hint" style="margin:0">点技能按钮 = 展示这张化身并获得该技能(全场可见);累计获得过 ${ts.total||0} 张</span><span class="grow"></span><button class="ghost" data-zcreset="1" style="font-size:12px">重开</button></div></div>`;
+    }
+  }
+  if(ts.log&&ts.log.length) h+=`<div class="card"><h2>记录</h2><div class="loglist">`+ts.log.slice(0,20).map(l=>`<div>${esc(l)}</div>`).join("")+`</div></div>`;
+  return h;
+}
+function bindZc(zc,q){
+  const Z=zc.seatNo, act=(o)=>send({type:"action",targetSeat:Z,bySeat:Z,toolAction:o});
+  q("[data-zcdraw]").forEach(b=>b.onclick=()=>{const n=+b.dataset.zcdraw;if(n===3||confirm("新生:受到 1 点伤害 → 获得一张新化身牌?"))act({type:"hsDraw",n});});
+  q("[data-zcshow]").forEach(b=>b.onclick=()=>{const hero=HERO_BY_ID.get(+b.dataset.zcshow),sk=b.dataset.zcskill;if(!hero)return;
+    if(confirm("展示「"+hero.name+"」并获得〖"+sk+"〗?\n全场都会看到,你的势力和性别视为与其相同("+(hero.faction||"")+" · "+(hero.gender||"男")+")。"))act({type:"hsShow",heroId:hero.id,skill:sk});});
+  q("[data-zcswapon]").forEach(b=>b.onclick=()=>{zcMode=true;zcSel=new Set();render();});
+  q("[data-zcswapoff]").forEach(b=>b.onclick=()=>{zcMode=false;zcSel=new Set();render();});
+  q("[data-zcsel]").forEach(b=>b.onclick=()=>{const id=+b.dataset.zcsel;if(zcSel.has(id))zcSel.delete(id);else{if(zcSel.size>=2)return toast("至多移去两张");zcSel.add(id);}render();});
+  q("[data-zcswapgo]").forEach(b=>b.onclick=()=>{const rm=[...zcSel];if(!rm.length)return;if(!confirm("移去勾选的 "+rm.length+" 张化身,换 "+rm.length+" 张新的?移去后不能撤回。"))return;zcMode=false;zcSel=new Set();act({type:"hsReplace",remove:rm});});
+  q("[data-zcreset]").forEach(b=>b.onclick=()=>{if(confirm("重开?清空所有化身牌和展示,势力回到群。"))act({type:"resetGame"});});
 }
 
 /* ---------- 孟达:苟得「变更势力」。在 app 里切换当前势力(写 seat.chosenFaction,全场面板/距离/查将都按它),全公开 ---------- */

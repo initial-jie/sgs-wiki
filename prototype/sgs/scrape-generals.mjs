@@ -139,6 +139,7 @@ export const TOOL_NAMES = {
   "周群": "zhouqun",         // OL 已收录(id543);天候当前天气台账
   "孟达": "mengda",          // OL 已收录(id558);苟得变更势力(写 seat.chosenFaction)
   "戏志才": "xizhicai",      // OL 已收录(id375);先辅秘密目标(保密)
+  "界左慈": "jiezuoci",      // OL 已收录(id447);化身牌(明细保密,展示的化身与技能公开)
   "神张角": "shenzhangjiao", // OL 已收录(id227);异兆「黄」计数器,tool 直写 generals.json,此处防重爬丢失
   "谢灵毓": "xielingyu",     // OL 已收录(id769,2026-10-16 由手录 9023 graduate);元嫡牌名组台账
   "谋程昱": "mouchengyu", // OL 已收录(id734);胆持跨座位秘密选类型,同上防重爬丢失

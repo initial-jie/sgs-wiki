@@ -1,7 +1,7 @@
 // 三国杀房间 —— worker 侧:数据路由 + RoomDO(Durable Object)。由 prototype/sgs/worker.mjs 路由进来。
 // 复用 ./shared/room-logic.mjs 的 RoomCore(与 node 模拟 room-sim 同一份逻辑);DO 外壳见 common/room-do.mjs。
 
-import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo } from "./shared/room-logic.mjs";
+import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo, setHuashenPool, buildHuashenPool } from "./shared/room-logic.mjs";
 import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
 import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, defaultPoolRules, normPoolRules, groupKey, needsExplicit } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
@@ -52,6 +52,8 @@ async function getConfig(env) {
 const FEMALE_IDS = new Set(GENDER_DATA.female);
 setHeroInfo(Object.fromEntries(GENERALS_DATA.map((h) => [h.tool || String(h.id), { name: h.name, hp: h.hp, female: FEMALE_IDS.has(h.id),
   yinni: (h.skills || []).some((s) => /^隐匿/.test(s.effect || "")) }]))); // yinni=带隐匿技(技能文本以「隐匿」开头;曹爽托孤只是提到隐匿,不算)
+
+setHuashenPool(buildHuashenPool(GENERALS_DATA, (h) => PACKS_DATA.packs[h.id], (h) => FEMALE_IDS.has(h.id))); // 界左慈化身将池:界限突破 + 界一将
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 // 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)

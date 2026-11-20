@@ -193,6 +193,31 @@ export const PUYUAN_FORGE = {
 };
 export const PUYUAN_CATS = ["武器", "防具", "宝物"];
 
+// ---------- 界左慈【化身】将池(半私密生成器)----------
+// 化身牌从哪些武将里抽:OL 的范围是 界限突破(界标 + 界风林火山)+ 界一将成名(用户 2026-11-20 凭记忆给的;当时 olwiki 504 没法核对,
+//   攻略站说法「界限突破后的标风火山林 + 界一将成名 2011~2013 等共 88 将」与之基本一致)→ 按扩展包名前缀「界限突破」「界一将」取。
+// 不能获得的技能类型按无名杀 rehuashen.bannedType:主公技 / 限定技 / 觉醒技 / 隐匿技 / 使命技;一个可获得技能都没有的武将不进池。
+// 池由 worker(generals.json + hero-packs.json)/ sim 灌进来:[{id,gid,name,faction,female,skills:[可获得的技能名]}],gid = setGeneral 的 generalId。
+export const HUASHEN_PACKS = ["界限突破", "界一将"];
+export const HUASHEN_BANNED_TAGS = ["主公技", "限定技", "觉醒技", "隐匿技", "使命技"];
+export function huashenBannedTag(skill) { // 技能文本开头的「X技,Y技,」标签里有没有不可化身的;有 → 返回那个标签,没有 → null
+  const e = (skill && skill.effect) || "", m = /^((?:[^，,。\s]{1,6}技[，,])+)/.exec(e);
+  const tags = m ? m[1].split(/[，,]/).filter(Boolean) : [];
+  return tags.find((t) => HUASHEN_BANNED_TAGS.includes(t)) || (/^隐匿/.test(e) ? "隐匿技" : null);
+}
+export function buildHuashenPool(heroes, packOf, isFemale) {
+  const out = [];
+  for (const h of heroes || []) {
+    const p = String(packOf(h) || "");
+    if (!HUASHEN_PACKS.some((x) => p.startsWith(x)) || h.name.includes("左慈")) continue;
+    const skills = (h.skills || []).filter((s) => !huashenBannedTag(s)).map((s) => s.name);
+    if (skills.length) out.push({ id: h.id, gid: h.tool || String(h.id), name: h.name, faction: h.faction, female: !!isFemale(h), skills });
+  }
+  return out;
+}
+let HUASHEN_POOL = [];
+export function setHuashenPool(list) { HUASHEN_POOL = Array.isArray(list) ? list : []; }
+
 // ---------- 可见性 spec(字段级原语;未列出的字段默认 public)----------
 export const VISIBILITY = {
   lvbu: {
@@ -221,6 +246,10 @@ export const VISIBILITY = {
     // 内训牌 = 郭照手牌里的标记牌:花色/点数/牌名仅郭照本人/代持可见,他人只见张数(桌上可数)
     neixun: { kind: "ownerSeatOnly" },
     // color / seq / log 默认 public(椒遇声明色是全场信息;log 只记张数不记牌名)
+  },
+  jiezuoci: {
+    // 化身牌(武将 id 列表):明细仅界左慈本人/代持可见,他人只见 {count}=张数。shown(展示中的化身)/ skill(所获技能)/ total / log 默认 public
+    cards: { kind: "ownerSeatOnly" },
   },
   xizhicai: {
     // 先辅:游戏开始时秘密选的目标,公开前仅戏志才本人/代持可见;他人只见 {count:0|1}=有无选定。revealed(公开后的座位)/ log 默认 public
@@ -405,6 +434,8 @@ export function initToolState(generalId) {
     return { suit: null, holder: null, log: [] }; // 天候:suit=当前生效天气的花色(H烈暑/D凝雾/S骤雨/C严霜),holder=拥有该技能的座位;到周群下一准备阶段清掉
   if (generalId === "mengda")
     return { switches: 0, log: [] }; // 苟得·变更势力:实际势力写在 seat.chosenFaction(公开,全场面板/距离/查将都按它),这里只记次数与日志
+  if (generalId === "jiezuoci")
+    return { cards: [], shown: null, skill: null, total: 0, log: [] }; // 化身:cards=化身牌的武将 id(保密,见 VISIBILITY);shown=展示中的那张、skill=所获技能(公开);total=累计获得张数
   if (generalId === "xizhicai")
     return { target: {}, revealed: null, log: [] }; // 先辅:target={}|{seat}(保密,见 VISIBILITY);revealed=公开后的目标座位(公开)
   if (generalId === "jiachong")
@@ -1284,6 +1315,55 @@ export class RoomCore extends RoomBase {
       }
       if (t === "zqClear") { if (!isZq) return { error: "NOT_ZQ_ACTION" }; ts.suit = null; ts.holder = null; this._log(ts, "天候:天气结束(周群准备阶段)"); return { ok: true }; }
       if (t === "resetGame") { if (!isZq) return { error: "NOT_ZQ_ACTION" }; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
+      return { error: "UNKNOWN_ACTION" };
+    }
+
+    // ───────── 界左慈:化身(半私密生成器)。化身牌明细仅左慈本人/代持可见(他人只见张数);展示中的化身 + 所获技能 + 势力/性别全场公开。
+    //   抽牌在 DO 跑(可 seed 复现):从 HUASHEN_POOL 里排除已有的化身和在场武将。log 只记张数不记牌名。 ─────────
+    if (target.general === "jiezuoci") {
+      const zSeat = targetSeat, isZc = bySeat === zSeat && iHold(zSeat);
+      if (!Array.isArray(ts.cards)) ts.cards = [];
+      const byId = (hid) => HUASHEN_POOL.find((h) => h.id === Number(hid)) || null;
+      const draw = (n, skip = []) => { // 抽 n 张新化身;skip = 这次刚移去的(不立刻抽回来)
+        const inPlay = new Set(Object.values(this.seats).map((s) => s.general).filter(Boolean));
+        const no = new Set([...ts.cards, ...skip].map(Number));
+        const cand = HUASHEN_POOL.filter((h) => !no.has(h.id) && !inPlay.has(h.gid));
+        const got = [];
+        for (let i = 0; i < n && cand.length; i++) got.push(cand.splice(Math.floor(this.rng() * cand.length), 1)[0].id);
+        ts.cards.push(...got); ts.total = (ts.total || 0) + got.length;
+        return got;
+      };
+      if (t === "hsDraw") { // {n}:游戏开始 3 张(仅当还没有化身牌);新生 1 张
+        if (!isZc) return { error: "NOT_ZC_ACTION" };
+        const init = ts.cards.length === 0 && Number(toolAction.n) === 3;
+        const got = draw(init ? 3 : 1);
+        if (!got.length) return { error: "HUASHEN_EMPTY" };
+        this._log(ts, init ? `化身:游戏开始,获得 ${got.length} 张化身牌` : `新生:获得 ${got.length} 张新化身牌(现有 ${ts.cards.length} 张)`);
+        return { ok: true, got: got.length };
+      }
+      if (t === "hsShow") { // {heroId, skill}:展示一张化身并获得其一个技能;势力 / 性别视为与之相同(势力写 seat.chosenFaction)
+        if (!isZc) return { error: "NOT_ZC_ACTION" };
+        const hid = Number(toolAction.heroId), h = byId(hid), sk = String(toolAction.skill || "");
+        if (!h || !ts.cards.includes(hid)) return { error: "NOT_YOUR_HUASHEN" };
+        if (!h.skills.includes(sk)) return { error: "BAD_HUASHEN_SKILL" };
+        if (ts.shown === hid && ts.skill === sk) return { error: "SAME_HUASHEN" };
+        ts.shown = hid; ts.skill = sk;
+        target.chosenFaction = h.faction || null;
+        this._log(ts, `化身:展示「${h.name}」,获得〖${sk}〗(${h.faction}势力 · ${h.female ? "女" : "男"}性)`);
+        return { ok: true };
+      }
+      if (t === "hsReplace") { // {remove:[heroId]}:移去至多两张(不能是展示中的那张),获得等量新化身
+        if (!isZc) return { error: "NOT_ZC_ACTION" };
+        const rm = [...new Set((Array.isArray(toolAction.remove) ? toolAction.remove : []).map(Number))];
+        if (rm.length < 1 || rm.length > 2) return { error: "BAD_HUASHEN_COUNT" };
+        if (rm.some((x) => !ts.cards.includes(x))) return { error: "NOT_YOUR_HUASHEN" };
+        if (rm.includes(ts.shown)) return { error: "HUASHEN_SHOWN" };
+        ts.cards = ts.cards.filter((x) => !rm.includes(x));
+        const got = draw(rm.length, rm);
+        this._log(ts, `化身:移去 ${rm.length} 张,获得 ${got.length} 张新化身牌(现有 ${ts.cards.length} 张)`);
+        return { ok: true, got: got.length };
+      }
+      if (t === "resetGame") { if (!isZc) return { error: "NOT_ZC_ACTION" }; target.chosenFaction = null; target.toolState = initToolState(target.general); return { ok: true, reset: true }; }
       return { error: "UNKNOWN_ACTION" };
     }
 

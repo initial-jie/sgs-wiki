@@ -784,6 +784,61 @@ console.log("\n=== 场景 15c2:戏志才 先辅 ===");
   check("序列化存活 + 重开", RoomCore.hydrate(rm.serialize()).seats[1].toolState.revealed === 3 && act(1, { type: "resetGame" }).reset === true && T().revealed === null);
 }
 
+// ============ 场景 15c2b:界左慈 化身(化身牌明细保密 + 展示的化身/技能公开;抽牌在 DO)============
+console.log("\n=== 场景 15c2b:界左慈 化身 ===");
+{
+  const { setHuashenPool, buildHuashenPool, huashenBannedTag } = await import("./shared/room-logic.mjs");
+  const { readFileSync: rf } = await import("node:fs");
+  const HS = JSON.parse(rf(new URL("./shared/generals.json", import.meta.url), "utf8"));
+  const PK = JSON.parse(rf(new URL("./shared/hero-packs.json", import.meta.url), "utf8")).packs;
+  const FE = new Set(JSON.parse(rf(new URL("./shared/hero-gender.json", import.meta.url), "utf8")).female);
+  const real = buildHuashenPool(HS, (h) => PK[h.id], (h) => FE.has(h.id));
+  const rh = (n) => real.find((h) => h.name === n);
+  check(`真实将池:只含 界限突破 / 界一将 的武将(${real.length} 将),不含左慈,人人至少一个可获得技能`,
+    real.length >= 80 && real.every((h) => /^(界限突破|界一将)/.test(PK[h.id]) && !h.name.includes("左慈") && h.skills.length > 0));
+  check("真实将池:主公技 / 觉醒技 / 限定技 不可获得(界刘备没有激将、界孙策没有魂姿、界贾诩没有乱武)",
+    !!rh("界刘备") && !rh("界刘备").skills.includes("激将") && !!rh("界孙策") && !rh("界孙策").skills.includes("魂姿") && !!rh("界贾诩") && !rh("界贾诩").skills.includes("乱武"));
+  check("技能标签解析:「主公技,锁定技,…」命中主公技;普通锁定技 / 无标签不命中",
+    huashenBannedTag({ effect: "主公技，锁定技，其他角色…" }) === "主公技" && huashenBannedTag({ effect: "锁定技，你的手牌上限+1。" }) === null && huashenBannedTag({ effect: "出牌阶段限一次，你可以…" }) === null && huashenBannedTag({ effect: "限定技，出牌阶段…" }) === "限定技");
+  check("界左慈挂了工具 jiezuoci", HS.find((h) => h.name === "界左慈").tool === "jiezuoci");
+
+  const pool = [
+    { id: 301, gid: "301", name: "界张辽", faction: "魏", female: false, skills: ["突袭"] },
+    { id: 302, gid: "302", name: "界孙尚香", faction: "吴", female: true, skills: ["结姻", "枭姬"] },
+    { id: 303, gid: "303", name: "界关羽", faction: "蜀", female: false, skills: ["武圣", "义绝"] },
+    { id: 304, gid: "304", name: "界吕布", faction: "群", female: false, skills: ["无双", "利驭"] },
+    { id: 305, gid: "305", name: "界黄盖", faction: "吴", female: false, skills: ["苦肉", "诈降"] },
+    { id: 306, gid: "306", name: "界甄姬", faction: "魏", female: true, skills: ["洛神", "倾国"] },
+  ];
+  setHuashenPool(pool);
+  const rm = new RoomCore("3586", 4, () => 0); // rng=0 → 总抽候选里的第一张
+  const d = {}; for (let i = 1; i <= 4; i++) { d[i] = `zc${i}`; rm.claimSeat(d[i], i); }
+  rm.setGeneral(d[1], 1, "jiezuoci"); rm.setGeneral(d[2], 2, "303"); // 座位 2 = 界关羽(在场 → 不会成为化身)
+  const act = (by, o) => rm.action(d[by], { targetSeat: 1, bySeat: by, toolAction: o });
+  const T = () => rm.seats[1].toolState, V = (n) => rm.viewFor(d[n]).seats[1].toolState;
+  check("init:没有化身牌、未展示", T().cards.length === 0 && T().shown === null && T().skill === null);
+  check("非本人不能抽", act(2, { type: "hsDraw", n: 3 }).error === "NOT_ZC_ACTION");
+  check("游戏开始抽 3 张:跳过在场的界关羽", act(1, { type: "hsDraw", n: 3 }).got === 3 && T().cards.join() === "301,302,304");
+  check("⭐ 保密:本人看到明细;旁人只见 {count:3};log 不含武将名", Array.isArray(V(1).cards) && V(1).cards.length === 3 && V(2).cards.count === 3 && !Array.isArray(V(3).cards)
+    && !JSON.stringify(V(2)).includes("301") && !/界张辽|界孙尚香|界吕布/.test(T().log.join("")));
+  check("展示校验:不是自己的化身 / 不可获得的技能 被拒", act(1, { type: "hsShow", heroId: 305, skill: "苦肉" }).error === "NOT_YOUR_HUASHEN" && act(1, { type: "hsShow", heroId: 302, skill: "武圣" }).error === "BAD_HUASHEN_SKILL"
+    && act(3, { type: "hsShow", heroId: 302, skill: "枭姬" }).error === "NOT_ZC_ACTION");
+  check("⭐ 展示界孙尚香·枭姬:全场可见化身与技能,势力变吴(seat.chosenFaction)", act(1, { type: "hsShow", heroId: 302, skill: "枭姬" }).ok && V(2).shown === 302 && V(4).skill === "枭姬"
+    && rm.viewFor(d[3]).seats[1].chosenFaction === "吴" && T().log[0].includes("界孙尚香") && T().log[0].includes("女性"));
+  check("同一张化身可换技能;完全相同则拒", act(1, { type: "hsShow", heroId: 302, skill: "结姻" }).ok && T().skill === "结姻" && act(1, { type: "hsShow", heroId: 302, skill: "结姻" }).error === "SAME_HUASHEN");
+  check("移去换新:不能移展示中的;至多两张;必须是自己的", act(1, { type: "hsReplace", remove: [302] }).error === "HUASHEN_SHOWN" && act(1, { type: "hsReplace", remove: [301, 304, 302] }).error === "BAD_HUASHEN_COUNT"
+    && act(1, { type: "hsReplace", remove: [] }).error === "BAD_HUASHEN_COUNT" && act(1, { type: "hsReplace", remove: [306] }).error === "NOT_YOUR_HUASHEN");
+  check("移去 1 张换 1 张:张数不变,刚移去的不会立刻抽回", act(1, { type: "hsReplace", remove: [301] }).got === 1 && T().cards.join() === "302,304,305" && V(2).cards.count === 3);
+  check("新生:受伤获得 1 张(刚才移去的界张辽回到池里可再抽到)", act(1, { type: "hsDraw", n: 1 }).got === 1 && T().cards.join() === "302,304,305,301" && V(2).cards.count === 4);
+  check("已有化身牌时 n=3 也只按新生抽 1 张", act(1, { type: "hsDraw", n: 3 }).got === 1 && T().cards.length === 5 && T().cards.includes(306));
+  check("池抽空 → HUASHEN_EMPTY;移去两张时池里不够就少拿", act(1, { type: "hsDraw", n: 1 }).error === "HUASHEN_EMPTY" && act(1, { type: "hsReplace", remove: [304, 305] }).got === 0 && T().cards.join() === "302,301,306");
+  check("换一张展示:势力跟着变魏", act(1, { type: "hsShow", heroId: 306, skill: "洛神" }).ok && rm.seats[1].chosenFaction === "魏" && V(2).shown === 306);
+  const hy = RoomCore.hydrate(rm.serialize());
+  check("序列化存活", hy.seats[1].toolState.cards.join() === "302,301,306" && hy.seats[1].toolState.shown === 306 && hy.seats[1].chosenFaction === "魏");
+  check("重开:清空化身、势力回本势力", act(1, { type: "resetGame" }).reset === true && T().cards.length === 0 && T().shown === null && rm.seats[1].chosenFaction === null);
+  setHuashenPool([]);
+}
+
 // ============ 场景 15c3:孟达 苟得·变更势力 ============
 console.log("\n=== 场景 15c3:孟达 变更势力 ===");
 {
