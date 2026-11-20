@@ -7,10 +7,11 @@
 //                 且同名的其它版本也可选(用户 2026-10-02:只勾标黄盖,界黄盖也能选)——但被禁的版本除外。
 //   禁将        = 当前座位数对应禁将池(房内禁将开关开着时);被禁版本从坑的可选项里剔除。
 //
-// 特殊规则(用户 2026-10-02 定):
-//   - LORD_ONLY:曹丕 只出现在君主位的「主公 6 选 1」里,其余身份不发。
-//   - IDENTITY_ONLY:董昭(355)机制依赖【忠臣】【反贼】身份,只在普通身份局可选;其它模式该坑只剩谋董昭。
-//   - 模式专属君主(暴君董卓/教主张角/昏君刘宏):只在对应模式、只进君主的额外候选,且必出。
+// 特殊规则:
+//   - 可配置的两类(/pool「特殊规则」页按环境维护,见下面 POOL_RULE_KEYS;用户 2026-11-20 要求从写死改成可配):
+//       lordOnly  仅主公候选:该版本只出现在君主位的「主公 6 选 1」里,其余座位的起手 / 换将都拿不到(默认:曹丕各版本,用户 2026-10-02 定)。
+//       identOnly 仅身份局:该版本只在普通身份局可选(默认:董昭 355,机制依赖【忠臣】【反贼】身份;其它模式该坑只剩谋董昭)。
+//   - 写死的:模式专属君主(暴君董卓/教主张角/昏君刘宏)只在对应模式、只进君主的额外候选,且必出。
 
 export const DEAL_HAND = 6;        // 每人起手坑数
 export const DEAL_LORD_EXTRA = 6;  // 君主位额外的主公技坑数
@@ -25,8 +26,20 @@ export const DEAL_MODES = {
   douzhu:  { label: "斗地主",   lordTitle: "地主", lordHero: null, hand: 3, lordExtraHand: 2, call: true, noLordPool: true },
 };
 
-const LORD_ONLY_KEYS = new Set(["曹丕"]);
-const IDENTITY_ONLY_IDS = new Set([355]); // 董昭
+// 可配置的特殊规则:{ lordOnly:[武将id], identOnly:[武将id] },都按版本(想让整个坑仅主公 → 把同名各版本都标上)。
+//   存在 /api/pool 的 pools[环境].rules;该环境从没存过 → 用 defaultPoolRules(= 改成可配之前写死的行为)。
+//   环境白名单为空沿用军争时,规则也沿用军争的(与套组同规则,worker dealStart 按 src 取)。不分套组。
+export const POOL_RULE_KEYS = ["lordOnly", "identOnly"];
+export function defaultPoolRules(heroes) {
+  return { lordOnly: (heroes || []).filter((h) => groupKey(h) === "曹丕").map((h) => h.id), identOnly: [355] };
+}
+// 存盘 / 读盘的规整:raw 不是对象 → 整份用 dflt;某一类没带 → 该类用 dflt(以后加新规则类型时老数据自动补默认)
+export function normPoolRules(raw, dflt) {
+  const ids = (a) => [...new Set((Array.isArray(a) ? a : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 5000);
+  const ok = raw && typeof raw === "object" && !Array.isArray(raw), out = {};
+  for (const k of POOL_RULE_KEYS) out[k] = ids(ok && Array.isArray(raw[k]) ? raw[k] : (dflt && dflt[k]) || []);
+  return out;
+}
 const MODE_EXCLUSIVE_GENRE = "不臣之君";
 // 「同名整坑可选」的例外:线下包《蚀心入魔》的武将必须自己被勾进白名单才可选,不随同名坑带出
 // (用户 2026-11-11:36 将里只有四个魔将进选将池,其余只进总库 —— 否则 嗔·赵云 会跟着赵云坑出现)。
@@ -88,15 +101,18 @@ export function dropIdsFromPools(pools, ids) {
  * @param whitelist 可迭代的白名单武将 id
  * @param banned    可迭代的被禁武将 id(当前禁将池;禁将开关关着就传空)
  * @param mode      DEAL_MODES 的 key
+ * @param rules     特殊规则 { lordOnly:[id], identOnly:[id] };不传 = defaultPoolRules(heroes)
  * @returns { normal:[{key,opts}], lord:[{key,opts}], forced:{key,opts}|null }
- *   normal = 普通起手可发的坑;lord = 君主额外候选的坑(至少一个可选版本带主公技,含 LORD_ONLY);
+ *   normal = 普通起手可发的坑(可选版本里不含「仅主公候选」的);lord = 君主额外候选的坑(至少一个可选版本带主公技,或被标了「仅主公候选」);
  *   forced = 该模式必出的专属君主坑(排在君主额外候选第一位;同名坑不再出现在 normal/lord)。
  */
-export function buildDealPools({ heroes, whitelist, banned, mode = "normal" }) {
+export function buildDealPools({ heroes, whitelist, banned, mode = "normal", rules = null }) {
   const wl = new Set([...(whitelist || [])].map(Number));
   const ban = new Set([...(banned || [])].map(Number));
   const m = DEAL_MODES[mode] || DEAL_MODES.normal;
-  const usable = (h) => !ban.has(h.id) && h.genre !== MODE_EXCLUSIVE_GENRE && !(mode !== "normal" && IDENTITY_ONLY_IDS.has(h.id));
+  const R = normPoolRules(rules, defaultPoolRules(heroes));
+  const lordOnly = new Set(R.lordOnly), identOnly = new Set(R.identOnly);
+  const usable = (h) => !ban.has(h.id) && h.genre !== MODE_EXCLUSIVE_GENRE && !(mode !== "normal" && identOnly.has(h.id));
 
   const groups = new Map(); // key → { key, opts:[], wl:bool }
   for (const h of heroes) {
@@ -124,8 +140,9 @@ export function buildDealPools({ heroes, whitelist, banned, mode = "normal" }) {
   for (const g of groups.values()) {
     if (!g.wl) continue;
     const slim = { key: g.key, opts: g.opts };
-    if (g.opts.some((o) => o.lord)) lord.push(slim);
-    if (!LORD_ONLY_KEYS.has(g.key)) normal.push(slim);
+    if (g.opts.some((o) => o.lord || lordOnly.has(o.id))) lord.push(slim); // 君主候选里整坑各版本都可选
+    const rest = g.opts.filter((o) => !lordOnly.has(o.id));                 // 其余座位:去掉「仅主公候选」的版本,一个不剩则整坑不发
+    if (rest.length) normal.push(rest.length === g.opts.length ? slim : { key: g.key, opts: rest });
   }
   return { normal, lord, forced };
 }

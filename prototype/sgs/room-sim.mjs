@@ -1479,6 +1479,28 @@ console.log("\n=== 场景 20:线上发将 ===");
       ns.length === 2 && ns[0].name === "素将" && ns[0].white.join() === "5,6" && ns[0].ban.join() === "7" && ns[1].name.length === 10 && ns[1].white.length === 0 && ns[1].ban.length === 0);
     check("normPoolSets:最多 " + POOL_SET_MAX + " 套;非数组 → 空", normPoolSets(Array.from({ length: 12 }, (_, i) => ({ id: "s" + i, name: "n" + i }))).length === POOL_SET_MAX && normPoolSets("x").length === 0);
   }
+  // —— 特殊规则可配(仅主公候选 / 仅身份局):不传 rules = 改成可配之前写死的行为(曹丕各版本 / 董昭) ——
+  {
+    const { defaultPoolRules, normPoolRules } = await import("./shared/deal.mjs");
+    const d = defaultPoolRules(HEROES);
+    check("默认规则:仅主公候选 = 曹丕坑各版本(不含神曹丕);仅身份局 = 董昭 355",
+      d.lordOnly.includes(idOf("曹丕")) && d.lordOnly.length >= 2 && d.lordOnly.every((i) => groupKey(HEROES.find((h) => h.id === i)) === "曹丕") && d.identOnly.join() === "355");
+    const none = { lordOnly: [], identOnly: [] };
+    p = P({ whitelist: [idOf("曹丕"), idOf("黄盖")], rules: none });
+    check("规则清空 → 曹丕和普通武将一样进普通池(仍因主公技在君主池)", !!grp(p, "曹丕") && !!grp(p, "曹丕", "lord"));
+    p = P({ whitelist: [idOf("费祎"), idOf("曹丕"), idOf("黄盖")], rules: { lordOnly: [idOf("费祎")], identOnly: [] } });
+    check("把没主公技的费祎标成仅主公候选 → 不进普通池、进君主候选池;没标的曹丕回到普通池", !grp(p, "费祎") && !!grp(p, "费祎", "lord") && !!grp(p, "曹丕") && !grp(p, "黄盖", "lord"));
+    p = P({ whitelist: [idOf("曹操")], rules: { lordOnly: [idOf("界曹操")], identOnly: [] } });
+    check("仅主公候选按版本:只标界曹操 → 普通池的曹操坑没有界曹操,君主候选里的曹操坑各版本都在",
+      !!grp(p, "曹操") && !names(grp(p, "曹操")).includes("界曹操") && names(grp(p, "曹操")).includes("曹操") && names(grp(p, "曹操", "lord")).includes("界曹操"));
+    p = P({ whitelist: [idOf("黄盖"), idOf("界黄盖"), idOf("董昭")], mode: "baonue", rules: { lordOnly: [], identOnly: [idOf("黄盖")] } });
+    check("仅身份局可配:标了黄盖 → 暴虐无道里黄盖坑只剩其它版本;没标的董昭照常可选", !names(grp(p, "黄盖")).includes("黄盖") && names(grp(p, "黄盖")).includes("界黄盖") && names(grp(p, "董昭")).includes("董昭"));
+    p = P({ whitelist: [idOf("黄盖")], mode: "normal", rules: { lordOnly: [], identOnly: [idOf("黄盖")] } });
+    check("仅身份局:身份局里照常可选", names(grp(p, "黄盖")).includes("黄盖"));
+    const nr = normPoolRules({ lordOnly: [5, "6", 6, -1, "x"], junk: [1] }, d);
+    check("normPoolRules:id 去重去非法;没带的规则类型用默认;未知类型丢弃;非对象 → 整份默认",
+      nr.lordOnly.join() === "5,6" && nr.identOnly.join() === "355" && !("junk" in nr) && normPoolRules(null, d).lordOnly.length === d.lordOnly.length && normPoolRules([1], d).identOnly.join() === "355");
+  }
   p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")] });
   check("身份局:董昭/谋董昭 都可选", names(grp(p, "董昭")).includes("董昭") && names(grp(p, "董昭")).includes("谋董昭"));
   p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")], mode: "dazhong" });

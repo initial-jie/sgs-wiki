@@ -3,7 +3,7 @@
 
 import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo } from "./shared/room-logic.mjs";
 import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
-import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, groupKey, needsExplicit } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
+import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, defaultPoolRules, normPoolRules, groupKey, needsExplicit } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
 import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
@@ -189,10 +189,12 @@ export function handleSgs(request, env, url) {
 }
 
 // 三国杀全局配置 DO(单例 idFromName("global")):各环境的白名单(可发将)+ 黑名单(禁将)。
-//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,white:[id],ban:[id]}]} }, seen:[id], updatedAt }
+//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,white:[id],ban:[id]}],rules:{lordOnly:[id],identOnly:[id]}} }, seen:[id], updatedAt }
 //   sets = 将池套组(2026-11-20):每套一份独立的黑白名单,发将时选用哪一套(不选 = 上面的默认 white / ban;语义见 shared/deal.mjs applyPoolSet)。
+//   rules = 发将特殊规则(2026-11-20:仅主公候选 / 仅身份局,从写死改成可配;该环境从没存过 → defaultPoolRules = 曹丕各版本 / 董昭)。
 //   旧格式 {ids,seen,updatedAt}(2026-10-01 首版只有一份白名单)读取时自动迁移:ids → 军争白名单,黑名单取文件种子。
 // 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
+const DEFAULT_RULES = defaultPoolRules(GENERALS_DATA);
 export class SgsConfigDO {
   constructor(state) { this.state = state; }
   async load() {
@@ -205,6 +207,7 @@ export class SgsConfigDO {
         ban: p ? (p.ban || []) : (BANNED_DATA.pools[k].ids || []),
         temp: p ? (p.temp || []) : [], // 临时 ban 池:发将时各人从中随机 3~5 选 1 ban 掉(2026-10-17)
         sets: p ? (p.sets || []) : [], // 将池套组(2026-11-20)
+        rules: normPoolRules(p && p.rules, DEFAULT_RULES), // 发将特殊规则(2026-11-20)
       };
     }
     return { pools, seen: (raw && raw.seen) || [], updatedAt: (raw && raw.updatedAt) || null };
@@ -270,13 +273,14 @@ export class SgsConfigDO {
       for (const k of POOL_KEYS) {
         const b = body && body.pools && body.pools[k];
         pools[k] = b ? { white: norm(b.white), ban: norm(b.ban), temp: b.temp === undefined ? cur.pools[k].temp : norm(b.temp),
-          sets: b.sets === undefined ? cur.pools[k].sets : normPoolSets(b.sets) } : cur.pools[k]; // 没带的环境保持原样;不带 temp / sets 的旧客户端与脚本 → 保留原值
+          sets: b.sets === undefined ? cur.pools[k].sets : normPoolSets(b.sets),
+          rules: b.rules === undefined ? cur.pools[k].rules : normPoolRules(b.rules, cur.pools[k].rules) } : cur.pools[k]; // 没带的环境保持原样;不带 temp / sets / rules 的旧客户端与脚本 → 保留原值
       }
       if (body && Array.isArray(body.ids) && !(body.pools && body.pools[POOL_KEYS[0]])) pools[POOL_KEYS[0]].white = norm(body.ids); // 兼容旧客户端 {ids}
       const saved = { pools, seen: body && body.seen ? norm(body.seen) : cur.seen, updatedAt: Date.now() };
       await this.state.storage.put("pool", saved);
       return new Response(JSON.stringify({ ok: true, updatedAt: saved.updatedAt,
-        counts: Object.fromEntries(POOL_KEYS.map((k) => [k, { white: pools[k].white.length, ban: pools[k].ban.length, temp: pools[k].temp.length, sets: pools[k].sets.length }])) }), { headers: noStore });
+        counts: Object.fromEntries(POOL_KEYS.map((k) => [k, { white: pools[k].white.length, ban: pools[k].ban.length, temp: pools[k].temp.length, sets: pools[k].sets.length, rules: Object.fromEntries(Object.entries(pools[k].rules).map(([r, a]) => [r, a.length])) }])) }), { headers: noStore });
     }
     const cfg = await this.load();
     for (const k of POOL_KEYS) Object.assign(cfg.pools[k], POOL_META[k]);
@@ -363,7 +367,7 @@ export class RoomDO extends RoomDOBase {
     const eff = applyPoolSet({ white: cfg.pools[src].white, ban: cfg.pools[key].ban }, set);
     const wl = eff.white, banned = core.banEnabled !== false ? eff.ban : [];
     if (!wl.length) return { error: "POOL_NOT_SET" };
-    let pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode });
+    let pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode, rules: cfg.pools[src].rules }); // 特殊规则跟白名单来源走(沿用军争白名单 → 也沿用军争的规则)
     const poolIds = () => new Set([...pools.normal, ...pools.lord, ...(pools.forced ? [pools.forced] : [])].flatMap((g) => g.opts.map((o) => o.id)));
     // 开关②「排除今日已登场」(小伙伴的 idea,默认关):从历史对局里取今天(北京时间)已落座过的武将名,按版本剔除;剔完不够发会报 POOL_TOO_SMALL
     let excluded = null;

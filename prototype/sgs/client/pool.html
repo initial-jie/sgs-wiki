@@ -54,6 +54,18 @@ body.l-temp .h.on{background:#efe9f6;color:#4d3a72;border-color:#6b4a86;font-wei
 body.l-temp .h.on::after{content:"⌛";margin-left:4px;font-size:11px}
 body.l-temp .h.x{text-decoration:line-through;text-decoration-color:#6b4a86}
 .tab.temp.on{background:#6b4a86;border-color:#6b4a86;color:#fff}
+/* 特殊规则页:选中=被这条规则管着(青);不在本环境将池里的加删除线;「同名」= 同坑还有版本没标(仅主公候选是按版本的) */
+body.l-rule .h.on{background:#e4f0f2;color:#1f5560;border-color:#2c7a8a;font-weight:600}
+body.l-rule .h.on::after{content:"★";margin-left:4px;font-size:10px}
+body.l-rule .h.x{text-decoration:line-through;text-decoration-color:#2c7a8a}
+body.l-rule .h.sib{border-style:dashed;border-color:#2c7a8a;color:var(--ink)}
+body.l-rule .h.sib::after{content:"同名未标";color:#2c7a8a;margin-left:4px;font-size:10px}
+.tab.rule.on{background:#2c7a8a;border-color:#2c7a8a;color:#fff}
+/* 白名单页上的规则角标:主 = 仅主公候选,身 = 仅身份局 */
+body.l-white .h.rl::before,body.l-white .h.ri::before{position:absolute;top:-7px;left:-5px;font-size:9px;background:#2c7a8a;color:#fff;border-radius:8px;padding:0 4px;line-height:14px;font-weight:400}
+body.l-white .h.rl::before{content:"主"}
+body.l-white .h.ri::before{content:"身"}
+body.l-white .h.rl.ri::before{content:"主·身"}
 /* 白名单页:选中=入池(金);该环境被禁的将加删除线提示 */
 body.l-white .h.on{background:#fff7e6;color:var(--ink);border-color:var(--qi);font-weight:600}
 body.l-white .h.on::after{content:"✓";color:var(--seal);margin-left:4px;font-size:11px}
@@ -69,7 +81,7 @@ body.l-white .h.fol::after{content:"随";color:var(--qi);margin-left:4px;font-si
 body.l-ban .h.on{background:#fbeceb;color:var(--seal);border-color:var(--seal);font-weight:600}
 body.l-ban .h.on::after{content:"⊘";margin-left:4px;font-size:11px}
 body.l-ban .h.x{color:var(--ink);border-style:dashed}
-.h.new::before{content:"新";position:absolute;top:-7px;right:-5px;font-size:9px;background:var(--seal);color:#fff;border-radius:8px;padding:0 4px;line-height:14px;font-weight:400}
+.h.new::before{content:"新"!important;left:auto!important;position:absolute;top:-7px;right:-5px;font-size:9px;background:var(--seal);color:#fff;border-radius:8px;padding:0 4px;line-height:14px;font-weight:400}
 .hide{display:none!important}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(43,36,25,.92);color:#f6ecd8;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
 #toast.show{opacity:1}
@@ -81,7 +93,7 @@ body.l-ban .h.x{color:var(--ink);border-style:dashed}
 </head>
 <body class="l-white">
 <h1>将池编辑</h1>
-<div class="sub">各环境的白名单(可发将)、黑名单(禁将)、临时 ban 池;黑白名单可分套组 · 保存后房间立即生效</div>
+<div class="sub">各环境的白名单(可发将)、黑名单(禁将)、临时 ban 池、发将特殊规则;黑白名单可分套组 · 保存后房间立即生效</div>
 
 <div id="bar">
   <div class="row">
@@ -95,8 +107,10 @@ body.l-ban .h.x{color:var(--ink);border-style:dashed}
     <button class="tab white on" data-list="white">白名单 · 可发将</button>
     <button class="tab ban" data-list="ban">黑名单 · 禁将</button>
     <button class="tab temp" data-list="temp">临时 ban 池</button>
+    <button class="tab rule" data-list="rule">特殊规则</button>
   </div>
   <div class="row hide" id="sets" style="margin-top:7px"></div>
+  <div class="row hide" id="rules" style="margin-top:7px"></div>
   <div id="tip"></div>
   <div class="row" style="margin-top:7px">
     <input id="q" class="grow" placeholder="搜武将名 / 拼音 / 首字母,如 关羽 guanyu gy" autocomplete="off" autocapitalize="off">
@@ -123,14 +137,19 @@ const FAM_ORDER=["标准","神话再临","界限突破","一将成名","界一�
 const FAM_LAST=["国战"];
 const FCLS={"魏":"wei","蜀":"shu","吴":"wu","群":"qun","晋":"jin","神":"shen","魔":"shen"};
 let HEROES=[],KEYS=[],CFG={},seen=new Set(),hasSaved=false,savedSnap="",filter="all",q="";
-let env="",list="white"; // 当前环境 / 当前名单(white|ban|temp)
+let env="",list="white"; // 当前环境 / 当前名单(white|ban|temp|rule)
 let setId="";            // 黑 / 白名单页正在看的套组 id(""=默认名单)
 const SET_MAX=8,SET_NAME_MAX=10; // 与 shared/deal.mjs POOL_SET_MAX / POOL_SET_NAME_MAX 一致
 const closed=new Set(FAM_LAST);
 const DEF=()=>KEYS[0];                       // 默认环境(军争):其它环境白名单留空时沿用它
 // —— 将池套组:每套一份独立的黑白名单 {id,name,white:Set,ban:Set}(语义同 shared/deal.mjs applyPoolSet;临时 ban 池不分套)——
-const curSet=()=>list!=="temp"&&setId?(CFG[env].sets.find(s=>s.id===setId)||null):null; // 正在编辑的套组(null=默认名单)
-const cur=()=>{const st=curSet();return st?st[list]:CFG[env][list];}; // 当前正在编辑的那个 Set
+const curSet=()=>(list==="white"||list==="ban")&&setId?(CFG[env].sets.find(s=>s.id===setId)||null):null; // 正在编辑的套组(null=默认名单)
+// —— 发将特殊规则(按环境、按版本;语义同 shared/deal.mjs POOL_RULE_KEYS)。环境沿用军争白名单时规则也沿用军争的(与服务端 dealStart 同规则)——
+const RULES=[{k:"lordOnly",name:"仅主公候选",badge:"主"},{k:"identOnly",name:"仅身份局",badge:"身"}];
+let ruleKey=RULES[0].k;
+const inherits=k=>k!==DEF()&&!CFG[k].white.size;              // 该环境没单独设白名单 → 白名单 / 套组 / 特殊规则都沿用军争
+const effRules=k=>CFG[inherits(k)?DEF():k].rules;              // 该环境实际生效的特殊规则
+const cur=()=>{if(list==="rule")return effRules(env)[ruleKey];const st=curSet();return st?st[list]:CFG[env][list];}; // 当前正在编辑的那个 Set
 const curBan=()=>{const st=curSet();return st?st.ban:CFG[env].ban;};          // 当前这套的黑名单
 const curWhite=()=>{const st=curSet();return st?st.white:effWhite(env);};   // 当前这套实际生效的白名单
 const effWhite=k=>CFG[k].white.size?CFG[k].white:CFG[DEF()].white; // 该环境实际生效的(默认)白名单
@@ -145,7 +164,8 @@ const famOf=p=>String(p||"其他").split("-")[0];
 function famRank(f){const i=FAM_ORDER.indexOf(f);if(i>=0)return i;if(FAM_LAST.includes(f))return 900+FAM_LAST.indexOf(f);return 500;}
 const sorted=s=>[...s].sort((a,b)=>a-b);
 const setsOut=k=>CFG[k].sets.map(s=>({id:s.id,name:s.name,white:sorted(s.white),ban:sorted(s.ban)}));
-const snap=()=>JSON.stringify(KEYS.map(k=>[sorted(CFG[k].white),sorted(CFG[k].ban),sorted(CFG[k].temp),setsOut(k)]));
+const rulesOut=k=>Object.fromEntries(RULES.map(r=>[r.k,sorted(CFG[k].rules[r.k])]));
+const snap=()=>JSON.stringify(KEYS.map(k=>[sorted(CFG[k].white),sorted(CFG[k].ban),sorted(CFG[k].temp),setsOut(k),rulesOut(k)]));
 const effTemp=k=>CFG[k].temp.size?CFG[k].temp:CFG[DEF()].temp; // 临时 ban 池同白名单规则:该环境为空 → 沿用军争
 const dirty=()=>snap()!==savedSnap;
 function matches(h){
@@ -199,13 +219,18 @@ function refresh(){
   const byId=new Map(HEROES.map(h=>[h.id,h])),s=cur();
   // x 标记:白名单页=这一套黑名单里的将;黑名单页=这一套白名单里的将(都跟着当前套组走)
   const mark=list==="white"?curBan():list==="ban"?curWhite():new Set(); // 临时 ban 页:下面单独算
-  if(list==="temp"){ const w=effWhite(env),b=CFG[env].ban; for(const h of HEROES) if(!w.has(h.id)||b.has(h.id)) mark.add(h.id); } // 不在本环境将池(没进白名单或被禁)→ 删除线
+  const inPool=list==="temp"||list==="rule"?poolGroups(effWhite(env),CFG[env].ban):null, sibOf=new Set();
+  if(list==="temp"){ const w=effWhite(env),b=CFG[env].ban; for(const h of HEROES) if(!w.has(h.id)||b.has(h.id)) mark.add(h.id); }
+  if(list==="rule"){ const b=CFG[env].ban; for(const h of HEROES){ if(b.has(h.id)||!inPool.has(h.gk)||(h.wlStrict&&!effWhite(env).has(h.id))) mark.add(h.id); if(ruleKey==="lordOnly"&&s.has(h.id)) sibOf.add(h.gk); } } // 默认名单下发不出来的 → 删除线;同坑有被标的 → 没标的兄弟版本提示
+  const ER=effRules(env); // 不在本环境将池(没进白名单或被禁)→ 删除线
   document.body.className="l-"+list;
   const pc={},fc={};
   document.querySelectorAll(".h").forEach(b=>{
     const id=+b.dataset.id,h=byId.get(id),on=s.has(id),show=matches(h);
     b.classList.toggle("on",on); b.classList.toggle("x",mark.has(id)); b.classList.toggle("new",hasSaved&&!seen.has(id)); b.classList.toggle("hide",!show);
     b.classList.toggle("fol",list==="white"&&isFollow(h));
+    b.classList.toggle("sib",list==="rule"&&!on&&!mark.has(id)&&sibOf.has(h.gk));
+    b.classList.toggle("rl",list==="white"&&ER.lordOnly.has(id)); b.classList.toggle("ri",list==="white"&&ER.identOnly.has(id));
     const p=h.pack||h.genre||"其他",f=famOf(p);
     (pc[p]=pc[p]||[0,0,0])[0]+=on?1:0; pc[p][1]++; pc[p][2]+=show?1:0;
     (fc[f]=fc[f]||[0,0,0])[0]+=on?1:0; fc[f][1]++; fc[f][2]+=show?1:0;
@@ -217,10 +242,12 @@ function refresh(){
     return `<button class="env${k===env?" on":""}" data-env="${esc(k)}">${esc(c.label||k)}<small>白 ${inh?"沿用军争":c.white.size} · 黑 ${c.ban.size} · 临 ${k!==DEF()&&!c.temp.size?"沿用":c.temp.size}</small></button>`;}).join("");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.list===list));
   const lab=esc(CFG[env].label||env);
-  $("#count").innerHTML=`${lab} · ${list==="temp"?"临时 ban 池":(st?"套组「"+esc(st.name)+"」":CFG[env].sets.length?"默认":"")+(list==="white"?"白名单":"黑名单")} <span style="color:var(--seal)">${s.size}</span> 将`
+  $("#count").innerHTML=`${lab} · ${list==="temp"?"临时 ban 池":list==="rule"?"特殊规则「"+RULES.find(r=>r.k===ruleKey).name+"」":(st?"套组「"+esc(st.name)+"」":CFG[env].sets.length?"默认":"")+(list==="white"?"白名单":"黑名单")} <span style="color:var(--seal)">${s.size}</span> 将`
     +(list==="white"&&s.size?` <span style="font-weight:400;font-size:12px;color:var(--soft)">· ${VIEW.groups.size} 个坑</span>`:"");
   // 套组栏:黑 / 白名单页、且该环境有自己的白名单时出现(沿用军争白名单的环境,套组也沿用军争的);临时 ban 池不分套
-  const showSets=list!=="temp"&&(env===DEF()||CFG[env].white.size>0);
+  const showSets=(list==="white"||list==="ban")&&(env===DEF()||CFG[env].white.size>0);
+  $("#rules").classList.toggle("hide",list!=="rule");
+  if(list==="rule") $("#rules").innerHTML=`<span class="setl">规则</span>`+RULES.map(r=>`<button class="setc${r.k===ruleKey?" on":""}" data-rule="${r.k}">${r.name}<small>${ER[r.k].size}</small></button>`).join("");
   $("#sets").classList.toggle("hide",!showSets); $("#f-diff").classList.toggle("hide",!st);
   if(showSets){ const c=CFG[env];
     $("#sets").innerHTML=`<span class="setl">套组</span><button class="setc${st?"":" on"}" data-set="">默认名单<small>白 ${c.white.size} · 黑 ${c.ban.size}</small></button>`
@@ -237,6 +264,14 @@ function refresh(){
     else tip=`白名单 = 这个环境可以发的武将。同名武将勾一个即可(黄盖/界黄盖 算一个坑,任选其一):${FOL}就是没勾但会跟着同名坑一起可选的版本,想单独去掉它 → 进黑名单。`
       +`发将按「坑」等概率抽,同名版本再多也只算一个坑。带${DEL}的是本环境黑名单里的将。`
       +(CFG[env].sets.length?"":`想分「素将 / 荤将」几套 → 点上面「＋ 新建套组」,会把这套黑白名单复制一份出去单独改。`);
+  } else if(list==="rule"){
+    const SIB=`<span style="border:1px dashed #2c7a8a;border-radius:4px;padding:0 4px;color:var(--ink)">同名未标</span>`, DEL=`<span style="text-decoration:line-through;text-decoration-color:#2c7a8a">删除线</span>`;
+    tip=(inherits(env)?`这个环境沿用「${esc(CFG[DEF()].label)}」的白名单,<b>特殊规则也沿用它的</b>(下面显示的就是)—— 要改请切到「${esc(CFG[DEF()].label)}」;给这个环境单独设了白名单后,它才有自己的一份规则。<br>`:"")
+      +(ruleKey==="lordOnly"
+        ?`<b>仅主公候选</b>:被标的版本只出现在君主位额外的 6 个候选里,其余座位的起手、换将都拿不到;没有主公技的武将标上后也会进君主候选池。选「无君主」、明忠 / 无间道、斗地主时没有君主候选,被标的版本就不会出现。`
+          +`<b>按版本算</b>:想让整个坑只给主公,要把同名各版本都标上 —— ${SIB}就是同坑里还没标、仍会照常发给其他座位的版本。`
+        :`<b>仅身份局</b>:被标的版本只在普通身份局可选;暴虐无道 / 失心疯 / 大忠似奸 / 斗地主里发不出来(同名其它版本照常)。适合机制依赖【忠臣】【反贼】身份的武将,比如董昭。`)
+      +`规则不分套组,这个环境所有套组共用;白名单页上有「主」「身」角标。带${DEL}的在默认名单下发不出来(没进白名单或被禁),标了暂时也没影响。`;
   } else if(list==="temp"){
     const n=effTemp(env).size, inh=env!==DEF()&&!s.size;
     tip=(inh?`这个环境没单独设 → 发将时<b>沿用「${esc(CFG[DEF()].label)}」的 ${CFG[DEF()].temp.size} 将</b>。`:"")
@@ -248,7 +283,8 @@ function refresh(){
   const d=dirty(); $("#dirty").textContent=d?"● 未保存":""; $("#b-save").disabled=!d;
 }
 // 批量(包/系列的 全选/清空):对当前正在看的那份名单(默认名单 / 某个套组 / 黑名单 / 临时 ban 池)
-function setMany(ids,on){ const s=cur(); for(const id of ids){on?s.add(id):s.delete(id);} refresh(); }
+const ruleLocked=()=>{ if(list==="rule"&&inherits(env)){toast("这个环境沿用"+CFG[DEF()].label+"的规则,请切到那边改");return true;} return false; };
+function setMany(ids,on){ if(ruleLocked())return; const s=cur(); for(const id of ids){on?s.add(id):s.delete(id);} refresh(); }
 const newSetId=()=>"s"+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);
 function askSetName(def){
   const n=(prompt("套组名(最多 "+SET_NAME_MAX+" 个字),如:素将 / 荤将",def||"")||"").trim().slice(0,SET_NAME_MAX);
@@ -260,7 +296,8 @@ const idsIn=(sel)=>[...document.querySelectorAll(sel+" .h:not(.hide)")].map(b=>+
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button"); if(!t)return;
-  if(t.classList.contains("h")){const id=+t.dataset.id,s=cur();s.has(id)?s.delete(id):s.add(id);refresh();return;}
+  if(t.dataset.rule){ruleKey=t.dataset.rule;refresh();return;}
+  if(t.classList.contains("h")){if(ruleLocked())return;const id=+t.dataset.id,s=cur();s.has(id)?s.delete(id):s.add(id);refresh();return;}
   if(t.dataset.set!=null){setId=t.dataset.set;refresh();return;}
   if(t.dataset.setnew){if(CFG[env].sets.length>=SET_MAX){toast("每个环境最多 "+SET_MAX+" 套");return;}
     const st=curSet(),from=st?"「"+st.name+"」":"默认名单",src=st||CFG[env]; // 新套组 = 当前正在看的那一套黑白名单的拷贝
@@ -278,7 +315,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.f){filter=t.dataset.f;document.querySelectorAll(".fl").forEach(b=>b.classList.toggle("on",b===t));refresh();return;}
 });
 $("#q").addEventListener("input",e=>{q=e.target.value.trim();refresh();});
-const payload=()=>({pools:Object.fromEntries(KEYS.map(k=>[k,{white:sorted(CFG[k].white),ban:sorted(CFG[k].ban),temp:sorted(CFG[k].temp),sets:setsOut(k)}]))});
+const payload=()=>({pools:Object.fromEntries(KEYS.map(k=>[k,{white:sorted(CFG[k].white),ban:sorted(CFG[k].ban),temp:sorted(CFG[k].temp),sets:setsOut(k),rules:rulesOut(k)}]))});
 $("#b-save").onclick=async()=>{
   $("#b-save").disabled=true;
   try{
@@ -297,7 +334,8 @@ window.addEventListener("beforeunload",e=>{if(dirty()){e.preventDefault();e.retu
     HEROES=g; const valid=new Set(g.map(h=>h.id));
     KEYS=Object.keys(p.pools||{}); env=KEYS[0];
     for(const k of KEYS) CFG[k]={label:p.pools[k].label,white:new Set((p.pools[k].white||[]).filter(i=>valid.has(i))),ban:new Set((p.pools[k].ban||[]).filter(i=>valid.has(i))),temp:new Set((p.pools[k].temp||[]).filter(i=>valid.has(i))),
-      sets:(p.pools[k].sets||[]).map(s=>({id:String(s.id),name:String(s.name),white:new Set((s.white||[]).filter(i=>valid.has(i))),ban:new Set((s.ban||[]).filter(i=>valid.has(i)))}))};
+      sets:(p.pools[k].sets||[]).map(s=>({id:String(s.id),name:String(s.name),white:new Set((s.white||[]).filter(i=>valid.has(i))),ban:new Set((s.ban||[]).filter(i=>valid.has(i)))})),
+      rules:Object.fromEntries(RULES.map(r=>[r.k,new Set((((p.pools[k].rules||{})[r.k])||[]).filter(i=>valid.has(i)))]))};
     seen=new Set(p.seen||[]); hasSaved=!!p.updatedAt&&seen.size>0; // 从未保存过时不标「新」
     savedSnap=snap();
     build();
