@@ -190,7 +190,7 @@ export function handleSgs(request, env, url) {
 
 // 三国杀全局配置 DO(单例 idFromName("global")):各环境的白名单(可发将)+ 黑名单(禁将)。
 //   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,plus:[id],minus:[id]}]} }, seen:[id], updatedAt }
-//   sets = 将池套组(2026-11-21):在该环境基础名单上的增减,发将时选用哪一套(语义见 shared/deal.mjs applyPoolSet)。
+//   sets = 将池套组(2026-11-20):在该环境基础名单上的增减,发将时选用哪一套(语义见 shared/deal.mjs applyPoolSet)。
 //   旧格式 {ids,seen,updatedAt}(2026-10-01 首版只有一份白名单)读取时自动迁移:ids → 军争白名单,黑名单取文件种子。
 // 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
 export class SgsConfigDO {
@@ -204,7 +204,7 @@ export class SgsConfigDO {
         white: p ? (p.white || []) : (k === POOL_KEYS[0] ? ((raw && raw.ids) || POOL_SEED.ids || []) : []),
         ban: p ? (p.ban || []) : (BANNED_DATA.pools[k].ids || []),
         temp: p ? (p.temp || []) : [], // 临时 ban 池:发将时各人从中随机 3~5 选 1 ban 掉(2026-10-17)
-        sets: p ? (p.sets || []) : [], // 将池套组(2026-11-21)
+        sets: p ? (p.sets || []) : [], // 将池套组(2026-11-20)
       };
     }
     return { pools, seen: (raw && raw.seen) || [], updatedAt: (raw && raw.updatedAt) || null };

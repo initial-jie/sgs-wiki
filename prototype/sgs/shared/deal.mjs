@@ -33,7 +33,7 @@ const MODE_EXCLUSIVE_GENRE = "不臣之君";
 const EXPLICIT_ONLY_GENRE = "蚀心入魔";
 export function needsExplicit(h) { return !!h && h.genre === EXPLICIT_ONLY_GENRE; }
 
-// 将池套组(用户 2026-11-21:同一环境里分「素将 / 荤将」等几套,发将时一键切换,不用来回重勾)。
+// 将池套组(用户 2026-11-20:同一环境里分「素将 / 荤将」等几套,发将时一键切换,不用来回重勾)。
 //   套组 = 在该环境基础名单上的增减:{ id, name, plus:[武将id], minus:[武将id] }
 //   生效白名单 = (基础白名单 ∪ plus) − minus;生效黑名单 = 基础黑名单 ∪ minus。
 //   minus 按版本排除(同黑名单语义:排除界黄盖,标黄盖照常);plus 同白名单语义(勾一个版本整坑入池)。
