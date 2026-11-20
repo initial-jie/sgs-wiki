@@ -1,4 +1,4 @@
-// 游戏注册表 —— 所有房间/站点的唯一清单。加第五个游戏只改这里:
+// 游戏注册表 —— 所有房间/站点的唯一清单。加新游戏只改这里:
 //   大厅页 /hub 的卡片与搜索、各房间页脚的"其他游戏"链接(room-client.js gamesNav)、/common/games.json 都从这里生成。
 //   wiki 首页(index.html,GitHub Pages 静态页)的房间块是手写的,加游戏时记得也补一行。
 // 字段:key 唯一键;api = WebSocket 路径 /api/<api>/<码>/ws 的段(room-client 用它反推当前游戏来记"最近房间");
@@ -22,6 +22,9 @@ export const GAMES = [
   { key: "avalon", api: "avalon", name: "阿瓦隆", en: "The Resistance: Avalon", py: "a wa long", aliases: ["avalon", "阿瓦隆", "抵抗组织", "梅林", "resistance"],
     path: "/avalon", icon: "🗡️", img: A + "avalon/merlin.jpg", pos: "50% 22%", color: "#d9a441", tag: "系统发身份 + 全流程", players: "5~10 人",
     desc: "开局手机上看身份信息(不用闭眼脚本),队长组队、全桌投票、任务卡匿名结算、湖中仙女、王者之剑、兰斯洛特变体、刺杀梅林。" },
+  { key: "loveletter", api: "loveletter", name: "情书", en: "Love Letter", py: "qing shu", aliases: ["loveletter", "love letter", "ll", "情书", "爱的情书", "公主"],
+    path: "/loveletter", icon: "💌", img: A + "loveletter/cover.jpg", pos: "50% 35%", color: "#b23a5a", tag: "线上牌桌 · 系统发牌", players: "2~6 人",
+    desc: "原版 16 张(2~4 人)与 2019 新版 21 张(2~6 人):每回合抽一打一,侍卫猜牌、男爵比点、国王换牌,轮末比点数发爱慕标记,集满即胜。" },
   { key: "noname", name: "线上牌桌(无名杀)", en: "Noname Online", py: "wu ming sha", aliases: ["noname", "无名杀", "线上", "远程", "online"],
     path: "https://private-sgs-initial-j.pages.dev", external: true, icon: "🌐", img: SKIN + "54801.png", pos: "50% 30%", tag: "人不在一起时", players: "联机",
     desc: "朋友圈内测:打开后先取名,选「联机」进大厅建房 / 加入;手机建议横屏。将池与线下房间同步。" },

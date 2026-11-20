@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>情书房间</title>
+<style>
+/* 信纸风:米白纸底 + 酒红蜡封 + 鎏金 */
+:root{
+  --bg:#f3e9dc; --bg2:#fbf5ec; --card:rgba(255,250,243,.96); --line:rgba(139,30,63,.18);
+  --fg:#3a2a2c; --fg-soft:#8a7378; --rose:#b23a5a; --rose-deep:#8b1e3f; --gold:#b8893a; --green:#3f8f5a; --blue:#4a6fa5; --red:#c7343f;
+  --body:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);background-image:radial-gradient(circle at 85% -5%,rgba(178,58,90,.14),transparent 40%),radial-gradient(circle at 10% 110%,rgba(184,137,58,.14),transparent 45%);
+  color:var(--fg);font-family:var(--body);line-height:1.6;padding:12px 16px 60px;max-width:560px;margin:0 auto}
+h1{font-weight:900;font-size:24px;letter-spacing:.3em;text-align:center;margin:4px 0 0;color:var(--rose-deep)}
+h1 .st{display:inline-block;font-size:11px;letter-spacing:.08em;color:var(--gold);border:2px solid var(--gold);border-radius:4px;padding:0 5px;margin-left:6px;transform:rotate(-8deg);vertical-align:middle;font-weight:700}
+.sub{text-align:center;color:var(--fg-soft);font-size:12px;letter-spacing:.14em;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--rose);border-radius:10px;padding:12px 14px;margin-bottom:11px;box-shadow:0 6px 20px rgba(80,30,40,.12)}
+.card.secret{border-left-color:var(--gold)}
+.card h2{font-weight:900;font-size:16px;letter-spacing:.08em;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:10px;color:var(--rose-deep)}
+.card h2 .tag{float:right;font-size:11px;color:var(--fg-soft);letter-spacing:0;font-weight:400}
+label{font-size:13px;color:var(--fg-soft)}
+input,select{font-family:inherit;font-size:14px;background:#fff;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+button{font-family:inherit;font-size:14px;border-radius:7px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:var(--rose);border-color:var(--rose);color:#fff;font-weight:700}
+button.danger{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+button.ok{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+button.ghost{background:transparent;color:var(--fg-soft)}
+button.sm{font-size:12px;padding:4px 9px}
+button.xs{font-size:12px;padding:2px 7px;line-height:1.4}
+button.on{background:var(--rose-deep);border-color:var(--rose-deep);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+.hint{font-size:12px;color:var(--fg-soft);margin-top:6px}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:1px 9px;color:var(--fg-soft);background:#fff}
+.chip.rose{border-color:var(--rose);color:var(--rose)}
+a{color:var(--blue)}
+#connbar{display:none;position:fixed;left:0;right:0;top:0;z-index:9999;align-items:center;justify-content:center;gap:12px;padding:9px 14px;background:var(--red);color:#fff;font-size:13px;font-weight:600}
+#connbar button{background:#fff;color:var(--red);border:none;padding:5px 14px;font-weight:700}
+body.disconnected #connbar{display:flex}
+body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#3a2a2c;color:#fff;padding:9px 16px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:10000;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.topbar{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.topbar .who{font-size:12px;color:var(--fg-soft)}
+.tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.tabs button.on{background:var(--rose);color:#fff;border-color:var(--rose)}
+
+/* 座位(准备页) */
+.seats-setup .seat{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:#fff;display:flex;align-items:center;gap:8px}
+.seats-setup .seat.mine{border-color:var(--rose);background:rgba(178,58,90,.05)}
+.seats-setup .st{font-weight:900;font-size:16px}
+.seats-setup .who{font-size:12px;color:var(--fg-soft)}
+.edopt{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff;cursor:pointer}
+.edopt.on{border-color:var(--rose);background:rgba(178,58,90,.05)}
+.edopt input{width:auto;margin-top:4px}
+.edopt b{color:var(--rose-deep)}
+.edopt small{display:block;font-size:12px;color:var(--fg-soft)}
+.cgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+@media (max-width:400px){.cgrid{grid-template-columns:repeat(4,1fr)}}
+
+/* 卡牌 */
+.cd{position:relative;width:62px;height:88px;border-radius:7px;border:1.5px solid #c9b79a;background:#fff;overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.cd img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%}
+.cd .rk{position:absolute;top:2px;left:4px;font-weight:900;font-size:15px;color:#fff;text-shadow:0 0 3px #000,0 1px 2px #000;line-height:1}
+.cd .ic{position:absolute;top:3px;right:4px;font-size:12px;filter:drop-shadow(0 0 2px #000)}
+.cd .cn{position:relative;z-index:1;width:100%;text-align:center;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(60,20,30,.85) 40%);padding:8px 2px 3px;line-height:1.1}
+.cd.noimg{background:linear-gradient(160deg,#fbf0e0,#e9d3b8);justify-content:center}
+.cd.noimg .rk,.cd.noimg .cn{color:var(--rose-deep);text-shadow:none;background:none}
+.cd.noimg .cn{position:absolute;bottom:0;left:0}
+.cd.noimg .big{font-size:28px;line-height:1;margin-top:8px}
+.cd.noimg.mini .big{font-size:16px;margin-top:4px}
+.cd.noimg.big .big{font-size:44px}
+.cd.big{width:96px;height:136px}
+.cd.big .rk{font-size:20px}.cd.big .cn{font-size:13px}
+.cd.mini{width:34px;height:48px;border-radius:4px;cursor:default}
+.cd.mini .rk{font-size:11px;top:1px;left:2px}.cd.mini .cn{font-size:8px;padding:5px 1px 2px}.cd.mini .ic{display:none}
+.cd.back{background:repeating-linear-gradient(135deg,#8b1e3f 0 5px,#731634 5px 10px);border-color:#5e1029;cursor:default;align-items:center;justify-content:center;color:rgba(255,255,255,.75);font-size:22px}
+.cd.back.mini{font-size:14px}
+.cd.sel{outline:3px solid var(--gold);outline-offset:1px;transform:translateY(-4px)}
+.cd.dim{opacity:.45}
+.cd.clickable{transition:transform .12s}
+.cd.clickable:hover{transform:translateY(-3px)}
+.hand{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.strip{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:20px}
+
+/* 计分 / 牌堆 */
+.score{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}
+.score .sc{border:1px solid var(--line);border-radius:20px;padding:2px 10px;font-size:12px;background:#fff;display:flex;gap:5px;align-items:center}
+.score .sc.turn{border-color:var(--rose);box-shadow:0 0 0 2px rgba(178,58,90,.25)}
+.score .sc b{font-size:14px}
+.score .hearts{letter-spacing:1px;color:var(--rose)}
+.deckbar{display:flex;gap:14px;align-items:center;justify-content:center;margin:6px 0 4px;flex-wrap:wrap}
+.deckbar .dk{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--fg-soft)}
+.deckbar .dk .cd.back::after{content:attr(data-n);font-weight:900;font-size:18px;color:#fff}
+.status{text-align:center;font-weight:800;color:var(--rose-deep);font-size:15px;margin:4px 0 8px}
+.status small{display:block;font-weight:400;color:var(--fg-soft);font-size:12px}
+
+/* 玩家面板 */
+.pl{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:7px;background:#fff;display:flex;gap:10px;align-items:flex-start}
+.pl.turn{border-color:var(--rose);box-shadow:0 0 0 2px rgba(178,58,90,.22)}
+.pl.mine{background:rgba(184,137,58,.06)}
+.pl.out{opacity:.6}
+.pl .ph{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px}
+.pl .ph .no{font-weight:900;font-size:17px;color:var(--rose-deep)}
+.pl .ph .nm{color:var(--fg);font-weight:600}
+.pl .ph .bd{font-size:11px;border-radius:10px;padding:0 7px;border:1px solid var(--line);color:var(--fg-soft)}
+.pl .ph .bd.on{border-color:var(--rose);color:var(--rose)}
+.pl .ph .bd.prot{border-color:var(--blue);color:var(--blue)}
+.pl .ph .bd.out{border-color:var(--red);color:var(--red)}
+.pl .lb{font-size:11px;color:var(--fg-soft);margin-top:4px}
+.pl .hd{display:flex;gap:4px;flex:none}
+.pl .hearts{color:var(--rose);letter-spacing:1px;font-size:13px}
+
+/* 面板 */
+.panel{border:1px solid rgba(178,58,90,.5);border-radius:10px;padding:10px 12px;background:rgba(178,58,90,.06);margin-bottom:8px}
+.panel .ti{font-weight:800;font-size:15px;color:var(--rose-deep);margin-bottom:4px}
+.panel .tp{font-size:13px}
+.tgt{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tgt button{min-width:64px}
+.guess{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.guess button{font-size:12px;padding:3px 8px}
+.note{border-left:3px solid var(--gold);padding:4px 10px;margin:5px 0;background:#fff;border-radius:0 6px 6px 0;font-size:13px}
+.result{border-left-color:var(--gold);background:rgba(184,137,58,.08)}
+.result .big{font-weight:900;font-size:21px;text-align:center;letter-spacing:.12em;margin-bottom:6px;color:var(--rose-deep)}
+.vt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.vt td,.vt th{padding:4px 6px;border-bottom:1px dotted var(--line);vertical-align:middle;text-align:left}
+.vt th{font-size:11px;color:var(--fg-soft);font-weight:400}
+.vt tr.win td{background:rgba(184,137,58,.12);font-weight:700}
+.mask{position:fixed;inset:0;background:rgba(40,15,25,.7);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:34px 10px;overflow:auto}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-top:3px solid var(--rose);border-radius:11px;width:100%;max-width:520px;padding:14px 15px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.sheet h2{font-weight:900;font-size:17px;letter-spacing:.06em;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:var(--rose-deep)}
+.sheet h2 .x{margin-left:auto;font-size:20px;line-height:1;color:var(--fg-soft);cursor:pointer;padding:0 4px}
+.sheet img.full{width:100%;max-width:360px;display:block;margin:0 auto;border-radius:8px}
+.codex .ce{display:flex;gap:10px;padding:8px 4px;border-bottom:1px dashed var(--line);align-items:flex-start}
+.codex .ce .cn{font-weight:800;font-size:15px;color:var(--rose-deep)}
+.codex .ce .cm{font-size:11px;color:var(--fg-soft)}
+.codex .ce .cdsc{font-size:13px;margin-top:2px}
+.codex h3{font-size:13px;letter-spacing:.15em;color:var(--fg-soft);margin:10px 0 2px}
+.codex .rule{font-size:13px;margin:3px 0}
+.log{font-size:12px;color:var(--fg-soft);max-height:220px;overflow:auto;font-family:var(--mono)}
+.log div{padding:2px 0;border-bottom:1px dotted var(--line)}
+details summary{cursor:pointer;font-size:13px;color:var(--fg-soft)}
+footer{text-align:center;font-size:11px;color:var(--fg-soft);margin-top:18px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div id="connbar"><span>⚠ 连接已断开,正在重连…操作已暂停</span><button id="rcNow" type="button">立即重连</button></div>
+<div id="app"></div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/common/room-client.js"></script><!-- 公共房间客户端(连接/重连/改名/toast);见 prototype/common/client/ -->
+<script>
+/* 情书房间:系统洗牌发牌,轮到谁自动抽一张、从两张里打一张;目标 / 侍卫猜牌在这里选;效果由服务端即时结算;轮末比点发爱慕标记。
+   权威逻辑在 DO(prototype/loveletter/shared/ll-logic.mjs);这里只渲染 roomState、发 action{op,…}。没有定时器。 */
+const {esc,toast,$}=RoomClient;
+let state=null, DATA=null, C={};
+let actSeat=null;                      // 多座位代持时当前操作的座位
+let pick=null, tgtSel=null, guessSel=null; // 出牌面板:选中的牌 / 目标 / 侍卫猜的牌
+let keepSel=null, bottomOrder=null;    // 大臣面板:留哪张 / 其余两张放底顺序
+let modal=null;
+
+const RC=RoomClient.create({
+  wsPath: code=>"/api/loveletter/"+code+"/ws",
+  errorText:{NOT_SETUP:"对局已开始,不能改设置/座位",BAD_CONFIG:"配置不合法",PLAYER_COUNT:"人数不在该版本支持范围内",NOT_PLAY:"现在不能出牌",NOT_YOUR_TURN:"还没轮到这个座位",
+    NOT_IN_HAND:"这张牌不在手里",COUNTESS_FORCED:"手里有国王/王子时必须打出伯爵夫人",BAD_TARGET:"目标不合法(出局或受侍女保护)",BAD_GUESS:"侍卫不能猜侍卫,且只能猜本版本有的牌",
+    NOT_CHANCELLOR:"现在不是大臣选牌阶段",BAD_BOTTOM:"放回牌堆底的必须是其余两张",NOT_ROUND_END:"本轮还没结束"},
+  beforeConnect(){ state=null; closeModal(); resetPick(); },
+  onState(m){ const prev=state; state=m; afterState(prev); autoSeat(); render(); },
+  onMessage(){},
+  onClosed(){ state=null; closeModal(); render(); },
+  onRenamed(){ render(); },
+});
+function act(op,extra){ return RC.send(Object.assign({type:"action",op},extra||{})); }
+function resetPick(){ pick=null; tgtSel=null; guessSel=null; keepSel=null; bottomOrder=null; }
+
+fetch("/loveletter/data.json?v=__LL_DATA_VER__").then(r=>r.json()).then(d=>{ DATA=d; C=Object.fromEntries(d.cards.map(c=>[c.key,c])); render(); }).catch(()=>toast("卡牌数据加载失败,刷新重试"));
+
+/* ============ 小工具 ============ */
+const seatsArr=()=>Object.values(state.seats).sort((a,b)=>a.seatNo-b.seatNo);
+const mySeats=()=>state.youHold.slice().sort((a,b)=>a-b);
+const nameOf=s=>s.holderDevices[0]||"";
+const ED=()=>DATA.editions[(state&&state.config.edition)||DATA.defaultEdition];
+const rank=k=>{ const e=ED(); return e&&e.ranks[k]!=null?e.ranks[k]:"?"; };
+const cn=k=>C[k]?C[k].name:(k||"?");
+const imgUrl=k=>DATA.artBase?DATA.artBase+k+".jpg":"";
+const hearts=(n,need)=>"❤".repeat(n)+"♡".repeat(Math.max(0,(need||0)-n));
+// 该版本按点数排好的卡牌清单
+function edCards(){ const e=ED(); return DATA.cards.filter(c=>e.deck[c.key]).map(c=>Object.assign({},c,{rank:e.ranks[c.key],count:e.deck[c.key]})).sort((a,b)=>a.rank-b.rank); }
+function cardHtml(k,opt){
+  opt=opt||{};
+  const cls="cd"+(opt.big?" big":"")+(opt.mini?" mini":"")+(opt.sel?" sel":"")+(opt.dim?" dim":"")+(opt.click?" clickable":"");
+  const da=opt.a?` data-a="${opt.a}" data-c="${esc(k)}"${opt.i!=null?` data-i="${opt.i}"`:""}`:` data-a="bigimg" data-c="${esc(k)}"`;
+  const img=imgUrl(k)?`<img src="${esc(imgUrl(k))}" alt="" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:"";
+  return `<div class="${cls}${img?"":" noimg"}"${da} title="${esc(cn(k))} ${rank(k)}">${img}<div class="rk">${rank(k)}</div><div class="ic">${C[k]?C[k].icon:""}</div>${img?"":`<div class="big">${C[k]?C[k].icon:"?"}</div>`}<div class="cn">${esc(cn(k))}</div></div>`;
+}
+const backHtml=(mini,n)=>`<div class="cd back${mini?" mini":""}"${n!=null?` data-n="${n}"`:""}>${n!=null?"":"💌"}</div>`;
+function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
+function afterState(prev){
+  if(prev&&(prev.phase!==state.phase||prev.turn!==state.turn||prev.sub!==state.sub||prev.round!==state.round)) resetPick();
+}
+// 一机多座:自动切到"该行动"的座位
+function autoSeat(){
+  const ms=mySeats(); if(ms.length<2) return;
+  if(state.phase==="play"&&state.turn!=null&&ms.includes(state.turn)&&actSeat!==state.turn){ actSeat=state.turn; resetPick(); }
+}
+const myTurn=()=>state.phase==="play"&&state.turn!=null&&state.turn===curActSeat();
+
+/* ============ 弹层 ============ */
+function closeModal(){ modal=null; $("#modal").innerHTML=""; }
+function openCodex(focus){
+  modal={t:"codex",focus};
+  const e=ED();
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 卡牌图鉴 · ${esc(e.name)}<span class="x" data-a="close">×</span></h2>`;
+  for(const c of edCards()) h+=`<div class="ce" id="cx-${c.key}" ${focus===c.key?'style="background:rgba(178,58,90,.07);border-radius:6px"':""}>${cardHtml(c.key,{})}<div><div class="cn">${c.rank} · ${esc(c.name)} <span class="cm">${esc(c.en)} · ${c.count} 张</span></div><div class="cdsc">${esc(c.desc)}</div></div></div>`;
+  h+=`<h3>📜 规则速记</h3>
+    <div class="rule">· 每人起手 1 张;开局盖掉 1 张不看(2 人局再翻开 3 张)。轮到你:系统自动抽 1 张,从两张里<b>打出一张</b>并结算效果,另一张留手。</div>
+    <div class="rule">· 受侍女保护的人不能被选为目标;若其他人全受保护,侍卫/神父/男爵/国王打出无效果,王子只能选自己。</div>
+    <div class="rule">· 出局者手牌翻开进弃牌堆。只剩一人,或某人回合结束时牌堆已空 → 本轮结束:在局者比手牌点数,最高者得 1 枚爱慕标记;同点比各自弃牌点数总和,再同则都得。</div>
+    <div class="rule">· 先集满所需标记者胜:${Object.entries(e.tokensToWin).map(([n,t])=>n+"人 "+t+"枚").join(" / ")}。上一轮赢家下一轮先手。</div>
+    ${e.deck.spy?`<div class="rule">· <b>间谍</b>:轮末,仍在局内且是唯一打出/弃过间谍的人额外 +1 枚。<b>大臣</b>:抽两张后从三张里留一张,其余按你选的顺序放回牌堆底。</div>`:""}
+  </div></div>`;
+  $("#modal").innerHTML=h;
+  if(focus){ const el=$("#cx-"+focus); el&&el.scrollIntoView({block:"center"}); }
+}
+function openBigImg(k){ modal={t:"img",k}; $("#modal").innerHTML=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>${rank(k)} · ${esc(cn(k))} <span class="cm" style="font-size:12px;color:var(--fg-soft)">${esc(C[k]?C[k].en:"")}</span><span class="x" data-a="close">×</span></h2>${imgUrl(k)?`<img class="full" src="${esc(imgUrl(k))}" alt="" onerror="this.remove()"/>`:""}<div style="font-size:14px;margin-top:10px">${esc(C[k]?C[k].desc:"")}</div></div></div>`; }
+function openHistory(){
+  modal={t:"hist"};
+  const seats=seatsArr();
+  let h=`<div class="mask" data-a="closeMask"><div class="sheet"><h2>📋 每轮记录<span class="x" data-a="close">×</span></h2>`;
+  if(!state.history.length) h+=`<div class="hint">还没有结束的轮次。</div>`;
+  for(const r of state.history.slice().reverse()){
+    h+=`<div class="note"><b>第 ${r.round} 轮</b>(${r.reason==="last"?"只剩一人":"牌堆抽完"})→ ${r.winners.join("/")}号 得标记${r.spyBonus!=null?`,${r.spyBonus}号 间谍 +1`:""}<div class="strip" style="margin-top:4px">${seats.map(s=>`<span class="chip ${r.winners.includes(s.seatNo)?"rose":""}">${s.seatNo}号 ${r.hands[s.seatNo]?esc(cn(r.hands[s.seatNo]))+" "+rank(r.hands[s.seatNo]):"出局"} · 弃 ${r.sums[s.seatNo]}</span>`).join("")}</div></div>`;
+  }
+  h+=`</div></div>`;
+  $("#modal").innerHTML=h;
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  const app=$("#app");
+  let h='<h1>情书<span class="st">LOVE LETTER</span></h1><div class="sub">LOVE LETTER · 线上牌桌房间</div>';
+  if(!state){
+    app.innerHTML=h+RoomClient.connectFormHtml(RC,{title:"加入房间",hint:"同一房间码即进同一桌。系统洗牌发牌,手牌只有自己看得到;轮到你时自动抽一张,从两张里打一张,目标与猜牌都在手机上点。人不在一起也能玩。"})
+      +'<div class="hint" style="text-align:center">其他游戏:'+RoomClient.gamesNav("loveletter")+'</div>';
+    RoomClient.bindConnectForm(RC); return;
+  }
+  if(!DATA){ app.innerHTML=h+'<div class="card">加载卡牌数据…</div>'; return; }
+  h+=viewTopbar();
+  if(state.phase==="setup") h+=viewSetup();
+  else h+=viewGame();
+  h+=viewLog();
+  h+='<footer>情书 · 房间版原型 · 卡面为公版古典肖像(Wikimedia Commons)<br>其他房间:'+RoomClient.gamesNav("loveletter")+'</footer>';
+  app.innerHTML=h;
+  if(modal&&modal.t==="codex") openCodex(modal.focus);
+  if(modal&&modal.t==="hist") openHistory();
+}
+function viewTopbar(){
+  const ms=mySeats();
+  return `<div class="topbar"><span class="who">房间 <b>${esc(RC.code||state.roomCode)}</b> · ${esc(RC.deviceId)}${ms.length?" · 座位 "+ms.join("/"):""}</span>
+    <button class="xs ghost" data-a="rename">改名</button><button class="xs ghost" data-a="codex">📖 图鉴</button>${state.phase!=="setup"?`<button class="xs ghost" data-a="hist">📋 记录</button>`:""}
+    <button class="xs ghost" data-a="disband">解散</button></div>`;
+}
+
+/* ---- 准备 ---- */
+function viewSetup(){
+  const seats=seatsArr(), N=seats.length, e=ED(), chk=state.check||{};
+  let h=`<div class="card"><h2>座位 <span class="tag">${N} 人 · 本版本 ${e.minPlayers}~${e.maxPlayers} 人</span></h2><div class="seats-setup">`;
+  for(const s of seats){
+    const mine=state.youHold.includes(s.seatNo), held=s.holderDevices.length>0;
+    h+=`<div class="seat${mine?" mine":""}"><span class="st">${s.seatNo}</span><span class="grow"><span class="who">${held?esc(nameOf(s))+(mine?" (我)":""):"空位"}</span></span>
+      ${mine?`<button class="xs ghost" data-a="release" data-s="${s.seatNo}">离座</button>`:held?`<button class="xs ghost" data-a="takeover" data-s="${s.seatNo}">替换</button>`:`<button class="xs primary" data-a="claim" data-s="${s.seatNo}">落座</button>`}</div>`;
+  }
+  h+=`</div><div class="row" style="margin-top:6px"><button class="sm ghost" data-a="addSeat">＋ 加座位</button><button class="sm ghost" data-a="removeSeat">－ 减座位</button><span class="hint">座位号即出牌顺序(顺时针)。一台手机可代持多个座位。</span></div></div>`;
+  h+=`<div class="card"><h2>版本</h2>`;
+  for(const ed of Object.values(DATA.editions)){
+    const on=state.config.edition===ed.key;
+    h+=`<label class="edopt${on?" on":""}"><input type="radio" name="ed" data-a="edition" data-k="${ed.key}" ${on?"checked":""}><span><b>${esc(ed.name)}</b> <span class="chip">${ed.minPlayers}~${ed.maxPlayers} 人</span><small>${esc(ed.en)} · ${Object.values(ed.deck).reduce((a,b)=>a+b,0)} 张 · 所需标记 ${Object.entries(ed.tokensToWin).map(([n,t])=>n+"人"+t).join(" / ")}</small></span></label>`;
+  }
+  h+=`<div class="cgrid">${edCards().map(c=>cardHtml(c.key,{a:"codexOf"})).join("")}</div>
+    <div class="hint">${edCards().map(c=>`${c.rank}·${esc(c.name)}×${c.count}`).join("  ")}。点卡看图鉴。</div>
+    <div class="row" style="margin-top:8px"><label>所需爱慕标记<select id="cf-tokens" style="margin-top:4px;width:auto">${[["", "按人数表("+(state.need||"?")+" 枚)"]].concat([1,2,3,4,5,6,7,8,9,10].map(n=>[n,n+" 枚(房规)"])).map(([v,t])=>`<option value="${v}" ${(state.config.tokens||"")==v?"selected":""}>${t}</option>`).join("")}</select></label></div>
+    <div class="hint">本机改动即时同步给全房。</div></div>`;
+  h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${chk.ok?"":"disabled"}>💌 开始游戏(系统发牌)</button>
+    <div class="hint">${chk.ok?"随机一人先手;之后每轮由上一轮赢家先手。":`现在 ${N} 人,${esc(e.name)}支持 ${e.minPlayers}~${e.maxPlayers} 人,请增减座位或换版本。`}</div></div>`;
+  return h;
+}
+
+/* ---- 对局 ---- */
+function viewGame(){
+  let h=viewScore()+viewDeck()+viewStatus();
+  if(state.phase==="play"&&mySeats().length) h+=viewAction();
+  if(state.phase==="roundEnd"||state.phase==="over") h+=viewRoundEnd();
+  h+=viewPlayers();
+  h+=viewNotes();
+  if(state.phase!=="over") h+=`<div class="card"><div class="row"><button class="sm ghost" data-a="newGame">终止本局,回到准备</button></div></div>`;
+  return h;
+}
+function viewScore(){
+  return `<div class="score"><span class="sc"><b>第 ${state.round} 轮</b> · 集满 ${state.need} ❤</span>${seatsArr().map(s=>`<span class="sc${s.isTurn?" turn":""}"><b>${s.seatNo}</b>${esc(nameOf(s))||"空"}<span class="hearts">${hearts(s.tokens,state.need)}</span></span>`).join("")}</div>`;
+}
+function viewDeck(){
+  return `<div class="deckbar"><div class="dk">${backHtml(false,state.deckCount)}牌堆</div><div class="dk">${state.removedTaken?`<div class="cd" style="border-style:dashed;background:transparent;box-shadow:none;cursor:default"></div>`:backHtml(false)}盖牌${state.removedTaken?"(已被王子抽走)":""}</div>${state.faceUp.length?`<div class="dk"><div class="hand" style="gap:4px">${state.faceUp.map(k=>cardHtml(k,{mini:true})).join("")}</div>2 人局翻开</div>`:""}</div>`;
+}
+function viewStatus(){
+  if(state.phase==="over") return `<div class="status">🏆 ${state.result.winners.join("/")}号 集满 ${state.result.need} 枚爱慕标记,获胜!</div>`;
+  if(state.phase==="roundEnd") return `<div class="status">第 ${state.round} 轮结束<small>任何人点「下一轮」继续,${state.starter}号 先手</small></div>`;
+  const t=state.seats[state.turn], mine=state.youHold.includes(state.turn);
+  if(state.sub==="chancellor") return `<div class="status">${state.turn}号 ${esc(nameOf(t))} 正在用大臣选牌${mine?"(你)":""}</div>`;
+  return `<div class="status">轮到 ${state.turn}号 ${esc(nameOf(t))} 出牌${mine?" —— 是你!":""}<small>牌堆剩 ${state.deckCount} 张 · 在局 ${seatsArr().filter(s=>!s.out).length} 人</small></div>`;
+}
+function seatTabs(){ const ms=mySeats(); if(ms.length<2) return ""; return `<div class="tabs">${ms.map(x=>`<button class="sm ${x===actSeat?"on":""}" data-a="actSeat" data-s="${x}">${x}号</button>`).join("")}</div>`; }
+function viewAction(){
+  const me=curActSeat(), s=state.seats[me];
+  if(me!==state.turn) return seatTabs()?`<div class="card">${seatTabs()}<div class="hint">${me}号 等待中,现在轮到 ${state.turn}号。</div></div>`:"";
+  if(state.sub==="chancellor") return viewChancellor(s);
+  const hand=s.hand||[], forced=!!s.countessForced;
+  let h=`<div class="card secret"><h2>💌 你的回合 <span class="tag">${me}号 · 选一张打出</span></h2>${seatTabs()}<div class="hand">`;
+  for(let i=0;i<hand.length;i++){ const k=hand[i]; const dis=forced&&k!=="countess"; h+=cardHtml(k,{big:true,a:"pick",i,sel:pick===i,dim:dis,click:!dis}); }
+  h+=`</div>`;
+  if(forced) h+=`<div class="hint" style="color:var(--rose)">手里同时有伯爵夫人和国王/王子:本回合必须打出伯爵夫人。</div>`;
+  if(pick!=null&&hand[pick]){
+    const k=hand[pick], def=C[k], pool=def.target==="any"?state.targets.any:def.target==="other"?state.targets.other:[];
+    h+=`<div class="panel"><div class="ti">${rank(k)} · ${esc(cn(k))}</div><div class="tp">${esc(def.desc)}</div>`;
+    if(def.target!=="none"){
+      if(!pool.length) h+=`<div class="hint" style="color:var(--rose)">没有可选目标(其他人都出局或受侍女保护),打出后无效果。</div>`;
+      else h+=`<div class="hint">选择目标:</div><div class="tgt">${pool.map(n=>`<button class="${tgtSel===n?"on":""}" data-a="tgt" data-s="${n}">${n}号 ${esc(nameOf(state.seats[n]))}${n===me?"(自己)":""}</button>`).join("")}</div>`;
+      if(def.needGuess&&pool.length) h+=`<div class="hint">猜对方手牌是:</div><div class="guess">${edCards().filter(c=>c.key!=="guard").map(c=>`<button class="${guessSel===c.key?"on":""}" data-a="guess" data-c="${c.key}">${c.rank} ${esc(c.name)}</button>`).join("")}</div>`;
+    }
+    const need=def.target!=="none"&&pool.length>0, ready=!need||(tgtSel!=null&&(!def.needGuess||guessSel));
+    h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="playGo" ${ready?"":"disabled"} style="padding:12px;font-size:15px">打出 ${esc(cn(k))}${need&&tgtSel!=null?" → "+tgtSel+"号":""}${guessSel&&def.needGuess&&tgtSel!=null?" 猜「"+esc(cn(guessSel))+"」":""}</button><button class="ghost" data-a="unpick">取消</button></div></div>`;
+  } else h+=`<div class="hint">点一张牌查看效果并选择目标。</div>`;
+  return h+`</div>`;
+}
+function viewChancellor(s){
+  const hand=s.hand||[];
+  if(bottomOrder&&(bottomOrder.length!==hand.length-1||bottomOrder.some(i=>i>=hand.length||i===keepSel))) bottomOrder=null;
+  let h=`<div class="card secret"><h2>📜 大臣 <span class="tag">从 ${hand.length} 张里留一张</span></h2>${seatTabs()}<div class="hand">${hand.map((k,i)=>cardHtml(k,{big:true,a:"keep",i,sel:keepSel===i,click:true})).join("")}</div>`;
+  if(keepSel!=null&&hand[keepSel]){
+    if(!bottomOrder) bottomOrder=hand.map((_,i)=>i).filter(i=>i!==keepSel);
+    h+=`<div class="panel"><div class="ti">留下「${esc(cn(hand[keepSel]))}」</div>${bottomOrder.length?`<div class="tp">其余放回牌堆底的顺序(左边先放,离牌堆顶更近;右边在最底):</div><div class="hand" style="margin-top:6px">${bottomOrder.map(i=>cardHtml(hand[i],{})).join('<span style="align-self:center">→</span>')}</div>${bottomOrder.length>1?`<div class="row" style="margin-top:6px"><button class="sm" data-a="swapBottom">⇄ 交换顺序</button></div>`:""}`:""}
+      <div class="row" style="margin-top:10px"><button class="primary grow" data-a="chancellorGo" style="padding:12px;font-size:15px">确认</button></div></div>`;
+  } else h+=`<div class="hint">点一张牌作为留下的手牌。</div>`;
+  return h+`</div>`;
+}
+function viewPlayers(){
+  const revealed=state.phase==="roundEnd"||state.phase==="over";
+  let h=`<div class="card"><h2>牌桌 <span class="tag">弃牌堆按打出顺序</span></h2>`;
+  for(const s of seatsArr()){
+    const mine=state.youHold.includes(s.seatNo);
+    h+=`<div class="pl${s.isTurn?" turn":""}${mine?" mine":""}${s.out?" out":""}"><div class="grow"><div class="ph"><span class="no">${s.seatNo}</span><span class="nm">${esc(nameOf(s))||"空位"}</span>
+      ${s.isTurn&&state.phase==="play"?`<span class="bd on">▶ 出牌中</span>`:""}${s.protected?`<span class="bd prot">🧺 保护中</span>`:""}${s.out?`<span class="bd out">✖ 出局</span>`:""}${state.starter===s.seatNo&&state.phase!=="over"?`<span class="bd">先手</span>`:""}<span class="hearts">${hearts(s.tokens,state.need)}</span></div>
+      <div class="lb">弃牌 ${s.discards.length?"(合计 "+s.discards.reduce((a,k)=>a+(+rank(k)||0),0)+")":""}</div><div class="strip">${s.discards.length?s.discards.map(k=>cardHtml(k,{mini:true})).join(""):`<span class="hint" style="margin:0">—</span>`}</div></div>
+      <div class="hd">${s.hand&&(mine||revealed)?s.hand.map(k=>cardHtml(k,{})).join(""):Array.from({length:s.handCount}).map(()=>backHtml(false)).join("")}</div></div>`;
+  }
+  return h+`</div>`;
+}
+function viewNotes(){
+  const ms=mySeats(); if(!ms.length) return "";
+  let h="";
+  for(const n of ms){ const s=state.seats[n], notes=(s.notes||[]).filter(x=>x.round===state.round);
+    if(notes.length) h+=`<div class="card secret"><h2>🔒 ${n}号 的私密情报 <span class="tag">只有你看得到</span></h2>${notes.map(x=>`<div class="note">${esc(x.text)}</div>`).join("")}</div>`; }
+  return h;
+}
+function viewRoundEnd(){
+  const r=state.roundResult; if(!r) return "";
+  const over=state.phase==="over";
+  let h=`<div class="card result"><div class="big">${over?`🏆 ${state.result.winners.join("/")}号 获胜`:`第 ${r.round} 轮 · ${r.winners.join("/")}号 得标记`}</div>
+    <div class="hint" style="text-align:center">${r.reason==="last"?"其他人都出局了":"牌堆抽完,比手牌点数"}${r.spyBonus!=null?` · ${r.spyBonus}号 是唯一打出间谍的在局者,额外 +1`:""}</div>
+    <table class="vt"><tr><th>座位</th><th>手牌</th><th>弃牌合计</th><th>标记</th></tr>`;
+  for(const s of seatsArr()) h+=`<tr class="${r.winners.includes(s.seatNo)?"win":""}"><td>${s.seatNo}号 ${esc(nameOf(s))}</td><td>${r.hands[s.seatNo]?`${rank(r.hands[s.seatNo])} ${esc(cn(r.hands[s.seatNo]))}`:"<span style='color:var(--red)'>出局</span>"}</td><td>${r.sums[s.seatNo]}</td><td class="hearts" style="color:var(--rose)">${hearts(r.tokens[s.seatNo],state.need)}</td></tr>`;
+  h+=`</table><div class="row" style="margin-top:10px">${over?`<button class="primary grow" data-a="newGame" style="padding:12px;font-size:15px">再来一局</button>`:`<button class="primary grow" data-a="nextRound" style="padding:12px;font-size:15px">下一轮(${state.starter}号 先手)</button>`}</div></div>`;
+  return h;
+}
+function viewLog(){ return `<div class="card"><details><summary>📜 日志(公开)</summary><div class="log">${(state.log||[]).map(l=>`<div>${esc(l)}</div>`).join("")}</div></details></div>`; }
+
+/* ============ 交互 ============ */
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]"); if(!b) return;
+  const a=b.dataset.a, sn=+b.dataset.s;
+  switch(a){
+    case "close": closeModal(); break;
+    case "closeMask": if(e.target===b) closeModal(); break;
+    case "rename": RC.promptRename(); break;
+    case "codex": openCodex(); break;
+    case "codexOf": openCodex(b.dataset.c); break;
+    case "bigimg": openBigImg(b.dataset.c); break;
+    case "hist": openHistory(); break;
+    case "disband": if(confirm("解散房间?所有人都会被踢出,房间数据清空。")) RC.send({type:"disbandRoom"}); break;
+    case "claim": RC.send({type:"claimSeat",seatNo:sn}); break;
+    case "takeover": { const s=state.seats[sn]; if(confirm(`座位 ${sn} 当前由「${nameOf(s)}」持有,替换成你?`)) RC.send({type:"takeoverSeat",seatNo:sn}); break; }
+    case "release": RC.send({type:"releaseSeat",seatNo:sn}); break;
+    case "addSeat": RC.send({type:"addSeat"}); break;
+    case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
+    case "edition": act("setConfig",{config:{edition:b.dataset.k}}); break;
+    case "start": act("startGame"); break;
+    case "actSeat": actSeat=sn; resetPick(); render(); break;
+    case "pick": { const i=+b.dataset.i, s=state.seats[curActSeat()]; if(s.countessForced&&s.hand[i]!=="countess"){ toast("必须打出伯爵夫人"); break; } pick=pick===i?null:i; tgtSel=null; guessSel=null; render(); break; }
+    case "unpick": pick=null; tgtSel=null; guessSel=null; render(); break;
+    case "tgt": tgtSel=tgtSel===sn?null:sn; render(); break;
+    case "guess": guessSel=guessSel===b.dataset.c?null:b.dataset.c; render(); break;
+    case "playGo": { const me=curActSeat(), s=state.seats[me]; if(pick==null||!s.hand[pick]) break; const k=s.hand[pick];
+      if(k==="princess"&&!confirm("打出公主你会立刻出局,确定?")) break;
+      act("play",{seatNo:me,card:k,target:tgtSel,guess:guessSel}); break; }
+    case "keep": keepSel=keepSel===+b.dataset.i?null:+b.dataset.i; bottomOrder=null; render(); break;
+    case "swapBottom": if(bottomOrder&&bottomOrder.length>1){ bottomOrder=[bottomOrder[1],bottomOrder[0]]; render(); } break;
+    case "chancellorGo": { const me=curActSeat(), s=state.seats[me]; if(keepSel==null||!s.hand[keepSel]) break; const order=bottomOrder||s.hand.map((_,i)=>i).filter(i=>i!==keepSel);
+      act("chancellor",{seatNo:me,keep:s.hand[keepSel],bottom:order.map(i=>s.hand[i])}); break; }
+    case "nextRound": act("nextRound"); break;
+    case "newGame": if(state.phase==="over"||state.phase==="roundEnd"||confirm("终止本局回到准备阶段?所有标记清零。")) act("newGame"); break;
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="cf-tokens") act("setConfig",{config:{tokens:t.value===""?null:+t.value}});
+});
+document.getElementById("rcNow").onclick=()=>RC.reconnectNow();
+render();
+</script>
+</body>
+</html>

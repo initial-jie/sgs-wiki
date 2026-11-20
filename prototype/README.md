@@ -39,6 +39,12 @@ avalon/                    阿瓦隆(The Resistance: Avalon,系统发身份 + �
   worker.mjs               /avalon 页面 + /avalon/data.json + AvalonRoomDO
   client/avalon.html       圆桌 UI + 任务轨/投票轨 + 身份卡(官方卡面)+ 各阶段面板 + 投票历史
   avalon-sim.mjs           node 断言(node prototype/avalon/avalon-sim.mjs)
+loveletter/                情书(Love Letter,线上牌桌:系统洗牌发牌、抽一打一、效果即时结算、轮末比点发标记)——第六个游戏
+  shared/ll-logic.mjs      LoveLetterCore extends RoomBase:开局/开轮/打牌与目标校验/各牌效果/大臣子阶段/轮末结算/间谍加成/终局
+  shared/ll-data.mjs       10 种牌 + 两个版本(原版 16 张 2~4 人 / 2019 新版 21 张 2~6 人)+ 所需标记表
+  worker.mjs               /loveletter 页面 + /loveletter/data.json + LoveLetterRoomDO
+  client/loveletter.html   信纸风 UI:计分条 / 牌堆 / 每人弃牌堆 / 我的手牌出牌面板(目标 + 侍卫猜牌)/ 大臣选牌 / 私密笔记 / 轮末结算
+  ll-sim.mjs               node 断言(node prototype/loveletter/ll-sim.mjs)
   qmxy-sim.mjs             node 断言:node prototype/qmxy/qmxy-sim.mjs
   build-pinyin.mjs         角色名拼音 → shared/hero-pinyin.json
 worker/                    一个 worker 托管所有游戏:src/index.js 只做路由

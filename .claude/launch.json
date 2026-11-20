@@ -86,6 +86,20 @@
         "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/222aff8b-9dcb-4ae0-ad1c-89894c080847/scratchpad/noname-new/dist"
       ],
       "port": 8096
+    },
+    {
+      "name": "loveletter-room",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--config",
+        "prototype/worker/wrangler.toml",
+        "--port",
+        "8790",
+        "--local"
+      ],
+      "port": 8790
     }
   ]
 }
