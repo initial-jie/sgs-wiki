@@ -3,7 +3,8 @@
 <title>武将数据 · 三国杀线下房间</title>
 <!-- 武将数据页(2026-10-21,用户提的):按历史对局(/api/history,最近 300 局 / 180 天)算每个武将的 出框率 / 选取率 / ban率,
      分三组:5 人以上 / 4 人 / 3 人(斗地主)。数据:记录里的 offered(出框)/ banCands(ban 候选)/ banned(被 ban)是武将 id,seats[].general 是选定的武将名。
-     口径:出框率 = 出框局数 / 该组局数;选取率 = 选定局数 / 出框局数(手动选将没出框 → 只计选定次数);ban率 = 被 ban 次数 / 进 ban 候选次数。-->
+     口径:出框率 = 出框局数 / 该组「有候选框记录」的局数;选取率 = 出框且被选定的局数 / 出框局数;ban率 = 被 ban 次数 / 进 ban 候选次数。
+     手动选将的局没有候选框:那些选定只单独计数(manual),不进选取率的分子,也不进出框率的分母 —— 否则会出现选取率 200%(2026-11-20 用户发现:南华老仙出框 1 次没人选、手动选将局里被选 2 次)。-->
 <style>
 :root{--paper:#f3ecdc;--paper2:#faf6ec;--ink:#2b2416;--soft:#6b6252;--line:#d8cfb8;--seal:#a32e22;--qi:#b9a26a;--wei:#2b5fa5;--shu:#a33322;--wu:#2f7d4f;--qun:#7a6320;--jin:#6b4a86;--shen:#a06a1a}
 *{box-sizing:border-box}body{margin:0;padding:14px 12px 40px;background:var(--paper);color:var(--ink);font:14px/1.5 -apple-system,"PingFang SC","Noto Sans SC",sans-serif}
@@ -26,7 +27,7 @@ td:first-child,th:first-child{text-align:left}td:nth-child(2),th:nth-child(2){te
 <div class="row" style="margin-top:8px"><input id="q" placeholder="搜武将名" style="flex:1 1 0;min-width:0"><select id="show"><option value="any">出过框 / 选过 / ban 过的</option><option value="picked">只看选过的</option><option value="banned">只看被 ban 过的</option><option value="all">全部武将</option></select></div>
 <div class="card"><div class="hint" id="desc"></div><div class="wrap"><table id="t"><thead><tr>
 <th data-k="name">武将</th><th data-k="fac">势力</th><th data-k="offered">出框</th><th data-k="offRate">出框率</th><th data-k="picked">选定</th><th data-k="pickRate">选取率</th><th data-k="banCand">ban 候选</th><th data-k="banned">被 ban</th><th data-k="banRate">ban率</th></tr></thead><tbody></tbody></table></div></div>
-<div class="hint" style="margin-top:8px">口径:出框率 = 出现在候选框的局数 ÷ 该组局数;选取率 = 选定落座的局数 ÷ 出框局数(手动选将的局没有候选框,只计入「选定」);ban率 = 被临时 ban 的次数 ÷ 进 ban 候选的次数。同名武将各版本分开算。历史只保留最近 300 局 / 180 天。</div>
+<div class="hint" style="margin-top:8px">口径:出框率 = 出现在候选框的局数 ÷ 该组有候选框记录的局数;选取率 = 出框后被选定的局数 ÷ 出框局数;手动选将的局没有候选框,那些落座只在「选定」里记成「+手动 N」,不计入出框率和选取率;ban率 = 被临时 ban 的次数 ÷ 进 ban 候选的次数。同名武将各版本分开算。历史只保留最近 300 局 / 180 天。</div>
 <script>
 "use strict";
 const $=s=>document.querySelector(s), esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -37,25 +38,28 @@ function players(r){return (r.seats||[]).filter(s=>s.player||s.general).length;}
 function compute(){
   const [,label,pred]=GROUPS.find(g=>g[0]===group);
   const recs=LIST.filter(r=>pred(players(r)));
-  const st=new Map(); const get=id=>{if(!st.has(id))st.set(id,{offered:0,picked:0,banCand:0,banned:0});return st.get(id);};
+  const Z=()=>({offered:0,picked:0,manual:0,banCand:0,banned:0}); // picked=出框后被选定;manual=没出框就落座(手动选将的局,或发将局里手动改的)
+  const st=new Map(); const get=id=>{if(!st.has(id))st.set(id,Z());return st.get(id);};
   for(const r of recs){
-    for(const id of new Set(r.offered||[]))get(id).offered++;
+    const off=new Set(r.offered||[]);
+    for(const id of off)get(id).offered++;
     for(const id of new Set(r.banCands||[]))get(id).banCand++;
     for(const id of r.banned||[])get(id).banned++;
-    for(const s of r.seats||[]){const h=s.general&&BY_NAME.get(s.general);if(h)get(h.id).picked++;}
+    for(const s of r.seats||[]){const h=s.general&&BY_NAME.get(s.general);if(h)get(h.id)[off.has(h.id)?"picked":"manual"]++;}
   }
-  $("#desc").innerHTML=`<b>${esc(label)}</b> · ${recs.length} 局 · 有候选框记录的 ${recs.filter(r=>(r.offered||[]).length).length} 局 · 开过临时 ban 的 ${recs.filter(r=>(r.banCands||[]).length).length} 局`;
+  const dealt=recs.filter(r=>(r.offered||[]).length).length; // 出框率的分母:只算发过候选框的局
+  $("#desc").innerHTML=`<b>${esc(label)}</b> · ${recs.length} 局 · 有候选框记录的 ${dealt} 局 · 开过临时 ban 的 ${recs.filter(r=>(r.banCands||[]).length).length} 局`;
   const rows=[];
   for(const h of HEROES){
-    const s=st.get(h.id)||{offered:0,picked:0,banCand:0,banned:0};
-    const any=s.offered||s.picked||s.banCand||s.banned;
-    if(show==="any"&&!any)continue; if(show==="picked"&&!s.picked)continue; if(show==="banned"&&!s.banned)continue;
+    const s=st.get(h.id)||Z();
+    const any=s.offered||s.picked||s.manual||s.banCand||s.banned;
+    if(show==="any"&&!any)continue; if(show==="picked"&&!(s.picked||s.manual))continue; if(show==="banned"&&!s.banned)continue;
     if(q&&!h.name.includes(q)&&!(h.py||"").replace(/ /g,"").startsWith(q.toLowerCase()))continue;
-    rows.push({id:h.id,name:h.name,fac:h.factionSelectable?(h.faction==="魔"?"魔":"神"):(h.faction||"?"),...s,offRate:recs.length?s.offered/recs.length:0,pickRate:s.offered?s.picked/s.offered:(s.picked?1:0),banRate:s.banCand?s.banned/s.banCand:0});
+    rows.push({id:h.id,name:h.name,fac:h.factionSelectable?(h.faction==="魔"?"魔":"神"):(h.faction||"?"),...s,offRate:dealt?s.offered/dealt:0,pickRate:s.offered?s.picked/s.offered:0,banRate:s.banCand?s.banned/s.banCand:0});
   }
   rows.sort((a,b)=>{const x=a[sortK],y=b[sortK];if(typeof x==="string")return sortD*x.localeCompare(y,"zh");return sortD*((x-y)||(b.offered-a.offered)||(b.picked-a.picked))||a.name.localeCompare(b.name,"zh");});
   const pct=v=>(v*100).toFixed(0)+"%", bar=(v,c)=>`<span class="bar ${c||""}" style="width:${Math.round(Math.min(1,v)*40)}px"></span>`;
-  $("#t tbody").innerHTML=rows.map(r=>`<tr><td class="nm">${esc(r.name)}</td><td><span class="fc ${FCLS[r.fac]||""}">${esc(r.fac)}</span></td><td>${r.offered}</td><td>${bar(r.offRate)}${pct(r.offRate)}</td><td>${r.picked}</td><td>${r.offered?bar(r.pickRate,"grn")+pct(r.pickRate):(r.picked?"<span class='hint'>手动 ×"+r.picked+"</span>":"—")}</td><td>${r.banCand}</td><td>${r.banned}</td><td>${r.banCand?bar(r.banRate,"red")+pct(r.banRate):"—"}</td></tr>`).join("")||`<tr><td colspan="9" class="hint">这一组还没有记录</td></tr>`;
+  $("#t tbody").innerHTML=rows.map(r=>`<tr><td class="nm">${esc(r.name)}</td><td><span class="fc ${FCLS[r.fac]||""}">${esc(r.fac)}</span></td><td>${r.offered}</td><td>${bar(r.offRate)}${pct(r.offRate)}</td><td>${r.picked}${r.manual?`<span class="hint" style="margin-left:4px" title="没出框就落座:手动选将的局,不计入选取率">+手动 ${r.manual}</span>`:""}</td><td>${r.offered?bar(r.pickRate,"grn")+pct(r.pickRate):"—"}</td><td>${r.banCand}</td><td>${r.banned}</td><td>${r.banCand?bar(r.banRate,"red")+pct(r.banRate):"—"}</td></tr>`).join("")||`<tr><td colspan="9" class="hint">这一组还没有记录</td></tr>`;
   document.querySelectorAll("th").forEach(th=>th.classList.toggle("on",th.dataset.k===sortK));
   document.querySelectorAll("#groups button").forEach(b=>b.classList.toggle("on",b.dataset.g===group));
 }
