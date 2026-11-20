@@ -883,6 +883,21 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/sxrm-yanfuren-tan-s.jpg",
     tool: null, offline: true,
   },
+  // 皇甫嵩 —— OL 2026-11-20 公告、11-21 小雪祈福上线(olwiki 真 id 743;官网花名册/API 仍未收录)。graduate 候选。
+  // 势力/体力/性别/技能抄自官方公告 sanguosha.com/news/20261117_1218_3314;品质公告未写(olwiki 当日 504)→ null;特点为自拟。⚠ graduate 后删。
+  {
+    id: 9066, name: "皇甫嵩", genre: "其他", series: "祈福", faction: "群",
+    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    tags: ["进攻", "控制", "过牌"],
+    skills: [
+      { name: "焰靖", effect: "准备阶段，你可以指定一名其他角色，对其造成1点火焰伤害，然后跳过本回合下X个阶段，跳过其下回合第X个阶段（X为其体力值）。" },
+      { name: "奋钺", effect: "转换技，每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以：阳：摸两张牌；阴：使用一张牌。" },
+    ],
+    characteristic: "焰靖在准备阶段烧一名其他角色1点火焰伤害，然后按其体力值X跳过自己本回合接下来的X个阶段，并跳过对方下回合的第X个阶段（按准备、判定、摸牌、出牌、弃牌、结束的顺序数，X=4即出牌阶段、X=3即摸牌阶段）；奋钺是转换技，任何回合结束时只要自己本回合受过伤或有角色受过属性伤害，就轮流摸两张牌、使用一张牌，自己的焰靖也算属性伤害。",
+    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74300.png",
+    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74300.png",
+    tool: null, offline: true,
+  },
 ];
 
 // 就地修改并返回 list。幂等:同 id 的线下武将已存在则整条替换。warn 收集未命中的技能名。
