@@ -34,21 +34,16 @@ const EXPLICIT_ONLY_GENRE = "蚀心入魔";
 export function needsExplicit(h) { return !!h && h.genre === EXPLICIT_ONLY_GENRE; }
 
 // 将池套组(用户 2026-11-20:同一环境里分「素将 / 荤将」等几套,发将时一键切换,不用来回重勾)。
-//   套组 = 在该环境基础名单上的增减:{ id, name, plus:[武将id], minus:[武将id] }
-//   生效白名单 = (基础白名单 ∪ plus) − minus;生效黑名单 = 基础黑名单 ∪ minus。
-//   minus 按版本排除(同黑名单语义:排除界黄盖,标黄盖照常);plus 同白名单语义(勾一个版本整坑入池)。
-//   基础白名单里新加的武将自动进所有套组(除非该套组 minus 了它)。
+//   套组 = 一份独立的白名单:{ id, name, white:[武将id] }。发将时选了套组 → 白名单整份换成它的;没选 → 用环境的默认白名单。
+//   (首版做成「默认名单上的增减」,用户当天定:要每套独立的名单 —— 各套互不影响,默认名单加了新将不会自动进套组。)
+//   黑名单、临时 ban 池仍是环境级,所有套组共用。线上牌桌(无名杀)只认默认白名单。
 export const POOL_SET_MAX = 8;       // 每个环境最多几套
 export const POOL_SET_NAME_MAX = 10; // 套组名最长字数
 export function applyPoolSet({ white, ban }, set) {
-  const w = new Set([...(white || [])].map(Number)), b = new Set([...(ban || [])].map(Number));
-  if (set) {
-    for (const id of set.plus || []) w.add(Number(id));
-    for (const id of set.minus || []) { w.delete(Number(id)); b.add(Number(id)); }
-  }
-  return { white: [...w], ban: [...b] };
+  const ids = (a) => [...new Set([...(a || [])].map(Number))];
+  return { white: ids(set ? set.white : white), ban: ids(ban) };
 }
-// 存盘前的规整:丢掉非法项;id 去重;同一武将同时在 plus 和 minus → 以 minus 为准
+// 存盘前的规整:丢掉非法项;套组 id / 武将 id 去重;名字截断
 export function normPoolSets(raw) {
   const ids = (a) => [...new Set((Array.isArray(a) ? a : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 5000);
   const out = [], seen = new Set();
@@ -57,8 +52,7 @@ export function normPoolSets(raw) {
     const id = String(s.id || "").trim(), name = String(s.name || "").trim().slice(0, POOL_SET_NAME_MAX);
     if (!/^[A-Za-z0-9_-]{1,16}$/.test(id) || !name || seen.has(id)) continue;
     seen.add(id);
-    const minus = ids(s.minus), m = new Set(minus);
-    out.push({ id, name, plus: ids(s.plus).filter((i) => !m.has(i)), minus });
+    out.push({ id, name, white: ids(s.white) });
     if (out.length >= POOL_SET_MAX) break;
   }
   return out;

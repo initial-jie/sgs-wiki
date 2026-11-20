@@ -709,7 +709,7 @@ function openDealSetup(){
     dealSetSrc=(P[k]&&P[k].white&&P[k].white.length)?k:"junzheng";
     const sets=(P[dealSetSrc]&&P[dealSetSrc].sets)||[];
     row.style.display=sets.length?"":"none";
-    sel.innerHTML=`<option value="">基础名单(不分套)</option>`+sets.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
+    sel.innerHTML=`<option value="">默认名单</option>`+sets.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
     let last=""; try{ last=localStorage.getItem("sgs_dealSet_"+dealSetSrc)||""; }catch(e){}
     sel.value=sets.some(s=>s.id===last)?last:"";
   };

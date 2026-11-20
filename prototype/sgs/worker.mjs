@@ -189,8 +189,8 @@ export function handleSgs(request, env, url) {
 }
 
 // 三国杀全局配置 DO(单例 idFromName("global")):各环境的白名单(可发将)+ 黑名单(禁将)。
-//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,plus:[id],minus:[id]}]} }, seen:[id], updatedAt }
-//   sets = 将池套组(2026-11-20):在该环境基础名单上的增减,发将时选用哪一套(语义见 shared/deal.mjs applyPoolSet)。
+//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,white:[id]}]} }, seen:[id], updatedAt }
+//   sets = 将池套组(2026-11-20):每套一份独立的白名单,发将时选用哪一套(不选 = 上面的默认 white;语义见 shared/deal.mjs applyPoolSet)。
 //   旧格式 {ids,seen,updatedAt}(2026-10-01 首版只有一份白名单)读取时自动迁移:ids → 军争白名单,黑名单取文件种子。
 // 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
 export class SgsConfigDO {
@@ -347,8 +347,8 @@ export class RoomDO extends RoomDOBase {
   }
   // 发将开局:名单从 SgsConfigDO 现读(/pool 页保存的那份)。
   //   环境 = msg.pool(发将设置里手选)或按座位数自动;该环境白名单为空 → 沿用军争白名单;黑名单用该环境自己的(房内禁将开关关着则不禁)。
-  //   套组 = msg.set(该环境的某个套组 id;空 = 基础名单):在基础名单上增减。白名单沿用军争时,套组也沿用军争的。
-  //   套组的 minus 是「这一套里不出现」,属于将池定义本身,不受房内禁将开关影响。
+  //   套组 = msg.set(该环境的某个套组 id;空 = 默认白名单):白名单整份换成该套组的。白名单沿用军争时,套组也沿用军争的。
+  //   黑名单不分套(所有套组共用该环境的黑名单)。
   async dealStart(id, msg, core) {
     const cfg = await this.syncConfig(true);
     if (!cfg) return { error: "POOL_UNAVAILABLE" };
