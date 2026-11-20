@@ -1438,6 +1438,47 @@ console.log("\n=== 场景 20:线上发将 ===");
   check("神版独立成坑(勾神关羽不带出关羽)", !!grp(p, "神关羽") && !grp(p, "关羽") && names(grp(p, "神关羽")).join() === "神关羽");
   p = P({ whitelist: [idOf("曹丕"), idOf("黄盖")] });
   check("曹丕只进君主池,不进普通池", !grp(p, "曹丕") && !!grp(p, "曹丕", "lord") && !grp(p, "黄盖", "lord"));
+  // —— 《蚀心入魔》必须自己被勾选:不随同名坑带出(只进总库、不进选将池的那 32 将)——
+  p = P({ whitelist: [idOf("赵云"), idOf("曹操")] });
+  check("蚀心入魔:勾赵云/曹操,嗔·赵云 / 嗔·曹操 / 疑·魔曹操 都不跟出来(界赵云仍随坑可选)",
+    names(grp(p, "赵云")).includes("界赵云") && !names(grp(p, "赵云")).includes("嗔·赵云") && !names(grp(p, "曹操")).some((n) => /·/.test(n)));
+  p = P({ whitelist: [idOf("曹操"), idOf("疑·魔曹操")] });
+  check("蚀心入魔:自己被勾选才可选(疑·魔曹操进曹操坑,嗔·曹操仍不在)", names(grp(p, "曹操")).includes("疑·魔曹操") && !names(grp(p, "曹操")).includes("嗔·曹操"));
+  p = P({ whitelist: [idOf("疑·王垕")] });
+  check("蚀心入魔:只勾它自己 → 单独成坑入池", names(grp(p, "王垕")).join() === "疑·王垕" && p.normal.length === 1);
+  // —— 发将按坑等概率:同名版本多不加权 ——
+  {
+    const pools = P({ whitelist: [idOf("曹操"), idOf("界曹操"), idOf("SP曹操"), idOf("费祎"), idOf("黄盖"), idOf("关羽"), idOf("张飞"), idOf("马超"), idOf("许褚"), idOf("甘宁"), idOf("吕蒙"), idOf("华佗")] });
+    let seed = 7; const rng = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const cnt = {}; const N = 3000;
+    for (let i = 0; i < N; i++) {
+      const rm = new RoomCore("t", 2, rng); rm.claimSeat("a", 1);
+      rm.dealStart("a", { mode: "normal", lordSeat: null, pools });
+      for (const s of rm.deal.hands[1].slots) cnt[s.key] = (cnt[s.key] || 0) + 1;
+    }
+    const exp = 6 / pools.normal.length, cc = cnt["曹操"] / N, fy = cnt["费祎"] / N; // 勾了 3 个版本的曹操仍只算 1 个坑:10 坑发 6 → 期望各 0.6
+    check(`发将按坑等概率:曹操坑(${grp(pools, "曹操").opts.length} 个版本、勾了 3 个)出现率 ${cc.toFixed(3)} ≈ 费祎坑(1 个版本)${fy.toFixed(3)} ≈ ${exp.toFixed(2)}`,
+      pools.normal.length === 10 && Math.abs(cc - exp) < 0.04 && Math.abs(fy - exp) < 0.04);
+  }
+  // —— 将池套组:基础名单上的增减 ——
+  {
+    const { applyPoolSet, normPoolSets, POOL_SET_MAX } = await import("./shared/deal.mjs");
+    const base = { white: [idOf("黄盖"), idOf("界曹操"), idOf("关羽")], ban: [idOf("SP关羽")] };
+    let e = applyPoolSet(base, null);
+    check("套组为空 = 基础名单原样", e.white.length === 3 && e.ban.length === 1);
+    e = applyPoolSet(base, { id: "su", name: "素将", plus: [idOf("费祎")], minus: [idOf("界曹操"), idOf("界黄盖")] });
+    p = P({ whitelist: e.white, banned: e.ban });
+    check("套组 minus 按版本排除:界黄盖没了、标黄盖还在;唯一勾选的界曹操被排除 → 曹操整坑出池",
+      names(grp(p, "黄盖")).includes("黄盖") && !names(grp(p, "黄盖")).includes("界黄盖") && !grp(p, "曹操"));
+    check("套组 plus 追加入池(费祎);基础黑名单照旧(SP关羽)", !!grp(p, "费祎") && !!grp(p, "关羽") && !names(grp(p, "关羽")).includes("SP关羽"));
+    e = applyPoolSet({ white: base.white, ban: [] }, { plus: [], minus: [idOf("界黄盖")] });
+    check("禁将开关关着(基础黑名单不传)时,套组的排除仍然生效", e.ban.join() === String(idOf("界黄盖")));
+    const ns = normPoolSets([{ id: "a1", name: "  素将  ", plus: [5, "6", 6, -1, "x"], minus: [6, 7] }, { id: "a1", name: "重复id" }, { id: "bad id", name: "x" }, { id: "b2", name: "" }, null,
+      { id: "c3", name: "一二三四五六七八九十十一", plus: [], minus: [] }]);
+    check("normPoolSets:去非法/重复 id/空名;名字截 10 字;同时在 plus 与 minus → 以 minus 为准",
+      ns.length === 2 && ns[0].name === "素将" && ns[0].plus.join() === "5" && ns[0].minus.join() === "6,7" && ns[1].name.length === 10);
+    check("normPoolSets:最多 " + POOL_SET_MAX + " 套;非数组 → 空", normPoolSets(Array.from({ length: 12 }, (_, i) => ({ id: "s" + i, name: "n" + i }))).length === POOL_SET_MAX && normPoolSets("x").length === 0);
+  }
   p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")] });
   check("身份局:董昭/谋董昭 都可选", names(grp(p, "董昭")).includes("董昭") && names(grp(p, "董昭")).includes("谋董昭"));
   p = P({ whitelist: [idOf("董昭"), idOf("谋董昭")], mode: "dazhong" });

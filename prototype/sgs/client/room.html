@@ -589,7 +589,7 @@ function draw3Effects(t){const out=[],used={};let g=0;while(out.length<3&&g++<80
 const RC=RoomClient.create({
   wsPath: code=>"/api/room/"+code+"/ws",
   errorText: {BANNED:"该武将在禁将池,不能落座",
-    DEAL_ACTIVE:"已有发将在进行中",POOL_NOT_SET:"将池白名单还没设置(房间设置 → 将池编辑)",POOL_TOO_SMALL:"将池不够发:可发的坑数少于 人数×6",POOL_UNAVAILABLE:"读取将池失败,稍后再试",
+    DEAL_ACTIVE:"已有发将在进行中",POOL_NOT_SET:"将池白名单还没设置(房间设置 → 将池编辑)",POOL_SET_UNKNOWN:"选的将池套组不存在了(可能刚被删),重新打开发将设置再选",POOL_TOO_SMALL:"将池不够发:可发的坑数少于 人数×6",POOL_UNAVAILABLE:"读取将池失败,稍后再试",
     BAD_LORD:"君主座位必须是已入座的座位",NO_PLAYERS:"还没有人入座",LORD_FIRST:"等君主先选定并亮出",ALREADY_PICKED:"已选定并亮出,不能再改",CANT_SWAP:"这个坑不能换(已换过,或是君主候选)",
     POOL_EMPTY:"将池里没有可换的了",TEMPBAN_TOO_SMALL:"临时 ban 池太小:每人至少要 3 选 1(将池编辑 → 临时 ban 池 多勾一些)",TEMPBAN_EMPTY:"临时 ban 池里没有在本局将池里的武将(将池编辑 → 临时 ban 池)",
     BAN_PHASE:"还在临时 ban 阶段,等全员 ban 完再选将",CALL_PHASE:"还在叫地主,等地主定了再选将/换将",NOT_CALL_PHASE:"不在叫地主阶段",NOT_YOUR_CALL:"还没轮到你叫",NOT_HIDDEN:"这个座位没有隐匿武将",NOT_BAN_PHASE:"不在临时 ban 阶段",ALREADY_BANNED:"你已经 ban 过了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束",
@@ -679,6 +679,7 @@ function openDealSetup(){
       +Object.entries(DEAL_MODE_UI).map(([k,v])=>`<option value="${k}">${v[0]}${k==="douzhu"?"(每人 3 将 · 叫地主 +2)":k!=="normal"?"("+v[1]+"专属将必出)":""}</option>`).join("")+`</select></div>
     <div class="row" style="margin-bottom:8px"><label style="flex:none;width:64px">将池</label><select id="deal-pool" class="grow"><option value="">自动(按座位数:${esc((BAN_POOLS[banPoolKey()]||{}).label||banPoolKey())})</option>`
       +Object.entries(BAN_POOLS).map(([k,p])=>`<option value="${esc(k)}">${esc(p.label||k)}</option>`).join("")+`</select></div>
+    <div class="row" id="deal-set-row" style="margin-bottom:8px;display:none"><label style="flex:none;width:64px">套组</label><select id="deal-set" class="grow"></select></div>
     <div class="row" style="margin-bottom:12px"><label style="flex:none;width:64px">君主座位</label><select id="deal-lord" class="grow"><option value="">无君主(不发主公技候选)</option>`
       +held.map(s=>`<option value="${s.seatNo}">座位${s.seatNo} · ${esc(s.holderDevices[0])}</option>`).join("")+`</select></div>
     <div style="margin:-4px 0 8px;font-size:13px"><label><input type="checkbox" id="deal-tempban" style="width:auto"> 本局临时 ban:每人从「临时 ban 池」随机看 3~5 个,各 ban 一个(按版本),本局不出现</label></div>
@@ -700,9 +701,23 @@ function openDealSetup(){
         +(fs.length>1?`两名主帅(座位${fs.join("、")})先各自暗选、都选定后一起亮出,其余人再暗选、一起亮出。`:fs.length?`${esc(state.ident.seats[fs[0]].pub)}(座位${fs[0]})先选定并亮出,其余人再暗选、一起亮出。`:"所有人一起暗选亮出。")+`</div>`);
     }
   }
-  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value, tb=$("#deal-tempban").checked, td=$("#deal-today").checked;
-    try{ localStorage.setItem("sgs_dealTempBan",tb?"1":"0"); localStorage.setItem("sgs_dealToday",td?"1":"0"); }catch(e){}
-    send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,lordSeat:lord===""?null:+lord,tempBan:tb,excludeToday:td});closeModal();};
+  // 将池套组(/pool 页维护:同一环境分「素将 / 荤将」等几套):列出所选环境的套组,记住本机上次在该环境用的那一套。
+  //   环境白名单为空 → 沿用军争的白名单,套组也沿用军争的(与服务端 dealStart 同规则)。没有套组则整行不显示。
+  let dealSetSrc="";
+  const fillSets=()=>{ const row=$("#deal-set-row"), sel=$("#deal-set"); if(!row||!sel) return;
+    const P=(POOL_CFG&&POOL_CFG.pools)||{}, k=$("#deal-pool").value||banPoolKey();
+    dealSetSrc=(P[k]&&P[k].white&&P[k].white.length)?k:"junzheng";
+    const sets=(P[dealSetSrc]&&P[dealSetSrc].sets)||[];
+    row.style.display=sets.length?"":"none";
+    sel.innerHTML=`<option value="">基础名单(不分套)</option>`+sets.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
+    let last=""; try{ last=localStorage.getItem("sgs_dealSet_"+dealSetSrc)||""; }catch(e){}
+    sel.value=sets.some(s=>s.id===last)?last:"";
+  };
+  $("#deal-pool").addEventListener("change",fillSets); fillSets();
+  fetch("/api/pool",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ if(d&&d.pools){ POOL_CFG=d; fillSets(); } }).catch(()=>{}); // 打开时现拉一次,套组刚改过也能看到
+  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value, tb=$("#deal-tempban").checked, td=$("#deal-today").checked, st=($("#deal-set")||{}).value||"";
+    try{ localStorage.setItem("sgs_dealTempBan",tb?"1":"0"); localStorage.setItem("sgs_dealToday",td?"1":"0"); if(dealSetSrc) localStorage.setItem("sgs_dealSet_"+dealSetSrc,st); }catch(e){}
+    send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,set:st||null,lordSeat:lord===""?null:+lord,tempBan:tb,excludeToday:td});closeModal();};
 }
 function openDeal(sn){ dealSeat=sn; dealOpen=null; renderDeal(); }
 function renderDeal(){

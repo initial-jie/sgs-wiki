@@ -3,7 +3,7 @@
 
 import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo } from "./shared/room-logic.mjs";
 import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
-import { buildDealPools, dropIdsFromPools, opt as dealOpt } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)
+import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, groupKey, needsExplicit } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
 import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
@@ -56,7 +56,8 @@ setHeroInfo(Object.fromEntries(GENERALS_DATA.map((h) => [h.tool || String(h.id),
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 // 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)
 // pack:所属包(缺则回退 genre)—— 新录武将没补 hero-packs.json 也能在编辑页出现
-const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => ({ ...h, pack: PACKS_DATA.packs[h.id] || h.genre || "其他", gender: FEMALE_IDS.has(h.id) ? "女" : "男", ...(PINYIN_DATA[h.name] ? { py: PINYIN_DATA[h.name] } : {}) })));
+// gk:将坑 key(同名合并,发将以坑为单位);wlStrict:必须自己被勾进白名单才可选(不随同名坑带出)—— 将池编辑页用它们标「随同名可选」
+const GENERALS_JSON = JSON.stringify(GENERALS_DATA.map((h) => ({ ...h, pack: PACKS_DATA.packs[h.id] || h.genre || "其他", gender: FEMALE_IDS.has(h.id) ? "女" : "男", gk: groupKey(h), ...(needsExplicit(h) ? { wlStrict: true } : {}), ...(PINYIN_DATA[h.name] ? { py: PINYIN_DATA[h.name] } : {}) })));
 // 合并 wiki 抽取的衍生技 + 房间专属补充(同名武将则数组拼接;房间补充仅房间可见)。map 浅拷贝每条,便于下面贴 text_en 不污染 import 源
 const DERIVED_MERGED = (() => {
   const out = {};
@@ -188,7 +189,8 @@ export function handleSgs(request, env, url) {
 }
 
 // 三国杀全局配置 DO(单例 idFromName("global")):各环境的白名单(可发将)+ 黑名单(禁将)。
-//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id]} }, seen:[id], updatedAt }
+//   存储(key "pool"):{ pools:{ [环境key]:{white:[id],ban:[id],temp:[id],sets:[{id,name,plus:[id],minus:[id]}]} }, seen:[id], updatedAt }
+//   sets = 将池套组(2026-11-21):在该环境基础名单上的增减,发将时选用哪一套(语义见 shared/deal.mjs applyPoolSet)。
 //   旧格式 {ids,seen,updatedAt}(2026-10-01 首版只有一份白名单)读取时自动迁移:ids → 军争白名单,黑名单取文件种子。
 // 不继承 RoomDOBase —— 没有 WebSocket、没有 2h TTL 闹钟,数据长期保留。绑定 SGS_CONFIG(wrangler.toml 迁移 v3)。
 export class SgsConfigDO {
@@ -202,6 +204,7 @@ export class SgsConfigDO {
         white: p ? (p.white || []) : (k === POOL_KEYS[0] ? ((raw && raw.ids) || POOL_SEED.ids || []) : []),
         ban: p ? (p.ban || []) : (BANNED_DATA.pools[k].ids || []),
         temp: p ? (p.temp || []) : [], // 临时 ban 池:发将时各人从中随机 3~5 选 1 ban 掉(2026-10-17)
+        sets: p ? (p.sets || []) : [], // 将池套组(2026-11-21)
       };
     }
     return { pools, seen: (raw && raw.seen) || [], updatedAt: (raw && raw.updatedAt) || null };
@@ -266,13 +269,14 @@ export class SgsConfigDO {
       const pools = {};
       for (const k of POOL_KEYS) {
         const b = body && body.pools && body.pools[k];
-        pools[k] = b ? { white: norm(b.white), ban: norm(b.ban), temp: b.temp === undefined ? cur.pools[k].temp : norm(b.temp) } : cur.pools[k]; // 没带的环境保持原样;旧客户端不带 temp 则保留
+        pools[k] = b ? { white: norm(b.white), ban: norm(b.ban), temp: b.temp === undefined ? cur.pools[k].temp : norm(b.temp),
+          sets: b.sets === undefined ? cur.pools[k].sets : normPoolSets(b.sets) } : cur.pools[k]; // 没带的环境保持原样;不带 temp / sets 的旧客户端与脚本 → 保留原值
       }
       if (body && Array.isArray(body.ids) && !(body.pools && body.pools[POOL_KEYS[0]])) pools[POOL_KEYS[0]].white = norm(body.ids); // 兼容旧客户端 {ids}
       const saved = { pools, seen: body && body.seen ? norm(body.seen) : cur.seen, updatedAt: Date.now() };
       await this.state.storage.put("pool", saved);
       return new Response(JSON.stringify({ ok: true, updatedAt: saved.updatedAt,
-        counts: Object.fromEntries(POOL_KEYS.map((k) => [k, { white: pools[k].white.length, ban: pools[k].ban.length, temp: pools[k].temp.length }])) }), { headers: noStore });
+        counts: Object.fromEntries(POOL_KEYS.map((k) => [k, { white: pools[k].white.length, ban: pools[k].ban.length, temp: pools[k].temp.length, sets: pools[k].sets.length }])) }), { headers: noStore });
     }
     const cfg = await this.load();
     for (const k of POOL_KEYS) Object.assign(cfg.pools[k], POOL_META[k]);
@@ -343,14 +347,22 @@ export class RoomDO extends RoomDOBase {
   }
   // 发将开局:名单从 SgsConfigDO 现读(/pool 页保存的那份)。
   //   环境 = msg.pool(发将设置里手选)或按座位数自动;该环境白名单为空 → 沿用军争白名单;黑名单用该环境自己的(房内禁将开关关着则不禁)。
+  //   套组 = msg.set(该环境的某个套组 id;空 = 基础名单):在基础名单上增减。白名单沿用军争时,套组也沿用军争的。
+  //   套组的 minus 是「这一套里不出现」,属于将池定义本身,不受房内禁将开关影响。
   async dealStart(id, msg, core) {
     const cfg = await this.syncConfig(true);
     if (!cfg) return { error: "POOL_UNAVAILABLE" };
     const key = POOL_KEYS.includes(msg.pool) ? msg.pool : banPoolForSeats(core.seatNos().length);
     const own = cfg.pools[key].white;
-    const wl = own.length ? own : cfg.pools[POOL_KEYS[0]].white;
+    const src = own.length ? key : POOL_KEYS[0]; // 白名单(及其套组)实际取自哪个环境
+    let set = null;
+    if (msg.set != null && msg.set !== "") {
+      set = (cfg.pools[src].sets || []).find((s) => s.id === String(msg.set)) || null;
+      if (!set) return { error: "POOL_SET_UNKNOWN" };
+    }
+    const eff = applyPoolSet({ white: cfg.pools[src].white, ban: core.banEnabled !== false ? cfg.pools[key].ban : [] }, set);
+    const wl = eff.white, banned = eff.ban;
     if (!wl.length) return { error: "POOL_NOT_SET" };
-    const banned = core.banEnabled !== false ? cfg.pools[key].ban : [];
     let pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode });
     const poolIds = () => new Set([...pools.normal, ...pools.lord, ...(pools.forced ? [pools.forced] : [])].flatMap((g) => g.opts.map((o) => o.id)));
     // 开关②「排除今日已登场」(小伙伴的 idea,默认关):从历史对局里取今天(北京时间)已落座过的武将名,按版本剔除;剔完不够发会报 POOL_TOO_SMALL
@@ -376,6 +388,6 @@ export class RoomDO extends RoomDOBase {
       tempBan = GENERALS_DATA.filter((x) => tl.includes(x.id) && inPool.has(x.id)).map(dealOpt);
       if (!tempBan.length) return { error: "TEMPBAN_EMPTY" };
     }
-    return core.dealStart(id, { mode: msg.mode, lordSeat: msg.lordSeat, pools, poolKey: key, poolLabel: POOL_META[key].label + (own.length ? "" : "·沿用军争池"), tempBan, excluded });
+    return core.dealStart(id, { mode: msg.mode, lordSeat: msg.lordSeat, pools, poolKey: key, poolLabel: POOL_META[key].label + (own.length ? "" : "·沿用军争池") + (set ? "·" + set.name : ""), tempBan, excluded });
   }
 }

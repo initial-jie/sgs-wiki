@@ -28,6 +28,41 @@ export const DEAL_MODES = {
 const LORD_ONLY_KEYS = new Set(["曹丕"]);
 const IDENTITY_ONLY_IDS = new Set([355]); // 董昭
 const MODE_EXCLUSIVE_GENRE = "不臣之君";
+// 「同名整坑可选」的例外:线下包《蚀心入魔》的武将必须自己被勾进白名单才可选,不随同名坑带出
+// (用户 2026-11-11:36 将里只有四个魔将进选将池,其余只进总库 —— 否则 嗔·赵云 会跟着赵云坑出现)。
+const EXPLICIT_ONLY_GENRE = "蚀心入魔";
+export function needsExplicit(h) { return !!h && h.genre === EXPLICIT_ONLY_GENRE; }
+
+// 将池套组(用户 2026-11-21:同一环境里分「素将 / 荤将」等几套,发将时一键切换,不用来回重勾)。
+//   套组 = 在该环境基础名单上的增减:{ id, name, plus:[武将id], minus:[武将id] }
+//   生效白名单 = (基础白名单 ∪ plus) − minus;生效黑名单 = 基础黑名单 ∪ minus。
+//   minus 按版本排除(同黑名单语义:排除界黄盖,标黄盖照常);plus 同白名单语义(勾一个版本整坑入池)。
+//   基础白名单里新加的武将自动进所有套组(除非该套组 minus 了它)。
+export const POOL_SET_MAX = 8;       // 每个环境最多几套
+export const POOL_SET_NAME_MAX = 10; // 套组名最长字数
+export function applyPoolSet({ white, ban }, set) {
+  const w = new Set([...(white || [])].map(Number)), b = new Set([...(ban || [])].map(Number));
+  if (set) {
+    for (const id of set.plus || []) w.add(Number(id));
+    for (const id of set.minus || []) { w.delete(Number(id)); b.add(Number(id)); }
+  }
+  return { white: [...w], ban: [...b] };
+}
+// 存盘前的规整:丢掉非法项;id 去重;同一武将同时在 plus 和 minus → 以 minus 为准
+export function normPoolSets(raw) {
+  const ids = (a) => [...new Set((Array.isArray(a) ? a : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 5000);
+  const out = [], seen = new Set();
+  for (const s of Array.isArray(raw) ? raw : []) {
+    if (!s || typeof s !== "object") continue;
+    const id = String(s.id || "").trim(), name = String(s.name || "").trim().slice(0, POOL_SET_NAME_MAX);
+    if (!/^[A-Za-z0-9_-]{1,16}$/.test(id) || !name || seen.has(id)) continue;
+    seen.add(id);
+    const minus = ids(s.minus), m = new Set(minus);
+    out.push({ id, name, plus: ids(s.plus).filter((i) => !m.has(i)), minus });
+    if (out.length >= POOL_SET_MAX) break;
+  }
+  return out;
+}
 
 // 与 room.html heroBaseName 同一前缀集(改一处要同步另一处)。
 // 用户 2026-10-02:(标)界/谋/族/闪/SP 同名都算同一位武将。2026-10-02 审计:库里 族34/闪5/标1 全是前缀写法,无误伤。
@@ -70,6 +105,7 @@ export function buildDealPools({ heroes, whitelist, banned, mode = "normal" }) {
   const groups = new Map(); // key → { key, opts:[], wl:bool }
   for (const h of heroes) {
     if (!usable(h)) continue;
+    if (needsExplicit(h) && !wl.has(h.id)) continue; // 蚀心入魔:没被勾选就不随同名坑带出
     const key = groupKey(h);
     if (!groups.has(key)) groups.set(key, { key, opts: [], wl: false });
     const g = groups.get(key);
