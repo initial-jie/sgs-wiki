@@ -593,7 +593,7 @@ const RC=RoomClient.create({
     NOT_ZC_ACTION:"只有界左慈本人(或代持)能操作化身",HUASHEN_EMPTY:"化身将池已经抽空了",NOT_YOUR_HUASHEN:"这张不在你的化身牌里",BAD_HUASHEN_SKILL:"这个技能不能通过化身获得",SAME_HUASHEN:"已经是这张化身的这个技能了",BAD_HUASHEN_COUNT:"一次移去 1~2 张",HUASHEN_SHOWN:"展示中的化身不能移去",
     DEAL_ACTIVE:"已有发将在进行中",POOL_NOT_SET:"将池白名单还没设置(房间设置 → 将池编辑)",POOL_SET_UNKNOWN:"选的将池套组不存在了(可能刚被删),重新打开发将设置再选",POOL_TOO_SMALL:"将池不够发:可发的坑数少于 人数×6",POOL_UNAVAILABLE:"读取将池失败,稍后再试",
     BAD_LORD:"君主座位必须是已入座的座位",NO_PLAYERS:"还没有人入座",LORD_FIRST:"等君主先选定并亮出",ALREADY_PICKED:"已选定并亮出,不能再改",CANT_SWAP:"这个坑不能换(已换过,或是君主候选)",
-    POOL_EMPTY:"将池里没有可换的了",TEMPBAN_TOO_SMALL:"临时 ban 池太小:每人至少要 3 选 1(将池编辑 → 临时 ban 池 多勾一些)",TEMPBAN_EMPTY:"临时 ban 池里没有在本局将池里的武将(将池编辑 → 临时 ban 池)",
+    POOL_EMPTY:"将池里没有可换的了",TEMPBAN_TOO_SMALL:"临时 ban 池太小:在本局将池里的至少要 人数×2 张(将池编辑 → 临时 ban 池 多勾一些,或换个套组)",TEMPBAN_EMPTY:"临时 ban 池里没有在本局将池里的武将(将池编辑 → 临时 ban 池)",
     BAN_PHASE:"还在临时 ban 阶段,等全员 ban 完再选将",CALL_PHASE:"还在叫地主,等地主定了再选将/换将",NOT_CALL_PHASE:"不在叫地主阶段",NOT_YOUR_CALL:"还没轮到你叫",NOT_HIDDEN:"这个座位没有隐匿武将",NOT_BAN_PHASE:"不在临时 ban 阶段",ALREADY_BANNED:"你已经 ban 过了",NOT_ALL_PICKED:"还有人没选定",NOT_IN_DEAL:"该座位不在本次发将里",BAD_PICK:"候选已变化,请重新选择",NO_DEAL:"发将已结束",
     GENERAL_LOCKED:"线上发将选定的武将不能再改(要重来请重新发将,或在房间设置里点「新一局」)",
     COUNT_MISMATCH:"身份张数之和要等于入座人数",BAD_LEAD:"君主身份必须正好 1 张(明忠模式还要至少 1 名忠臣)",BAD_COUNTS:"身份张数填得不对",BAD_LOST:"失心张数不对",
@@ -684,7 +684,7 @@ function openDealSetup(){
     <div class="row" id="deal-set-row" style="margin-bottom:8px;display:none"><label style="flex:none;width:64px">套组</label><select id="deal-set" class="grow"></select></div>
     <div class="row" style="margin-bottom:12px"><label style="flex:none;width:64px">君主座位</label><select id="deal-lord" class="grow"><option value="">无君主(不发主公技候选)</option>`
       +held.map(s=>`<option value="${s.seatNo}">座位${s.seatNo} · ${esc(s.holderDevices[0])}</option>`).join("")+`</select></div>
-    <div style="margin:-4px 0 8px;font-size:13px"><label><input type="checkbox" id="deal-tempban" style="width:auto"> 本局临时 ban:每人从「临时 ban 池」随机看 3~5 个,各 ban 一个(按版本),本局不出现</label></div>
+    <div style="margin:-4px 0 8px;font-size:13px"><label><input type="checkbox" id="deal-tempban" style="width:auto"> 本局临时 ban:每人从「临时 ban 池」随机看 2~5 个,各 ban 1~2 个(按版本),本局不出现</label><div class="hint" id="deal-tempban-hint" style="margin:3px 0 0 22px"></div></div>
     <div style="margin:0 0 12px;font-size:13px;display:none"><label><input type="checkbox" id="deal-today" style="width:auto"> 排除今天已登场的武将(按历史对局,北京时间当天;只剔那个版本)</label></div><!-- 用户 2026-10-17:太一刀切,先隐藏(服务端 excludeToday 逻辑保留,把 display:none 去掉即恢复) -->
     <div class="row"><button class="primary grow" id="deal-go"${held.length?"":" disabled"}>开始发将</button></div>
     ${held.length?"":'<div class="hint">还没有人入座,先认领座位。</div>'}</div></div>`;
@@ -715,10 +715,27 @@ function openDealSetup(){
     let last=""; try{ last=localStorage.getItem("sgs_dealSet_"+dealSetSrc)||""; }catch(e){}
     sel.value=sets.some(s=>s.id===last)?last:"";
   };
-  $("#deal-pool").addEventListener("change",fillSets); fillSets();
-  fetch("/api/pool",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ if(d&&d.pools){ POOL_CFG=d; fillSets(); } }).catch(()=>{}); // 打开时现拉一次,套组刚改过也能看到
-  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value, tb=$("#deal-tempban").checked, td=$("#deal-today").checked, st=($("#deal-set")||{}).value||"";
-    try{ localStorage.setItem("sgs_dealTempBan",tb?"1":"0"); localStorage.setItem("sgs_dealToday",td?"1":"0"); if(dealSetSrc) localStorage.setItem("sgs_dealSet_"+dealSetSrc,st); }catch(e){}
+  // 临时 ban 开关的开局前校验(用户 2026-11-20):候选 = 临时 ban 池 ∩ 所选环境 / 套组 / 模式下的本局将池;不足 人数×2 就禁用开关。
+  //   数字问服务端 /api/deal-preview(与真发将同一套算法,不在页面里再抄一遍);没拿到结果时不拦(发将时服务端照样会校验)。
+  let tbWant=$("#deal-tempban").checked, tbSeq=0; // tbWant=用户想不想开(被禁用时不丢掉这个意愿)
+  $("#deal-tempban").addEventListener("change",()=>{ if(!$("#deal-tempban").disabled) tbWant=$("#deal-tempban").checked; });
+  const checkTemp=()=>{ const cb=$("#deal-tempban"), hint=$("#deal-tempban-hint"); if(!cb||!hint) return;
+    const seq=++tbSeq, n=held.length, k=$("#deal-pool").value||banPoolKey();
+    const qs="pool="+encodeURIComponent(k)+"&set="+encodeURIComponent(($("#deal-set")||{}).value||"")+"&mode="+encodeURIComponent($("#deal-mode").value)+"&ban="+(banOn()?1:0);
+    fetch("/api/deal-preview?"+qs,{cache:"no-store"}).then(r=>r.json()).then(p=>{ if(seq!==tbSeq||!$("#deal-tempban")) return;
+      if(!p||!p.ok){ cb.disabled=false; cb.checked=tbWant; hint.textContent=""; return; }
+      const need=n*p.tempMin, ok=n>0&&p.tempCands>=need;
+      cb.disabled=n>0&&!ok; cb.checked=ok&&tbWant; cb.closest("label").style.opacity=cb.disabled?".5":"";
+      if(!n) hint.textContent="";
+      else if(ok){ const per=Math.min(p.tempMax,Math.floor(p.tempCands/n)), each=n<=p.tempSmall?2:1; hint.innerHTML=`临时 ban 池在本局将池里有 ${p.tempCands} 张 → ${n} 人每人看 ${per} 个、各 ban ${Math.min(each,per)} 个。`; }
+      else hint.innerHTML=`<b style="color:var(--seal)">本局不能开</b>:临时 ban 池在本局将池里只有 ${p.tempCands} 张,不足 人数×${p.tempMin} = ${need} 张。换个套组,或去「将池编辑 → 临时 ban 池」多勾一些。`;
+    }).catch(()=>{ if(seq===tbSeq&&$("#deal-tempban")){ cb.disabled=false; hint.textContent=""; } });
+  };
+  $("#deal-pool").addEventListener("change",()=>{fillSets();checkTemp();}); fillSets();
+  $("#deal-set").addEventListener("change",checkTemp); $("#deal-mode").addEventListener("change",checkTemp); checkTemp();
+  fetch("/api/pool",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{ if(d&&d.pools){ POOL_CFG=d; fillSets(); checkTemp(); } }).catch(()=>{}); // 打开时现拉一次,套组刚改过也能看到
+  $("#deal-go").onclick=()=>{const lord=$("#deal-lord").value, tb=$("#deal-tempban").checked&&!$("#deal-tempban").disabled, td=$("#deal-today").checked, st=($("#deal-set")||{}).value||"";
+    try{ localStorage.setItem("sgs_dealTempBan",tbWant?"1":"0"); localStorage.setItem("sgs_dealToday",td?"1":"0"); if(dealSetSrc) localStorage.setItem("sgs_dealSet_"+dealSetSrc,st); }catch(e){}
     send({type:"dealStart",mode:$("#deal-mode").value,pool:$("#deal-pool").value||null,set:st||null,lordSeat:lord===""?null:+lord,tempBan:tb,excludeToday:td});closeModal();};
 }
 function openDeal(sn){ dealSeat=sn; dealOpen=null; renderDeal(); }

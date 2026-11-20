@@ -3,7 +3,7 @@
 
 import { RoomCore, setBannedPools, banPoolForSeats, setHeroInfo, setHuashenPool, buildHuashenPool } from "./shared/room-logic.mjs";
 import { identModesForClient } from "./shared/identity.mjs"; // 身份自动发放:模式表(发身份设置弹层用)
-import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, defaultPoolRules, normPoolRules, groupKey, needsExplicit } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
+import { buildDealPools, dropIdsFromPools, opt as dealOpt, applyPoolSet, normPoolSets, defaultPoolRules, normPoolRules, groupKey, needsExplicit, DEAL_MODES, DEAL_TEMPBAN_MIN, DEAL_TEMPBAN_MAX, DEAL_TEMPBAN_SMALL } from "./shared/deal.mjs"; // 线上发将:组池(同名成坑/曹丕仅君主/董昭仅身份局/模式专属君主)+ 将池套组
 import { RoomDOBase, jsonResponse, htmlResponse, routeRoomWs } from "../common/room-do.mjs";
 import ROOM_HTML from "./client/room.html"; // 文本模块(.html 默认即 Text)
 import POOL_HTML from "./client/pool.html"; // 将池(白名单)编辑页 /pool
@@ -54,6 +54,29 @@ setHeroInfo(Object.fromEntries(GENERALS_DATA.map((h) => [h.tool || String(h.id),
   yinni: (h.skills || []).some((s) => /^隐匿/.test(s.effect || "")) }]))); // yinni=带隐匿技(技能文本以「隐匿」开头;曹爽托孤只是提到隐匿,不算)
 
 setHuashenPool(buildHuashenPool(GENERALS_DATA, (h) => PACKS_DATA.packs[h.id], (h) => FEMALE_IDS.has(h.id))); // 界左慈化身将池:界限突破 + 界一将
+
+// 发将用哪份名单(dealStart 与 /api/deal-preview 共用,保证「发将设置」里预览的数和真发时一致):
+//   环境 key 的白名单为空 → 白名单 / 套组 / 特殊规则沿用军争(src);黑名单用 key 自己的;选了套组 → 黑白名单整份换成套组的;禁将开关关着则不禁。
+function resolveDealPools(cfg, { key, setId, mode, banEnabled }) {
+  const own = cfg.pools[key].white;
+  const src = own.length ? key : POOL_KEYS[0];
+  let set = null;
+  if (setId != null && setId !== "") {
+    set = (cfg.pools[src].sets || []).find((s) => s.id === String(setId)) || null;
+    if (!set) return { error: "POOL_SET_UNKNOWN" };
+  }
+  const eff = applyPoolSet({ white: cfg.pools[src].white, ban: cfg.pools[key].ban }, set);
+  if (!eff.white.length) return { error: "POOL_NOT_SET" };
+  const pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: eff.white, banned: banEnabled ? eff.ban : [], mode, rules: cfg.pools[src].rules });
+  return { key, src, set, inherited: !own.length, pools };
+}
+const dealPoolIds = (pools) => new Set([...pools.normal, ...pools.lord, ...(pools.forced ? [pools.forced] : [])].flatMap((g) => g.opts.map((o) => o.id)));
+// 「本局临时 ban」的候选 = 该环境的临时 ban 池(空则沿用军争)∩ 本局将池
+function tempBanCands(cfg, key, pools) {
+  const tl = (cfg.pools[key].temp && cfg.pools[key].temp.length) ? cfg.pools[key].temp : (cfg.pools[POOL_KEYS[0]].temp || []);
+  const inPool = dealPoolIds(pools);
+  return GENERALS_DATA.filter((x) => tl.includes(x.id) && inPool.has(x.id)).map(dealOpt);
+}
 
 const SEAT_COUNT = 8; // 三国杀常见 2~8 人;先固定 8,后续可由开房参数决定
 // 一次序列化,静态资源直接吐;顺带贴拼音(py:"guan yu")。GENERALS_DATA 本身不改(禁将池等仍按原数据查)
@@ -126,6 +149,20 @@ export function handleSgs(request, env, url) {
   // 将池(白名单):全局一份,存在 SgsConfigDO(单例 "global");/pool 编辑页读写,发将时房间也读它。无鉴权(朋友局,用户定)
   if (url.pathname === "/api/pool" && (request.method === "GET" || request.method === "PUT"))
     return env.SGS_CONFIG.get(env.SGS_CONFIG.idFromName("global")).fetch(request);
+  // 发将预览(发将设置弹层用):按所选 环境 / 套组 / 模式 / 禁将开关 算出本局将池有多少坑、临时 ban 候选有多少张,弹层据此禁用开不了的开关。
+  //   ?pool=环境key&set=套组id&mode=模式&ban=0|1;与 dealStart 走同一个 resolveDealPools,不含「排除今日已登场」(那个开关已隐藏)。
+  if (url.pathname === "/api/deal-preview" && request.method === "GET") return (async () => {
+    const noStore = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+    const q = url.searchParams, key = q.get("pool");
+    if (!POOL_KEYS.includes(key)) return new Response(JSON.stringify({ error: "BAD_POOL" }), { status: 400, headers: noStore });
+    const cfg = await getConfig(env);
+    const mode = DEAL_MODES[q.get("mode")] ? q.get("mode") : "normal";
+    const r = resolveDealPools(cfg, { key, setId: q.get("set"), mode, banEnabled: q.get("ban") !== "0" });
+    if (r.error) return new Response(JSON.stringify({ error: r.error }), { headers: noStore });
+    return new Response(JSON.stringify({ ok: true, pool: key, src: r.src, set: r.set ? r.set.id : null, mode,
+      groups: r.pools.normal.length, lordGroups: r.pools.lord.length, tempCands: tempBanCands(cfg, key, r.pools).length,
+      tempMin: DEAL_TEMPBAN_MIN, tempMax: DEAL_TEMPBAN_MAX, tempSmall: DEAL_TEMPBAN_SMALL }), { headers: noStore });
+  })();
   // 无名杀扩展(private-sgs-initial-j.pages.dev,跨域)读将池:按武将名给白/黑名单,它那边按「前缀+名字」对到无名杀的武将 id
   if (url.pathname === "/api/noname-pool" && request.method === "GET") return (async () => {
     const cfg = await getConfig(env);
@@ -359,18 +396,11 @@ export class RoomDO extends RoomDOBase {
     const cfg = await this.syncConfig(true);
     if (!cfg) return { error: "POOL_UNAVAILABLE" };
     const key = POOL_KEYS.includes(msg.pool) ? msg.pool : banPoolForSeats(core.seatNos().length);
-    const own = cfg.pools[key].white;
-    const src = own.length ? key : POOL_KEYS[0]; // 白名单(及其套组)实际取自哪个环境
-    let set = null;
-    if (msg.set != null && msg.set !== "") {
-      set = (cfg.pools[src].sets || []).find((s) => s.id === String(msg.set)) || null;
-      if (!set) return { error: "POOL_SET_UNKNOWN" };
-    }
-    const eff = applyPoolSet({ white: cfg.pools[src].white, ban: cfg.pools[key].ban }, set);
-    const wl = eff.white, banned = core.banEnabled !== false ? eff.ban : [];
-    if (!wl.length) return { error: "POOL_NOT_SET" };
-    let pools = buildDealPools({ heroes: GENERALS_DATA, whitelist: wl, banned, mode: msg.mode, rules: cfg.pools[src].rules }); // 特殊规则跟白名单来源走(沿用军争白名单 → 也沿用军争的规则)
-    const poolIds = () => new Set([...pools.normal, ...pools.lord, ...(pools.forced ? [pools.forced] : [])].flatMap((g) => g.opts.map((o) => o.id)));
+    const rp = resolveDealPools(cfg, { key, setId: msg.set, mode: msg.mode, banEnabled: core.banEnabled !== false });
+    if (rp.error) return { error: rp.error };
+    const set = rp.set;
+    let pools = rp.pools;
+    const poolIds = () => dealPoolIds(pools);
     // 开关②「排除今日已登场」(小伙伴的 idea,默认关):从历史对局里取今天(北京时间)已落座过的武将名,按版本剔除;剔完不够发会报 POOL_TOO_SMALL
     let excluded = null;
     if (msg.excludeToday) {
@@ -389,11 +419,9 @@ export class RoomDO extends RoomDOBase {
     // 开关①「本局临时 ban」:候选 = 该环境的临时 ban 池(空则沿用军争)∩ 本局将池;池太小 core 会报 TEMPBAN_TOO_SMALL
     let tempBan = null;
     if (msg.tempBan) {
-      const tl = (cfg.pools[key].temp && cfg.pools[key].temp.length) ? cfg.pools[key].temp : (cfg.pools[POOL_KEYS[0]].temp || []);
-      const inPool = poolIds();
-      tempBan = GENERALS_DATA.filter((x) => tl.includes(x.id) && inPool.has(x.id)).map(dealOpt);
+      tempBan = tempBanCands(cfg, key, pools);
       if (!tempBan.length) return { error: "TEMPBAN_EMPTY" };
     }
-    return core.dealStart(id, { mode: msg.mode, lordSeat: msg.lordSeat, pools, poolKey: key, poolLabel: POOL_META[key].label + (own.length ? "" : "·沿用军争池") + (set ? "·" + set.name : ""), tempBan, excluded });
+    return core.dealStart(id, { mode: msg.mode, lordSeat: msg.lordSeat, pools, poolKey: key, poolLabel: POOL_META[key].label + (rp.inherited ? "·沿用军争池" : "") + (set ? "·" + set.name : ""), tempBan, excluded });
   }
 }
