@@ -233,20 +233,6 @@ export const OFFLINE_HEROES = [
     avatar: "https://initial-jie.github.io/sgs-wiki/assets/heroes/mengdiaochan.jpg",
     tool: null, offline: true,
   },
-  // 界钟会 —— OL 2026-09 测试上线、2026-11-06 正式版(技能按 olwiki 758 正式文本更新;官方花名册/API 仍未收录)。魏/4血/界一将-2。衍生技「排异」在 derived-skills-room.json。⚠ graduate 后删。
-  {
-    id: 9018, name: "界钟会", genre: "界限突破", series: "界", faction: "魏",
-    factionSelectable: false, quality: null, hp: 4, initialHp: null,
-    tags: ["卖血", "进攻"],
-    skills: [
-      { name: "权计", effect: "当你造成或受到1点伤害后，你可以摸一张牌，当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你手牌数最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。" },
-      { name: "自立", effect: "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得“排异”。" },
-    ],
-    characteristic: "造成伤害可权计，排异可两项都执行。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75800.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75800.png",
-    tool: null, offline: true,
-  },
   // ───── 《不臣之心》实体扩展 = OL 2026「不臣之君」身份新玩法的三个模式专属将(数据源:萌娘百科 三国杀:张角/董卓/刘宏 「不臣之君」节,2026-09-24)。
   // 各自只能在对应模式当"君"用;模式规则写在 derived-skills-room.json 的说明卡里(查将带出)。
   // 立绘:OL 无独立 id 也无专属皮肤,实体卡插画网上无干净图 → 用户 2026-09-25 定:各挑一款 OL 高品质皮肤与标版区分(张角 大贤良师·传说 21206 / 董卓 西凉鬼豪·传说 4505 / 刘宏 俪觞妙舞·限定 50701,刘宏无传说皮)。路径 general/big/static + skinShop 同新将。
@@ -340,47 +326,6 @@ export const OFFLINE_HEROES = [
     cardWarn: "OL 测试版武将(olwiki 品质未标注),技能文本以本房间为准;正式版若有改动再同步",
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77400.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77400.png",
-    tool: null, offline: true,
-  },
-  // 界刘封 —— olwiki 真 id 776(官网花名册 2026-10-23 仍未收录),用户报 OL 新上线;graduate 候选。技能抄自 olwiki
-  {
-    id: 9028, name: "界刘封", genre: "界限突破", series: "界", faction: "蜀",
-    factionSelectable: false, quality: null, hp: 4, initialHp: null,
-    tags: ["控制", "进攻"],
-    skills: [
-      { name: "陷嗣", effect: "准备阶段，你可以将至多两名角色共计至多两张牌置于你的武将牌上，称为“逆”。其他角色可以移去两张“逆”视为对你使用一张【杀】。" },
-      { name: "侵凌", effect: "每回合限一次，你可以弃置一张牌，视为使用一张【杀】。若此【杀】造成了伤害，你摸一张牌，否则将你弃置的牌置为“逆”。" },
-    ],
-    characteristic: "可灵活的对敌方角色手牌进行破坏并印杀。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77600.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77600.png",
-    tool: null, offline: true,
-  },
-  // 王皑 —— OL 2026-11-06 正式上线(olwiki 真 id 768,官网花名册/API 仍未收录);graduate 候选。技能抄自 olwiki(⚠ 原文「你摸一张牌」后疑似丢了「将其置为“勤励”牌」的图标位,待官网文本核对)
-  {
-    id: 9029, name: "王皑", genre: "其他", series: "璀璨星河", faction: "魏",
-    factionSelectable: false, quality: null, hp: 4, initialHp: null,
-    tags: ["卖血"],
-    skills: [
-      { name: "勤励", effect: "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害。若你因此失去所有手牌，改为对其造成等量伤害。" },
-    ],
-    characteristic: "有灵活的防守反击能力，调整手牌可以打出较高上限。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76800.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76800.png",
-    tool: null, offline: true,
-  },
-  // 谋田丰 —— olwiki 真 id 659(官网花名册 2026-10-16 仍未收录),用户报 OL 当日上线;graduate 候选。技能文本抄自 olwiki(去掉"爆发/卖血"定位角标)
-  {
-    id: 9026, name: "谋田丰", genre: "谋", series: "谋", faction: "群",
-    factionSelectable: false, quality: "传说", hp: 3, initialHp: null,
-    tags: ["控制", "过牌"],
-    skills: [
-      { name: "执谏", effect: "出牌阶段限一次，你可以摸3-X张牌并交给一名其他角色一张牌，此牌称为“谏”至其下个回合结束时。然后若其使用的下一张牌不为“谏”，你可再对其发动此技能（X为此技能本回合此前已发动次数）。" },
-      { name: "效竭", effect: "当你成为【杀】的目标后，你可令你不可响应之。若如此做，你于此【杀】结算完毕后，视为使用你使用的上一张普通锦囊牌或摸一张牌。" },
-    ],
-    characteristic: "能够转化锦囊牌，对同目标连续发动技能收益较高。",
-    cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/65900.png",
-    avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/65900.png",
     tool: null, offline: true,
   },
   {
@@ -884,16 +829,16 @@ export const OFFLINE_HEROES = [
     tool: null, offline: true,
   },
   // 皇甫嵩 —— OL 2026-11-20 公告、11-21 小雪祈福上线(olwiki 真 id 743;官网花名册/API 仍未收录)。graduate 候选。
-  // 势力/体力/性别/技能抄自官方公告 sanguosha.com/news/20261117_1218_3314;品质公告未写(olwiki 当日 504)→ null;特点为自拟。⚠ graduate 后删。
+  // 势力/体力/性别/技能抄自官方公告 sanguosha.com/news/20261117_1218_3314;品质(传说)/特点按用户 2026-11-20 游戏内武将信息截图(技能文本与公告一致)。⚠ graduate 后删。
   {
     id: 9066, name: "皇甫嵩", genre: "其他", series: "祈福", faction: "群",
-    factionSelectable: false, quality: null, hp: 4, initialHp: null,
+    factionSelectable: false, quality: "传说", hp: 4, initialHp: null,
     tags: ["进攻", "控制", "过牌"],
     skills: [
       { name: "焰靖", effect: "准备阶段，你可以指定一名其他角色，对其造成1点火焰伤害，然后跳过本回合下X个阶段，跳过其下回合第X个阶段（X为其体力值）。" },
       { name: "奋钺", effect: "转换技，每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以：阳：摸两张牌；阴：使用一张牌。" },
     ],
-    characteristic: "焰靖在准备阶段烧一名其他角色1点火焰伤害，然后按其体力值X跳过自己本回合接下来的X个阶段，并跳过对方下回合的第X个阶段（按准备、判定、摸牌、出牌、弃牌、结束的顺序数，X=4即出牌阶段、X=3即摸牌阶段）；奋钺是转换技，任何回合结束时只要自己本回合受过伤或有角色受过属性伤害，就轮流摸两张牌、使用一张牌，自己的焰靖也算属性伤害。",
+    characteristic: "可打直伤可跳阶段，监听属性伤害获取收益。",
     cover: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74300.png",
     avatar: "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74300.png",
     tool: null, offline: true,

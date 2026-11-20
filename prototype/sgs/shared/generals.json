@@ -21115,6 +21115,157 @@
     "offline": false
   },
   {
+    "id": 758,
+    "name": "界钟会",
+    "genre": "界限突破",
+    "series": "界",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "权计",
+        "effect": "当你造成或受到1点伤害后，你可以摸一张牌，当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你手牌数最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。"
+      },
+      {
+        "name": "自立",
+        "effect": "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得“排异”。"
+      }
+    ],
+    "characteristic": "造成伤害可权计，排异可两项都执行。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/75800.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/75800.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 659,
+    "name": "谋田丰",
+    "genre": "谋",
+    "series": "谋",
+    "faction": "群",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 3,
+    "initialHp": null,
+    "tags": [
+      "控制",
+      "辅助",
+      "配合神将"
+    ],
+    "skills": [
+      {
+        "name": "执谏",
+        "effect": "出牌阶段限一次，你可以摸3-X张牌并交给一名其他角色一张牌，此牌称为“谏”至其下个回合结束时或其使用了“谏”。然后若其使用的下一张牌不为“谏”，你可再对其发动此技能(X为此技能本回合此前已发动次数)。"
+      },
+      {
+        "name": "效竭",
+        "effect": "当你成为【杀】的目标后，你可令你不可响应之。若如此做，你于此【杀】结算完毕后，视为使用你使用的上一张普通锦囊牌或摸一张牌。"
+      }
+    ],
+    "characteristic": "能够转化锦囊牌，对同目标连续发动技能收益较高",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/65900.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/65900.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 776,
+    "name": "界刘封",
+    "genre": "界限突破",
+    "series": "界",
+    "faction": "蜀",
+    "factionSelectable": false,
+    "quality": "史诗",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "控制",
+      "过牌"
+    ],
+    "skills": [
+      {
+        "name": "陷嗣",
+        "effect": "准备阶段，你可以将至多两名角色共计至多两张牌置于你的武将牌上，称为“逆”。其他角色可以移去两张“逆”视为对你使用一张【杀】。"
+      },
+      {
+        "name": "侵凌",
+        "effect": "每回合限一次，你可以弃置一张牌，视为使用一张【杀】。若此【杀】造成了伤害，你摸一张牌，否则将你弃置的牌置为“逆”。"
+      }
+    ],
+    "characteristic": "可灵活的对敌方角色手牌进行破坏并印杀",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/77600.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/77600.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 768,
+    "name": "王皑",
+    "genre": "其他",
+    "series": "标",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [
+      "进攻",
+      "防御",
+      "控制"
+    ],
+    "skills": [
+      {
+        "name": "勤励",
+        "effect": "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害。若你因此失去所有手牌，改为对其造成等量伤害。"
+      }
+    ],
+    "characteristic": "有灵活的防守反击能力，调整手牌可以打出较高上限。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/76800.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/76800.png",
+    "tool": null,
+    "offline": false
+  },
+  {
+    "id": 736,
+    "name": "族陈泰",
+    "genre": "门阀士族",
+    "series": "标",
+    "faction": "魏",
+    "factionSelectable": false,
+    "quality": "传说",
+    "hp": 4,
+    "initialHp": null,
+    "tags": [],
+    "skills": [
+      {
+        "name": "奋剑",
+        "effect": "出牌阶段每项限一次，你可以视为对一名角色使用一张【杀】。该角色攻击范围须：1.小于你；2.等于你；3.大于你的角色。若选择角色与上次不同，你须先弃置一张牌。此【杀】造成伤害后，你本回合攻击范围-1（至多减至0）。"
+      },
+      {
+        "name": "动虚",
+        "effect": "转换技，阳，你可以将一张装备牌置于其他角色装备区（替换原装备）；阴，你可以将手牌摸至攻击范围（至多为5）。然后视为使用一张【闪】或令你被抵消的【杀】依然造成伤害。"
+      },
+      {
+        "name": "士则",
+        "effect": "宗族技，锁定技，你于回合内使用牌首次被响应后，你令一名同族角色攻击范围+1，直到其下次受到伤害。"
+      }
+    ],
+    "characteristic": "反复调整攻击范围换取收益，玩法灵活。",
+    "cover": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/big/static/73600.png",
+    "avatar": "https://web.sanguosha.com//220/miniGame/release/laya2/res/runtime/m/general/skinShop/73600.png",
+    "tool": null,
+    "offline": false
+  },
+  {
     "id": 9001,
     "name": "线下孙寒华",
     "genre": "线下",
@@ -21404,36 +21555,6 @@
     "offline": true
   },
   {
-    "id": 9018,
-    "name": "界钟会",
-    "genre": "界限突破",
-    "series": "界",
-    "faction": "魏",
-    "factionSelectable": false,
-    "quality": null,
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "卖血",
-      "进攻"
-    ],
-    "skills": [
-      {
-        "name": "权计",
-        "effect": "当你造成或受到1点伤害后，你可以摸一张牌，当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你手牌数最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。"
-      },
-      {
-        "name": "自立",
-        "effect": "觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得“排异”。"
-      }
-    ],
-    "characteristic": "造成伤害可权计，排异可两项都执行。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/75800.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/75800.png",
-    "tool": null,
-    "offline": true
-  },
-  {
     "id": 9019,
     "name": "教主张角",
     "genre": "不臣之君",
@@ -21543,36 +21664,6 @@
     "offline": true
   },
   {
-    "id": 9026,
-    "name": "谋田丰",
-    "genre": "谋",
-    "series": "谋",
-    "faction": "群",
-    "factionSelectable": false,
-    "quality": "传说",
-    "hp": 3,
-    "initialHp": null,
-    "tags": [
-      "控制",
-      "过牌"
-    ],
-    "skills": [
-      {
-        "name": "执谏",
-        "effect": "出牌阶段限一次，你可以摸3-X张牌并交给一名其他角色一张牌，此牌称为“谏”至其下个回合结束时。然后若其使用的下一张牌不为“谏”，你可再对其发动此技能（X为此技能本回合此前已发动次数）。"
-      },
-      {
-        "name": "效竭",
-        "effect": "当你成为【杀】的目标后，你可令你不可响应之。若如此做，你于此【杀】结算完毕后，视为使用你使用的上一张普通锦囊牌或摸一张牌。"
-      }
-    ],
-    "characteristic": "能够转化锦囊牌，对同目标连续发动技能收益较高。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/65900.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/65900.png",
-    "tool": null,
-    "offline": true
-  },
-  {
     "id": 9027,
     "name": "孙寒华",
     "genre": "璀璨星河",
@@ -21600,61 +21691,6 @@
     "cardWarn": "OL 测试版武将(olwiki 品质未标注),技能文本以本房间为准;正式版若有改动再同步",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77400.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77400.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9028,
-    "name": "界刘封",
-    "genre": "界限突破",
-    "series": "界",
-    "faction": "蜀",
-    "factionSelectable": false,
-    "quality": null,
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "控制",
-      "进攻"
-    ],
-    "skills": [
-      {
-        "name": "陷嗣",
-        "effect": "准备阶段，你可以将至多两名角色共计至多两张牌置于你的武将牌上，称为“逆”。其他角色可以移去两张“逆”视为对你使用一张【杀】。"
-      },
-      {
-        "name": "侵凌",
-        "effect": "每回合限一次，你可以弃置一张牌，视为使用一张【杀】。若此【杀】造成了伤害，你摸一张牌，否则将你弃置的牌置为“逆”。"
-      }
-    ],
-    "characteristic": "可灵活的对敌方角色手牌进行破坏并印杀。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/77600.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/77600.png",
-    "tool": null,
-    "offline": true
-  },
-  {
-    "id": 9029,
-    "name": "王皑",
-    "genre": "其他",
-    "series": "璀璨星河",
-    "faction": "魏",
-    "factionSelectable": false,
-    "quality": null,
-    "hp": 4,
-    "initialHp": null,
-    "tags": [
-      "卖血"
-    ],
-    "skills": [
-      {
-        "name": "勤励",
-        "effect": "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害。若你因此失去所有手牌，改为对其造成等量伤害。"
-      }
-    ],
-    "characteristic": "有灵活的防守反击能力，调整手牌可以打出较高上限。",
-    "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/76800.png",
-    "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/76800.png",
     "tool": null,
     "offline": true
   },
@@ -22750,7 +22786,7 @@
     "series": "祈福",
     "faction": "群",
     "factionSelectable": false,
-    "quality": null,
+    "quality": "传说",
     "hp": 4,
     "initialHp": null,
     "tags": [
@@ -22768,7 +22804,7 @@
         "effect": "转换技，每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以：阳：摸两张牌；阴：使用一张牌。"
       }
     ],
-    "characteristic": "焰靖在准备阶段烧一名其他角色1点火焰伤害，然后按其体力值X跳过自己本回合接下来的X个阶段，并跳过对方下回合的第X个阶段（按准备、判定、摸牌、出牌、弃牌、结束的顺序数，X=4即出牌阶段、X=3即摸牌阶段）；奋钺是转换技，任何回合结束时只要自己本回合受过伤或有角色受过属性伤害，就轮流摸两张牌、使用一张牌，自己的焰靖也算属性伤害。",
+    "characteristic": "可打直伤可跳阶段，监听属性伤害获取收益。",
     "cover": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/74300.png",
     "avatar": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/skinShop/74300.png",
     "tool": null,

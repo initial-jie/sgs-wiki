@@ -377,7 +377,7 @@ function derivedSkillsHtml(hero){
 }
 // graduate 过渡:手录 9000+ id ↔ 官网真 id(2026-09-15)。deploy 时进行中的房间座位可能存旧 id,
 // 而 generals.json 有 1h 缓存的老客户端又不认新 id —— 双向兜底,找不到本 id 时查另一边
-const GRADUATED={9002:663,9003:606,9010:765,9011:230,9012:740,9013:775,9014:683,9015:755,9022:770,9023:769,9024:679,9025:748}; // 2026-10-16 +谋周瑜/谢灵毓/逢纪/族荀灌
+const GRADUATED={9002:663,9003:606,9010:765,9011:230,9012:740,9013:775,9014:683,9015:755,9022:770,9023:769,9024:679,9025:748,9018:758,9026:659,9028:776,9029:768}; // 2026-10-16 +谋周瑜/谢灵毓/逢纪/族荀灌;2026-11-20 +界钟会/谋田丰/界刘封/王皑
 const GRADUATED_REV=Object.fromEntries(Object.entries(GRADUATED).map(([a,b])=>[b,+a]));
 function heroForSeat(general){
   if(!general||general==="none")return null;
