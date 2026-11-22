@@ -445,7 +445,7 @@ function refreshSkillBar(player) {
 			return;
 		}
 		if (!player.name) {
-			if (player.sgsSkillbar) player.sgsSkillbar.innerHTML = "";
+			if (player.sgsSkillbar) player.sgsSkillbar.innerHTML = "", (player.sgsSkillbar._sgsHtml = "");
 			return;
 		}
 		let bar = player.sgsSkillbar;
@@ -464,9 +464,12 @@ function refreshSkillBar(player) {
 			const isLocked = get.is.locked ? get.is.locked(skill, player) : !!(info.forced || info.locked); // 锁定技
 			const blocked = !isLocked && (!!disabled[skill] || (get.is.blocked ? get.is.blocked(skill, player) : false));
 			const cls = usable.has(skill) ? "usable" : blocked ? "locked" : "";
-			html += `<span class="${cls}">${name}</span>`;
+			html += `<span class="${cls}" data-skill="${skill}">${name}</span>`;
 		}
-		bar.innerHTML = html;
+		if (bar._sgsHtml !== html) {
+			bar._sgsHtml = html;
+			bar.innerHTML = html;
+		}
 	} catch (e) { /* 显示层,出错不影响对局 */ }
 }
 function refreshAllSkillBars() {
@@ -503,6 +506,148 @@ try {
 }
 lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { refreshAllSkillBars });
 
+// ---------------------------------------------------------------------------------------------
+// ⑥ 技能详情浮框(用户 2026-11-21:不想双击看技能):鼠标移到 / 点到头像下方的技能名上,立刻弹出该技能的描述;
+//    鼠标移出技能名和浮框后消失。触屏:点技能名弹出,点别处收起。点击照常冒泡给武将牌(选目标不受影响)。
+// ---------------------------------------------------------------------------------------------
+(() => {
+	const style = document.createElement("style");
+	style.textContent = `
+.player .sgs-skillbar span{pointer-events:auto;cursor:help}
+#sgs-skilltip{position:absolute;z-index:1000;box-sizing:border-box;width:300px;max-width:calc(100% - 16px);padding:9px 12px 10px;border-radius:8px;background:rgba(26,21,16,.95);border:1px solid rgba(214,182,120,.5);box-shadow:0 6px 22px rgba(0,0,0,.55);color:#efe6d2;font-size:14px;line-height:1.6;text-align:left;white-space:normal;font-family:"PingFang SC","Microsoft YaHei",sans-serif;pointer-events:auto;transition:none;height:auto}
+#sgs-skilltip div{position:relative;display:block;transition:none}
+#sgs-skilltip .t{font-family:xinwei,"PingFang SC",sans-serif;font-size:17px;color:#f3c96b;margin-bottom:3px}
+#sgs-skilltip .t small{font-family:"PingFang SC","Microsoft YaHei",sans-serif;font-size:12px;color:#b9ad95;margin-left:8px}`;
+	document.head.appendChild(style);
+
+	let tip = null, anchorSpan = null, hideTimer = null, guard = null, lastXY = null;
+	const spanOf = target => (target && target.closest ? target.closest(".sgs-skillbar span[data-skill]") : null);
+	const inTip = target => !!(tip && target && tip.contains(target));
+	const hide = () => {
+		clearTimeout(hideTimer);
+		clearInterval(guard);
+		hideTimer = guard = null;
+		anchorSpan = null;
+		if (tip) tip.remove(), (tip = null);
+	};
+	const hideSoon = () => {
+		clearTimeout(hideTimer);
+		hideTimer = setTimeout(hide, 180); // 留一点时间把鼠标挪进浮框
+	};
+	const show = (span, e) => {
+		try {
+			if (!ui.window) return;
+			clearTimeout(hideTimer);
+			if (anchorSpan === span && tip) return;
+			const skill = span.dataset.skill;
+			const player = span.closest(".player");
+			let info = "";
+			try { info = get.skillInfoTranslation(skill, player, false); } catch (err) { /* 个别技能的动态描述会抛错 */ }
+			if (!info) info = lib.translate[skill + "_info"] || "";
+			if (!info) return;
+			hide();
+			anchorSpan = span;
+			tip = document.createElement("div");
+			tip.id = "sgs-skilltip";
+			const owner = player && player.name ? get.translation(player.name) : "";
+			tip.innerHTML = `<div class="t">${lib.translate[skill] || skill}${owner ? `<small>${owner}</small>` : ""}</div><div>${info}</div>`;
+			ui.window.appendChild(tip);
+			tip.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+			tip.addEventListener("mouseleave", hide);
+			// 位置按指针算(无名杀的界面缩放下,指针坐标 / documentZoom 才是 #window 里的坐标)
+			const zoom = game.documentZoom || 1;
+			const point = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e;
+			const x = point.clientX / zoom, y = point.clientY / zoom;
+			const W = ui.window.offsetWidth, H = ui.window.offsetHeight, w = tip.offsetWidth, h = tip.offsetHeight;
+			const left = Math.max(8, Math.min(W - w - 8, x - w / 2));
+			const top = y + 14 + h <= H - 8 ? y + 14 : Math.max(8, y - 14 - h); // 下面放得下就放下面,否则放上面
+			tip.style.left = left + "px";
+			tip.style.top = top + "px";
+			// 悬停期间压住无名杀自带的「悬停 1 秒弹武将资料」,免得两个框叠在一起;
+			// 顺带兜底:指针已经不在技能名 / 浮框上(元素被重绘、窗口切走)就收起
+			guard = setInterval(() => {
+				try { ui.click.mouseentercancel && ui.click.mouseentercancel(); } catch (err) { /* ignore */ }
+				if (!anchorSpan || !anchorSpan.isConnected) return hide();
+				if (lastXY && !("ontouchstart" in window && lastXY.touch)) {
+					const el = document.elementFromPoint(lastXY.x, lastXY.y);
+					if (!inTip(el) && spanOf(el) !== anchorSpan) hideSoon();
+				}
+			}, 250);
+		} catch (err) { /* 显示层,出错不影响对局 */ }
+	};
+	document.addEventListener("mousemove", e => { lastXY = { x: e.clientX, y: e.clientY }; }, true);
+	document.addEventListener("mouseover", e => {
+		const span = spanOf(e.target);
+		if (span) show(span, e);
+	}, true);
+	document.addEventListener("mouseout", e => {
+		if (spanOf(e.target) && !inTip(e.relatedTarget) && spanOf(e.relatedTarget) !== anchorSpan) hideSoon();
+	}, true);
+	// 点击 / 触屏:点技能名弹出(已弹出的再点一次收起),点别处收起
+	const tap = e => {
+		const span = spanOf(e.target);
+		if (span) {
+			if (e.type === "touchend") lastXY = { touch: true };
+			if (anchorSpan === span && tip && e.type === "touchend") hide();
+			else show(span, e);
+		} else if (!inTip(e.target)) hide();
+	};
+	document.addEventListener("click", tap, true);
+	document.addEventListener("touchend", tap, true);
+	window.addEventListener("resize", hide);
+})();
+
+// ---------------------------------------------------------------------------------------------
+// ⑦ 牌桌上的武将牌放大(用户 2026-11-21:武将在牌桌上可以更大一点):按窗口大小自动算一个倍率(1~1.35),
+//    以不挤到邻座、不顶出屏幕为限;用独立的 CSS scale / translate 属性(上沿不动往下长),不和无名杀自己的 transform(横置、受伤抖动等)打架。
+//    自己那张(左下角,紧挨手牌)不放大。布局是固定像素写的,所以只能整体缩放,不能单独改宽高。
+// ---------------------------------------------------------------------------------------------
+const PLAYER_SCALE_MAX = 1.35;
+function refreshPlayerScale() {
+	try {
+		const arena = ui.arena;
+		if (!arena) return;
+		let scale = 1;
+		if (lib.config["sgs-friends_bigplayer_playpackconfig"] !== "off" && !game.chess) {
+			const nodes = [...arena.children].filter(node => node.classList.contains("player") && node.dataset.position !== "0" && !node.classList.contains("minskin") && node.offsetWidth);
+			if (nodes.length) {
+				scale = PLAYER_SCALE_MAX;
+				const w = nodes[0].offsetWidth, h = nodes[0].offsetHeight, gap = 6;
+				for (let i = 0; i < nodes.length; i++) {
+					const a = nodes[i];
+					// 左右居中放大、上沿不动往下长(见下面 css 的 translate)。边界:左右不出屏幕,下面不压到自己的武将牌 / 手牌区
+					scale = Math.min(scale, 1 + (2 * (a.offsetLeft + arena.offsetLeft - 2)) / w, 1 + (2 * (arena.offsetWidth + arena.offsetLeft - a.offsetLeft - w - 2)) / w, (arena.offsetHeight - 250 - a.offsetTop) / h);
+					for (let j = i + 1; j < nodes.length; j++) {
+						const b = nodes[j];
+						const dx = Math.abs(a.offsetLeft - b.offsetLeft), dy = Math.abs(a.offsetTop - b.offsetTop);
+						// 两张牌放大后各自宽 w*s / 高 h*s,横向或纵向有一边分得开即可
+						scale = Math.min(scale, Math.max((dx - gap) / w, (dy - gap) / h));
+					}
+				}
+				scale = Math.max(1, Math.round(scale * 100) / 100);
+			}
+		}
+		const first = arena.querySelector(':scope > .player:not(.minskin):not([data-position="0"])');
+		const shift = Math.round(((scale - 1) * (first ? first.offsetHeight : 200)) / 2); // 往下挪半个增量 = 上沿不动
+		if (arena._sgsScale !== scale || arena._sgsShift !== shift) {
+			arena._sgsScale = scale;
+			arena._sgsShift = shift;
+			arena.style.setProperty("--sgs-pscale", String(scale));
+			arena.style.setProperty("--sgs-pshift", shift + "px");
+		}
+	} catch (e) { /* 显示层,出错不影响对局 */ }
+}
+(() => {
+	const style = document.createElement("style");
+	style.textContent = `
+#arena > .player:not(.minskin):not([data-position="0"]){scale:var(--sgs-pscale,1);translate:0 var(--sgs-pshift,0px)}
+#arena:not(.oldlayout) > #arenalog[data-position="center"]{top:calc(240px + var(--sgs-pshift,0px) * 2);height:calc(100% - 430px - var(--sgs-pshift,0px) * 2)}`;
+	document.head.appendChild(style);
+	window.addEventListener("resize", () => setTimeout(refreshPlayerScale, 300));
+	setInterval(refreshPlayerScale, 1500); // 人数变化 / 布局切换没有统一的钩子,低频轮询即可
+})();
+lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { refreshPlayerScale });
+
 game.import("play", function () {
 	return {
 		name: "sgs-friends",
@@ -535,10 +680,20 @@ game.import("play", function () {
 				name: "技能常驻栏",
 				init: "on",
 				item: { on: "开启", off: "关闭" },
-				intro: "每个武将头像下方常驻显示技能名:可发动的变绿,被封锁的画锁",
+				intro: "每个武将头像下方常驻显示技能名:可发动的变绿,被封锁的画锁;鼠标移到(或点一下)技能名上弹出技能描述",
 				onclick(item) {
 					game.saveConfig("sgs-friends_skillbar_playpackconfig", item);
 					refreshAllSkillBars();
+				},
+			},
+			bigplayer: {
+				name: "牌桌武将放大",
+				init: "on",
+				item: { on: "自动(按窗口大小,最多 1.35 倍)", off: "关闭" },
+				intro: "牌桌上其他角色的武将牌按窗口大小自动放大,以不挤到邻座为限;自己那张紧挨手牌,不放大",
+				onclick(item) {
+					game.saveConfig("sgs-friends_bigplayer_playpackconfig", item);
+					refreshPlayerScale();
 				},
 			},
 			skin: {
