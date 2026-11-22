@@ -168,6 +168,12 @@ One Night Ultimate Werewolf 房间,借鉴 Bezier Games 官方 app《Werewolf》�
   - 规则:击杀真实同阵营 → `modedDiscard` 全部牌;主帅 +1 血上限(占 zhu 位的那位在联机 >4 人路径会先吃标准主公 +1,单将时按 `maxHp > get.infoMaxHp(原上限)` 判断已加过);`checkResult`:龙内鬼死=龙军胜,虎内鬼死=虎军胜(主帅死不结束);`realAttitude` 按真实阵营。顺手修:`special_identity`(8 人特殊身份)在 baonue/dazhong/wujian 下跳过,否则 `fans.randomRemove()` 取空会崩。
   - 本地验证(8 人):配比 1/2/1 ×2、我(龙内鬼)看别人只有龙/虎、主帅视角看对方牌背真身、护卫杀本方主帅弃牌且虎内鬼暴露、虎内鬼死 → 虎军四人胜(含我这个龙内鬼)。**联机未实战**。
   - 至此四个变体(暴虐无道/大忠似奸/失心疯/无间道)+ 将池都在「游戏模式」下拉里。后续可做:线下将作扩展武将(线下孙寒华/SP徐氏/教主张角〖蔽众〗/暴君董卓〖肆虐〗/昏君刘宏〖障目〗〖鬻爵〗)、战绩回传 /api/history、技能常驻栏/重铸交互、手机横屏 PWA。
+**✅ 2026-11-21 选将时限 5 分钟 + 「看清别人在做什么」(本地 dist 已含,Pages 待用户 deploy)**
+  - 用户反馈:选将时间太短(要看技能),想要房间设置里有「选将时间」默认五分钟;「角色做的事有点看不清,比如谋小乔发动绝颜,提示只有一秒」。
+  - **选将时限**:联机倒计时各端都读 `lib.configOL.choose_timeout`,没有单独的选将时间。`game.randomMapOL` 末尾(各模式联机开局都走这里)`broadcastAll` 把它临时换成 `lib.configOL.choose_character_timeout`(缺省 300),紧跟 `chooseCharacterOL()` 之后排一个 `sgsRestoreChooseTimeout` 事件换回出牌时限。房间设置项 `connect_choose_character_timeout`(「选将时限」30 秒~10 分钟,默认 5 分钟)加在 `ui/create/menu/pages/startMenu.js`(老的 `menu/startMenu.js` 也加了,dist 不用它),所有联机模式通用(斗地主也生效)。实测:选将框倒计时 295,两端 configOL 都是 300;选完后两端回到 30、出牌倒计时正常。
+  - **技能名提示**:`player.popup` → `$damagepop` 的文字提示(`.normal-font`,技能名 / 判定等)原来过渡完 0.2 秒就删(肉眼不到 1 秒)→ 停 2.5 秒(实测可见约 3 秒);同一角色来了下一条提示时上一条立刻让位(`_sgsLingerPop`),队列节奏(0.5 秒)没动,伤害数字不变。
+  - **历史记录栏默认打开**:无名杀自带 `show_log`(屏幕中部滚动文字:谁对谁用了什么 / 发动了什么技能,联机下 `game.log` 会广播到各端),默认关。扩展迁移加一档 v3(`sgs-friends_houserule_playpackconfig` 2→3,只在当前为 off 时改成 `center`,不重跑 v2 的候选数);不想要的在 选项→显示→历史记录栏 关。layout.css:居中时 top 200→240(别和「请选择要使用的牌」叠字)、高度相应收一点、`min-height: 56px`(矮屏至少三行)。⚠ 手机横屏上的实际观感没测。
+  - 没做 / 可选:游戏速度(选项→通用→游戏速度,房主的设置决定全场节奏)调慢也能让每一步多停一会,没动默认值。
 **✅ 2026-11-21 联机换将卡(identity.js 补丁的 `lib.sgsSwap`;本地 dist 已含,Pages 待用户 deploy)**
   - **规则**(照线下房间「线上发将」,用户只说了「联机也加上换将卡」,口径是我选的):起手候选每张各可换一次 —— 换下的放回将池(别人之后可能换到)、换上来的不能再换、不会换回自己起手见过的;君主位只有随机那几张可换,主公技候选不能换。明忠 / 谋攻 / 3v3v2 走别的选将函数,没接;斗地主(`mode/doudizhu.js`)也没接。
   - **实现**:主机在 `_status.sgsSwap[playerid] = {init,left,got,pool,back}` 记账,`chooseCharacterOL` 里君主那步(pool = 没出现在他框里的非主公技武将,不放回)和其余玩家那步(pool = `event.list` 引用,放回)各 `register` 一次,出结果后 `clear()`。玩家点选一张候选再点「换将」控件 → 客户端 `game.send("sgsSwap", 名)`(新增 `lib.message.server.sgsSwap`)/ 房主本机直接调 → 主机抽新将 → `player.send` 单发 `lib.sgsSwap.apply(old, fresh)` 替换对话框里的按钮(`ui.create.button(fresh,"characterx")`,加 `.sgs-swapped` + 顶部「已换」角标,css 在 layout.css)。「换将」控件由各端 200ms 轮询决定显隐(自己的 chooseButton 框开着且还有可换的才出现)。发给客户端的函数只调 `lib.sgsSwap.*` 并带存在性判断,老版本客户端收到不报错。

@@ -114,7 +114,7 @@ index 753d0a0..4734abc 100644
  		guozhan: {
  			normal: "国战模式",
 diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
-index b7a3c12..a069e35 100644
+index b7a3c12..b159157 100644
 --- a/apps/core/layout/default/layout.css
 +++ b/apps/core/layout/default/layout.css
 @@ -4063,6 +4063,7 @@ div:hover > .intro {
@@ -169,7 +169,7 @@ index b7a3c12..a069e35 100644
  .player .identity[data-color="bZhu"],
  .player .identity[data-color="bZhong"],
  .player .identity[data-color="bNei"],
-@@ -5822,3 +5832,21 @@ progress.progress::-webkit-progress-value {
+@@ -5822,3 +5832,31 @@ progress.progress::-webkit-progress-value {
  #arena.selecting .card.oljuhun:not(.selectable):not(.selected) {
  	filter: brightness(0.48) grayscale(0.65) !important;
  }
@@ -190,6 +190,16 @@ index b7a3c12..a069e35 100644
 +	color: #fff;
 +	pointer-events: none;
 +	z-index: 3;
++}
++
++/* 【私用补丁】历史记录栏默认打开(sgs-friends 扩展迁移 v3):矮屏上保证至少能看到三行 */
++#arenalog {
++	min-height: 56px;
++}
++/* 居中时往下让一行半,别和「请选择要使用的牌」这类提示字叠在一起 */
++#arena:not(.oldlayout) > #arenalog[data-position="center"] {
++	top: 240px;
++	height: calc(100% - 430px);
 +}
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
 index 943d3f9..80fd87b 100644
@@ -1495,10 +1505,33 @@ index 34e2315..c661597 100644
  		ui.arena.classList.add("selecting");
  		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
 diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
-index 7335b5c..75aa4c7 100644
+index 7335b5c..96eede7 100644
 --- a/apps/core/noname/game/index.js
 +++ b/apps/core/noname/game/index.js
-@@ -7196,16 +7196,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
+@@ -1869,7 +1869,21 @@ export class Game {
+ 			type == "hidden"
+ 		);
+ 		_status.mode = lib.configOL[lib.configOL.mode + "_mode"];
+-		return game.chooseCharacterOL();
++		// 【私用补丁】选将时限(房间设置「选将时限」,默认 5 分钟):选将、换将、选势力都要看技能,不能和出牌共用 30 秒。
++		// 倒计时各端都读 lib.configOL.choose_timeout,所以选将期间把它临时换掉,选将事件结束后再换回出牌时限。
++		const playTimeout = lib.configOL.choose_timeout;
++		const characterTimeout = String(parseInt(lib.configOL.choose_character_timeout) || 300);
++		game.broadcastAll(time => {
++			lib.configOL.choose_timeout = time;
++		}, characterTimeout);
++		const chooseCharacterResult = game.chooseCharacterOL();
++		const restoreTimeout = game.createEvent("sgsRestoreChooseTimeout", false);
++		restoreTimeout.setContent(async () => {
++			game.broadcastAll(time => {
++				lib.configOL.choose_timeout = time;
++			}, playTimeout);
++		});
++		return chooseCharacterResult;
+ 	}
+ 	closeMenu() {
+ 		if (ui.menuContainer && !ui.menuContainer.classList.contains("hidden")) {
+@@ -7196,16 +7210,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
  		}
  		if (!ui.restart) {
  			if (game.onlineroom && typeof game.roomId == "string") {
@@ -1559,7 +1592,7 @@ index 7335b5c..75aa4c7 100644
  			} else {
  				ui.restart = ui.create.control("restart", game.reload);
  			}
-@@ -7376,6 +7419,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
+@@ -7376,6 +7433,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
  		});
  
  		game.Check.skill(event);
@@ -1748,7 +1781,7 @@ index bbc3353..dc07928 100644
  			},
  			event.videoId,
 diff --git a/apps/core/noname/library/element/player.js b/apps/core/noname/library/element/player.js
-index 72c08b2..f7162ee 100644
+index 72c08b2..819642f 100644
 --- a/apps/core/noname/library/element/player.js
 +++ b/apps/core/noname/library/element/player.js
 @@ -511,9 +511,9 @@ export class Player extends HTMLDivElement {
@@ -1774,6 +1807,35 @@ index 72c08b2..f7162ee 100644
  	}
  	/**
  	 * 整理手牌然后如果是联机模式顺便同步
+@@ -16421,13 +16424,25 @@ export class Player extends HTMLDivElement {
+ 			}
+ 		} else if (this.damagepopups.length) {
+ 			var node = this.damagepopups[0];
++			// 【私用补丁】文字提示(技能名等)原来只停 0.2 秒,联机时别人根本看不清发动了什么 → 停 2.5 秒;
++			// 同一角色的下一条提示出现时,上一条立刻让位(队列节奏不变,不会越排越晚)
++			if (this._sgsLingerPop && this._sgsLingerPop.parentNode) {
++				this._sgsLingerPop.delete();
++			}
++			var linger = node.classList.contains("normal-font");
++			this._sgsLingerPop = linger ? node : null;
+ 			this.appendChild(node);
+ 			ui.refresh(node);
+ 			node.classList.add("damageadded");
+ 			node.listenTransition(function () {
+-				setTimeout(function () {
+-					node.delete();
+-				}, 200);
++				setTimeout(
++					function () {
++						if (node.parentNode) {
++							node.delete();
++						}
++					},
++					linger ? 2500 : 200
++				);
+ 			});
+ 			// setTimeout(function(){
+ 			// 	node.delete();
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
 index 08f9718..79cf1ef 100644
 --- a/apps/core/noname/library/index.js
@@ -1976,3 +2038,57 @@ index 6af9480..cd63704 100644
  				}
  			},
  			{ once: true }
+diff --git a/apps/core/noname/ui/create/menu/pages/startMenu.js b/apps/core/noname/ui/create/menu/pages/startMenu.js
+index b533fc9..53ef420 100644
+--- a/apps/core/noname/ui/create/menu/pages/startMenu.js
++++ b/apps/core/noname/ui/create/menu/pages/startMenu.js
+@@ -184,6 +184,22 @@ export const startMenu = function (connectMenu) {
+ 						connect: true,
+ 						frequent: true,
+ 					};
++					// 【私用补丁】选将单独计时(实现在 game.randomMapOL)
++					infoconfig.connect_choose_character_timeout = {
++						name: "选将时限",
++						init: "300",
++						item: {
++							30: "30秒",
++							60: "1分钟",
++							120: "2分钟",
++							180: "3分钟",
++							300: "5分钟",
++							600: "10分钟",
++						},
++						connect: true,
++						frequent: true,
++						intro: "选将(含换将、选势力)的时间上限,到时自动选;开局后按「出牌时限」计时",
++					};
+ 					infoconfig.connect_observe = {
+ 						name: "允许旁观",
+ 						init: true,
+diff --git a/apps/core/noname/ui/create/menu/startMenu.js b/apps/core/noname/ui/create/menu/startMenu.js
+index 6288821..02a6e3e 100644
+--- a/apps/core/noname/ui/create/menu/startMenu.js
++++ b/apps/core/noname/ui/create/menu/startMenu.js
+@@ -91,6 +91,22 @@ export const startMenuData = {
+ 					};
+ 				}
+ 				if (!infoconfig.connect_observe) {
++					// 【私用补丁】选将单独计时(实现在 game.randomMapOL)
++					infoconfig.connect_choose_character_timeout = {
++						name: "选将时限",
++						init: "300",
++						item: {
++							30: "30秒",
++							60: "1分钟",
++							120: "2分钟",
++							180: "3分钟",
++							300: "5分钟",
++							600: "10分钟",
++						},
++						connect: true,
++						frequent: true,
++						intro: "选将(含换将、选势力)的时间上限,到时自动选;开局后按「出牌时限」计时",
++					};
+ 					infoconfig.connect_observe = {
+ 						name: "允许旁观",
+ 						init: true,

@@ -374,6 +374,7 @@ lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { openProfile, openAvatarPi
 // ---------------------------------------------------------------------------------------------
 // ④ 房规默认值一次性迁移:无名杀会把菜单默认值存进 IndexedDB,改 config.json/菜单 init 对老玩家无效,
 //    所以按版本号迁移一次(之后玩家自己改的仍然保留)。身份局 非内奸 6 / 内奸 7;斗地主 地主 5 / 农民 3;联机同。
+//    v3 起分档:候选数是 v2,显示类默认值(历史记录栏)是 v3,各跑各的。
 // ---------------------------------------------------------------------------------------------
 {
 	const HOUSE_RULE_VERSION = 2;
@@ -392,6 +393,14 @@ lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { openProfile, openAvatarPi
 		set("connect_choice_fan", 3, "doudizhu");
 		set("sgs-friends_houserule_playpackconfig", HOUSE_RULE_VERSION);
 		console.log("[sgs-friends] 已套用房规默认值 v" + HOUSE_RULE_VERSION);
+	}
+	// v3(2026-11-21,用户反馈「看不清别人在做什么」):默认打开屏幕中部的「历史记录栏」(滚动显示 谁对谁用了什么 / 发动了什么技能)。
+	// 单独一档,不重跑上面的候选数(玩家自己改过的要保留);不想要的人在 选项→显示→历史记录栏 里关。
+	const DISPLAY_VERSION = 3;
+	if ((lib.config["sgs-friends_houserule_playpackconfig"] || 0) < DISPLAY_VERSION) {
+		if (!lib.config.show_log || lib.config.show_log === "off") game.saveConfig("show_log", "center");
+		game.saveConfig("sgs-friends_houserule_playpackconfig", DISPLAY_VERSION);
+		console.log("[sgs-friends] 已打开历史记录栏(居中) v" + DISPLAY_VERSION);
 	}
 }
 
