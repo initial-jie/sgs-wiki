@@ -1,5 +1,43 @@
+diff --git a/apps/core/character/sp/skill.js b/apps/core/character/sp/skill.js
+index f0599fa..dda7b4a 100644
+--- a/apps/core/character/sp/skill.js
++++ b/apps/core/character/sp/skill.js
+@@ -46458,17 +46458,10 @@ const skills = {
+ 						}
+ 						case 2: {
+ 							player.line(trigger.player, "green");
+-							/*
+-							var card1=trigger.player.getCards('h').randomGet();
+-							var card2=trigger.player.getCards('e').randomGet();
+-							var list=[];
+-							if(card1) list.push(card1);
+-							if(card2) list.push(card2);
+-							if(list.length) player.gain(list,trigger.player,'giveAuto','bySelf');
+-							*/
+-							const cards = trigger.player.getGainableCards(player, "he");
++							// 【私用补丁】按 OL 原文:随机获得其一张手牌和一张装备区里的牌(哪个区域没牌就不拿,不用另一区域的牌补)。上游是「随机获得其两张牌」
++							const cards = [...trigger.player.getGainableCards(player, "h").randomGets(1), ...trigger.player.getGainableCards(player, "e").randomGets(1)];
+ 							if (cards.length) {
+-								await player.gain(cards.randomGets(2), trigger.player, "giveAuto", "bySelf");
++								await player.gain(cards, trigger.player, "giveAuto", "bySelf");
+ 							}
+ 							break;
+ 						}
+diff --git a/apps/core/character/sp/translate.js b/apps/core/character/sp/translate.js
+index 5f65279..a6081a2 100644
+--- a/apps/core/character/sp/translate.js
++++ b/apps/core/character/sp/translate.js
+@@ -39,7 +39,7 @@ const translates = {
+ 	xinfu_fujian: "伏间",
+ 	xinfu_fujian_info: "锁定技，结束阶段，你观看一名随机的其他角色的随机X张手牌。（X为场上手牌最少的角色的手牌数）",
+ 	xinfu_xionghuo: "凶镬",
+-	xinfu_xionghuo_info: "游戏开始时，你获得3个“暴戾”标记（标记上限为3）。出牌阶段，你可以交给一名其他角色一个“暴戾”标记。当你对有“暴戾”标记的其他角色造成伤害时，此伤害+1。有“暴戾”标记的其他角色的出牌阶段开始时，其移去所有“暴戾”标记并随机执行一项：1.受到1点火焰伤害且本回合不能对你使用【杀】；2.失去1点体力且本回合手牌上限-1；3.你随机获得其两张牌。",
++	xinfu_xionghuo_info: "游戏开始时，你获得3个“暴戾”标记（标记上限为3）。出牌阶段，你可以交给一名其他角色一个“暴戾”标记。当你对有“暴戾”标记的其他角色造成伤害时，此伤害+1。有“暴戾”标记的其他角色的出牌阶段开始时，其移去所有“暴戾”标记并随机执行一项：1.受到1点火焰伤害且本回合不能对你使用【杀】；2.失去1点体力且本回合手牌上限-1；3.你随机获得其一张手牌和一张装备区里的牌。",
+ 	xinfu_shajue: "杀绝",
+ 	xinfu_shajue_info: "锁定技，其他角色进入濒死状态时，你获得一个“暴戾”标记。然后若其体力值小于0，你获得使其进入濒死状态的牌。",
+ 	xinfu_jianjie: "荐杰",
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa7989..4b68a1fe0 100644
+index 99aaa79..4b68a1f 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -53,7 +91,7 @@ index 99aaa7989..4b68a1fe0 100644
  	"extensions": [],
  	"banned": [],
 diff --git a/apps/core/game/package.js b/apps/core/game/package.js
-index 753d0a02d..4734abc66 100644
+index 753d0a0..4734abc 100644
 --- a/apps/core/game/package.js
 +++ b/apps/core/game/package.js
 @@ -49,6 +49,7 @@ window.noname_package = {
@@ -76,7 +114,7 @@ index 753d0a02d..4734abc66 100644
  		guozhan: {
  			normal: "国战模式",
 diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
-index b7a3c124c..2bb343782 100644
+index b7a3c12..2bb3437 100644
 --- a/apps/core/layout/default/layout.css
 +++ b/apps/core/layout/default/layout.css
 @@ -4063,6 +4063,7 @@ div:hover > .intro {
@@ -132,7 +170,7 @@ index b7a3c124c..2bb343782 100644
  .player .identity[data-color="bZhong"],
  .player .identity[data-color="bNei"],
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
-index 943d3f929..80fd87bf6 100644
+index 943d3f9..80fd87b 100644
 --- a/apps/core/mode/connect.js
 +++ b/apps/core/mode/connect.js
 @@ -85,6 +85,7 @@ export default {
@@ -197,10 +235,10 @@ index 943d3f929..80fd87bf6 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b58b..8e7450259 100644
+index 67fb1b5..8a3372e 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
-@@ -3,6 +3,202 @@ import html from "dedent";
+@@ -3,6 +3,229 @@ import html from "dedent";
  
  export const type = "mode";
  
@@ -267,6 +305,33 @@ index 67fb1b58b..8e7450259 100644
 +	const cfg = lib.config.mode_config.identity;
 +	cfg.choice_jianchen = cfg.choice_nei ?? 5;
 +	cfg.choice_yijun = cfg.choice_fan ?? 3;
++};
++
++/**
++ * 主机:大忠似奸的义军彼此知晓身份。
++ * 联机客户端本地只有自己和昏君的身份(其他人一律是「猜」),所以不能让各端自己比对,要由主机把义军名单单发给每名义军(不广播,别的身份收不到)。
++ * 只改显示层:不动 identityShown / ai.shown —— 对其他身份(含电脑)来说这些义军仍是暗的。
++ */
++const showDazhongMates = (me, mates) => {
++	for (const current of mates) {
++		if (current === me) {
++			continue;
++		}
++		current.identity = "yijun";
++		current.ai.identity_mark = "finished"; // 单机「自动标记身份」别再把队友改标成忠/反
++		current.setIdentity("yijun");
++		current.node.identity.classList.remove("guessing");
++	}
++};
++const revealDazhongYijun = () => {
++	const mates = game.players.filter(current => current.identity === "yijun");
++	for (const current of mates) {
++		if (current === game.me) {
++			showDazhongMates(current, mates);
++		} else {
++			current.send(showDazhongMates, current, mates); // 电脑 / 掉线者没有 ws,send 自己会跳过;托管中的玩家也照发
++		}
++	}
 +};
 +
 +/**
@@ -403,7 +468,7 @@ index 67fb1b58b..8e7450259 100644
  /** @type { importModeConfig } */
  export default {
  	name: "identity",
-@@ -75,9 +271,7 @@ export default {
+@@ -75,9 +298,7 @@ export default {
  		},
  		async (event, trigger, player) => {
  			if (lib.config.new_tutorial) {
@@ -414,7 +479,7 @@ index 67fb1b58b..8e7450259 100644
  				return;
  			}
  
-@@ -205,6 +399,27 @@ export default {
+@@ -205,6 +426,27 @@ export default {
  			};
  			if (_status.connectMode) {
  				_status.mode = lib.configOL.identity_mode;
@@ -442,7 +507,7 @@ index 67fb1b58b..8e7450259 100644
  				if (_status.mode == "zhong") {
  					lib.configOL.number = 8;
  					if (lib.configOL.zhong_card) {
-@@ -233,11 +448,24 @@ export default {
+@@ -233,11 +475,24 @@ export default {
  				if (lib.configOL.number < 2) {
  					lib.configOL.number = 2;
  				}
@@ -468,7 +533,7 @@ index 67fb1b58b..8e7450259 100644
  				if (_status.mode == "normal" && (get.config("enable_commoner") || get.config("double_nei"))) {
  					const identity = get.config("enable_commoner") ? "commoner" : "nei";
  					for (const list of lib.config.mode_config.identity.identity.slice(1)) {
-@@ -253,7 +481,7 @@ export default {
+@@ -253,7 +508,7 @@ export default {
  						list.push(identity);
  					}
  				}
@@ -477,7 +542,7 @@ index 67fb1b58b..8e7450259 100644
  					lib.onwash.push(yearLimitCheck);
  				}
  				for (const current of game.players) {
-@@ -335,7 +563,55 @@ export default {
+@@ -335,7 +590,46 @@ export default {
  						game.zhong.addSkill("sheshen");
  					}
  				}
@@ -519,22 +584,33 @@ index 67fb1b58b..8e7450259 100644
 +					}
 +				}
 +				if (_status.mode === "dazhong") {
-+					// 大忠似奸:义军彼此知晓身份(只在各自客户端本地亮,不广播)
-+					game.broadcastAll(() => {
-+						if (game.me && game.me.identity === "yijun") {
-+							for (const current of game.players) {
-+								if (current !== game.me && current.identity === "yijun") {
-+									current.showIdentity();
-+								}
-+							}
-+						}
-+					});
++					revealDazhongYijun();
 +				}
 +				let enhance_zhu = !["zhong", "stratagem", "purple", "baonue", "dazhong", "wujian"].includes(_status.mode),
  					skill;
  				if (enhance_zhu) {
  					if (_status.connectMode) {
-@@ -542,7 +818,7 @@ export default {
+@@ -537,12 +831,27 @@ export default {
+ 					//player.node.name.dataset.nature=get.groupnature(player.group);
+ 				}
+ 			}
++			// 【私用补丁】大忠似奸重连:reinit 会把 translate 盖回模式默认值(昏君又显示成「主」),重放一遍;
++			// 义军重新认出队友(旁观者不算)
++			if (_status.mode === "dazhong" && game.online) {
++				lib.translate.zhu = "昏";
++				lib.translate.zhu2 = "昏君";
++				if (game.zhu && game.zhu.identityShown) {
++					game.zhu.setIdentity();
++				}
++			}
++			if (_status.mode === "dazhong" && !game.observe && game.me && game.me.identity === "yijun") {
++				showDazhongMates(
++					game.me,
++					game.players.filter(current => current.identity === "yijun")
++				);
++			}
+ 		},
+ 		/**
  		 * 给“房间信息”界面填充身份模式的联机房间配置
  		 */
  		getRoomInfo(uiintro) {
@@ -543,7 +619,7 @@ index 67fb1b58b..8e7450259 100644
  			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
  			if (lib.configOL.identity_mode != "zhong") {
  				if (lib.configOL.identity_mode == "stratagem") {
-@@ -649,6 +925,36 @@ export default {
+@@ -649,6 +958,36 @@ export default {
  						cai: "猜",
  					};
  				}
@@ -580,7 +656,7 @@ index 67fb1b58b..8e7450259 100644
  			} else {
  				if (get.config("enable_commoner")) {
  					return {
-@@ -678,10 +984,10 @@ export default {
+@@ -678,10 +1017,10 @@ export default {
  			for (var i in list) {
  				switch (i) {
  					case "fan":
@@ -593,7 +669,7 @@ index 67fb1b58b..8e7450259 100644
  						break;
  					case "nei":
  						list[i] = "内奸";
-@@ -689,6 +995,27 @@ export default {
+@@ -689,6 +1028,27 @@ export default {
  					case "commoner":
  						list[i] = "平民";
  						break;
@@ -621,7 +697,7 @@ index 67fb1b58b..8e7450259 100644
  					case "zhu":
  						list[i] = "主公";
  						break;
-@@ -741,6 +1068,18 @@ export default {
+@@ -741,6 +1101,18 @@ export default {
  					case "stratagem":
  						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
  						break;
@@ -640,7 +716,7 @@ index 67fb1b58b..8e7450259 100644
  					default:
  						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
  				}
-@@ -789,6 +1128,12 @@ export default {
+@@ -789,6 +1161,12 @@ export default {
  		 * @param {boolean} [me] - 兼容旧逻辑的保留参数，目前不会影响显示范围。
  		 */
  		showIdentity(me) {
@@ -653,7 +729,7 @@ index 67fb1b58b..8e7450259 100644
  			for (const player of game.players) {
  				// if(me===false&&player==game.me) continue;
  				player.node.identity.classList.remove("guessing");
-@@ -911,6 +1256,104 @@ export default {
+@@ -911,6 +1289,104 @@ export default {
  				}
  				return;
  			}
@@ -758,7 +834,7 @@ index 67fb1b58b..8e7450259 100644
  			if (!game.zhu) {
  				if (get.population("fan") == 0) {
  					switch (me.identity) {
-@@ -1853,8 +2296,8 @@ export default {
+@@ -1853,8 +2329,8 @@ export default {
  						if (event.zhongmode) {
  							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
  						} else {
@@ -769,7 +845,7 @@ index 67fb1b58b..8e7450259 100644
  								identityChoices.push("commoner");
  							}
  						}
-@@ -2109,7 +2552,13 @@ export default {
+@@ -2109,7 +2585,13 @@ export default {
  						currentPlayer.identityShown = false;
  					}
  
@@ -784,7 +860,7 @@ index 67fb1b58b..8e7450259 100644
  						for (const currentPlayer of game.players) {
  							delete currentPlayer.special_identity;
  						}
-@@ -2552,7 +3001,13 @@ export default {
+@@ -2552,7 +3034,13 @@ export default {
  						}
  						currentPlayer.identityShown = false;
  					}
@@ -799,7 +875,7 @@ index 67fb1b58b..8e7450259 100644
  						const map = {};
  						const zhongs = game.filterPlayer(current => current.identity === "zhong");
  						const fans = game.filterPlayer(current => current.identity === "fan");
-@@ -2605,6 +3060,7 @@ export default {
+@@ -2605,6 +3093,7 @@ export default {
  								}
  								zhu.setIdentity();
  								zhu.node.identity.classList.remove("guessing");
@@ -807,7 +883,7 @@ index 67fb1b58b..8e7450259 100644
  								me.setIdentity(identity);
  								me.node.identity.classList.remove("guessing");
  								if (me.special_identity) {
-@@ -2618,6 +3074,13 @@ export default {
+@@ -2618,6 +3107,13 @@ export default {
  							currentPlayer.identity
  						);
  					}
@@ -821,7 +897,7 @@ index 67fb1b58b..8e7450259 100644
  
  					let list;
  					const list2 = [];
-@@ -2957,6 +3420,22 @@ export default {
+@@ -2957,6 +3453,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -844,7 +920,7 @@ index 67fb1b58b..8e7450259 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3459,20 @@ export default {
+@@ -2980,6 +3492,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -865,7 +941,7 @@ index 67fb1b58b..8e7450259 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3491,16 @@ export default {
+@@ -2998,6 +3524,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -882,7 +958,7 @@ index 67fb1b58b..8e7450259 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3605,40 @@ export default {
+@@ -3102,6 +3638,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -923,7 +999,7 @@ index 67fb1b58b..8e7450259 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +3670,29 @@ export default {
+@@ -3133,6 +3703,29 @@ export default {
  						});
  					}
  				}
@@ -953,7 +1029,7 @@ index 67fb1b58b..8e7450259 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +3960,34 @@ export default {
+@@ -3400,6 +3993,34 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -988,7 +1064,7 @@ index 67fb1b58b..8e7450259 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4501,65 @@ export default {
+@@ -3913,6 +4534,65 @@ export default {
  				}
  				return -7;
  			}
@@ -1054,7 +1130,7 @@ index 67fb1b58b..8e7450259 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5238,88 @@ export default {
+@@ -4591,6 +5271,88 @@ export default {
  		},
  	},
  	skill: {
@@ -1144,7 +1220,7 @@ index 67fb1b58b..8e7450259 100644
  		stratagem_gain: {
  			trigger: {
 diff --git a/apps/core/noname/game/check.js b/apps/core/noname/game/check.js
-index 34e2315a3..c66159738 100644
+index 34e2315..c661597 100644
 --- a/apps/core/noname/game/check.js
 +++ b/apps/core/noname/game/check.js
 @@ -181,6 +181,11 @@ export class Check {
@@ -1202,7 +1278,7 @@ index 34e2315a3..c66159738 100644
  		ui.arena.classList.add("selecting");
  		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
 diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
-index 7335b5c7f..75aa4c72d 100644
+index 7335b5c..75aa4c7 100644
 --- a/apps/core/noname/game/index.js
 +++ b/apps/core/noname/game/index.js
 @@ -7196,16 +7196,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
@@ -1275,7 +1351,7 @@ index 7335b5c7f..75aa4c72d 100644
  		_status.multitarget = false;
  		const skillinfo = get.info(event.skill) || {};
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
-index 10da4f224..0864b5678 100644
+index 10da4f2..0864b56 100644
 --- a/apps/core/noname/init/browser.js
 +++ b/apps/core/noname/init/browser.js
 @@ -10,15 +10,17 @@ import { FileSystem, FileSystemError, FileSystemErrorCode, installLegacyFileSyst
@@ -1392,7 +1468,7 @@ index 10da4f224..0864b5678 100644
   * @implements { FileSystemAdapter }
   */
 diff --git a/apps/core/noname/init/index.ts b/apps/core/noname/init/index.ts
-index 2aacae291..45f4c6a9d 100644
+index 2aacae2..45f4c6a 100644
 --- a/apps/core/noname/init/index.ts
 +++ b/apps/core/noname/init/index.ts
 @@ -84,6 +84,11 @@ export async function boot() {
@@ -1417,7 +1493,7 @@ index 2aacae291..45f4c6a9d 100644
  
  	if (autoImport) {
 diff --git a/apps/core/noname/init/polyfill.ts b/apps/core/noname/init/polyfill.ts
-index dc294b901..6e894463e 100644
+index dc294b9..6e89446 100644
 --- a/apps/core/noname/init/polyfill.ts
 +++ b/apps/core/noname/init/polyfill.ts
 @@ -249,9 +249,10 @@ HTMLDivElement.prototype.setBackgroundDB = async function (img) {
@@ -1433,7 +1509,7 @@ index dc294b901..6e894463e 100644
  	} else if (URL.canParse(img)) {
  		this.style.backgroundImage = `url("${img}")`;
 diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
-index bbc335357..dc07928fa 100644
+index bbc3353..dc07928 100644
 --- a/apps/core/noname/library/element/content.ts
 +++ b/apps/core/noname/library/element/content.ts
 @@ -1669,7 +1669,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
@@ -1454,8 +1530,35 @@ index bbc335357..dc07928fa 100644
  				}
  			},
  			event.videoId,
+diff --git a/apps/core/noname/library/element/player.js b/apps/core/noname/library/element/player.js
+index 72c08b2..f7162ee 100644
+--- a/apps/core/noname/library/element/player.js
++++ b/apps/core/noname/library/element/player.js
+@@ -511,9 +511,9 @@ export class Player extends HTMLDivElement {
+ 				}
+ 			});
+ 		}
+-		if (this.getCards("h").every((card, index) => hs[index] == card)) {
+-			return false;
+-		}
++		// 【私用补丁】下面是逐张 unshift 再 prepend,最终顺序是 hs 的倒序;原来拿 hs 本身和现状比,
++		// 「想把手牌完全倒过来」(最常见:只有两张牌想互换,蒋琬〖自若〗整理手牌)会被误判成没变化。改成排完再比前后。
++		const before = this.getCards("h");
+ 
+ 		this.node.handcards1.style.visibility = "hidden";
+ 		this.node.handcards2.style.visibility = "hidden";
+@@ -535,6 +535,9 @@ export class Player extends HTMLDivElement {
+ 		if (this == game.me) {
+ 			ui.updatehl();
+ 		}
++		if (this.getCards("h").every((card, index) => before[index] == card)) {
++			return false;
++		}
+ 	}
+ 	/**
+ 	 * 整理手牌然后如果是联机模式顺便同步
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718b5..25375071a 100644
+index 08f9718..2537507 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -1616,7 +1719,7 @@ index 08f9718b5..25375071a 100644
  					intro: "读取剪贴板以解析邀请链接自动加入联机房间",
  				},
 diff --git a/apps/core/noname/ui/click/index.js b/apps/core/noname/ui/click/index.js
-index add63cd56..ac777511e 100644
+index add63cd..ac77751 100644
 --- a/apps/core/noname/ui/click/index.js
 +++ b/apps/core/noname/ui/click/index.js
 @@ -413,6 +413,8 @@ export class Click {
@@ -1629,7 +1732,7 @@ index add63cd56..ac777511e 100644
  						ui.create.div(".name", button.info[i][0] || "无名玩家", node);
  					} else {
 diff --git a/apps/core/noname/ui/create/index.js b/apps/core/noname/ui/create/index.js
-index 6af9480e3..cd637040a 100644
+index 6af9480..cd63704 100644
 --- a/apps/core/noname/ui/create/index.js
 +++ b/apps/core/noname/ui/create/index.js
 @@ -2435,7 +2435,7 @@ export class Create {
