@@ -114,7 +114,7 @@ index 753d0a0..4734abc 100644
  		guozhan: {
  			normal: "国战模式",
 diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
-index b7a3c12..2bb3437 100644
+index b7a3c12..a069e35 100644
 --- a/apps/core/layout/default/layout.css
 +++ b/apps/core/layout/default/layout.css
 @@ -4063,6 +4063,7 @@ div:hover > .intro {
@@ -169,6 +169,28 @@ index b7a3c12..2bb3437 100644
  .player .identity[data-color="bZhu"],
  .player .identity[data-color="bZhong"],
  .player .identity[data-color="bNei"],
+@@ -5822,3 +5832,21 @@ progress.progress::-webkit-progress-value {
+ #arena.selecting .card.oljuhun:not(.selectable):not(.selected) {
+ 	filter: brightness(0.48) grayscale(0.65) !important;
+ }
++
++/* 【私用补丁】联机换将卡:换上来的候选顶部居中标「已换」(左下是「切换」版本按钮,右下是体力) */
++.button.character > .sgs-swapped-tag {
++	left: 50%;
++	top: 2px;
++	right: auto;
++	bottom: auto;
++	transform: translateX(-50%);
++	white-space: nowrap;
++	padding: 0 4px;
++	font-size: 12px;
++	line-height: 16px;
++	border-radius: 3px;
++	background: rgba(120, 40, 30, 0.85);
++	color: #fff;
++	pointer-events: none;
++	z-index: 3;
++}
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
 index 943d3f9..80fd87b 100644
 --- a/apps/core/mode/connect.js
@@ -235,10 +257,10 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..8a3372e 100644
+index 67fb1b5..aa28796 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
-@@ -3,6 +3,229 @@ import html from "dedent";
+@@ -3,6 +3,378 @@ import html from "dedent";
  
  export const type = "mode";
  
@@ -305,6 +327,155 @@ index 67fb1b5..8a3372e 100644
 +	const cfg = lib.config.mode_config.identity;
 +	cfg.choice_jianchen = cfg.choice_nei ?? 5;
 +	cfg.choice_yijun = cfg.choice_fan ?? 3;
++};
++
++/**
++ * 【私用补丁】联机换将卡(sgs-wiki 房规,同线下房间的「线上发将」):
++ * 起手候选每张各可换一次 —— 换下的放回将池,换上来的不能再换;君主的主公技候选不能换。
++ * 主机在 _status.sgsSwap 记账;玩家点选一张候选再点「换将」→ game.send("sgsSwap", 名) → 主机抽新将 → 单发给该玩家替换按钮。
++ * 发给客户端的函数只调 lib.sgsSwap.*(各端加载本文件时都会装上),老版本客户端没有就什么也不做。
++ */
++lib.sgsSwap = {
++	/** 主机:登记一名真人玩家可换的候选。pool = 抽新将用的数组(引用);back = 换下的是否放回 pool */
++	register(player, names, pool, back) {
++		if (!names.length || (player !== game.me && !(player.ws && !player.ws.closed))) {
++			return;
++		}
++		if (!_status.sgsSwap) {
++			_status.sgsSwap = {};
++		}
++		_status.sgsSwap[player.playerid] = { init: names.slice(0), left: names.slice(0), got: [], pool, back };
++		if (player === game.me) {
++			lib.sgsSwap.enable(names.slice(0));
++		} else {
++			player.send(names => lib.sgsSwap && lib.sgsSwap.enable(names), names.slice(0));
++		}
++	},
++	/** 主机:处理一次换将请求 */
++	request(player, name) {
++		const hand = player && _status.sgsSwap && _status.sgsSwap[player.playerid];
++		const reply = (old, fresh) => {
++			if (player === game.me) {
++				lib.sgsSwap.apply(old, fresh);
++			} else {
++				player.send((old, fresh) => lib.sgsSwap && lib.sgsSwap.apply(old, fresh), old, fresh);
++			}
++		};
++		if (!hand || typeof name !== "string" || !hand.left.includes(name)) {
++			return reply(name, null);
++		}
++		// 不会换回自己起手见过的,也不会抽到自己这轮已经换来的
++		const candidates = hand.pool.filter(current => !hand.init.includes(current) && !hand.got.includes(current));
++		if (!candidates.length) {
++			return reply(name, null);
++		}
++		const fresh = candidates.randomGet();
++		hand.pool.remove(fresh);
++		if (hand.back) {
++			hand.pool.push(name);
++		}
++		hand.left.remove(name);
++		hand.got.push(fresh);
++		reply(name, fresh);
++	},
++	/** 主机:这一步选将结束,收掉各端的「换将」按钮 */
++	clear() {
++		if (!_status.sgsSwap) {
++			return;
++		}
++		delete _status.sgsSwap;
++		game.broadcastAll(() => lib.sgsSwap && lib.sgsSwap.disable());
++	},
++	/** 各端:本机玩家可以换 names 里的候选了 */
++	enable(names) {
++		lib.sgsSwap.disable();
++		_status.sgsSwapLeft = names;
++		// 「换将」按钮只在自己的选将框开着、且还有可换的候选时出现
++		_status.sgsSwapTimer = setInterval(() => {
++			const dialog = _status.event && _status.event.name === "chooseButton" && _status.event.dialog;
++			const usable = !!dialog && Array.isArray(dialog.buttons) && dialog.buttons.some(button => _status.sgsSwapLeft.includes(button._link));
++			if (usable && !ui.sgsSwap) {
++				ui.sgsSwap = ui.create.control("换将", () => lib.sgsSwap.click());
++			} else if (!usable && ui.sgsSwap) {
++				ui.sgsSwap.close();
++				delete ui.sgsSwap;
++			}
++		}, 200);
++	},
++	disable() {
++		clearInterval(_status.sgsSwapTimer);
++		delete _status.sgsSwapTimer;
++		delete _status.sgsSwapLeft;
++		delete _status.sgsSwapPending;
++		if (ui.sgsSwap) {
++			ui.sgsSwap.close();
++			delete ui.sgsSwap;
++		}
++	},
++	/** 各端:点了「换将」 */
++	click() {
++		const left = _status.sgsSwapLeft;
++		const dialog = _status.event && _status.event.name === "chooseButton" && _status.event.dialog;
++		if (!left || !dialog || _status.sgsSwapPending) {
++			return;
++		}
++		const selected = ui.selected.buttons.slice(0);
++		if (selected.length !== 1) {
++			ui.create.toast("先点选一张要换掉的武将,再点「换将」");
++			return;
++		}
++		const name = selected[0]._link;
++		if (!left.includes(name)) {
++			ui.create.toast(selected[0].classList.contains("sgs-swapped") ? "换上来的武将不能再换" : "这张不能换(主公技候选)");
++			return;
++		}
++		_status.sgsSwapPending = name;
++		setTimeout(() => {
++			if (_status.sgsSwapPending === name) {
++				delete _status.sgsSwapPending;
++			}
++		}, 3000);
++		if (game.online) {
++			game.send("sgsSwap", name);
++		} else {
++			lib.sgsSwap.request(game.me, name);
++		}
++	},
++	/** 各端:主机回话 —— 把 old 换成 fresh(fresh 为空 = 没换成) */
++	apply(old, fresh) {
++		delete _status.sgsSwapPending;
++		if (!fresh) {
++			ui.create.toast("将池里没有可换的武将了");
++			return;
++		}
++		if (_status.sgsSwapLeft) {
++			_status.sgsSwapLeft.remove(old);
++		}
++		const dialog = _status.event && _status.event.name === "chooseButton" && _status.event.dialog;
++		const button = dialog && Array.isArray(dialog.buttons) && dialog.buttons.find(current => current._link === old);
++		if (!button) {
++			return;
++		}
++		if (ui.selected.buttons.includes(button)) {
++			button.classList.remove("selected");
++			ui.selected.buttons.remove(button);
++		}
++		const swapped = ui.create.button(fresh, "characterx", button.parentNode);
++		button.parentNode.insertBefore(swapped, button);
++		swapped.classList.add("sgs-swapped");
++		ui.create.div(".sgs-swapped-tag", swapped).textContent = "已换";
++		dialog.buttons[dialog.buttons.indexOf(button)] = swapped;
++		button.remove();
++		game.uncheck();
++		game.check();
++	},
++};
++// 客户端 → 主机:换将请求(this 是发来的那个客户端)
++lib.message.server.sgsSwap = function (name) {
++	const player = lib.playerOL && lib.playerOL[this.id];
++	if (player && _status.sgsSwap) {
++		lib.sgsSwap.request(player, name);
++	}
 +};
 +
 +/**
@@ -468,7 +639,7 @@ index 67fb1b5..8a3372e 100644
  /** @type { importModeConfig } */
  export default {
  	name: "identity",
-@@ -75,9 +298,7 @@ export default {
+@@ -75,9 +447,7 @@ export default {
  		},
  		async (event, trigger, player) => {
  			if (lib.config.new_tutorial) {
@@ -479,7 +650,7 @@ index 67fb1b5..8a3372e 100644
  				return;
  			}
  
-@@ -205,6 +426,27 @@ export default {
+@@ -205,6 +575,27 @@ export default {
  			};
  			if (_status.connectMode) {
  				_status.mode = lib.configOL.identity_mode;
@@ -507,7 +678,7 @@ index 67fb1b5..8a3372e 100644
  				if (_status.mode == "zhong") {
  					lib.configOL.number = 8;
  					if (lib.configOL.zhong_card) {
-@@ -233,11 +475,24 @@ export default {
+@@ -233,11 +624,24 @@ export default {
  				if (lib.configOL.number < 2) {
  					lib.configOL.number = 2;
  				}
@@ -533,7 +704,7 @@ index 67fb1b5..8a3372e 100644
  				if (_status.mode == "normal" && (get.config("enable_commoner") || get.config("double_nei"))) {
  					const identity = get.config("enable_commoner") ? "commoner" : "nei";
  					for (const list of lib.config.mode_config.identity.identity.slice(1)) {
-@@ -253,7 +508,7 @@ export default {
+@@ -253,7 +657,7 @@ export default {
  						list.push(identity);
  					}
  				}
@@ -542,7 +713,7 @@ index 67fb1b5..8a3372e 100644
  					lib.onwash.push(yearLimitCheck);
  				}
  				for (const current of game.players) {
-@@ -335,7 +590,46 @@ export default {
+@@ -335,7 +739,46 @@ export default {
  						game.zhong.addSkill("sheshen");
  					}
  				}
@@ -590,7 +761,7 @@ index 67fb1b5..8a3372e 100644
  					skill;
  				if (enhance_zhu) {
  					if (_status.connectMode) {
-@@ -537,12 +831,27 @@ export default {
+@@ -537,12 +980,27 @@ export default {
  					//player.node.name.dataset.nature=get.groupnature(player.group);
  				}
  			}
@@ -619,7 +790,7 @@ index 67fb1b5..8a3372e 100644
  			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
  			if (lib.configOL.identity_mode != "zhong") {
  				if (lib.configOL.identity_mode == "stratagem") {
-@@ -649,6 +958,36 @@ export default {
+@@ -649,6 +1107,36 @@ export default {
  						cai: "猜",
  					};
  				}
@@ -656,7 +827,7 @@ index 67fb1b5..8a3372e 100644
  			} else {
  				if (get.config("enable_commoner")) {
  					return {
-@@ -678,10 +1017,10 @@ export default {
+@@ -678,10 +1166,10 @@ export default {
  			for (var i in list) {
  				switch (i) {
  					case "fan":
@@ -669,7 +840,7 @@ index 67fb1b5..8a3372e 100644
  						break;
  					case "nei":
  						list[i] = "内奸";
-@@ -689,6 +1028,27 @@ export default {
+@@ -689,6 +1177,27 @@ export default {
  					case "commoner":
  						list[i] = "平民";
  						break;
@@ -697,7 +868,7 @@ index 67fb1b5..8a3372e 100644
  					case "zhu":
  						list[i] = "主公";
  						break;
-@@ -741,6 +1101,18 @@ export default {
+@@ -741,6 +1250,18 @@ export default {
  					case "stratagem":
  						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
  						break;
@@ -716,7 +887,7 @@ index 67fb1b5..8a3372e 100644
  					default:
  						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
  				}
-@@ -789,6 +1161,12 @@ export default {
+@@ -789,6 +1310,12 @@ export default {
  		 * @param {boolean} [me] - 兼容旧逻辑的保留参数，目前不会影响显示范围。
  		 */
  		showIdentity(me) {
@@ -729,7 +900,7 @@ index 67fb1b5..8a3372e 100644
  			for (const player of game.players) {
  				// if(me===false&&player==game.me) continue;
  				player.node.identity.classList.remove("guessing");
-@@ -911,6 +1289,104 @@ export default {
+@@ -911,6 +1438,104 @@ export default {
  				}
  				return;
  			}
@@ -834,7 +1005,7 @@ index 67fb1b5..8a3372e 100644
  			if (!game.zhu) {
  				if (get.population("fan") == 0) {
  					switch (me.identity) {
-@@ -1853,8 +2329,8 @@ export default {
+@@ -1853,8 +2478,8 @@ export default {
  						if (event.zhongmode) {
  							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
  						} else {
@@ -845,7 +1016,7 @@ index 67fb1b5..8a3372e 100644
  								identityChoices.push("commoner");
  							}
  						}
-@@ -2109,7 +2585,13 @@ export default {
+@@ -2109,7 +2734,13 @@ export default {
  						currentPlayer.identityShown = false;
  					}
  
@@ -860,7 +1031,7 @@ index 67fb1b5..8a3372e 100644
  						for (const currentPlayer of game.players) {
  							delete currentPlayer.special_identity;
  						}
-@@ -2552,7 +3034,13 @@ export default {
+@@ -2552,7 +3183,13 @@ export default {
  						}
  						currentPlayer.identityShown = false;
  					}
@@ -875,7 +1046,7 @@ index 67fb1b5..8a3372e 100644
  						const map = {};
  						const zhongs = game.filterPlayer(current => current.identity === "zhong");
  						const fans = game.filterPlayer(current => current.identity === "fan");
-@@ -2605,6 +3093,7 @@ export default {
+@@ -2605,6 +3242,7 @@ export default {
  								}
  								zhu.setIdentity();
  								zhu.node.identity.classList.remove("guessing");
@@ -883,7 +1054,7 @@ index 67fb1b5..8a3372e 100644
  								me.setIdentity(identity);
  								me.node.identity.classList.remove("guessing");
  								if (me.special_identity) {
-@@ -2618,6 +3107,13 @@ export default {
+@@ -2618,6 +3256,13 @@ export default {
  							currentPlayer.identity
  						);
  					}
@@ -897,7 +1068,53 @@ index 67fb1b5..8a3372e 100644
  
  					let list;
  					const list2 = [];
-@@ -2957,6 +3453,22 @@ export default {
+@@ -2719,7 +3364,16 @@ export default {
+ 							zhuListUnique.sort(lib.sort.character);
+ 							return zhuListUnique;
+ 						};
+-						list = getZhuList(list2).concat(list3.randomGets(lib.configOL.choice_zhu));
++						const zhuExtra = list3.randomGets(lib.configOL.choice_zhu);
++						list = getZhuList(list2).concat(zhuExtra);
++						if (lib.configOL.change_choice !== false) {
++							lib.sgsSwap.register(
++								game.zhu,
++								zhuExtra.filter(name => !list2.includes(name)),
++								list3.filter(name => !list.includes(name)),
++								false
++							);
++						}
+ 					}
+ 					const chooseButtonEvent = game.zhu.chooseButton(true);
+ 					chooseButtonEvent.set("selectButton", lib.configOL.double_character ? 2 : 1);
+@@ -2727,6 +3381,7 @@ export default {
+ 					chooseButtonEvent.set("ai", () => Math.random());
+ 				},
+ 				async (event, trigger, player, result) => {
++					lib.sgsSwap.clear();
+ 					if (!game.zhu.name) {
+ 						game.zhu.init(result.links[0], result.links[1]);
+ 					}
+@@ -2799,6 +3454,11 @@ export default {
+ 						}
+ 						list.push([currentPlayer, [str, [event.list.randomRemove(Math.min(num, num2)), "characterx"]], selectButton, true]);
+ 					}
++					if (lib.configOL.change_choice !== false) {
++						for (const [currentPlayer, args] of list) {
++							lib.sgsSwap.register(currentPlayer, args[1][0], event.list, true);
++						}
++					}
+ 					game.me.chooseButtonOL(list, (player, result) => {
+ 						if (game.online || player === game.me) {
+ 							player.init(result.links[0], result.links[1]);
+@@ -2807,6 +3467,7 @@ export default {
+ 				},
+ 				// step 3
+ 				async (event, trigger, player, result) => {
++					lib.sgsSwap.clear();
+ 					let shen = [];
+ 					for (const id in result) {
+ 						if (result[id] && result[id].links) {
+@@ -2957,6 +3618,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -920,7 +1137,7 @@ index 67fb1b5..8a3372e 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3492,20 @@ export default {
+@@ -2980,6 +3657,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -941,7 +1158,7 @@ index 67fb1b5..8a3372e 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3524,16 @@ export default {
+@@ -2998,6 +3689,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -958,7 +1175,7 @@ index 67fb1b5..8a3372e 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3638,40 @@ export default {
+@@ -3102,6 +3803,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -999,7 +1216,7 @@ index 67fb1b5..8a3372e 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +3703,29 @@ export default {
+@@ -3133,6 +3868,29 @@ export default {
  						});
  					}
  				}
@@ -1029,7 +1246,7 @@ index 67fb1b5..8a3372e 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +3993,34 @@ export default {
+@@ -3400,6 +4158,34 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -1064,7 +1281,7 @@ index 67fb1b5..8a3372e 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4534,65 @@ export default {
+@@ -3913,6 +4699,65 @@ export default {
  				}
  				return -7;
  			}
@@ -1130,7 +1347,7 @@ index 67fb1b5..8a3372e 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5271,88 @@ export default {
+@@ -4591,6 +5436,88 @@ export default {
  		},
  	},
  	skill: {
@@ -1558,7 +1775,7 @@ index 72c08b2..f7162ee 100644
  	/**
  	 * 整理手牌然后如果是联机模式顺便同步
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..2537507 100644
+index 08f9718..79cf1ef 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -1653,7 +1870,22 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6073,6 +6077,10 @@ export class Library {
+@@ -5866,6 +5870,14 @@ export class Library {
+ 					frequent: true,
+ 					restart: true,
+ 				},
++				// 【私用补丁】联机换将卡(实现在 mode/identity.js 的 lib.sgsSwap)
++				connect_change_choice: {
++					name: "启用换将卡",
++					init: true,
++					frequent: true,
++					restart: true,
++					intro: "选将时,起手候选每张可换一次(先点选一张再点「换将」);换上来的不能再换,主公技候选不能换",
++				},
+ 				connect_special_identity: {
+ 					name: "特殊身份",
+ 					init: false,
+@@ -6073,6 +6085,10 @@ export class Library {
  						zhong: "明忠",
  						stratagem: "谋攻",
  						purple: "3v3v2",
@@ -1664,7 +1896,7 @@ index 08f9718..2537507 100644
  					},
  					restart: true,
  					frequent: true,
-@@ -6379,7 +6387,7 @@ export class Library {
+@@ -6379,7 +6395,7 @@ export class Library {
  				},
  				choice_zhu: {
  					name: "主公候选武将数",
@@ -1673,7 +1905,7 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6427,7 +6435,7 @@ export class Library {
+@@ -6427,7 +6443,7 @@ export class Library {
  				},
  				choice_zhong: {
  					name: "忠臣候选武将数",
@@ -1682,7 +1914,7 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6444,7 +6452,7 @@ export class Library {
+@@ -6444,7 +6460,7 @@ export class Library {
  				},
  				choice_nei: {
  					name: "内奸候选武将数",
@@ -1691,7 +1923,7 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6461,7 +6469,7 @@ export class Library {
+@@ -6461,7 +6477,7 @@ export class Library {
  				},
  				choice_fan: {
  					name: "反贼候选武将数",
@@ -1700,7 +1932,7 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6485,7 +6493,7 @@ export class Library {
+@@ -6485,7 +6501,7 @@ export class Library {
  				},
  				choice_commoner: {
  					name: "平民候选武将数",
@@ -1709,7 +1941,7 @@ index 08f9718..2537507 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -7491,7 +7499,7 @@ export class Library {
+@@ -7491,7 +7507,7 @@ export class Library {
  				},
  				read_clipboard: {
  					name: "读取邀请链接",
