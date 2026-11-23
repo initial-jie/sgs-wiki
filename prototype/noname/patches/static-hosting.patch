@@ -1,8 +1,1203 @@
+diff --git a/apps/core/character/clan/skill.js b/apps/core/character/clan/skill.js
+index 2dcb4ed..0b2a3d7 100644
+--- a/apps/core/character/clan/skill.js
++++ b/apps/core/character/clan/skill.js
+@@ -1121,30 +1121,45 @@ const skills = {
+ 						return false;
+ 					}
+ 					const num = target.getAttackRange() - get.event().player.getAttackRange();
++					// 【私用补丁】按 OL 原文:提示上次选择的角色(选择其无须弃牌)
++					const tip = get.event().player.getStorage("clanfenjian").includes(target) ? "<br>免弃牌" : "";
+ 					if (num < 0) {
+-						return "小于你";
++						return "小于你" + tip;
+ 					} else if (num > 0) {
+-						return "大于你";
++						return "大于你" + tip;
+ 					} else {
+-						return "等于你";
++						return "等于你" + tip;
+ 					}
+ 				});
+ 			}
+ 		},
+ 		enable: "phaseUse",
++		// 【私用补丁】按 OL 原文:仅当所选角色与上次不同时才须先弃置一张牌(原为每次发动都弃置一张牌);上次选择的角色记录在 player.storage.clanfenjian
+ 		filter(event, player) {
+-			if (!player.hasCards("he")) {
+-				return false;
+-			}
+ 			const name = "clanfenjian_used";
+ 			const card = get.autoViewAs({ name: "sha", isCard: true });
++			const last = player.getStorage("clanfenjian"),
++				bool = player.hasCard(cardx => lib.filter.cardDiscardable(cardx, player), "he");
+ 			return game.hasPlayer(target => {
++				if (!bool && !last.includes(target)) {
++					return false;
++				}
+ 				return !player.getStorage(name).includes(Math.sign(target.getAttackRange() - player.getAttackRange())) && player.canUse(card, target, void 0, false);
+ 			});
+ 		},
+ 		filterTarget(card, player, target) {
++			if (!player.getStorage("clanfenjian").includes(target) && !player.hasCard(cardx => lib.filter.cardDiscardable(cardx, player), "he")) {
++				return false;
++			}
+ 			return !player.getStorage("clanfenjian_used").includes(Math.sign(target.getAttackRange() - player.getAttackRange())) && lib.filter.targetEnabled2(get.autoViewAs(get.info("clanfenjian").viewAs), player, target);
+ 		},
++		prompt(event, player) {
++			const last = (player || event.player).getStorage("clanfenjian");
++			return `视为对一名角色使用一张无距离和次数限制的【杀】${last.length ? `（上次选择的角色：${get.translation(last)}）` : ""}；若选择的角色与上次不同，你须先弃置一张牌`;
++		},
++		intro: {
++			content: "上次〖奋剑〗选择的角色：$",
++		},
+ 		viewAs: {
+ 			name: "sha",
+ 			isCard: true,
+@@ -1156,23 +1171,26 @@ const skills = {
+ 			},
+ 		},
+ 		ignoreMod: true,
+-		filterCard: lib.filter.cardDiscardable,
+-		position: "he",
+-		check(card) {
+-			return 7 - get.value(card);
+-		},
++		// 【私用补丁】按 OL 原文:发动时不再固定选一张牌弃置,改为选定目标后、若与上次不同再弃置一张牌
++		filterCard: () => false,
++		selectCard: -1,
+ 		log: false,
+ 		async precontent(event, trigger, player) {
+ 			const name = event.name.slice(4);
+ 			player.logSkill(name, event.result.targets);
+ 			const {
+ 				targets: [target],
+-				cards,
+ 			} = event.result;
+ 			const num = Math.sign(target.getAttackRange() - player.getAttackRange());
+ 			player.addTempSkill(`${name}_used`, "phaseChange");
+ 			player.markAuto(`${name}_used`, num);
+-			await player.discard({ cards });
++			// 【私用补丁】按 OL 原文:若选择角色与上次不同(含此前未发动过),须先弃置一张牌;然后记录本次选择的角色
++			const different = !player.getStorage(name).includes(target);
++			player.storage[name] = [target];
++			player.markSkill(name);
++			if (different && player.hasCard(card => lib.filter.cardDiscardable(card, player), "he")) {
++				await player.chooseToDiscard("he", true, `奋剑：请弃置一张牌`);
++			}
+ 			event.result.card.cards = [];
+ 			event.result.cards = [];
+ 			event.getParent().addCount = false;
+@@ -2964,13 +2982,18 @@ const skills = {
+ 					const discard = cards.removeArray(result.cards);
+ 					await player.loseToDiscardpile(discard);
+ 				}
+-				if (game.hasPlayer(target => target.countDiscardableCards(target, "h"))) {
++				// 【私用补丁】按 OL 原文:令一名角色「展示」一张手牌(原为弃置);你没有此花色则对其造成1点伤害,有此花色则将其展示牌当【过河拆桥】使用
++				if (game.hasPlayer(target => target.countCards("h"))) {
+ 					const result2 = await player
+-						.chooseTarget(`绝途：令一名角色弃置一张手牌`, true, (card, player, target) => {
+-							return target.countDiscardableCards(target, "h");
++						.chooseTarget(`绝途：令一名角色展示一张手牌`, `若你手牌中没有此花色的牌，你对其造成1点伤害；否则你将其展示的牌当【过河拆桥】使用`, true, (card, player, target) => {
++							return target.countCards("h") > 0;
+ 						})
+ 						.set("ai", target => {
+-							return get.effect(target, { name: "guohe_copy", position: "h" }, target, get.player());
++							const player = get.player();
++							if (target == player) {
++								return 0.1;
++							}
++							return Math.max(0, get.damageEffect(target, player, player)) + Math.max(0, -get.attitude(player, target));
+ 						})
+ 						.forResult();
+ 					if (!result2?.targets?.length) {
+@@ -2984,14 +3007,37 @@ const skills = {
+ 					next.player = player;
+ 					next.target = target;
+ 					next.setContent(async (event, trigger, player) => {
+-						const result = await target.chooseToDiscard("绝途：请弃置一张手牌", true, "h").forResult();
++						const result = await target
++							.chooseCard("h", true, `绝途：请展示一张手牌`, `若${get.translation(player)}手牌中没有此花色的牌，其对你造成1点伤害；否则其将此牌当【过河拆桥】使用`)
++							.set("clanjuetu_source", player)
++							.set("ai", card => {
++								const evt = get.event(),
++									target = evt.player,
++									source = evt.clanjuetu_source;
++								if (target == source) {
++									return 8 - get.value(card);
++								}
++								const suit = get.suit(card, target);
++								if (source.hasCard(cardx => get.suit(cardx, source) == suit, "h")) {
++									return 8 - get.value(card);
++								}
++								return get.damageEffect(target, source, target) > 0 ? 10 : 0.1;
++							})
++							.forResult();
+ 						if (!result?.cards?.length) {
+ 							event.finish();
+ 							return;
+ 						}
+-						const suit = get.suit(result.cards[0], target);
++						const card = result.cards[0];
++						await target.showCards([card], `${get.translation(target)}因【绝途】展示`);
++						const suit = get.suit(card, target);
+ 						if (!player.hasCard(cardx => get.suit(cardx, player) == suit, "h")) {
+ 							await target.damage();
++						} else if (get.owner(card) == target && get.position(card) == "h") {
++							const guohe = get.autoViewAs({ name: "guohe" }, [card]);
++							if (player.hasUseTarget(guohe)) {
++								await player.chooseUseTarget(`绝途：将${get.translation(card)}当【过河拆桥】使用`, guohe, [card], true, false);
++							}
+ 						}
+ 					});
+ 					await next;
+@@ -4776,7 +4822,8 @@ const skills = {
+ 		},
+ 		limited: true,
+ 		audio: 2,
+-		trigger: { global: "phaseJieshuBegin" },
++		// 【私用补丁】按 OL 原文:发动时机为每名角色的回合结束时(原为结束阶段)
++		trigger: { global: "phaseEnd" },
+ 		filter(event, player) {
+ 			if (!event.player.isIn()) {
+ 				return false;
+@@ -7719,7 +7766,8 @@ const skills = {
+ 		},
+ 		async content(event, trigger, player) {
+ 			await player.showHandcards(get.translation(player) + "发动了【八龙】");
+-			await player.drawTo(game.countPlayer());
++			// 【私用补丁】按 OL 原文:摸至8张(原为测试版的摸至存活角色数张)
++			await player.drawTo(8);
+ 		},
+ 	},
+ 	//族荀粲
+diff --git a/apps/core/character/clan/translate.js b/apps/core/character/clan/translate.js
+index c13f9b7..d46cd48 100644
+--- a/apps/core/character/clan/translate.js
++++ b/apps/core/character/clan/translate.js
+@@ -50,7 +50,7 @@ const translates = {
+ 	clanshenjun: "神君",
+ 	clanshenjun_info: "当一名角色使用【杀】或普通锦囊牌时，若你手牌中有该牌名的牌，你展示之，且这些牌称为“神君”。然后本阶段结束时，你可以将等同于你“神君”数张牌当做一张“神君”牌使用。",
+ 	clanbalong: "八龙",
+-	clanbalong_info: "锁定技。当你于一回合内体力值首次变化后，若你手牌中唯一最多的类别为锦囊牌，你展示所有手牌并摸至角色数张。",
++	clanbalong_info: "锁定技。当你于一回合内体力值首次变化后，若你手牌中唯一最多的类别为锦囊牌，你展示所有手牌并摸至八张。",
+ 	clandaojie: "蹈节",
+ 	clandaojie_info: "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。",
+ 	clan_xuncai: "族荀采",
+@@ -151,7 +151,7 @@ const translates = {
+ 	clanlilun: "离论",
+ 	clanlilun_info: "出牌阶段限一次，你可以重铸两张牌名相同的牌（不能是你本回合以此法重铸过的牌名的牌），然后使用其中的一张牌。",
+ 	clanjianji: "见机",
+-	clanjianji_info: "限定技，一名角色的结束阶段，若其上下家均未于本回合：使用过牌，则你可以与其各摸一张牌；成为过牌的目标，则你可以视为使用一张【杀】。",
++	clanjianji_info: "限定技，一名角色的回合结束时，若其上下家均未于本回合：使用过牌，则你可以与其各摸一张牌；成为过牌的目标，则你可以视为使用一张【杀】。",
+ 	clan_wangmingshan: "族王明山",
+ 	clan_wangmingshan_prefix: "族",
+ 	clantanque: "弹雀",
+@@ -202,7 +202,7 @@ const translates = {
+ 	clan_yangzhong: "族杨众",
+ 	clan_yangzhong_prefix: "族",
+ 	clanjuetu: "绝途",
+-	clanjuetu_info: "锁定技，弃牌阶段开始前，你将此阶段执行的效果改为：保留手牌中每个花色各一张，将其余手牌置入弃牌堆，然后你令一名角色弃置一张手牌，若你手牌中没有此花色的牌，你对其造成1点伤害。",
++	clanjuetu_info: "锁定技，弃牌阶段开始时，你将此阶段执行的效果改为：保留手牌中每个花色各一张，将其余手牌置入弃牌堆，然后你令一名角色展示一张手牌，若你手牌中没有此花色的牌，你对其造成1点伤害；若你手牌中有此花色的牌，你将其展示的牌当【过河拆桥】使用。",
+ 	clankudu: "苦渡",
+ 	clankudu_info: "限定技，结束阶段，你可以重铸两张牌，令一名角色下X个回合结束时摸一张牌，第X个回合后其执行一个额外回合（X为你重铸牌点数差且至多为5）。",
+ 	clan_yangbiao: "族杨彪",
+@@ -252,7 +252,7 @@ const translates = {
+ 	clan_chentai: "族陈泰",
+ 	clan_chentai_prefix: "族",
+ 	clanfenjian: "奋剑",
+-	clanfenjian_info: "出牌阶段每项限一次，你可以弃置一张牌，视为对一名角色使用一张无距离和次数限制的【杀】。该角色攻击范围须：1.小于你；2.等于你；3.大于你的角色。此【杀】造成伤害后，你本回合攻击范围-1（至多减至0）。",
++	clanfenjian_info: "出牌阶段每项限一次，你可以视为对一名角色使用一张无距离和次数限制的【杀】。该角色攻击范围须：1.小于你；2.等于你；3.大于你的角色。若选择的角色与上次不同，你须先弃置一张牌。此【杀】造成伤害后，你本回合攻击范围-1（至多减至0）。",
+ 	clandongxu: "动虚",
+ 	clandongxu_info: "转换技，阳：你可以将一张装备牌置于其他角色装备区（替换原装备）；阴：你可以将手牌摸至X（X为你的攻击范围且至多为5）。然后视为使用一张【闪】或令你被抵消的【杀】依然造成伤害。",
+ 	clan_xunshi: "族荀莳",
+diff --git a/apps/core/character/diy/skill.js b/apps/core/character/diy/skill.js
+index 25c1c84..908cc91 100644
+--- a/apps/core/character/diy/skill.js
++++ b/apps/core/character/diy/skill.js
+@@ -4513,56 +4513,32 @@ const skills = {
+ 		audio: "sijun",
+ 		inherit: "sijun",
+ 		check(event, player) {
+-			return ui.cardPile.childNodes.length;
++			// 【私用补丁】按 OL 原文:改为亮出牌堆顶后牌堆为空也有收益(会洗牌),AI 恒发动
++			return true;
+ 		},
++		// 【私用补丁】按 OL 原文:弃置所有“黄”后逐张亮出牌堆顶的牌,直到亮出牌的点数之和不小于36,然后获得这些牌(原为随机获得点数和恰为36的牌组)
+ 		async content(event, trigger, player) {
+ 			player.removeMark("yizhao", player.countMark("yizhao"));
+-			const pile = Array.from(ui.cardPile.childNodes);
+-			if (pile.length) {
+-				const max = Math.pow(2, Math.min(100, pile.length));
+-				let bool = false,
+-					index,
+-					cards = [];
+-				for (let i = 0; i < max; i++) {
+-					let num = 0;
+-					index = i.toString(2);
+-					while (index.length < pile.length) {
+-						index = "0" + index;
+-					}
+-					for (var k = 0; k < index.length; k++) {
+-						if (index[k] == "1") {
+-							num += get.number(pile[k]);
+-						}
+-						if (num > 36) {
+-							break;
+-						}
+-					}
+-					if (num == 36) {
+-						bool = true;
+-						break;
+-					}
+-				}
+-				if (bool) {
+-					for (let k = 0; k < index.length; k++) {
+-						if (index[k] == "1") {
+-							cards.push(pile[k]);
+-						}
+-					}
+-					await player.gain(cards, "gain2");
+-				} else {
+-					let total = 0;
+-					for (const card of pile) {
+-						total += get.number(card);
+-						cards.push(card);
+-						if (total >= 36) {
+-							break;
+-						}
+-					}
++			const cards = [];
++			let total = 0;
++			while (total < 36) {
++				const card = get.cards()[0];
++				if (!card) {
++					break;
+ 				}
+-				if (cards.length) {
+-					await player.gain(cards, "gain2");
++				await game.cardsGotoOrdering(card);
++				cards.push(card);
++				const number = get.number(card, false);
++				if (typeof number === "number") {
++					total += number;
+ 				}
+ 			}
++			if (!cards.length) {
++				return;
++			}
++			game.log(player, "亮出了牌堆顶的", cards, `（点数之和为${total}）`);
++			await player.showCards(cards, `${get.translation(player)}发动了【肆军】`);
++			await player.gain(cards, "gain2");
+ 		},
+ 	},
+ 	//手杀削弱版许攸
+diff --git a/apps/core/character/diy/translate.js b/apps/core/character/diy/translate.js
+index c7b3f60..a74c597 100644
+--- a/apps/core/character/diy/translate.js
++++ b/apps/core/character/diy/translate.js
+@@ -349,7 +349,7 @@ const translates = {
+ 	ns_duji_prefix: "画饼",
+ 	ns_duji_ab: "杜畿",
+ 	junksijun: "肆军",
+-	junksijun_info: "准备阶段，若“黄”数大于牌堆的牌数，你可以移去所有“黄”，然后从牌堆中随机获得任意张点数之和为36的牌（若牌堆没有点数和为36的组合则获得牌堆顶点数和刚好超过36的牌组）。",
++	junksijun_info: "准备阶段，若“黄”数大于牌堆的牌数，你可以移去所有“黄”，然后依次亮出牌堆顶的牌直到亮出牌的点数之和不小于36，然后你获得所有亮出的牌。",
+ 	junk_guanyu: "旧谋关羽",
+ 	junk_guanyu_prefix: "旧谋",
+ 	junk_liuyan: "OL刘焉",
+diff --git a/apps/core/character/onlyOL/skill.js b/apps/core/character/onlyOL/skill.js
+index 661a36d..66fe5f5 100644
+--- a/apps/core/character/onlyOL/skill.js
++++ b/apps/core/character/onlyOL/skill.js
+@@ -18,25 +18,45 @@ const skills = {
+ 		async content(event, trigger, player) {
+ 			await player.draw();
+ 			const target = _status.currentPhase;
+-			if (!target?.isIn()) {
++			const hs = target?.isIn() ? target.getCards("h") : [];
++			if (hs.length) {
++				const result =
++					hs.length == 1
++						? { bool: true, cards: hs }
++						: await target
++								.chooseCard({
++									position: "h",
++									forced: true,
++									prompt: `权计：将一张牌作为“权”置于${get.translation(player)}武将牌上`,
++								})
++								.forResult();
++				if (result?.bool && result?.cards?.length) {
++					await player.addToExpansion({ cards: result.cards, source: target, animate: "give", gaintag: [event.name] });
++				}
++			}
++			// 【私用补丁】按 OL 原文:然后若你手牌数最多(可并列),你将一张手牌置为“权”
++			if (!player.isIn() || !player.isMaxHandcard()) {
+ 				return;
+ 			}
+-			const hs = target.getCards("h");
+-			if (!hs.length) {
++			const hs2 = player.getCards("h");
++			if (!hs2.length) {
+ 				return;
+ 			}
+-			const result =
+-				hs.length == 1
+-					? { bool: true, cards: hs }
+-					: await target
++			const result2 =
++				hs2.length == 1
++					? { bool: true, cards: hs2 }
++					: await player
+ 							.chooseCard({
+ 								position: "h",
+ 								forced: true,
+-								prompt: `权计：将一张牌作为“权”置于${get.translation(player)}武将牌上`,
++								prompt: "权计：你的手牌数为全场最多，将一张手牌置为“权”",
++								ai(card) {
++									return 6 - get.value(card);
++								},
+ 							})
+ 							.forResult();
+-			if (result?.bool && result?.cards?.length) {
+-				await player.addToExpansion({ cards: result.cards, source: target, animate: "give", gaintag: [event.name] });
++			if (result2?.bool && result2?.cards?.length) {
++				await player.addToExpansion({ cards: result2.cards, source: player, animate: "give", gaintag: [event.name] });
+ 			}
+ 		},
+ 		intro: {
+@@ -111,7 +131,7 @@ const skills = {
+ 					return "draw_card";
+ 				},
+ 			});
+-			await player.loseMaxHp();
++			// 【私用补丁】按 OL 原文:觉醒不减体力上限(原实现此处有 loseMaxHp)
+ 			await player.addSkills("olpaiyi");
+ 		},
+ 		ai: {
+@@ -518,7 +538,13 @@ const skills = {
+ 		filter(event, player) {
+ 			return player.countDiscardableCards(player, "he") >= get.info("olsbrenche").getShaLength() && game.hasPlayer(current => current != player && current.hasCards("he"));
+ 		},
++		// 【私用补丁】联机修复:X(本回合弃牌堆里【杀】的数量)靠全局事件历史算,客户端没有这份历史,
++		// 原来在客人端永远算成 1(只能选 1 张牌 / 1 个目标 / 发动 1 次)。改成房主在 onChooseToUse 里算好带给客户端。
+ 		getShaLength() {
++			if (game.online) {
++				const num = get.event()?.olsbrenche_num;
++				return typeof num == "number" ? num : 1;
++			}
+ 			return Math.max(
+ 				1,
+ 				get
+@@ -527,6 +553,12 @@ const skills = {
+ 					.filterInD("d").length
+ 			);
+ 		},
++		onChooseToUse(event) {
++			if (game.online) {
++				return;
++			}
++			event.set("olsbrenche_num", get.info("olsbrenche").getShaLength());
++		},
+ 		usable(skill, player) {
+ 			return get.info(skill).getShaLength();
+ 		},
+@@ -8728,6 +8760,20 @@ const skills = {
+ 		check: () => true,
+ 		async content(event, trigger, player) {
+ 			player.addSkill("olrumo");
++			// 【私用补丁】按 OL 原文:入魔时先获得〖诡伏〗记录的牌各一张(从牌堆或弃牌堆检索,找不到的牌名跳过)
++			const names = player.storage.olguifu_record?.card;
++			if (names?.length) {
++				const cards = [];
++				for (const name of names) {
++					const card = get.cardPile(card => card.name == name && !cards.includes(card));
++					if (card) {
++						cards.push(card);
++					}
++				}
++				if (cards.length) {
++					await player.gain(cards, "gain2");
++				}
++			}
+ 			const skills = player.storage.olguifu_record?.skill;
+ 			if (skills?.length) {
+ 				await player.addSkills(skills);
+@@ -8740,7 +8786,9 @@ const skills = {
+ 	},
+ 	olzhouxi: {
+ 		audio: 2,
+-		damageSkills: ["oljuece", "reganglie", "nzry_kuizhu", "zhefu", "tianjie", "xinleiji", "zhendu", "olqiangxi", "duwu", "olsanyao", "oljianhe", "clanlieshi", "xueji", "quhu", "olshuzi"],
++		// 【私用补丁】〖骤袭〗的技能池按 OL 官方的固定 16 个(盗书 雪恨 雷击 天劫 溃诛 绝策 鸩毒 烈誓 驱虎 束辎 强袭 哲妇 黩武 刚烈 剑合 散谣,与 sgs-wiki 房间的司马懿工具同一份),
++		// 不再用上游的「扫描全将池里带 .damage( 的技能」—— 那样会抽到〖焚城〗这类限定技和一堆 OL 池外的技能(用户 2026-11-22 反馈)。
++		damageSkills: ["daoshu", "xueji", "xinleiji", "tianjie", "nzry_kuizhu", "oljuece", "zhendu", "clanlieshi", "quhu", "olshuzi", "olqiangxi", "zhefu", "duwu", "reganglie", "oljianhe", "olsanyao"],
+ 		initList() {
+ 			//先用许劭评鉴那个函数初始化一下角色列表
+ 			if (!_status.characterlist) {
+@@ -8787,10 +8835,10 @@ const skills = {
+ 		forced: true,
+ 		locked: false,
+ 		async content(event, trigger, player) {
+-			if (!_status.damageSkills) {
+-				lib.skill.olzhouxi.initList();
+-			}
+-			const skills = _status.damageSkills.filter(skill => !player.hasSkill(skill, null, null, false)).randomGets(3);
++			const skills = get
++				.info(event.name)
++				.damageSkills.filter(skill => lib.skill[skill] && !player.hasSkill(skill, null, null, false))
++				.randomGets(3);
+ 			/*const skills = get
+ 				.info(event.name)
+ 				.damageSkills
+@@ -8860,13 +8908,16 @@ const skills = {
+ 	//OL界马岱
+ 	olqianxi: {
+ 		audio: 2,
+-		trigger: { player: "phaseUseBegin" },
+-		filter(event, player) {
+-			return player.countCards("he") > 0;
+-		},
+-		async cost(event, trigger, player) {
+-			event.result = await player
+-				.chooseCard(get.prompt2(event.skill), "he")
++		// 【私用补丁】按 OL 原文:时机改为准备阶段,发动后先摸一张牌再展示一张牌(原为出牌阶段开始时只展示)
++		trigger: { player: "phaseZhunbeiBegin" },
++		check: () => true,
++		async content(event, trigger, player) {
++			await player.draw();
++			if (!player.countCards("he")) {
++				return;
++			}
++			const result = await player
++				.chooseCard(`${get.translation(event.name)}：请展示一张牌`, "本回合距离为1的其他角色不能使用或打出与此牌颜色相同的手牌，且你本回合使用此牌造成的伤害+1", "he", true)
+ 				.set("ai", card => {
+ 					const player = get.player();
+ 					let value = 0;
+@@ -8877,9 +8928,10 @@ const skills = {
+ 					return value;
+ 				})
+ 				.forResult();
+-		},
+-		async content(event, trigger, player) {
+-			const card = event.cards[0],
++			if (!result?.bool || !result.cards?.length) {
++				return;
++			}
++			const card = result.cards[0],
+ 				color = get.color(card, player);
+ 			await player.showCards(card, `${get.translation(player)}发动了〖${get.translation(event.name)}〗`);
+ 			player.addTempSkill(event.name + "_damage");
+@@ -9282,16 +9334,17 @@ const skills = {
+ 				charlotte: true,
+ 				audio: "jsrgshenchong",
+ 				trigger: { player: "die" },
++				// 【私用补丁】按 OL 原文:杀死你的角色弃置所有牌(原为所有手牌);失去所有技能的是因〖甚宠〗获得技能的角色(原实现已如此)
+ 				filter(event, player) {
+-					return (event.source?.isIn() && event.source.countCards("h")) || player.getStorage("olshenchong_die").some(current => current.isIn());
++					return (event.source?.isIn() && event.source.countCards("he")) || player.getStorage("olshenchong_die").some(current => current.isIn());
+ 				},
+ 				forced: true,
+ 				forceDie: true,
+ 				async content(event, trigger, player) {
+ 					const source = trigger.source;
+-					if (source?.isIn() && source.countCards("h")) {
++					if (source?.isIn() && source.countCards("he")) {
+ 						player.line(source);
+-						await source.chooseToDiscard(source.countCards("h"), "h", true);
++						await source.chooseToDiscard(source.countCards("he"), "he", true);
+ 						await game.delayx();
+ 					}
+ 					const targets = player
+@@ -13393,7 +13446,8 @@ const skills = {
+ 				return false;
+ 			}
+ 			const num = Math.abs(ui.selected.targets[0].countCards("e") - target.countCards("e"));
+-			return player.getDamagedHp() >= num || player.countDiscardableCards(player, "h") >= num;
++			// 【私用补丁】按 OL 原文:X大于已损失体力值时须弃置X张「牌」(含装备区,原为仅手牌),弃不出则不能选
++			return player.getDamagedHp() >= num || player.countDiscardableCards(player, "he") >= num;
+ 		},
+ 		multitarget: true,
+ 		multiline: true,
+@@ -13401,8 +13455,9 @@ const skills = {
+ 			//ol结算先弃牌再交换
+ 			const { targets } = event;
+ 			const num = Math.abs(targets[0].countCards("e") - targets[1].countCards("e"));
+-			if (player.getDamagedHp() < num && player.hasDiscardableCards(player, "h")) {
+-				await player.chooseToDiscard({ position: "h", selectCard: num, forced: true });
++			// 【私用补丁】按 OL 原文:弃置的是X张「牌」(含装备区),X按选择角色时的装备数之差计算,先弃再交换
++			if (player.getDamagedHp() < num && player.hasDiscardableCards(player, "he")) {
++				await player.chooseToDiscard({ position: "he", selectCard: num, forced: true });
+ 			}
+ 			await targets[0].swapEquip(targets[1]);
+ 			await game.delayx();
+diff --git a/apps/core/character/onlyOL/translate.js b/apps/core/character/onlyOL/translate.js
+index 23afeff..8705f35 100644
+--- a/apps/core/character/onlyOL/translate.js
++++ b/apps/core/character/onlyOL/translate.js
+@@ -4,9 +4,9 @@ const translates = {
+ 	ol_zhonghui: "OL界钟会",
+ 	ol_zhonghui_prefix: "OL|界",
+ 	olquanji: "权计",
+-	olquanji_info: "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。你每有一张“权”，你的手牌上限便+1。",
++	olquanji_info: "当你造成或受到1点伤害后，你可以摸一张牌，然后令当前回合角色将一张手牌置于你的武将牌上，称为“权”。然后若你的手牌数为全场最多，你将一张手牌置为“权”。你每有一张“权”，你的手牌上限便+1。",
+ 	olzili: "自立",
+-	olzili_info: `觉醒技，每个准备阶段，若你“权”的数里大于等于3，你回复1点体力或摸两张牌，然后减少1点体力上限，获得${get.poptip("olpaiyi")}。`,
++	olzili_info: `觉醒技，每个准备阶段，若你“权”的数量大于等于3，你回复1点体力或摸两张牌，然后获得${get.poptip("olpaiyi")}。`,
+ 	olpaiyi: "排异",
+ 	olpaiyi_info: "出牌阶段限一次，你可以移去一张“权”，指定一名角色并选择：1.其摸两张牌；2.你对其造成1点伤害。然后若其手牌数大于你，执行另一项，本阶段此技能改为限两次。",
+ 	ol_shen_huangzhong: "OL神黄忠",
+@@ -254,7 +254,7 @@ const translates = {
+ 	ol_madai: "OL界马岱",
+ 	ol_madai_prefix: "OL界",
+ 	olqianxi: "潜袭",
+-	olqianxi_info: "出牌阶段开始时，你可以展示一张牌，本回合距离为1的其他角色不能使用或打出与此牌颜色相同的手牌，且你本回合使用此牌造成的伤害+1。",
++	olqianxi_info: "准备阶段，你可以摸一张牌并展示一张牌，本回合距离为1的其他角色不能使用或打出与此牌颜色相同的手牌，且你本回合使用此牌造成的伤害+1。",
+ 	ol_sb_yl_luzhi: "OL谋卢植",
+ 	ol_sb_yl_luzhi_prefix: "OL谋",
+ 	olsibing: "司兵",
+@@ -413,7 +413,7 @@ const translates = {
+ 	ol_wuguotai: "OL界吴国太",
+ 	ol_wuguotai_prefix: "OL界",
+ 	olganlu: "甘露",
+-	olganlu_info: "出牌阶段限一次，你可以交换两名角色装备区内的牌，然后若你的已损失体力值小于X，你弃置X张手牌（X为交换前两者装备区牌数之差）。",
++	olganlu_info: "出牌阶段限一次，你可以令两名角色交换装备区内的牌。若X大于你的已损失体力值，你须先弃置X张牌（无法弃置足够的牌则不能选择这两名角色；X为交换前两者装备区牌数之差）。",
+ 	olbuyi: "补益",
+ 	olbuyi_info: "一名角色进入濒死状态时，你可展示其一张牌。若此牌不为基本牌，则其弃置此牌并回复1点体力。",
+ 	ol_sb_kongrong: "OL谋孔融",
+@@ -520,7 +520,7 @@ const translates = {
+ 	olchaozheng: "朝争",
+ 	olchaozheng_info: "①出牌阶段开始时，你可以与所有其他角色议事。若结果为：红色，意见为红色的角色各回复1点体力；黑色，意见为红色的其他角色各失去1点体力。然后你摸X张牌（X为此次议事意见与你相同的角色数且至多为2）。②当你参与的议事展示意见时，你的意见权重+1。",
+ 	olshenchong: "甚宠",
+-	olshenchong_info: `限定技。准备阶段，你可以令一名其他角色获得${get.poptip("olrefeiyang")}和${get.poptip("jsrgbahu")}。若如此做，当你死亡时，杀死你的角色弃置所有手牌，其失去所有技能。`,
++	olshenchong_info: `限定技。准备阶段，你可以令一名其他角色获得${get.poptip("olrefeiyang")}和${get.poptip("jsrgbahu")}。若如此做，当你死亡时，杀死你的角色弃置所有牌，因〖甚宠〗获得技能的角色失去所有技能。`,
+ 	oljulian: "聚敛",
+ 	oljulian_info: "主公技。①其他群势力角色每回合限一次。当其不于摸牌阶段且不因〖聚敛〗摸牌后，其可以摸一张牌。②结束阶段，你可以获得所有其他群势力角色各一张手牌。",
+ 	olrefeiyang: "飞扬",
+@@ -530,7 +530,7 @@ const translates = {
+ 	olguifu: "诡伏",
+ 	olguifu_info: "①每轮开始时或当你的体力值变化后，你可以随机从牌堆或弃牌堆获得一张不计入手牌上限的【闪】。②本局游戏中牌或技能直接造成伤害后，你记录此牌名或技能。③每回合每种牌名限一次，你可以将因此技能获得的【闪】当做不计入次数限制的〖诡伏②〗记录过的牌名使用。",
+ 	olmoubian: "谋变",
+-	olmoubian_info: `准备阶段，若你记录的牌名和技能之和大于等于3，你可以${get.poptip("rule_rumo")}，获得记录的全部技能，然后获得${get.poptip("olzhouxi")}。`,
++	olmoubian_info: `准备阶段，若你记录的牌名和技能之和大于等于3，你可以${get.poptip("rule_rumo")}，从牌堆或弃牌堆获得记录的牌各一张并获得记录的全部技能，然后获得${get.poptip("olzhouxi")}。`,
+ 	//olmoubian_append: `<span style="font-family:yuanli"><li>入魔：每局游戏限一次，当你满足条件后，可入魔。入魔后，每轮结束时，若本轮你未造成过伤害，你失去1点体力。</span>`,
+ 	olzhouxi: "骤袭",
+ 	olzhouxi_info: "①准备阶段，你从三个可造成伤害的技能中选择一个获得直到你的下回合开始。②本轮受到你伤害的角色于本轮结束时视为对你使用一张【杀】。",
+diff --git a/apps/core/character/refresh/character.js b/apps/core/character/refresh/character.js
+index fcd3754..0f8754b 100644
+--- a/apps/core/character/refresh/character.js
++++ b/apps/core/character/refresh/character.js
+@@ -203,7 +203,8 @@ const characters = {
+ 		sex: "male",
+ 		group: "qun",
+ 		hp: 3,
+-		skills: ["dcjianying", "dcshibei"],
++		// 【私用补丁】OL 界沮授:〖渐营〗用带「一张牌当任意基本牌」的 xinjianying,〖矢北〗用带开局 3 护甲的 sgs_olshibei(原为十周年版 dcjianying / dcshibei)
++		skills: ["xinjianying", "sgs_olshibei"],
+ 	},
+ 	re_zhanghe: {
+ 		sex: "male",
+@@ -782,8 +783,8 @@ const characters = {
+ 		group: "wu",
+ 		hp: 4,
+ 		maxHp: 5,
+-		skills: ["gzyinghun", "wulie", "twpolu"],
+-		isZhugong: true,
++		// 【私用补丁】OL 界孙坚只有〖英魂〗〖武烈〗,去掉海外服的主公技〖破虏〗
++		skills: ["gzyinghun", "wulie"],
+ 	},
+ 	re_caopi: {
+ 		sex: "male",
+diff --git a/apps/core/character/sp/character.js b/apps/core/character/sp/character.js
+index d216fac..c9006e4 100644
+--- a/apps/core/character/sp/character.js
++++ b/apps/core/character/sp/character.js
+@@ -971,14 +971,15 @@ const characters = {
+ 		sex: "male",
+ 		group: "qun",
+ 		hp: 4,
+-		skills: ["ollongdan", "chongzhen"],
++		// 【私用补丁】OL SP赵云的〖龙胆〗只有杀闪互转,换回标准版 longdan(原为带 酒↔桃 的 ollongdan)
++		skills: ["longdan", "chongzhen"],
+ 	},
+ 	liuxie: {
+ 		sex: "male",
+ 		group: "qun",
+ 		hp: 3,
+-		skills: ["tianming", "mizhao", "twzhuiting"],
+-		isZhugong: true,
++		// 【私用补丁】OL 刘协只有〖天命〗〖密诏〗,去掉海外服的主公技〖坠廷〗(也就不再进主公技候选)
++		skills: ["tianming", "mizhao"],
+ 	},
+ 	zhugejin: {
+ 		sex: "male",
+diff --git a/apps/core/character/sp/dynamicTranslate.js b/apps/core/character/sp/dynamicTranslate.js
+index 804290e..4bf3dd4 100644
+--- a/apps/core/character/sp/dynamicTranslate.js
++++ b/apps/core/character/sp/dynamicTranslate.js
+@@ -4,13 +4,13 @@ const dynamicTranslates = {
+ 	olfenyue(player, skill) {
+ 		const bool = player.storage[skill];
+ 		let yang = "摸两张牌",
+-			yin = "使用一张【杀】";
++			yin = "使用一张牌"; // 【私用补丁】按 OL 原文
+ 		if (!bool) {
+ 			yang = `<span class=firetext>${yang}</span>`;
+ 		} else {
+ 			yin = `<span class=bluetext>${yin}</span>`;
+ 		}
+-		const start = "转换技，每回合结束时，若本回合有角色受到过属性伤害，你可以：",
++		const start = "转换技，每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以：",
+ 			end = "。";
+ 		return `${start}阳：${yang}；阴：${yin}${end}`;
+ 	},
 diff --git a/apps/core/character/sp/skill.js b/apps/core/character/sp/skill.js
-index f0599fa..dda7b4a 100644
+index f0599fa..efb2d73 100644
 --- a/apps/core/character/sp/skill.js
 +++ b/apps/core/character/sp/skill.js
-@@ -46458,17 +46458,10 @@ const skills = {
+@@ -5138,13 +5138,15 @@ const skills = {
+ 			event.result = await player
+ 				.chooseTarget({
+ 					prompt: get.prompt2(event.skill),
+-					filterTarget: lib.filter.all,
++					// 【私用补丁】按 OL 原文:只能指定其他角色
++					filterTarget: lib.filter.notMe,
+ 					ai(target) {
+ 						const player = get.player();
+-						if (target.getHp() > 2) {
++						// 【私用补丁】按 OL 原文:X 在造成伤害后取值,通常为其当前体力值-1,阈值相应后移一档
++						if (target.getHp() > 3) {
+ 							return 0;
+ 						}
+-						if (target.getHp() == 2 && player.countCards("h") < 2) {
++						if (target.getHp() == 3 && player.countCards("h") < 2) {
+ 							return 0;
+ 						}
+ 						return get.damageEffect(target, player, player, "fire");
+@@ -5156,11 +5158,54 @@ const skills = {
+ 			const {
+ 				targets: [target],
+ 			} = event;
+-			player.addTempSkill(`${event.name}_skip`);
+-			player.addMark(`${event.name}_skip`, target.getHp(), false);
++			// 【私用补丁】按 OL 原文:先对其造成1点火焰伤害,然后以其此时的体力值为X,你跳过本回合下X个阶段,并令其跳过其下回合第X个阶段
+ 			await target.damage({ nature: "fire" });
++			const num = target.isIn() ? target.getHp() : 0;
++			if (num <= 0) {
++				return;
++			}
++			if (player.isIn()) {
++				player.addTempSkill(`${event.name}_skip`);
++				player.addMark(`${event.name}_skip`, num, false);
++			}
++			target.addSkill(`${event.name}_next`);
++			target.markAuto(`${event.name}_next`, [num]);
+ 		},
+ 		subSkill: {
++			// 【私用补丁】按 OL 原文:目标下回合的第X个阶段被跳过(回合开始时把记录挂到该回合事件上,回合结束后清除)
++			next: {
++				charlotte: true,
++				forced: true,
++				popup: false,
++				onremove: true,
++				intro: {
++					content(storage) {
++						return `下回合的第${(storage || []).join("、")}个阶段将被跳过`;
++					},
++				},
++				trigger: {
++					player: ["phaseBegin", "phaseAnyBefore", "phaseAfter"],
++				},
++				filter(event, player) {
++					if (event.name == "phase") {
++						return true;
++					}
++					const list = event.getParent()?.olyanjing_next;
++					return Array.isArray(list) && typeof event.phaseIndex == "number" && list.includes(event.phaseIndex + 1);
++				},
++				async content(event, trigger, player) {
++					if (trigger.name == "phase") {
++						if (event.triggername == "phaseBegin") {
++							trigger.olyanjing_next = player.getStorage(event.name).slice();
++						} else if (trigger.olyanjing_next) {
++							player.removeSkill(event.name);
++						}
++						return;
++					}
++					game.log(player, "跳过了", `#g${get.translation(trigger)}`);
++					trigger.cancel();
++				},
++			},
+ 			skip: {
+ 				charlotte: true,
+ 				forced: true,
+@@ -5193,13 +5238,17 @@ const skills = {
+ 		marktext: "☯",
+ 		intro: {
+ 			content(storage, player) {
+-				return `每回合结束时，若本回合有角色受到过属性伤害，你可以${!storage ? "摸两张牌" : "使用一张【杀】"}`;
++				return `每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以${!storage ? "摸两张牌" : "使用一张牌"}`;
+ 			},
+ 		},
+ 		trigger: {
+ 			global: "phaseEnd",
+ 		},
+ 		filter(event, player) {
++			// 【私用补丁】按 OL 原文:本回合你受到过伤害也满足发动条件
++			if (player.getHistory("damage").length > 0) {
++				return true;
++			}
+ 			return game.hasGlobalHistory("changeHp", evt => {
+ 				return evt.getParent()?.name == "damage" && evt.getParent()?.hasNature();
+ 			});
+@@ -5211,7 +5260,7 @@ const skills = {
+ 				const result = await player
+ 					.chooseBool({
+ 						prompt: get.prompt(event.name),
+-						prompt2: get.skillInfoTranslation(event.name, player, false),
++						prompt2: "摸两张牌",
+ 						choice: true,
+ 					})
+ 					.forResult();
+@@ -5221,16 +5270,11 @@ const skills = {
+ 					await player.draw({ num: 2 });
+ 				}
+ 			} else {
++				// 【私用补丁】按 OL 原文:阴状态为「使用一张牌」,不限【杀】
+ 				await player
+ 					.chooseToUse({
+ 						prompt: get.prompt(event.name),
+-						prompt2: get.skillInfoTranslation(event.name, player, false),
+-						filterCard(card, player) {
+-							if (get.itemtype(card) != "card" || get.name(card) != "sha") {
+-								return false;
+-							}
+-							return lib.filter.filterCard.call(this, card, player);
+-						},
++						prompt2: "使用一张牌",
+ 					})
+ 					.set("onresult", result => {
+ 						const player = get.player();
+@@ -13584,9 +13628,16 @@ const skills = {
+ 						const num = Math.min(target.hasDisabledSlot() + target.isDamaged() + 1, types.length),
+ 							selected = [];
+ 						while (selected.length < num) {
++							// 【私用补丁】按 OL 原文:须选择「等量项」,不能少选或不选(可执行的选项不足时选完可执行的为止)
++							const canEquip = !selected.includes("equip") && target.hasDisabledSlot(),
++								canRecover = !selected.includes("recover") && target.isDamaged(),
++								canDiscard = !selected.includes("discard");
++							if (!target.isIn() || (!canEquip && !canRecover && !canDiscard)) {
++								break;
++							}
+ 							const result = await target
+ 								.chooseButton([
+-									"慰勉：是否执行其中一项？",
++									`慰勉：请选择执行一项（还须选择${get.cnNumber(num - selected.length)}项）`,
+ 									[
+ 										[
+ 											["equip", "恢复一个装备栏"],
+@@ -13597,6 +13648,7 @@ const skills = {
+ 									],
+ 								])
+ 								.set("forceAuto", true)
++								.set("forced", true)
+ 								.set("filterButton", button => {
+ 									const player = get.event().player;
+ 									if (get.event().selected.includes(button.link)) {
+@@ -19954,30 +20006,37 @@ const skills = {
+ 	//OL周群
+ 	oltianhou: {
+ 		audio: 2,
+-		trigger: { player: "phaseJieshuBegin" },
++		// 【私用补丁】按 OL 原文:改为准备阶段发动;观看牌堆顶的一张牌并可用一张手牌交换之,然后展示牌堆顶的牌(不再是三张里选一张);所获技能持续到你下一准备阶段
++		trigger: { player: "phaseZhunbeiBegin" },
+ 		forced: true,
+ 		async content(event, trigger, player) {
+ 			player.removeSkill("oltianhou_expire");
+-			let cards = get.cards(3, true);
++			let cards = get.cards(1, true);
++			if (!cards.length) {
++				return;
++			}
+ 			await game.cardsGotoOrdering(cards);
+ 			if (player.countCards("h") > 0) {
+ 				const hs = player.getCards("h");
+ 				const result = await player
+-					.chooseToMove("天候：请选择你要交换的牌（靠左的为牌堆顶第一张）")
++					.chooseToMove("天候：是否用一张手牌交换牌堆顶的牌？（不交换则直接确定）")
+ 					.set("filterMove", (from, to, moved) => {
+ 						return typeof to != "number";
+ 					})
+ 					.set("list", [
+ 						["牌堆顶", cards, "牌堆顶"],
+-						["手牌", player.getCards("h")],
++						["手牌", hs],
+ 					])
+ 					.set("processAI", list => {
+-						const player = get.player(),
+-							cards = list[0][1].concat(list[1][1]).sort(function (a, b) {
+-								return get.value(a) - get.value(b);
+-							}),
+-							cards2 = cards.splice(0, player.countCards("h"));
+-						return [cards2, cards];
++						const top = list[0][1].slice(),
++							hand = list[1][1].slice();
++						const card = top.concat(hand).sort(function (a, b) {
++							return get.value(a) - get.value(b);
++						})[0];
++						if (top.includes(card)) {
++							return [top, hand];
++						}
++						return [[card], hand.filter(i => i != card).concat(top)];
+ 					})
+ 					.forResult();
+ 				const { moved } = result;
+@@ -19985,53 +20044,20 @@ const skills = {
+ 					const [top, hand] = moved;
+ 					const ordering = top.filter(i => hs.includes(i));
+ 					const gain = hand.filter(i => cards.includes(i));
+-					cards = top.slice();
+-					player.$throw(ordering.length, 1000);
+-					await player.lose(ordering, ui.ordering);
+-					game.log(player, `从牌堆顶获得了${get.cnNumber(gain.length)}张牌`);
+-					await player.gain(gain, "draw");
++					if (ordering.length == 1 && gain.length == 1) {
++						cards = top.slice();
++						player.$throw(ordering.length, 1000);
++						await player.lose(ordering, ui.ordering);
++						game.log(player, `用一张手牌交换了牌堆顶的牌`);
++						await player.gain(gain, "draw");
++					}
+ 				}
+ 			}
+ 			await game.cardsGotoPile(cards.filterInD().reverse(), "insert");
+-			cards = get.cards(3, true);
+-			const result = await player
+-				.chooseButton({
+-					createDialog: [`天候：请选择要展示的牌`, cards],
+-					forced: true,
+-					ai(button) {
+-						const card = button.link;
+-						const suit = get.suit(card);
+-						if (suit === "heart") {
+-							return (
+-								1 /
+-								game.countPlayer(current => {
+-									if (player !== current && !game.hasPlayer(tar => tar.hp - current.hp > 1)) {
+-										return get.sgnAttitude(player, current);
+-									}
+-									return 0;
+-								})
+-							);
+-						}
+-						if (suit == "club") {
+-							return (
+-								1 /
+-								game.countPlayer(current => {
+-									if (player !== current && (current.hp < 2 || !game.hasPlayer(tar => current.hp - tar.hp > 1))) {
+-										return get.sgnAttitude(player, current);
+-									}
+-									return 0;
+-								})
+-							);
+-						}
+-						return 1 / get.rand(1, game.countPlayer());
+-					},
+-				})
+-				.forResult();
+-			const { links } = result;
+-			if (!links?.length) {
++			const [card] = get.cards(1, true);
++			if (!card) {
+ 				return;
+ 			}
+-			const [card] = links;
+ 			await player.showCards(card, get.translation(player) + "发动了【天候】");
+ 			const suit = get.suit(card, false),
+ 				skill = "oltianhou_" + suit;
+@@ -20052,7 +20078,8 @@ const skills = {
+ 				if (result.bool && result.targets?.length) {
+ 					const target = result.targets[0];
+ 					player.line(target, "green");
+-					player.addTempSkill("oltianhou_expire", { player: "dieAfter" });
++					// 【私用补丁】按 OL 原文:持续到你下一准备阶段(即使届时〖天候〗失效/已失去也会到期)
++					player.addTempSkill("oltianhou_expire", { player: ["dieAfter", "phaseZhunbeiBegin"] });
+ 					game.broadcastAll(function (bg) {
+ 						_status.tempBackground = bg;
+ 						game.updateBackground();
+@@ -20277,17 +20304,21 @@ const skills = {
+ 	},
+ 	olchenshuo: {
+ 		audio: 2,
+-		trigger: { player: "phaseZhunbeiBegin" },
++		// 【私用补丁】按 OL 原文:改为结束阶段发动,由你自己展示一张手牌(不再是准备阶段令一名角色展示)
++		trigger: { player: "phaseJieshuBegin" },
++		filter(event, player) {
++			return player.countCards("h") > 0;
++		},
+ 		async cost(event, trigger, player) {
+ 			event.result = await player
+-				.chooseTarget({
++				.chooseCard({
++					position: "h",
+ 					prompt: get.prompt2(event.skill),
+-					filterTarget(card, player, target) {
+-						return target.countCards("h") > 0;
+-					},
+-					ai(target) {
+-						const player = get.player();
+-						return 2 - (target == player ? -0.5 : get.sgnAttitude(player, target)) + Math.random();
++					ai(card) {
++						if (get.type(card) == "basic") {
++							return 1 + Math.random();
++						}
++						return 0.1 + Math.random();
+ 					},
+ 				})
+ 				.forResult();
+@@ -20305,34 +20336,12 @@ const skills = {
+ 			return info.length == get.cardNameLength(card);
+ 		},
+ 		async content(event, trigger, player) {
+-			const {
+-				targets: [target],
+-			} = event;
+-			const result = await target
+-				.chooseCard({
+-					position: "h",
+-					prompt: `谶说：展示一张手牌，然后${get.translation(player)}展示并获得牌堆顶的牌`,
+-					ai(card) {
+-						const att = get.attitude(get.player(), get.event().sourcex);
+-						if (get.type(card) == "basic") {
+-							if (att > 0) {
+-								return 1 + Math.random();
+-							}
+-							return Math.random() - 0.5;
+-						}
+-						return Math.random();
+-					},
+-					forced: true,
+-				})
+-				.set("sourcex", player)
+-				.forResult();
+-			if (!result.cards?.length) {
++			// 【私用补丁】按 OL 原文:展示的是你自己在发动时选择的那张手牌
++			const card = event.cards?.[0];
++			if (!card) {
+ 				return;
+ 			}
+-			const {
+-				cards: [card],
+-			} = result;
+-			await target.showCards([card], get.translation(player) + "发动了【谶说】");
++			await player.showCards([card], get.translation(player) + "发动了【谶说】");
+ 			const cardInfo = {
+ 				type: get.type2(card, player),
+ 				suit: get.suit(card, player),
+@@ -20358,12 +20367,8 @@ const skills = {
+ 					game.broadcastAll(function () {
+ 						ui.clear();
+ 					});
++					// 【私用补丁】按 OL 原文:展示的手牌本就是你的,只需获得亮出的牌堆顶牌
+ 					player.$gain2(cards, true);
+-					const owner = get.owner(card);
+-					if (get.position(card) == "h" && owner != player) {
+-						cards.push(card);
+-						owner?.$give(card, player);
+-					}
+ 					await player.gain(cards);
+ 					break;
+ 				}
+@@ -22374,7 +22379,8 @@ const skills = {
+ 			return player.hp > 0;
+ 		},
+ 		async content(event, trigger, player) {
+-			await player.draw(Math.min(5, player.hp));
++			// 【私用补丁】按 OL 原文:摸与体力值等量张牌,没有「至多为5」的上限
++			await player.draw(player.hp);
+ 			const targets = game.filterPlayer(current => current != player && current.countCards("h") > 0 && player.inRange(current));
+ 			if (targets.length > 0) {
+ 				let result;
+@@ -25240,7 +25246,8 @@ const skills = {
+ 				var skills = source.getStockSkills("一！", "五！");
+ 				for (var skill of skills) {
+ 					var info = get.info(skill);
+-					if (info && !info.persevereSkill && !info.charlotte && !get.is.locked(skill, source) && source.hasSkill(skill, null, null, false)) {
++					// 【私用补丁】按 OL 原文:觉醒技、限定技也不能选(原只排除锁定技)
++					if (info && !info.persevereSkill && !info.charlotte && !info.limited && !info.juexingji && !get.is.locked(skill, source) && source.hasSkill(skill, null, null, false)) {
+ 						return true;
+ 					}
+ 				}
+@@ -25264,14 +25271,15 @@ const skills = {
+ 				var skills = source.getStockSkills("一！", "五！");
+ 				for (var skill of skills) {
+ 					var info = get.info(skill);
+-					if (info && !info.persevereSkill && !info.charlotte && !get.is.locked(skill, source) && source.hasSkill(skill, null, null, false)) {
++					// 【私用补丁】按 OL 原文:觉醒技、限定技也不能选(原只排除锁定技)
++					if (info && !info.persevereSkill && !info.charlotte && !info.limited && !info.juexingji && !get.is.locked(skill, source) && source.hasSkill(skill, null, null, false)) {
+ 						return true;
+ 					}
+ 				}
+ 				return false;
+ 			});
+ 			const result = await player
+-				.chooseTarget(get.prompt("olzeyue"), "令一名可选角色的一个非锁定技失效", function (card, player, target) {
++				.chooseTarget(get.prompt("olzeyue"), "令一名可选角色的一个技能（锁定技、觉醒技、限定技除外）失效", function (card, player, target) {
+ 					return _status.event.sources.includes(target);
+ 				})
+ 				.set("sources", sources)
+@@ -25292,7 +25300,8 @@ const skills = {
+ 				let skills = target.getStockSkills("一！", "五！");
+ 				skills = skills.filter(function (skill) {
+ 					var info = get.info(skill);
+-					if (info && !info.charlotte && !get.is.locked(skill, target) && target.hasSkill(skill, null, null, false)) {
++					// 【私用补丁】按 OL 原文:觉醒技、限定技也不能选(并与上方可选角色的判断保持一致)
++					if (info && !info.persevereSkill && !info.charlotte && !info.limited && !info.juexingji && !get.is.locked(skill, target) && target.hasSkill(skill, null, null, false)) {
+ 						return true;
+ 					}
+ 				});
+@@ -25358,7 +25367,8 @@ const skills = {
+ 							if (
+ 								target.storage[key] &&
+ 								player.hasHistory("damage", function (evt) {
+-									return evt.card.name == "sha" && evt.getParent().type == "card" && evt.getParent(3) == event;
++									// 【私用补丁】本回合有非卡牌伤害记录时 evt.card 为空,原写法会报错
++									return evt.card?.name == "sha" && evt.getParent().type == "card" && evt.getParent(3) == event;
+ 								})
+ 							) {
+ 								for (const skill in target.disabledSkills) {
+@@ -28228,10 +28238,8 @@ const skills = {
+ 			gain: {
+ 				charlotte: true,
+ 				audio: "qiaoli",
+-				trigger: { player: "useCardAfter" },
+-				filter(event, player) {
+-					return event.card.qiaoli && get.subtype(event.cards[0]) != "equip1";
+-				},
++				// 【私用补丁】按 OL 原文:改为于(本回合的)结束阶段随机获得一张装备牌(原为此【决斗】结算后立即获得)
++				trigger: { player: "phaseJieshuBegin" },
+ 				forced: true,
+ 				async content(event, trigger, player) {
+ 					player.removeSkill(event.name);
+@@ -28253,11 +28261,15 @@ const skills = {
+ 		audio: 2,
+ 		trigger: { target: "useCardToTarget" },
+ 		filter(event, player) {
++			// 【私用补丁】按 OL 原文:仅限【杀】或伤害类锦囊牌,且你须为唯一目标
+ 			var bool1 = event.card.name == "sha";
+-			var bool2 = get.type2(event.card) == "trick";
++			var bool2 = get.type2(event.card) == "trick" && get.tag(event.card, "damage");
+ 			if (!bool1 && !bool2) {
+ 				return false;
+ 			}
++			if (!event.targets || event.targets.length != 1) {
++				return false;
++			}
+ 			return player != event.player && player.countCards("h") > 0;
+ 		},
+ 		usable: 1,
+@@ -30195,7 +30207,8 @@ const skills = {
+ 					if (!list.length) {
+ 						return 0;
+ 					}
+-					return list[0] + (list[1] || 0) + (list[2] || 0);
++					// 【私用补丁】按 OL 原文:至多两张
++					return list[0] + (list[1] || 0);
+ 				})
+ 				.forResult();
+ 			if (result.bool) {
+@@ -30250,10 +30263,12 @@ const skills = {
+ 					event.stopped = true;
+ 				}
+ 				if (event.target.isIn() && event.count > 0) {
+-					if (event.count < 3 && !event.stopped && event.list.length > 0) {
++					// 【私用补丁】按 OL 原文:至多视为使用两张不同的锦囊牌(原为三张)
++					if (event.count < 2 && !event.stopped && event.list.length > 0) {
+ 						continue;
+ 					} else {
+-						event.target.addTempSkill("oljuanxia_counter", { player: "phaseAfter" });
++						// 【私用补丁】按 OL 原文:反击时机为其下个结束阶段(原为其下回合结束时),该结束阶段结束后失效
++						event.target.addTempSkill("oljuanxia_counter", { player: "phaseJieshuAfter" });
+ 						if (!event.target.storage.oljuanxia_counter) {
+ 							event.target.storage.oljuanxia_counter = {};
+ 						}
+@@ -30268,7 +30283,8 @@ const skills = {
+ 		},
+ 		subSkill: {
+ 			counter: {
+-				trigger: { player: "phaseEnd" },
++				// 【私用补丁】按 OL 原文:其下个结束阶段可以视为对你使用等量张【杀】(原为其下回合结束时)
++				trigger: { player: "phaseJieshuBegin" },
+ 				forced: true,
+ 				charlotte: true,
+ 				onremove: true,
+@@ -39300,7 +39316,8 @@ const skills = {
+ 			}
+ 		},
+ 		filter(event, player) {
+-			return player.countCards("he") > 0;
++			// 【私用补丁】按 OL 原文:只能将手牌置为“伏兵”
++			return player.countCards("h") > 0;
+ 		},
+ 		onremove(player, skill) {
+ 			var cards = player.getExpansions(skill);
+@@ -39381,7 +39398,8 @@ const skills = {
+ 			if (result.bool) {
+ 				event.cardname = result.links[0][2];
+ 				player.logSkill("shefu");
+-				const result2 = await player.chooseCard("he", "选择一张牌作为“伏兵”", true).forResult();
++				// 【私用补丁】按 OL 原文:只能将手牌置为“伏兵”
++				const result2 = await player.chooseCard("h", "选择一张手牌作为“伏兵”", true).forResult();
+ 				if (result2.bool) {
+ 					const card = result2.cards[0];
+ 					event.card = card;
+@@ -39480,11 +39498,9 @@ const skills = {
+ 						}
+ 					}
+ 				}
++				// 【私用补丁】按 OL 原文:仅令此牌无效,去掉「处于使用者回合内则令其技能失效至回合结束」
+ 				trigger.targets.length = 0;
+ 				trigger.all_excluded = true;
+-				if (trigger.player == _status.currentPhase) {
+-					trigger.player.addTempSkill("baiban");
+-				}
+ 				if (loseNext) {
+ 					await loseNext;
+ 				}
+@@ -45569,6 +45585,10 @@ const skills = {
+ 			return game.hasPlayer(current => get.info("songci").filterTarget(null, player, current));
+ 		},
+ 		filterTarget(card, player, target) {
++			// 【私用补丁】按 OL 原文:手牌数等于体力值的角色不能选(须小于才摸牌、大于才弃牌)
++			if (target.countCards("h") == target.hp) {
++				return false;
++			}
+ 			return !player.getStorage("songci").includes(target);
+ 		},
+ 		logAudio(event, player) {
+@@ -45601,22 +45621,7 @@ const skills = {
+ 				},
+ 			},
+ 		},
+-		group: "songci_draw",
+-		subSkill: {
+-			draw: {
+-				audio: "songci",
+-				trigger: { player: "phaseDiscardEnd" },
+-				forced: true,
+-				filter(event, player) {
+-					return !game.hasPlayer(current => {
+-						return !player.getStorage("songci").includes(current);
+-					});
+-				},
+-				async content(event, trigger, player) {
+-					await player.draw();
+-				},
+-			},
+-		},
++		// 【私用补丁】按 OL 原文:没有「对全场都发动过后,弃牌阶段结束时摸一张牌」这一段,已移除 songci_draw
+ 	},
+ 	baobian: {
+ 		trigger: { player: ["phaseBefore", "changeHp"] },
+@@ -46458,17 +46463,10 @@ const skills = {
  						}
  						case 2: {
  							player.line(trigger.player, "green");
@@ -23,8 +1218,88 @@ index f0599fa..dda7b4a 100644
  							}
  							break;
  						}
+@@ -47232,7 +47230,32 @@ const skills = {
+ 		frequent: true,
+ 		async content(event, trigger, player) {
+ 			const num = lib.suit.filter(suit => player.hasMark(`xinfu_falu_${suit}`)).length;
+-			await player.chooseToGuanxing(num).set("prompt", "点化：点击或拖动将牌移动到牌堆顶或牌堆底");
++			// 【私用补丁】按 OL 原文:观看后只能以任意顺序置于牌堆顶,不能置于牌堆底
++			let cards = get.cards(num);
++			if (!cards.length) {
++				return;
++			}
++			await game.cardsGotoOrdering(cards);
++			const next = trigger.name == "phaseJieshu" ? player.getNext() : player;
++			const result = await player
++				.chooseToMove("点化：将牌以任意顺序置于牌堆顶（左为上）", true)
++				.set("list", [["牌堆顶", cards]])
++				.set("reverse", !next || get.attitude(player, next) <= 0)
++				.set("processAI", function (list) {
++					const cards = list[0][1].slice(0);
++					cards.sort(function (a, b) {
++						return (_status.event.reverse ? -1 : 1) * (get.value(b) - get.value(a));
++					});
++					return [cards];
++				})
++				.forResult();
++			if (result?.bool && result.moved?.[0]?.length == cards.length) {
++				cards = result.moved[0].slice(0);
++			}
++			await game.cardsGotoPile(cards.slice(0).reverse(), "insert");
++			game.addCardKnower(cards, player);
++			game.log(player, `将${get.cnNumber(cards.length)}张牌置于牌堆顶`);
++			await game.delayx();
+ 		},
+ 		ai: { combo: "xinfu_falu" },
+ 	},
+@@ -47357,16 +47380,17 @@ const skills = {
+ 			club: {
+ 				audio: "xinfu_zhenyi",
+ 				enable: "chooseToUse",
++				// 【私用补丁】按 OL 原文:改为「你处于濒死状态时,将一张手牌当【桃】使用」(原为回合外、可用任意牌)
+ 				viewAsFilter(player) {
+-					if (player == _status.currentPhase) {
++					if (!player.isDying()) {
+ 						return false;
+ 					}
+-					return player.hasMark("xinfu_falu_club") && player.countCards("hes") > 0;
++					return player.hasMark("xinfu_falu_club") && player.countCards("hs") > 0;
+ 				},
+ 				filterCard: true,
+-				position: "hes",
++				position: "hs",
+ 				viewAs: { name: "tao" },
+-				prompt: "失去「后土♣」标记，将一张牌当作【桃】使用",
++				prompt: "失去「后土♣」标记，将一张手牌当作【桃】使用",
+ 				check(card) {
+ 					return 15 - get.value(card);
+ 				},
+@@ -47392,12 +47416,21 @@ const skills = {
+ 					});
+ 				},
+ 				prompt2(event) {
+-					return "失去「玉清♥」标记，令即将对" + get.translation(event.player) + "造成的伤害+1";
++					return "失去「玉清♥」标记并进行判定，若结果为黑色，则即将对" + get.translation(event.player) + "造成的伤害+1";
+ 				},
+ 				logTarget: "player",
+ 				async content(event, trigger, player) {
+ 					player.clearMark("xinfu_falu_heart");
+-					trigger.num++;
++					// 【私用补丁】按 OL 原文:需进行判定,结果为黑色此伤害才+1(原为直接+1)
++					const result = await player
++						.judge(card => {
++							return get.color(card) == "black" ? 2 : -2;
++						})
++						.set("judge2", result => result.bool)
++						.forResult();
++					if (result?.color == "black") {
++						trigger.num++;
++					}
+ 				},
+ 			},
+ 		},
 diff --git a/apps/core/character/sp/translate.js b/apps/core/character/sp/translate.js
-index 5f65279..a6081a2 100644
+index 5f65279..f538f5b 100644
 --- a/apps/core/character/sp/translate.js
 +++ b/apps/core/character/sp/translate.js
 @@ -39,7 +39,7 @@ const translates = {
@@ -36,6 +1311,460 @@ index 5f65279..a6081a2 100644
  	xinfu_shajue: "杀绝",
  	xinfu_shajue_info: "锁定技，其他角色进入濒死状态时，你获得一个“暴戾”标记。然后若其体力值小于0，你获得使其进入濒死状态的牌。",
  	xinfu_jianjie: "荐杰",
+@@ -68,9 +68,9 @@ const translates = {
+ 	xinfu_falu: "法箓",
+ 	xinfu_falu_info: "锁定技。①游戏开始时，你获得「紫薇」「后土」「玉清」「勾陈」标记。②当你的牌因弃置而进入弃牌堆后，你根据这些牌的花色获得对应的未拥有的标记：黑桃，「紫薇」；梅花，「后土」；红桃，「玉清」；方块，「勾陈」。",
+ 	xinfu_dianhua: "点化",
+-	xinfu_dianhua_info: "准备阶段或结束阶段，你可以观看牌堆顶的X张牌（X为你的「紫薇」「后土」「玉清」「勾陈」标记数的总和）。若如此做，你将这些牌以任意顺序放回牌堆顶或牌堆底。",
++	xinfu_dianhua_info: "准备阶段或结束阶段，你可以观看牌堆顶的X张牌（X为你的「紫薇」「后土」「玉清」「勾陈」标记数的总和）。若如此做，你将这些牌以任意顺序放回牌堆顶。",
+ 	zhenyi: "真仪",
+-	zhenyi_info: "你可以在以下时机弃置相应的标记来发动以下效果：一名角色的判定牌生效前，你可以失去「紫薇」标记，将判定结果改为红桃5或黑桃5；你的回合外，你可以失去「后土」标记，将一张牌当【桃】使用；当你造成伤害时，你可以失去「玉清」标记，令此伤害+1；当你受到属性伤害后，你可以失去「勾陈」标记，从牌堆中随机获得三种类型的牌各一张。",
++	zhenyi_info: "你可以在以下时机弃置相应的标记来发动以下效果：一名角色的判定牌生效前，你可以失去「紫薇」标记，将判定结果改为红桃5或黑桃5；当你处于濒死状态时，你可以失去「后土」标记，将一张手牌当【桃】使用；当你造成伤害时，你可以失去「玉清」标记并判定，若结果为黑色，此伤害+1；当你受到属性伤害后，你可以失去「勾陈」标记，从牌堆中随机获得三种类型的牌各一张。",
+ 	zhangren: "张任",
+ 	zoushi: "邹氏",
+ 	zangba: "臧霸",
+@@ -408,7 +408,7 @@ const translates = {
+ 	shefu: "设伏",
+ 	shefu2: "设伏",
+ 	shefu_bg: "伏",
+-	shefu_info: "结束阶段开始时，你可以将一张牌移出游戏，称为「伏兵」。并为「伏兵」记录一个基本牌或锦囊牌的名称（须与其他「伏兵」记录的名称均不同）。你的回合外，当有其他角色使用与你记录的「伏兵」牌名相同的手牌时，你可以取消此牌的所有目标，然后移去该「伏兵」。若此时处于使用者的回合内，则你令使用者当前的所有非Charlotte技失效直至回合结束。",
++	shefu_info: "结束阶段开始时，你可以将一张手牌移出游戏，称为「伏兵」。并为「伏兵」记录一个基本牌或锦囊牌的名称（须与其他「伏兵」记录的名称均不同）。你的回合外，当有其他角色使用与你记录的「伏兵」牌名相同的手牌时，你可以移去该「伏兵」，令此牌无效。",
+ 	benyu: "贲育",
+ 	benyu2: "贲育",
+ 	benyu_info: "当你受到伤害后，你可选择：①将手牌摸至与伤害来源手牌数相同（至多摸至五张）；②弃置大于伤害来源手牌数的牌，然后对其造成1点伤害。",
+@@ -689,7 +689,7 @@ const translates = {
+ 	chongzhen: "冲阵",
+ 	chongzhen_info: "当你因发动〖龙胆〗而使用或打出【杀】或【闪】时，你可以获得对方的一张手牌或对对方造成1点伤害。若其因此失去了最后一张手牌或进入了濒死状态，你摸两张牌。",
+ 	bifa_info: "结束阶段开始时，你可以将一张手牌移出游戏并指定一名其他角色。该角色的准备阶段开始时，其观看你移出游戏的牌并选择一项：交给你一张与此牌类型相同的手牌并获得此牌；或将此牌置入弃牌堆，然后失去1点体力。",
+-	songci_info: "①出牌阶段，你可以选择一名未以此法选择过的角色。若其手牌数：大于其体力值，其弃置两张牌；不大于其体力值，其摸两张牌。②弃牌阶段结束时，若你已对场上所有存活角色发动过〖颂词①〗，则你摸一张牌。",
++	songci_info: "每名角色限一次，出牌阶段，你可以选择一项：1.令一名手牌数小于体力值的角色摸两张牌；2.令一名手牌数大于体力值的角色弃置两张牌。",
+ 	yongsi_info: "锁定技。①摸牌阶段，你多摸X张牌。②弃牌阶段开始时，你弃置X张牌。（X为场上势力数）",
+ 	yicong_info: "锁定技，当你的体力值大于2时，你计算与其他角色的距离时-1；当你的体力值不大于2时，其他角色计算与你的距离时+1。",
+ 	baobian_info: "锁定技，若你的体力值为3或更少，你视为拥有技能〖挑衅〗；若你的体力值为2或更少；你视为拥有技能〖咆哮〗；若你的体力值为1，你视为拥有技能〖神速〗。",
+@@ -833,7 +833,7 @@ const translates = {
+ 	lisi_info: "当你于回合外使用的牌结算结束后，你可将其交给一名手牌数不大于你的其他角色。",
+ 	ol_yangyi: "杨仪",
+ 	oljuanxia: "狷狭",
+-	oljuanxia_info: "结束阶段，你可以选择一名其他角色。你依次视为对其使用至多三种单目标普通锦囊牌。然后其下回合结束时，可视为对你使用等量的【杀】。",
++	oljuanxia_info: "结束阶段，你可以选择一名其他角色。你依次视为对其使用至多两种单目标普通锦囊牌。然后其下个结束阶段，可视为对你使用等量的【杀】。",
+ 	oldingcuo: "定措",
+ 	oldingcuo_info: "每回合限一次。当你受到或造成伤害后，你可摸两张牌。若这两张牌颜色不同，则你弃置一张手牌。",
+ 	fengfangnv: "OL冯妤",
+@@ -914,10 +914,10 @@ const translates = {
+ 	ruiji: "OL芮姬",
+ 	ruiji_prefix: "OL",
+ 	qiaoli: "巧力",
+-	qiaoli_info: "出牌阶段各限一次，你可以将一张武器牌/非武器装备牌当作【决斗】使用。若此【决斗】对应的实体牌为武器牌，当你以此【决斗】对目标角色造成伤害后，你摸X张牌（X为此牌的攻击范围），且可以将其中任意张牌分配给其他角色；若此【决斗】对应的实体牌不为武器牌，此牌不可被响应，然后你随机获得一张装备牌。",
++	qiaoli_info: "出牌阶段各限一次，你可以将一张武器牌/非武器装备牌当作【决斗】使用。若此【决斗】对应的实体牌为武器牌，当你以此【决斗】对目标角色造成伤害后，你摸X张牌（X为此牌的攻击范围），且可以将其中任意张牌分配给其他角色；若此【决斗】对应的实体牌不为武器牌，此牌不可被响应，然后你于本回合的结束阶段随机获得一张装备牌。",
+ 	qiaoli_given: "已分配",
+ 	qingliang: "清靓",
+-	qingliang_info: "每回合限一次，当你成为其他角色使用【杀】或锦囊牌的目标时，你可展示所有手牌，然后选择一项：⒈你与其各摸一张牌，⒉取消此目标，然后弃置你手牌中一种花色的所有牌。",
++	qingliang_info: "每回合限一次，当你成为其他角色使用【杀】或伤害类锦囊牌的唯一目标时，你可展示所有手牌，然后选择一项：⒈你与其各摸一张牌，⒉弃置你手牌中一种花色的所有牌，然后取消此目标。",
+ 	chixueqingfeng: "赤血青锋",
+ 	chixueqingfeng2: "赤血青锋",
+ 	chixueqingfeng_info: "锁定技，当你使用【杀】指定目标后，你令目标角色不能使用或打出手牌且防具技能无效直到此【杀】结算结束。",
+@@ -1000,7 +1000,7 @@ const translates = {
+ 	olqingyi: "清议",
+ 	olqingyi_info: "①出牌阶段限一次，你可以选择至多两名有牌的其他角色。你和这些角色同时弃置一张牌，然后若这些牌类型均相同，则你可以重复此流程。②结束阶段开始时，若你本回合内发动〖清议①〗弃置的牌包含两种颜色，则你获得每种颜色的牌各一张。",
+ 	olzeyue: "迮阅",
+-	olzeyue_info: "限定技。准备阶段，你可以选择一名于你的上个回合结束后对你造成过伤害的角色A及其武将牌上的一个非锁定技B，令A的B失效。然后每轮结束时，A依次视为对你使用X张【杀】（X为B失效状态下经过的完整轮数）。当你因这些【杀】受到伤害后，你令A恢复技能B。",
++	olzeyue_info: "限定技。准备阶段，你可以选择一名于你的上个回合结束后对你造成过伤害的其他角色A及其武将牌上的一个技能B（锁定技、觉醒技、限定技除外），令A的B失效。然后每轮结束时，A依次视为对你使用X张【杀】（X为B失效状态下经过的完整轮数）。当你因这些【杀】受到伤害后，你令A恢复技能B。",
+ 	xindiaodu: "调度",
+ 	xindiaodu_info: "①每回合限一次，与你势力相同的角色使用装备牌时，其可以摸一张牌。②出牌阶段开始时，你可以获得与你势力相同的一名角色装备区内的一张牌，然后你可以将此牌交给另一名其他角色。",
+ 	olhuanshi: "缓释",
+@@ -1071,7 +1071,7 @@ const translates = {
+ 	olmiuyan_tag: "invisible",
+ 	olmiuyan_info: "转换技。你可以将一张黑色牌当做【火攻】使用。然后若此技能：处于阳状态且此牌造成了伤害，则你获得此阶段内所有被展示过的手牌；处于阴状态且未造成伤害，则你令此技能失效直到本轮结束。",
+ 	olshilu: "失路",
+-	olshilu_info: "锁定技。当你受到伤害后，你摸X张牌（X为你的体力值且至多为5）。然后你展示攻击范围内一名角色的一张手牌并令此牌视为无属性【杀】。",
++	olshilu_info: "锁定技。当你受到伤害后，你摸X张牌（X为你的体力值）。然后你展示攻击范围内一名其他角色的一张手牌并令此牌视为无属性【杀】。",
+ 	ol_huban: "OL胡班",
+ 	ol_huban_prefix: "OL",
+ 	olhuiyun: "晖云",
+@@ -1124,9 +1124,9 @@ const translates = {
+ 	olxieju_info: "出牌阶段限一次。你可以令任意名本回合成为过牌的目标的角色依次视为使用一张【杀】。",
+ 	ol_zhouqun: "周群",
+ 	oltianhou: "天候",
+-	oltianhou_info: `锁定技，结束阶段，你观看牌堆顶的三张牌并选择是否用你的手牌交换之，然后你展示牌堆顶三张牌中的一张，令一名角色根据此牌的花色获得对应的技能直到你下次发动此技能：♠${get.poptip("oltianhou_spade")}；♥${get.poptip("oltianhou_heart")}；♣${get.poptip("oltianhou_club")}；♦${get.poptip("oltianhou_diamond")}。`,
++	oltianhou_info: `锁定技，准备阶段，你观看牌堆顶的牌并选择是否用你的一张手牌交换之，然后你展示牌堆顶的牌，令一名角色根据此牌的花色获得对应的技能直到你下一个准备阶段：♥${get.poptip("oltianhou_heart")}；♦${get.poptip("oltianhou_diamond")}；♠${get.poptip("oltianhou_spade")}；♣${get.poptip("oltianhou_club")}。`,
+ 	olchenshuo: "谶说",
+-	olchenshuo_info: "准备阶段，你可以令一名角色展示一张手牌，然后亮出牌堆顶的一张牌。若这两张牌类型/花色/点数/牌名字数中任一项相同且已展示的牌数小于3，则你重复此流程，然后你获得所有因此技能展示的牌。",
++	olchenshuo_info: "结束阶段，你可以展示一张手牌，然后亮出牌堆顶的一张牌。若这两张牌类型/花色/点数/牌名字数中任一项相同且已亮出的牌堆顶牌数小于3，则你重复亮出牌堆顶的牌并与此手牌比较，最后你获得所有以此法亮出的牌。",
+ 	oltianhou_spade: "骤雨",
+ 	oltianhou_spade_miehuo: "骤雨",
+ 	oltianhou_spade_info: "锁定技。其他角色造成火属性伤害时，取消之；一名角色受到雷属性伤害后，所有与其座次相邻的角色失去1点体力。",
+@@ -1297,7 +1297,7 @@ const translates = {
+ 	olchishi: "持室",
+ 	olchishi_info: "每回合限一次，当前回合角色失去其一个区域内的最后一张牌后，你可以令其摸两张牌且本回合手牌上限+2。",
+ 	olweimian: "慰勉",
+-	olweimian_info: "出牌阶段限一次，你可以废除至多三个装备栏，然后令一名角色选择至多等量项：①恢复一个已废除的装备栏；②回复1点体力；③弃置所有手牌，然后摸四张牌。",
++	olweimian_info: "出牌阶段限一次，你可以废除至多三个装备栏，然后令一名角色选择等量项（可执行的项不足则全选）：①恢复一个已废除的装备栏；②回复1点体力；③弃置所有手牌，然后摸四张牌。",
+ 	ol_kebineng: "OL轲比能",
+ 	ol_kebineng_prefix: "OL",
+ 	olpingduan: "平端",
+@@ -1637,9 +1637,9 @@ const translates = {
+ 	ol_huangfusong: "OL皇甫嵩",
+ 	ol_huangfusong_prefix: "OL",
+ 	olyanjing: "焰靖",
+-	olyanjing_info: "准备阶段，你可以指定一名其他角色并跳过本回合下X个阶段，对其造成1点火焰伤害（X为其体力值）。",
++	olyanjing_info: "准备阶段，你可以指定一名其他角色，对其造成1点火焰伤害，然后你跳过本回合下X个阶段，其跳过其下回合第X个阶段（X为其体力值）。",
+ 	olfenyue: "奋钺",
+-	olfenyue_info: "转换技，每回合结束时，若本回合有角色受到过属性伤害，你可以：阳：摸两张牌；阴：使用一张【杀】。",
++	olfenyue_info: "转换技，每回合结束时，若本回合你受到过伤害，或有角色受到过属性伤害，你可以：阳：摸两张牌；阴：使用一张牌。",
+ 	ollingren: "凌人",
+ 	ollingren_info: `每回合限一次，当你使用【杀】或伤害锦囊牌时，你可以猜测其中一个目标的手牌中是否有基本牌、锦囊牌或装备牌，若至少猜对：一项，本回合你下次对其伤害+1；两项，此牌不计入次数且你摸两张牌；三项，你获得${get.poptip("new_rejianxiong")}${get.poptip("rexingshang")}直到你下回合开始。`,
+ 	olfujian: "伏间",
+@@ -1855,7 +1855,8 @@ const translates = {
+ 	oltaohuai: "讨怀",
+ 	oltaohuai_info: "转换技，你使用手牌中点数<br>阳：最大的牌<br>阴：最小的牌<br>时摸一张牌，否则你可以弃置一张牌。",
+ 	wangai: "王皑",
+-	qinmian: "勤勉",
++	// 【私用补丁】按 OL 原文:技能名为「勤励」
++	qinmian: "勤励",
+ 	qinmian_info: "准备阶段或当你受到1点伤害后，你摸一张牌。每回合结束时，你可将所有“勤励”牌置入弃牌堆，对当前回合角色造成1点伤害；若你因此失去所有手牌，改为对其造成等量伤害。",
+ };
+ 
+diff --git a/apps/core/character/xianding/character.js b/apps/core/character/xianding/character.js
+index c6516e6..f10deef 100644
+--- a/apps/core/character/xianding/character.js
++++ b/apps/core/character/xianding/character.js
+@@ -1100,7 +1100,8 @@ const characters = {
+ 		sex: "female",
+ 		group: "wu",
+ 		hp: 3,
+-		skills: ["dcyuandi", "dcxinyou"],
++		// 【私用补丁】按 OL 原文:换成 OL 版〖元嫡〗〖心幽〗(十周年版 dcyuandi / dcxinyou 保留未删)
++		skills: ["olyuandi", "olxinyou"],
+ 	},
+ 	dc_yangbiao: {
+ 		sex: "male",
+diff --git a/apps/core/character/xianding/skill.js b/apps/core/character/xianding/skill.js
+index b905cc5..b0b2bee 100644
+--- a/apps/core/character/xianding/skill.js
++++ b/apps/core/character/xianding/skill.js
+@@ -7531,8 +7531,9 @@ const skills = {
+ 	},
+ 	yizhao: {
+ 		audio: 2,
++		// 【私用补丁】按 OL 原文:时机为使用或打出牌结算结束后(原为使用或打出牌时)
+ 		trigger: {
+-			player: ["useCard", "respond"],
++			player: ["useCardAfter", "respondAfter"],
+ 		},
+ 		forced: true,
+ 		filter(event, player) {
+@@ -7553,13 +7554,9 @@ const skills = {
+ 			player.addMark("yizhao", get.number(trigger.card));
+ 			const num = Math.floor(event.num / 10) % 10;
+ 			const num2 = Math.floor(player.countMark("yizhao") / 10) % 10;
++			// 【私用补丁】按 OL 原文:十位数改变后摸一张牌(原为从牌堆获得一张点数为十位数的牌)
+ 			if (num !== num2) {
+-				const card = get.cardPile2(card => {
+-					return get.number(card, false) === num2;
+-				});
+-				if (card) {
+-					await player.gain(card, "gain2");
+-				}
++				await player.draw();
+ 			}
+ 		},
+ 		mod: {
+@@ -35678,6 +35675,182 @@ const skills = {
+ 			},
+ 		},
+ 	},
++	//OL谢灵毓
++	// 【私用补丁】按 OL 原文:新写 OL 版〖元嫡〗——牌名组(初始【杀】【闪】【桃】)内的牌名本回合均进入过弃牌堆后摸一张牌(每回合限一次);其中有牌不因使用进入弃牌堆且牌名数大于一,则移除一个牌名
++	olyuandi: {
++		audio: "dcyuandi",
++		trigger: { global: ["loseAfter", "cardsDiscardAfter", "loseAsyncAfter", "equipAfter"] },
++		forced: true,
++		usable: 1,
++		init(player, skill) {
++			if (!Array.isArray(player.storage[skill])) {
++				player.storage[skill] = ["sha", "shan", "tao"];
++			}
++		},
++		mark: true,
++		marktext: "嫡",
++		intro: {
++			name: "元嫡",
++			content(storage) {
++				if (!Array.isArray(storage) || !storage.length) {
++					return "当前没有牌名";
++				}
++				return `当前牌名组：${storage.map(name => `【${get.translation(name)}】`).join("")}`;
++			},
++		},
++		//统计本回合进入过弃牌堆的、牌名在names内的牌：entered为已进入过的牌名，notUse为其中是否有牌不因使用进入弃牌堆
++		getDiscarded(names) {
++			const entered = [];
++			let notUse = false;
++			game.getGlobalHistory("cardMove", evt => {
++				let useEvent = null;
++				if (evt.name === "lose") {
++					if (evt.position !== ui.discardPile) {
++						return false;
++					}
++				} else if (evt.name === "cardsDiscard") {
++					const evtx = evt.getParent();
++					if (evtx?.name === "orderingDiscard" && evtx.relatedEvent?.name === "useCard") {
++						useEvent = evtx.relatedEvent;
++					}
++				} else {
++					return false;
++				}
++				for (const card of evt.cards) {
++					const name = get.name(card, false);
++					if (!names.includes(name)) {
++						continue;
++					}
++					entered.add(name);
++					if (!useEvent || !useEvent.cards?.includes(card)) {
++						notUse = true;
++					}
++				}
++				return false;
++			});
++			return { entered, notUse };
++		},
++		filter(event, player) {
++			const names = player.getStorage("olyuandi");
++			if (!names.length) {
++				return false;
++			}
++			const cards = event.getd?.();
++			if (!cards?.some(card => names.includes(get.name(card, false)))) {
++				return false;
++			}
++			const { entered } = get.info("olyuandi").getDiscarded(names);
++			return names.every(name => entered.includes(name));
++		},
++		async content(event, trigger, player) {
++			const names = player.getStorage(event.name).slice();
++			const { notUse } = get.info(event.name).getDiscarded(names);
++			await player.draw();
++			if (!notUse || names.length <= 1) {
++				return;
++			}
++			const result = await player
++				.chooseButton(["元嫡：请移除一个牌名", [names, "vcard"]], true)
++				.set("ai", button => {
++					return { tao: 3, shan: 2, sha: 1 }[button.link[2]] || 0;
++				})
++				.forResult();
++			const name = result?.links?.[0]?.[2];
++			if (!result?.bool || !name) {
++				return;
++			}
++			player.unmarkAuto(event.name, [name]);
++			game.log(player, "从〖元嫡〗的牌名组中移除了", `#y【${get.translation(name)}】`);
++		},
++	},
++	// 【私用补丁】按 OL 原文:新写 OL 版〖心幽〗——出牌阶段限一次,弃置任意张基本牌后摸一张牌,摸到本次已弃置过的基本牌牌名则可重复(再弃再摸),至多摸五张,所摸的牌本回合不计入手牌上限
++	olxinyou: {
++		audio: "dcxinyou",
++		enable: "phaseUse",
++		usable: 1,
++		filter(event, player) {
++			return player.countCards("h", card => get.type(card) === "basic" && lib.filter.cardDiscardable(card, player, "olxinyou")) > 0;
++		},
++		position: "h",
++		filterCard(card, player) {
++			return get.type(card) === "basic" && lib.filter.cardDiscardable(card, player, "olxinyou");
++		},
++		selectCard: [1, Infinity],
++		allowChooseAll: true,
++		prompt: "弃置任意张基本牌并摸一张牌，若摸到的牌与已弃置的基本牌牌名相同则可重复此流程（至多摸五张）",
++		check(card) {
++			if (ui.selected.cards.length) {
++				return 0;
++			}
++			return 7 - get.value(card);
++		},
++		async content(event, trigger, player) {
++			const skill = `${event.name}_effect`;
++			//本次已弃置的基本牌的牌名
++			const names = [];
++			names.addArray(event.cards.map(card => get.name(card, false)));
++			let num = 0;
++			player.addTempSkill(skill);
++			while (num < 5) {
++				const next = player.draw();
++				next.gaintag.add(skill);
++				const result = await next.forResult();
++				num++;
++				const cards = result?.cards ?? [];
++				if (!cards.length || cards.some(card => !names.includes(get.name(card, false)))) {
++					break;
++				}
++				if (num >= 5 || !player.countCards("h", card => get.type(card) === "basic" && lib.filter.cardDiscardable(card, player, event.name))) {
++					break;
++				}
++				const result2 = await player
++					.chooseToDiscard({
++						prompt: "心幽：是否弃置任意张基本牌，然后摸一张牌？",
++						prompt2: `已弃置的牌名：${get.translation(names)}；已摸${get.cnNumber(num)}张牌（至多五张）`,
++						position: "h",
++						selectCard: [1, Infinity],
++						filterCard(card, player) {
++							return get.type(card) === "basic";
++						},
++						ai(card) {
++							if (ui.selected.cards.length) {
++								return 0;
++							}
++							return 6 - get.value(card);
++						},
++					})
++					.forResult();
++				if (!result2?.bool || !result2.cards?.length) {
++					break;
++				}
++				names.addArray(result2.cards.map(card => get.name(card, false)));
++			}
++		},
++		ai: {
++			order: 1,
++			result: { player: 1 },
++		},
++		subSkill: {
++			effect: {
++				charlotte: true,
++				onremove(player, skill) {
++					player.removeGaintag(skill);
++				},
++				mod: {
++					ignoredHandcard(card, player) {
++						if (card.hasGaintag("olxinyou_effect")) {
++							return true;
++						}
++					},
++					cardDiscardable(card, player, name) {
++						if (name === "phaseDiscard" && card.hasGaintag("olxinyou_effect")) {
++							return false;
++						}
++					},
++				},
++			},
++		},
++	},
+ 	//笮融
+ 	dccansi: {
+ 		audio: 2,
+@@ -45136,9 +45309,7 @@ const skills = {
+ 			if (!event.targets || event.targets.length !== 1 || event.player === event.target) {
+ 				return false;
+ 			}
+-			if (event.card.name !== "sha" && get.type(event.card) !== "trick") {
+-				return false;
+-			}
++			// 【私用补丁】按 OL 原文:不限牌的种类(原实现仅限【杀】或普通锦囊牌),「第一张牌」本就按所有牌计
+ 			if (name === "useCardToPlayered") {
+ 				if (!event.cards.filterInD().length) {
+ 					return false;
+@@ -45162,7 +45333,8 @@ const skills = {
+ 			} else {
+ 				target = trigger.targets[0];
+ 				prompt = `弃置一张牌，并获得${get.translation(trigger.cards.filterInD())}`;
+-				next.set("goon", get.value(trigger.cards.filterInD()));
++				// 【私用补丁】按 OL 原文:放开牌的种类后,延时锦囊被拿回就不会置入判定区,AI 不对延时锦囊发动
++				next.set("goon", get.type(trigger.card) === "delay" ? 0 : get.value(trigger.cards.filterInD()));
+ 			}
+ 			next.set("prompt", get.prompt(event.skill, target));
+ 			next.set("prompt2", prompt);
+diff --git a/apps/core/character/xianding/translate.js b/apps/core/character/xianding/translate.js
+index 2b68dbc..1fdc728 100644
+--- a/apps/core/character/xianding/translate.js
++++ b/apps/core/character/xianding/translate.js
+@@ -199,7 +199,7 @@ const translates = {
+ 	dcyizhao: "异兆",
+ 	dcyizhao_info: "锁定技。当你使用或打出牌或你的牌因弃置进入弃牌堆时，你获得等同于此牌点数枚“黄”标记。然后若“黄”的十位数发生变化，你获得牌堆中一张点数为你“黄”的十位数的牌。",
+ 	yizhao: "异兆",
+-	yizhao_info: "锁定技。当你使用或打出牌时，你获得等同于此牌点数枚“黄”标记。然后若“黄”的十位数发生变化，你获得牌堆中一张点数为你“黄”的十位数的牌。",
++	yizhao_info: "锁定技。当你使用或打出牌结算结束后，你获得等同于此牌点数枚“黄”标记。然后若“黄”的十位数因此发生变化，你摸一张牌。",
+ 	sijun: "肆军",
+ 	sijun_info: "准备阶段，若“黄”数大于牌堆的牌数，你可以移去所有“黄”并洗牌，然后随机获得任意张点数之和为36的牌。",
+ 	sanshou: "三首",
+@@ -352,7 +352,7 @@ const translates = {
+ 	mansi: "蛮嗣",
+ 	mansi_info: "出牌阶段限一次，你可以将所有手牌当做【南蛮入侵】使用；当有角色受到【南蛮入侵】的伤害后，你摸一张牌。",
+ 	souying: "薮影",
+-	souying_info: "每回合限一次，当你对其他角色（或其他角色对你）使用【杀】或普通锦囊牌指定唯一目标后，若此牌不是本回合你对其（或其对你）使用的第一张【杀】或普通锦囊牌，你可以弃置一张牌，获得此牌对应的所有实体牌（或令此牌对你无效）。",
++	souying_info: "每回合限一次，当你对其他角色（或其他角色对你）使用牌指定唯一目标后，若此牌不是本回合你对其（或其对你）使用的第一张牌，你可以弃置一张牌，获得此牌对应的所有实体牌（或令此牌对你无效）。",
+ 	zhanyuan: "战缘",
+ 	zhanyuan_info: "觉醒技，准备阶段，若你已因〖蛮嗣〗累计获得超过七张牌，你加1点体力上限并回复1点体力，并可以选择一名男性角色，你与其获得技能〖系力〗，然后你失去技能〖蛮嗣〗。",
+ 	hmxili: "系力",
+@@ -654,6 +654,11 @@ const translates = {
+ 	dcyuandi_info: "当其他角色于其出牌阶段使用第一张牌时，若此牌仅指定其为目标，你可以选择一项：1.弃置其一张手牌；2.你与其各摸一张牌。",
+ 	dcxinyou: "心幽",
+ 	dcxinyou_info: "出牌阶段限一次。你可以将体力回复至上限并将手牌补至体力上限。若你以此法：获得了至少三张牌，你于结束阶段失去1点体力；回复了体力，你于结束阶段弃置一张牌。",
++	olyuandi: "元嫡",
++	olyuandi_info: "锁定技。每回合限一次，当你的牌名组（初始为【杀】【闪】【桃】）中的所有牌名于本回合均有牌进入过弃牌堆后，你摸一张牌。然后若这些牌中有不因使用而进入弃牌堆的牌，且牌名组中的牌名数大于1，你从牌名组中移除一个牌名。",
++	olxinyou: "心幽",
++	olxinyou_info: "出牌阶段限一次。你可以弃置任意张基本牌，然后摸一张牌。若你以此法摸到的牌与你本次发动已弃置的基本牌牌名相同，你可以重复此流程（至多以此法摸五张牌）。你以此法摸到的牌本回合不计入手牌上限。",
++	olxinyou_effect: "心幽",
+ 	zerong: "笮融",
+ 	dccansi: "残肆",
+ 	dccansi_info: "锁定技。准备阶段，你回复1点体力，然后选择一名其他角色，其回复1点体力，你视为对其依次使用以下能使用的牌：【杀】（无距离限制）、【决斗】、【火攻】。当其以此法受到1点伤害后，你摸两张牌。",
+diff --git a/apps/core/character/yijiang/skill.js b/apps/core/character/yijiang/skill.js
+index 7a035b5..e1291b1 100644
+--- a/apps/core/character/yijiang/skill.js
++++ b/apps/core/character/yijiang/skill.js
+@@ -14771,6 +14771,40 @@ const skills = {
+ 			log: {},
+ 		},
+ 	},
++	// 【私用补丁】OL 界沮授〖矢北〗:比 shibei 多「游戏开始时获得3点护甲」;首次受伤回复 1 点体力,本回合之后每次受伤失去 1 点体力
++	sgs_olshibei: {
++		audio: "shibei",
++		trigger: { player: "damageEnd" },
++		forced: true,
++		async content(event, trigger, player) {
++			if (player.getHistory("damage").indexOf(trigger) > 0) {
++				await player.loseHp();
++			} else {
++				await player.recover();
++			}
++		},
++		group: "sgs_olshibei_init",
++		subSkill: {
++			init: {
++				audio: "shibei",
++				trigger: {
++					global: "phaseBefore",
++					player: "enterGame",
++				},
++				filter(event, player) {
++					return event.name != "phase" || game.phaseNumber == 0;
++				},
++				forced: true,
++				async content(event, trigger, player) {
++					await player.changeHujia(3);
++				},
++			},
++		},
++		ai: {
++			maixie_defend: true,
++			threaten: 0.9,
++		},
++	},
+ 	shibei: {
+ 		trigger: { player: "damageEnd" },
+ 		forced: true,
+diff --git a/apps/core/character/yijiang/translate.js b/apps/core/character/yijiang/translate.js
+index 214d953..9c4553d 100644
+--- a/apps/core/character/yijiang/translate.js
++++ b/apps/core/character/yijiang/translate.js
+@@ -345,6 +345,8 @@ const translates = {
+ 	zzili_info: `觉醒技。准备阶段，若你的“权”数不小于4，你减1点体力上限并获得${get.poptip("zpaiyi")}。`,
+ 	zpaiyi: "排异",
+ 	zpaiyi_info: "结束阶段，你可以选择一张“权”，若此牌为：装备牌，你将此牌置入一名角色的装备区；延时类锦囊牌，你将此牌置入一名角色的判定区；基本牌或普通锦囊牌，你将此牌交给一名角色。然后若此牌的目标区域对应的角色不为你，你可以摸一张牌。",
++	sgs_olshibei: "矢北",
++	sgs_olshibei_info: "锁定技。①游戏开始时，你获得3点护甲。②当你受到伤害后：若此伤害是你本回合第一次受到的伤害，则你回复1点体力；否则你失去1点体力。",
+ 	shibei: "矢北",
+ 	shibei_info: "锁定技，当你受到伤害后：若此伤害是你本回合第一次受到的伤害，则你回复1点体力；否则你失去1点体力。",
+ 	jianying: "渐营",
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
 index 99aaa79..4b68a1f 100644
 --- a/apps/core/game/config.json
@@ -267,10 +1996,10 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..aa28796 100644
+index 67fb1b5..349cc7b 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
-@@ -3,6 +3,378 @@ import html from "dedent";
+@@ -3,6 +3,542 @@ import html from "dedent";
  
  export const type = "mode";
  
@@ -489,6 +2218,170 @@ index 67fb1b5..aa28796 100644
 +};
 +
 +/**
++ * 【私用补丁】联机同时选将(sgs-wiki 房规,用户 2026-11-22):所有人同时拿到候选框,不用干等君主;
++ * 其余玩家可以先看技能、换将,但要等君主选好(亮出来)之后才能点确定。
++ * 时限:君主 = 房间的「选将时限」,其余玩家多一分钟(君主压着时限选完,他们至少还有一分钟)。
++ * 候选:其余玩家的候选避开君主框里出现的全部武将(君主还没选,哪张都可能被他拿走)。
++ * 君主若选了要选势力的武将(神将等),势力放到后面和其他人一起选。
++ * 只接了标准流程(含暴虐无道 / 大忠似奸 / 失心疯 / 无间道),明忠不走这里。
++ */
++const sgsChooseTogether = async (event, zhuBox) => {
++	const zhu = game.zhu;
++	const zhuIsHuman = zhu === game.me || zhu.isOnline();
++	const together = (event.sgsTogether = { results: {}, zhuGroup: false });
++	const selectButton = lib.configOL.double_character ? 2 : 1;
++	const others = game.players.filter(current => current !== zhu);
++	const free = event.list.filter(name => !zhuBox.includes(name));
++	const num = Math.floor(free.length / Math.max(1, others.length));
++	const entries = [];
++	for (const current of others) {
++		const num2 = lib.configOL[`choice_${current.identity}`];
++		let title = "选择角色";
++		if (current.special_identity) {
++			title = `选择角色（${get.translation(current.special_identity)}）`;
++		}
++		entries.push([current, [zhuIsHuman ? `${title}（主公选好后才能确定）` : title, [free.randomRemove(Math.min(num, num2)), "characterx"]], selectButton, true]);
++	}
++	game.broadcastAll(() => {
++		_status.sgsZhuPicked = false;
++	});
++	if (lib.configOL.change_choice !== false) {
++		// 换将:新将都从「没发给任何人、也不在君主框里」的 free 里抽;其余玩家换下的放回 free
++		lib.sgsSwap.register(zhu, (event.sgsZhuExtra || []).slice(0), free, false);
++		for (const [current, args] of entries) {
++			lib.sgsSwap.register(current, args[1][0], free, true);
++		}
++	}
++
++	const base = parseInt(lib.configOL.choose_timeout) || 300;
++	const chooseRemote = (args, callback, gate) => {
++		const next = game.me.chooseButton(...args);
++		if (gate) {
++			next.set("filterOk", () => !!_status.sgsZhuPicked);
++		}
++		next.callback = callback;
++		next.complexSelect = true;
++		game.resume();
++	};
++	const chooseLocal = (current, args, callback, gate) => {
++		const next = current.chooseButton(...args);
++		if (gate) {
++			next.set("filterOk", () => !!_status.sgsZhuPicked);
++		}
++		next.callback = callback;
++		return next;
++	};
++	// 同 chooseButtonOL 的单人分支,多了「确定」的闸门和每人各自的时限
++	const choose = (current, args, callback, gate, seconds) =>
++		new Promise(resolve => {
++			lib.configOL.choose_timeout = String(seconds); // player.wait() 读的是这个
++			if (current.isOnline()) {
++				current.send(time => {
++					lib.configOL.choose_timeout = time;
++				}, String(seconds));
++				current.wait(result => resolve(result ?? {}));
++				current.send(chooseRemote, args, callback, gate);
++			} else if (current === game.me) {
++				const next = chooseLocal(game.me, args, callback, gate);
++				game.me.wait(result => resolve(result ?? {}));
++				next.forResult()
++					.then(result => game.me.unwait(result))
++					.catch(() => resolve({}));
++			} else {
++				chooseLocal(current, args, callback, false)
++					.forResult()
++					.then(resolve)
++					.catch(() => resolve({}));
++			}
++		});
++
++	const onZhuPicked = result => {
++		let links = result && Array.isArray(result.links) ? result.links.slice(0) : [];
++		if (!links.length) {
++			// 超时 / 掉线:从他当前的候选(算上换将)里随机
++			const hand = _status.sgsSwap && _status.sgsSwap[zhu.playerid];
++			const box = zhuBox.filter(name => !hand || !hand.init.includes(name) || hand.left.includes(name)).concat(hand ? hand.got : []);
++			links = box.randomGets(selectButton).map(name => {
++				const replacements = lib.characterReplace[name];
++				return replacements && replacements.length ? replacements.randomGet() : name;
++			});
++		}
++		if (!zhu.name) {
++			zhu.init(links[0], links[1]);
++		}
++		event.list2.remove(get.sourceCharacter(zhu.name1));
++		event.list2.remove(get.sourceCharacter(zhu.name2));
++		const addMaxHp = game.players.length > 4;
++		if (addMaxHp && !zhu.isInitFilter("noZhuHp")) {
++			zhu.maxHp++;
++			zhu.hp++;
++			zhu.update();
++		}
++		game.broadcast(
++			(zhu, name, name2, addMaxHp) => {
++				if (!zhu.name) {
++					zhu.init(name, name2);
++				}
++				if (addMaxHp && !zhu.isInitFilter("noZhuHp")) {
++					zhu.maxHp++;
++					zhu.hp++;
++					zhu.update();
++				}
++			},
++			zhu,
++			links[0],
++			links[1],
++			addMaxHp
++		);
++		const type = get.selectGroup(zhu.name1, true);
++		if (type !== "default") {
++			zhu._groupChosen = type;
++		}
++		together.zhuGroup = get.selectGroup(zhu.name1).length > 0;
++		// 放开其余玩家的「确定」
++		game.broadcastAll(() => {
++			_status.sgsZhuPicked = true;
++			const current = _status.event;
++			if (current && current.name === "chooseButton" && current.dialog) {
++				const caption = current.dialog.querySelector(".caption");
++				if (caption && caption.innerHTML.includes("主公选好后才能确定")) {
++					caption.innerHTML = caption.innerHTML.replace("（主公选好后才能确定）", "（主公已选好）");
++				}
++				game.check();
++			}
++		});
++	};
++
++	const zhuArgs = [["选择角色", [zhuBox, "characterx"]], selectButton, true];
++	let zhuPromise;
++	if (zhuIsHuman) {
++		zhuPromise = choose(zhu, zhuArgs, null, false, base).then(onZhuPicked);
++	} else {
++		// 电脑(或掉线 / 托管)君主:直接随机一张,原流程的 ai 也是纯随机。
++		// 不能给它建选将事件——本机事件的结果要等同一批事件都跑完才交回这里,而房主自己的选将框又在等君主选完,会互相卡死。
++		onZhuPicked({ links: [] });
++		zhuPromise = Promise.resolve();
++	}
++	const callback = (player, result) => {
++		if (game.online || player === game.me) {
++			player.init(result.links[0], result.links[1]);
++		}
++	};
++	const otherPromises = entries.map(async ([current, ...args]) => {
++		try {
++			return [current.playerid, await choose(current, args, callback, true, base + 60)];
++		} catch {
++			return [current.playerid, {}];
++		}
++	});
++	// 房主本机的倒计时读的也是 lib.configOL.choose_timeout:按自己的身份摆正
++	lib.configOL.choose_timeout = String(zhu === game.me ? base : base + 60);
++	await zhuPromise;
++	together.results = Object.fromEntries(await Promise.all(otherPromises));
++	lib.configOL.choose_timeout = String(base);
++};
++
++/**
 + * 主机:大忠似奸的义军彼此知晓身份。
 + * 联机客户端本地只有自己和昏君的身份(其他人一律是「猜」),所以不能让各端自己比对,要由主机把义军名单单发给每名义军(不广播,别的身份收不到)。
 + * 只改显示层:不动 identityShown / ai.shown —— 对其他身份(含电脑)来说这些义军仍是暗的。
@@ -649,7 +2542,7 @@ index 67fb1b5..aa28796 100644
  /** @type { importModeConfig } */
  export default {
  	name: "identity",
-@@ -75,9 +447,7 @@ export default {
+@@ -75,9 +611,7 @@ export default {
  		},
  		async (event, trigger, player) => {
  			if (lib.config.new_tutorial) {
@@ -660,7 +2553,7 @@ index 67fb1b5..aa28796 100644
  				return;
  			}
  
-@@ -205,6 +575,27 @@ export default {
+@@ -205,6 +739,27 @@ export default {
  			};
  			if (_status.connectMode) {
  				_status.mode = lib.configOL.identity_mode;
@@ -688,7 +2581,7 @@ index 67fb1b5..aa28796 100644
  				if (_status.mode == "zhong") {
  					lib.configOL.number = 8;
  					if (lib.configOL.zhong_card) {
-@@ -233,11 +624,24 @@ export default {
+@@ -233,11 +788,24 @@ export default {
  				if (lib.configOL.number < 2) {
  					lib.configOL.number = 2;
  				}
@@ -714,7 +2607,7 @@ index 67fb1b5..aa28796 100644
  				if (_status.mode == "normal" && (get.config("enable_commoner") || get.config("double_nei"))) {
  					const identity = get.config("enable_commoner") ? "commoner" : "nei";
  					for (const list of lib.config.mode_config.identity.identity.slice(1)) {
-@@ -253,7 +657,7 @@ export default {
+@@ -253,7 +821,7 @@ export default {
  						list.push(identity);
  					}
  				}
@@ -723,7 +2616,7 @@ index 67fb1b5..aa28796 100644
  					lib.onwash.push(yearLimitCheck);
  				}
  				for (const current of game.players) {
-@@ -335,7 +739,46 @@ export default {
+@@ -335,7 +903,46 @@ export default {
  						game.zhong.addSkill("sheshen");
  					}
  				}
@@ -771,7 +2664,7 @@ index 67fb1b5..aa28796 100644
  					skill;
  				if (enhance_zhu) {
  					if (_status.connectMode) {
-@@ -537,12 +980,27 @@ export default {
+@@ -537,12 +1144,27 @@ export default {
  					//player.node.name.dataset.nature=get.groupnature(player.group);
  				}
  			}
@@ -800,7 +2693,7 @@ index 67fb1b5..aa28796 100644
  			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
  			if (lib.configOL.identity_mode != "zhong") {
  				if (lib.configOL.identity_mode == "stratagem") {
-@@ -649,6 +1107,36 @@ export default {
+@@ -649,6 +1271,36 @@ export default {
  						cai: "猜",
  					};
  				}
@@ -837,7 +2730,7 @@ index 67fb1b5..aa28796 100644
  			} else {
  				if (get.config("enable_commoner")) {
  					return {
-@@ -678,10 +1166,10 @@ export default {
+@@ -678,10 +1330,10 @@ export default {
  			for (var i in list) {
  				switch (i) {
  					case "fan":
@@ -850,7 +2743,7 @@ index 67fb1b5..aa28796 100644
  						break;
  					case "nei":
  						list[i] = "内奸";
-@@ -689,6 +1177,27 @@ export default {
+@@ -689,6 +1341,27 @@ export default {
  					case "commoner":
  						list[i] = "平民";
  						break;
@@ -878,7 +2771,7 @@ index 67fb1b5..aa28796 100644
  					case "zhu":
  						list[i] = "主公";
  						break;
-@@ -741,6 +1250,18 @@ export default {
+@@ -741,6 +1414,18 @@ export default {
  					case "stratagem":
  						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
  						break;
@@ -897,7 +2790,7 @@ index 67fb1b5..aa28796 100644
  					default:
  						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
  				}
-@@ -789,6 +1310,12 @@ export default {
+@@ -789,6 +1474,12 @@ export default {
  		 * @param {boolean} [me] - 兼容旧逻辑的保留参数，目前不会影响显示范围。
  		 */
  		showIdentity(me) {
@@ -910,7 +2803,7 @@ index 67fb1b5..aa28796 100644
  			for (const player of game.players) {
  				// if(me===false&&player==game.me) continue;
  				player.node.identity.classList.remove("guessing");
-@@ -911,6 +1438,104 @@ export default {
+@@ -911,6 +1602,104 @@ export default {
  				}
  				return;
  			}
@@ -1015,7 +2908,7 @@ index 67fb1b5..aa28796 100644
  			if (!game.zhu) {
  				if (get.population("fan") == 0) {
  					switch (me.identity) {
-@@ -1853,8 +2478,8 @@ export default {
+@@ -1853,8 +2642,8 @@ export default {
  						if (event.zhongmode) {
  							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
  						} else {
@@ -1026,7 +2919,7 @@ index 67fb1b5..aa28796 100644
  								identityChoices.push("commoner");
  							}
  						}
-@@ -2109,7 +2734,13 @@ export default {
+@@ -2109,7 +2898,13 @@ export default {
  						currentPlayer.identityShown = false;
  					}
  
@@ -1041,7 +2934,7 @@ index 67fb1b5..aa28796 100644
  						for (const currentPlayer of game.players) {
  							delete currentPlayer.special_identity;
  						}
-@@ -2552,7 +3183,13 @@ export default {
+@@ -2552,7 +3347,13 @@ export default {
  						}
  						currentPlayer.identityShown = false;
  					}
@@ -1056,7 +2949,7 @@ index 67fb1b5..aa28796 100644
  						const map = {};
  						const zhongs = game.filterPlayer(current => current.identity === "zhong");
  						const fans = game.filterPlayer(current => current.identity === "fan");
-@@ -2605,6 +3242,7 @@ export default {
+@@ -2605,6 +3406,7 @@ export default {
  								}
  								zhu.setIdentity();
  								zhu.node.identity.classList.remove("guessing");
@@ -1064,7 +2957,7 @@ index 67fb1b5..aa28796 100644
  								me.setIdentity(identity);
  								me.node.identity.classList.remove("guessing");
  								if (me.special_identity) {
-@@ -2618,6 +3256,13 @@ export default {
+@@ -2618,6 +3420,13 @@ export default {
  							currentPlayer.identity
  						);
  					}
@@ -1078,14 +2971,15 @@ index 67fb1b5..aa28796 100644
  
  					let list;
  					const list2 = [];
-@@ -2719,7 +3364,16 @@ export default {
+@@ -2719,7 +3528,22 @@ export default {
  							zhuListUnique.sort(lib.sort.character);
  							return zhuListUnique;
  						};
 -						list = getZhuList(list2).concat(list3.randomGets(lib.configOL.choice_zhu));
 +						const zhuExtra = list3.randomGets(lib.configOL.choice_zhu);
 +						list = getZhuList(list2).concat(zhuExtra);
-+						if (lib.configOL.change_choice !== false) {
++						event.sgsZhuExtra = zhuExtra.filter(name => !list2.includes(name));
++						if (lib.configOL.change_choice !== false && lib.configOL.choose_together === false) {
 +							lib.sgsSwap.register(
 +								game.zhu,
 +								zhuExtra.filter(name => !list2.includes(name)),
@@ -1093,18 +2987,36 @@ index 67fb1b5..aa28796 100644
 +								false
 +							);
 +						}
++					}
++					if (!event.zhongmode && lib.configOL.choose_together !== false) {
++						// 【私用补丁】同时选将:君主和其余玩家一起选,下面两步(君主结果 / 其余玩家选将)都跳过
++						await sgsChooseTogether(event, list);
++						return;
  					}
  					const chooseButtonEvent = game.zhu.chooseButton(true);
  					chooseButtonEvent.set("selectButton", lib.configOL.double_character ? 2 : 1);
-@@ -2727,6 +3381,7 @@ export default {
+@@ -2727,6 +3551,10 @@ export default {
  					chooseButtonEvent.set("ai", () => Math.random());
  				},
  				async (event, trigger, player, result) => {
++					if (event.sgsTogether) {
++						return;
++					}
 +					lib.sgsSwap.clear();
  					if (!game.zhu.name) {
  						game.zhu.init(result.links[0], result.links[1]);
  					}
-@@ -2799,6 +3454,11 @@ export default {
+@@ -2774,6 +3602,9 @@ export default {
+ 				},
+ 				// step 2
+ 				async (event, trigger, player) => {
++					if (event.sgsTogether) {
++						return;
++					}
+ 					const list = [];
+ 					const selectButton = lib.configOL.double_character ? 2 : 1;
+ 
+@@ -2799,6 +3630,11 @@ export default {
  						}
  						list.push([currentPlayer, [str, [event.list.randomRemove(Math.min(num, num2)), "characterx"]], selectButton, true]);
  					}
@@ -1116,15 +3028,30 @@ index 67fb1b5..aa28796 100644
  					game.me.chooseButtonOL(list, (player, result) => {
  						if (game.online || player === game.me) {
  							player.init(result.links[0], result.links[1]);
-@@ -2807,6 +3467,7 @@ export default {
+@@ -2807,6 +3643,10 @@ export default {
  				},
  				// step 3
  				async (event, trigger, player, result) => {
++					if (event.sgsTogether) {
++						result = event.sgsTogether.results;
++					}
 +					lib.sgsSwap.clear();
  					let shen = [];
  					for (const id in result) {
  						if (result[id] && result[id].links) {
-@@ -2957,6 +3618,22 @@ export default {
+@@ -2831,6 +3671,11 @@ export default {
+ 							shen.push(lib.playerOL[id]);
+ 						}
+ 					}
++					if (event.sgsTogether && event.sgsTogether.zhuGroup) {
++						// 同时选将:君主的势力和其他人一起选
++						result[game.zhu.playerid] = [game.zhu.name1, game.zhu.name2];
++						shen.push(game.zhu);
++					}
+ 					event.result2 = result;
+ 					if (shen.length) {
+ 						shen = shen.map(currentPlayer => {
+@@ -2957,6 +3802,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -1147,7 +3074,7 @@ index 67fb1b5..aa28796 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3657,20 @@ export default {
+@@ -2980,6 +3841,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -1168,7 +3095,7 @@ index 67fb1b5..aa28796 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3689,16 @@ export default {
+@@ -2998,6 +3873,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -1185,7 +3112,7 @@ index 67fb1b5..aa28796 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3803,40 @@ export default {
+@@ -3102,6 +3987,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -1226,7 +3153,7 @@ index 67fb1b5..aa28796 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +3868,29 @@ export default {
+@@ -3133,6 +4052,29 @@ export default {
  						});
  					}
  				}
@@ -1256,7 +3183,7 @@ index 67fb1b5..aa28796 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +4158,34 @@ export default {
+@@ -3400,6 +4342,34 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -1291,7 +3218,7 @@ index 67fb1b5..aa28796 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4699,65 @@ export default {
+@@ -3913,6 +4883,65 @@ export default {
  				}
  				return -7;
  			}
@@ -1357,7 +3284,7 @@ index 67fb1b5..aa28796 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5436,88 @@ export default {
+@@ -4591,6 +5620,88 @@ export default {
  		},
  	},
  	skill: {
@@ -1837,7 +3764,7 @@ index 72c08b2..819642f 100644
  			// setTimeout(function(){
  			// 	node.delete();
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..79cf1ef 100644
+index 08f9718..cca2bb3 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -1932,10 +3859,18 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -5866,6 +5870,14 @@ export class Library {
+@@ -5866,6 +5870,22 @@ export class Library {
  					frequent: true,
  					restart: true,
  				},
++				// 【私用补丁】联机同时选将(实现在 mode/identity.js 的 sgsChooseTogether)
++				connect_choose_together: {
++					name: "同时选将",
++					init: true,
++					frequent: true,
++					restart: true,
++					intro: "所有人同时拿到候选武将,可以先看技能、换将;其余玩家要等主公选好后才能确定,时限比主公多一分钟。关闭则回到主公先选、其余人后选",
++				},
 +				// 【私用补丁】联机换将卡(实现在 mode/identity.js 的 lib.sgsSwap)
 +				connect_change_choice: {
 +					name: "启用换将卡",
@@ -1947,7 +3882,7 @@ index 08f9718..79cf1ef 100644
  				connect_special_identity: {
  					name: "特殊身份",
  					init: false,
-@@ -6073,6 +6085,10 @@ export class Library {
+@@ -6073,6 +6093,10 @@ export class Library {
  						zhong: "明忠",
  						stratagem: "谋攻",
  						purple: "3v3v2",
@@ -1958,7 +3893,7 @@ index 08f9718..79cf1ef 100644
  					},
  					restart: true,
  					frequent: true,
-@@ -6379,7 +6395,7 @@ export class Library {
+@@ -6379,7 +6403,7 @@ export class Library {
  				},
  				choice_zhu: {
  					name: "主公候选武将数",
@@ -1967,7 +3902,7 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6427,7 +6443,7 @@ export class Library {
+@@ -6427,7 +6451,7 @@ export class Library {
  				},
  				choice_zhong: {
  					name: "忠臣候选武将数",
@@ -1976,7 +3911,7 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6444,7 +6460,7 @@ export class Library {
+@@ -6444,7 +6468,7 @@ export class Library {
  				},
  				choice_nei: {
  					name: "内奸候选武将数",
@@ -1985,7 +3920,7 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6461,7 +6477,7 @@ export class Library {
+@@ -6461,7 +6485,7 @@ export class Library {
  				},
  				choice_fan: {
  					name: "反贼候选武将数",
@@ -1994,7 +3929,7 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6485,7 +6501,7 @@ export class Library {
+@@ -6485,7 +6509,7 @@ export class Library {
  				},
  				choice_commoner: {
  					name: "平民候选武将数",
@@ -2003,7 +3938,7 @@ index 08f9718..79cf1ef 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -7491,7 +7507,7 @@ export class Library {
+@@ -7491,7 +7515,7 @@ export class Library {
  				},
  				read_clipboard: {
  					name: "读取邀请链接",

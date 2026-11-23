@@ -18,7 +18,14 @@ const KIND = { "": "", "界": "界", "谋": "谋", "神": "神", "族": "族", "
 const ALIAS = { "冯方女": "冯方" };
 // 线下《蚀心入魔》魔将:无名杀放在 sxrm 包,显示名同为「魔X」,会和 OL 魔系列(onlyOL 包 dm_*)撞名 → 我们的名字按 id 直连;
 // 反过来 sxrm_* 不参与按名匹配(否则白名单里的 OL「魔曹操」会把线下版也放进来)。无名杀还没实现的(魔吕布)先列着,上游有了自动生效。
-const DIRECT = { "疑·魔曹操": ["sxrm_caocao"], "慢·魔关羽": ["sxrm_guanyu"], "嗔·魔周瑜": ["sxrm_zhouyu"], "贪·魔吕布": ["sxrm_lvbu"] };
+const DIRECT = {
+	"疑·魔曹操": ["sxrm_caocao"], "慢·魔关羽": ["sxrm_guanyu"], "嗔·魔周瑜": ["sxrm_zhouyu"], "贪·魔吕布": ["sxrm_lvbu"],
+	// 2026-11-22 技能对齐审计:按名字会对到无名杀里的「另一个版本」,技能与 OL 原文不同 → 直连技能一致的那个 id
+	"袁术": ["yuanshu"],        // 庸肆 / 伪帝(无名杀叫「SP袁术」;按名对到的 re_yuanshu 是 妄尊 / 同疾)
+	"留赞": ["liuzan"],         // 奋音 = 与上一张颜色不同摸一张(「手杀留赞」;re_liuzan 是按花色 + 力激)
+	"冯方女": ["fengfangnv"],   // 妆梳 / 垂涕(无名杀叫「OL冯妤」;原先 ALIAS 到的「冯方」是她父亲,技能完全不同)
+	"界徐盛": ["re_xusheng"],   // 破军 = 移出游戏 + 手牌装备皆不大于你则伤害+1(「手杀界徐盛」;xin_xusheng 是十周年版)
+};
 function parsePrefix(p) {
 	for (const plat of Object.keys(PLATFORM).sort((a, b) => b.length - a.length)) {
 		if (!p.startsWith(plat)) continue;
