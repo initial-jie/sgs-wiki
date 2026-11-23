@@ -25,6 +25,18 @@ const DIRECT = {
 	"留赞": ["liuzan"],         // 奋音 = 与上一张颜色不同摸一张(「手杀留赞」;re_liuzan 是按花色 + 力激)
 	"冯方女": ["fengfangnv"],   // 妆梳 / 垂涕(无名杀叫「OL冯妤」;原先 ALIAS 到的「冯方」是她父亲,技能完全不同)
 	"界徐盛": ["re_xusheng"],   // 破军 = 移出游戏 + 手牌装备皆不大于你则伤害+1(「手杀界徐盛」;xin_xusheng 是十周年版)
+	// 2026-11-23 线下武将第一批:上游已经实现、只是名字对不上的(技能文本核对结果见 docs/noname-ol-audit.md「线下武将」一节)
+	"线下孙寒华": ["scl_sunhanhua"],            // 无名杀叫「SCL孙寒华」;按名会对到手杀版 sunhanhua
+	"SP徐氏": ["zc26_sp_xushi"],               // 「26SP徐氏」,前缀 26SP 不在可识别的记号里
+	"神黄月英": ["zc26_shen_huangyueying"],     // 「26神黄月英」
+	"晋司马懿": ["jin_simayi"],                 // 名字就叫「晋司马懿」,但「晋」被当成前缀后剩下「司马懿」,对不上我们的名字
+	"移动版谋韩当": ["sb_handang"],             // 「谋韩当」没有手杀记号
+	// 《蚀心入魔》疑 / 慢 / 嗔(上游 sxrm 包,名字是「疑蒋干」这种不带间隔号的写法)
+	"疑·蒋干": ["sxrm_jianggan"], "疑·曹丕": ["sxrm_caopi"], "疑·王垕": ["sxrm_wanghou"], "疑·荀彧": ["sxrm_xunyu"], "疑·吕伯奢": ["sxrm_lvboshe"],
+	"疑·华佗": ["sxrm_huatuo"], "疑·伏寿": ["sxrm_fuhuanghou"], "疑·刘备": ["sxrm_liubei"], "慢·庞德": ["sxrm_pangde"], "慢·寇封": ["sxrm_liufeng"],
+	"慢·关银屏": ["sxrm_guanyinping"], "慢·糜芳": ["sxrm_mifang"], "慢·于禁": ["sxrm_yujin"], "慢·吕蒙": ["sxrm_lvmeng"], "慢·陆逊": ["sxrm_luxun"],
+	"慢·颜良文丑": ["sxrm_yanwen"], "嗔·曹操": ["sxrm_chen_caocao"], "嗔·曹仁": ["sxrm_caoren"], "嗔·诸葛亮": ["sxrm_zhugeliang"], "嗔·赵云": ["sxrm_zhaoyun"],
+	"嗔·贾华": ["sxrm_jiahua"], "嗔·鲁肃": ["sxrm_lusu"], "嗔·孙尚香": ["sxrm_sunshangxiang"], "嗔·张昭": ["sxrm_zhangzhao"],
 };
 function parsePrefix(p) {
 	for (const plat of Object.keys(PLATFORM).sort((a, b) => b.length - a.length)) {
@@ -113,6 +125,45 @@ export function computeAllowed(pool, byOurs) {
 	return { allowed, unmatched, chosen };
 }
 
+// ---------------------------------------------------------------------------------------------
+// 同名并坑(用户 2026-11-23:像线下房间那样并成一个坑):同一位武将的各个版本在选将框里只占一张候选,点「切换」选版本
+// —— 否则会出现「框里是徐氏,但想要的是线下徐氏」。坑的划分与房间发将同一套(prototype/sgs/shared/deal.mjs 的 groupKey / BASE_ALIAS,
+// 改一处要同步另一处):去掉 移动版 / 线下、疑慢嗔贪痴·、神界谋魔SP梦族闪标… 这些前缀后同名即同坑;神将自成一坑。
+// 实现 = 改写无名杀的 lib.characterReplace(选将框「一坑多版本」本来就靠它):把同坑且在池里的 id 编成一组,并从上游原有的组里摘出来。
+// ---------------------------------------------------------------------------------------------
+const PIT_ALIAS = { "寇封": "刘封", "伏寿": "伏皇后", "晋司马懿": "司马懿", "晋张春华": "张春华" };
+function pitKey(name) {
+	if (name.startsWith("神")) return name;
+	const base = name.replace(/^(?:移动版|线下)?(?:[疑慢嗔贪痴]·)?(?:神|界|谋|魔|SP|梦|族|闪|标|教主|暴君|昏君)?/, "");
+	return PIT_ALIAS[base] || base;
+}
+let pristineReplace = null; // 上游原始的 lib.characterReplace(池子重拉时从它重新算)
+function applyPits(chosen) {
+	try {
+		if (!pristineReplace) pristineReplace = JSON.parse(JSON.stringify(lib.characterReplace || {}));
+		const pits = new Map();
+		for (const [name, ids] of chosen) {
+			const key = pitKey(name);
+			if (!pits.has(key)) pits.set(key, []);
+			for (const id of ids) if (!pits.get(key).includes(id)) pits.get(key).push(id);
+		}
+		const groups = [...pits.values()].filter(ids => ids.length > 1);
+		const grouped = new Set(groups.flat());
+		const map = JSON.parse(JSON.stringify(pristineReplace));
+		for (const key of Object.keys(map)) {
+			map[key] = map[key].filter(id => !grouped.has(id));
+			if (!map[key].length) delete map[key];
+		}
+		for (const ids of groups) map[ids[0]] = ids.slice();
+		lib.characterReplace = map;
+		console.log(`[sgs-friends] 同名并坑:${groups.length} 个坑有多个版本(共 ${grouped.size} 将)`);
+		return groups;
+	} catch (e) {
+		console.warn("[sgs-friends] 同名并坑失败,保持无名杀原样:", e?.message || e);
+		return [];
+	}
+}
+
 // 无名杀模式 → 我们的将池环境:身份局=军争场(可在设置里换)、斗地主=斗地主池;2v2 / 1v1 池为空时回退身份局环境
 const MODE_ENV = { identity: "junzheng", doudizhu: "douzhu", versus: "2v2", single: "1v1" };
 function applyPool(data, mainEnv) {
@@ -140,6 +191,7 @@ function applyPool(data, mainEnv) {
 	}
 	const main = summary.identity || Object.values(summary)[0] || { env: mainEnv, allowed: 0, unmatched: [] };
 	_status.sgsFriendsPool = { env: main.env, allowed: main.allowed, total, unmatched: main.unmatched, updatedAt: data.updatedAt, modes: summary };
+	_status.sgsFriendsPool.pits = applyPits(allChosen);
 	applySkins(data.skins || {}, allChosen);
 }
 
