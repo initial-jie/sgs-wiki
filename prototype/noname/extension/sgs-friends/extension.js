@@ -15,7 +15,7 @@ const CACHE_KEY = "sgs_friends_pool_cache";
 const PLATFORM = { "": "", "OL": "", "新杀": "", "手杀": "移动版", "标": "标" };
 const KIND = { "": "", "界": "界", "谋": "谋", "神": "神", "族": "族", "SP": "SP", "★SP": "SP", "☆SP": "SP", "J.SP": "SP", "魔": "魔", "闪": "闪", "梦": "梦", "晋": "" };
 // 我们叫法 ≠ 无名杀叫法的个别武将
-const ALIAS = { "冯方女": "冯方" };
+const ALIAS = { "界伏皇后": "界伏寿" }; // 无名杀叫「界伏寿」,OL 版是 ol_fuhuanghou(惴恐 / 求援与 OL 原文一致);冯方女改走下面的 DIRECT
 // 线下《蚀心入魔》魔将:无名杀放在 sxrm 包,显示名同为「魔X」,会和 OL 魔系列(onlyOL 包 dm_*)撞名 → 我们的名字按 id 直连;
 // 反过来 sxrm_* 不参与按名匹配(否则白名单里的 OL「魔曹操」会把线下版也放进来)。无名杀还没实现的(魔吕布)先列着,上游有了自动生效。
 const DIRECT = {
@@ -654,6 +654,38 @@ function refreshPlayerScale() {
 	setInterval(refreshPlayerScale, 1500); // 人数变化 / 布局切换没有统一的钩子,低频轮询即可
 })();
 lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { refreshPlayerScale });
+
+// ---------------------------------------------------------------------------------------------
+// ⑧ OL 的固定牌堆:界左慈〖化身〗的武将牌堆 = 界限突破 + 界一将成名(89 将,不含左慈;名单 = 房间工具 room-logic.mjs HUASHEN_PACKS 的产出,
+//    武将库里这两个包有增减时要同步这里)。mode 补丁里的 rehuashen.getOLPool() 来取;按我们的名字对到无名杀 id,口径同将池(DIRECT / pickIds)。
+// ---------------------------------------------------------------------------------------------
+const HUASHEN_NAMES = [
+	"界黄忠", "界刘备", "界关羽", "界张飞", "界赵云", "界马超", "界徐庶", "界甘宁", "界吕蒙", "界黄盖", "界周瑜", "界大乔", "界陆逊", "界曹操", "界司马懿", "界夏侯惇", "界张辽", "界许褚", "界郭嘉", "界李典", "界华佗",
+	"界吕布", "界公孙瓒", "界诸葛亮", "界黄月英", "界孙权", "界孙尚香", "界甄姬", "界貂蝉", "界华雄", "界张角", "界于吉", "界袁绍", "界刘禅", "界孙策", "界夏侯渊", "界卧龙诸葛亮", "界庞统", "界魏延", "界小乔", "界孙坚",
+	"界庞德", "界太史慈", "界董卓", "界邓艾", "界祝融", "界姜维", "界贾诩", "界鲁肃", "界张郃", "界孟获", "界徐晃", "界蔡文姬", "界荀彧", "界典韦", "界颜良文丑", "界张昭张纮", "界徐盛", "界凌统", "界陈宫", "界曹彰",
+	"界简雍", "界虞翻", "界高顺", "界法正", "界程普", "界王异", "界张春华", "界刘表", "界蔡夫人", "界曹冲", "界曹植", "界吴国太", "界廖化", "界李儒", "界郭淮", "界伏皇后", "界韩当", "界关兴张苞", "界马岱", "界郭皇后",
+	"界沮授", "界夏侯氏", "界张松", "界于禁", "界步练师", "界钟会", "界刘封", "界关平",
+];
+// 我们的叫法 ≠ 无名杀叫法(这三个目前不在线上将池里,先只给化身牌堆用;进池时挪到上面的 ALIAS)
+const HUASHEN_ALIAS = { "界甄姬": "界甄宓", "界卧龙诸葛亮": "界卧龙", "界蔡文姬": "界蔡琰" };
+function huashenIds() {
+	if (Array.isArray(_status.sgsHuashenIds)) return _status.sgsHuashenIds;
+	if (!Object.keys(lib.character).length) return [];
+	const byOurs = buildIndex();
+	const ids = [];
+	for (const name of HUASHEN_NAMES) {
+		let list = DIRECT[name] ? DIRECT[name].filter(id => lib.character[id]) : [];
+		if (!list.length) {
+			const cands = byOurs.get(HUASHEN_ALIAS[name] || ALIAS[name] || name);
+			list = cands ? pickIds(cands, "", null) : [];
+		}
+		if (list.length) ids.push(list[0]);
+	}
+	_status.sgsHuashenIds = ids;
+	console.log(`[sgs-friends] 化身牌堆:${ids.length} / ${HUASHEN_NAMES.length} 将对上`);
+	return ids;
+}
+lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { huashenIds });
 
 game.import("play", function () {
 	return {

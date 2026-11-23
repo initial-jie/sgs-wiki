@@ -1,8 +1,8 @@
 diff --git a/apps/core/character/clan/skill.js b/apps/core/character/clan/skill.js
-index 2dcb4ed..0b2a3d7 100644
+index 2dcb4ed..b0f3d83 100644
 --- a/apps/core/character/clan/skill.js
 +++ b/apps/core/character/clan/skill.js
-@@ -1121,30 +1121,45 @@ const skills = {
+@@ -1121,30 +1121,46 @@ const skills = {
  						return false;
  					}
  					const num = target.getAttackRange() - get.event().player.getAttackRange();
@@ -32,10 +32,12 @@ index 2dcb4ed..0b2a3d7 100644
 +			const last = player.getStorage("clanfenjian"),
 +				bool = player.hasCard(cardx => lib.filter.cardDiscardable(cardx, player), "he");
  			return game.hasPlayer(target => {
+-				return !player.getStorage(name).includes(Math.sign(target.getAttackRange() - player.getAttackRange())) && player.canUse(card, target, void 0, false);
 +				if (!bool && !last.includes(target)) {
 +					return false;
 +				}
- 				return !player.getStorage(name).includes(Math.sign(target.getAttackRange() - player.getAttackRange())) && player.canUse(card, target, void 0, false);
++				// 【私用补丁】此【杀】无距离限制(用户确认),可用性判断不看攻击范围
++				return !player.getStorage(name).includes(Math.sign(target.getAttackRange() - player.getAttackRange())) && player.canUse(card, target, false, false);
  			});
  		},
  		filterTarget(card, player, target) {
@@ -54,7 +56,7 @@ index 2dcb4ed..0b2a3d7 100644
  		viewAs: {
  			name: "sha",
  			isCard: true,
-@@ -1156,23 +1171,26 @@ const skills = {
+@@ -1156,23 +1172,26 @@ const skills = {
  			},
  		},
  		ignoreMod: true,
@@ -88,7 +90,7 @@ index 2dcb4ed..0b2a3d7 100644
  			event.result.card.cards = [];
  			event.result.cards = [];
  			event.getParent().addCount = false;
-@@ -2964,13 +2982,18 @@ const skills = {
+@@ -2964,13 +2983,18 @@ const skills = {
  					const discard = cards.removeArray(result.cards);
  					await player.loseToDiscardpile(discard);
  				}
@@ -111,7 +113,7 @@ index 2dcb4ed..0b2a3d7 100644
  						})
  						.forResult();
  					if (!result2?.targets?.length) {
-@@ -2984,14 +3007,37 @@ const skills = {
+@@ -2984,14 +3008,37 @@ const skills = {
  					next.player = player;
  					next.target = target;
  					next.setContent(async (event, trigger, player) => {
@@ -151,7 +153,7 @@ index 2dcb4ed..0b2a3d7 100644
  						}
  					});
  					await next;
-@@ -4776,7 +4822,8 @@ const skills = {
+@@ -4776,7 +4823,8 @@ const skills = {
  		},
  		limited: true,
  		audio: 2,
@@ -161,7 +163,7 @@ index 2dcb4ed..0b2a3d7 100644
  		filter(event, player) {
  			if (!event.player.isIn()) {
  				return false;
-@@ -7719,7 +7766,8 @@ const skills = {
+@@ -7719,7 +7767,8 @@ const skills = {
  		},
  		async content(event, trigger, player) {
  			await player.showHandcards(get.translation(player) + "发动了【八龙】");
@@ -212,7 +214,7 @@ index c13f9b7..d46cd48 100644
  	clandongxu_info: "转换技，阳：你可以将一张装备牌置于其他角色装备区（替换原装备）；阴：你可以将手牌摸至X（X为你的攻击范围且至多为5）。然后视为使用一张【闪】或令你被抵消的【杀】依然造成伤害。",
  	clan_xunshi: "族荀莳",
 diff --git a/apps/core/character/diy/skill.js b/apps/core/character/diy/skill.js
-index 25c1c84..908cc91 100644
+index 25c1c84..8c8bd79 100644
 --- a/apps/core/character/diy/skill.js
 +++ b/apps/core/character/diy/skill.js
 @@ -4513,56 +4513,32 @@ const skills = {
@@ -292,6 +294,16 @@ index 25c1c84..908cc91 100644
  		},
  	},
  	//手杀削弱版许攸
+@@ -9121,7 +9097,8 @@ const skills = {
+ 			}
+ 		},
+ 		group: "junkyuheng_remove",
+-		derivation: ["olbingyi", "shenxing", "xiashu", "old_anxu", "rezhiheng", "xinanguo", "lanjiang", "xinfu_guanwei", "dimeng", "xindiaodu", "xingxue", "jiexun", "olhongyuan", "xinfu_youdi", "bizheng"],
++		// 【私用补丁】技能池按 OL 官方 14 个(慎行 秉壹 制衡 下书 安国 缔盟 澜疆 观微 调度 安恤 弘援 兴学 弼政 诱敌,与 sgs-wiki 房间神孙权工具同一份):去掉上游多出来的〖诫训〗
++		derivation: ["olbingyi", "shenxing", "xiashu", "old_anxu", "rezhiheng", "xinanguo", "lanjiang", "xinfu_guanwei", "dimeng", "xindiaodu", "xingxue", "olhongyuan", "xinfu_youdi", "bizheng"],
+ 		subSkill: {
+ 			remove: {
+ 				audio: "yuheng",
 diff --git a/apps/core/character/diy/translate.js b/apps/core/character/diy/translate.js
 index c7b3f60..a74c597 100644
 --- a/apps/core/character/diy/translate.js
@@ -306,7 +318,7 @@ index c7b3f60..a74c597 100644
  	junk_guanyu_prefix: "旧谋",
  	junk_liuyan: "OL刘焉",
 diff --git a/apps/core/character/onlyOL/skill.js b/apps/core/character/onlyOL/skill.js
-index 661a36d..66fe5f5 100644
+index 661a36d..0603609 100644
 --- a/apps/core/character/onlyOL/skill.js
 +++ b/apps/core/character/onlyOL/skill.js
 @@ -18,25 +18,45 @@ const skills = {
@@ -401,7 +413,36 @@ index 661a36d..66fe5f5 100644
  		usable(skill, player) {
  			return get.info(skill).getShaLength();
  		},
-@@ -8728,6 +8760,20 @@ const skills = {
+@@ -2235,25 +2267,9 @@ const skills = {
+ 			}
+ 			_status.characterlist.randomSort();
+ 
+-			const list = [];
+-			for (const name of _status.characterlist) {
+-				if (
+-					get.character(name, 3).some(skill => {
+-						const info = get.plainText(get.skillInfoTranslation(skill));
+-						if (!info.includes("【杀】")) {
+-							return false;
+-						}
+-						const list = get.skillCategoriesOf(skill, player);
+-						list.remove("锁定技");
+-						return list.length == 0;
+-					})
+-				) {
+-					list.push(name);
+-					if (list.length >= 5) {
+-						break;
+-					}
+-				}
+-			}
++			// 【私用补丁】按 OL 原文:从随机五张武将牌中选,不保证牌上有带【杀】的技能(没有的就是只有攻击范围的白板武器,
++			// 线下房间的挈挟牌堆也是这么配的)。上游只抽「有可用技能」的武将,每次五张都有用,比 OL 强。
++			const list = _status.characterlist.filter(name => lib.character[name] && !get.is.double(name)).slice(0, 5);
+ 			const num = player.countEmptySlot(1);
+ 			if (!list.length || !num) {
+ 				return;
+@@ -8728,6 +8744,20 @@ const skills = {
  		check: () => true,
  		async content(event, trigger, player) {
  			player.addSkill("olrumo");
@@ -422,7 +463,7 @@ index 661a36d..66fe5f5 100644
  			const skills = player.storage.olguifu_record?.skill;
  			if (skills?.length) {
  				await player.addSkills(skills);
-@@ -8740,7 +8786,9 @@ const skills = {
+@@ -8740,7 +8770,9 @@ const skills = {
  	},
  	olzhouxi: {
  		audio: 2,
@@ -433,7 +474,7 @@ index 661a36d..66fe5f5 100644
  		initList() {
  			//先用许劭评鉴那个函数初始化一下角色列表
  			if (!_status.characterlist) {
-@@ -8787,10 +8835,10 @@ const skills = {
+@@ -8787,10 +8819,10 @@ const skills = {
  		forced: true,
  		locked: false,
  		async content(event, trigger, player) {
@@ -448,7 +489,7 @@ index 661a36d..66fe5f5 100644
  			/*const skills = get
  				.info(event.name)
  				.damageSkills
-@@ -8860,13 +8908,16 @@ const skills = {
+@@ -8860,13 +8892,16 @@ const skills = {
  	//OL界马岱
  	olqianxi: {
  		audio: 2,
@@ -472,7 +513,7 @@ index 661a36d..66fe5f5 100644
  				.set("ai", card => {
  					const player = get.player();
  					let value = 0;
-@@ -8877,9 +8928,10 @@ const skills = {
+@@ -8877,9 +8912,10 @@ const skills = {
  					return value;
  				})
  				.forResult();
@@ -486,7 +527,7 @@ index 661a36d..66fe5f5 100644
  				color = get.color(card, player);
  			await player.showCards(card, `${get.translation(player)}发动了〖${get.translation(event.name)}〗`);
  			player.addTempSkill(event.name + "_damage");
-@@ -9282,16 +9334,17 @@ const skills = {
+@@ -9282,16 +9318,17 @@ const skills = {
  				charlotte: true,
  				audio: "jsrgshenchong",
  				trigger: { player: "die" },
@@ -507,7 +548,7 @@ index 661a36d..66fe5f5 100644
  						await game.delayx();
  					}
  					const targets = player
-@@ -13393,7 +13446,8 @@ const skills = {
+@@ -13393,7 +13430,8 @@ const skills = {
  				return false;
  			}
  			const num = Math.abs(ui.selected.targets[0].countCards("e") - target.countCards("e"));
@@ -517,7 +558,7 @@ index 661a36d..66fe5f5 100644
  		},
  		multitarget: true,
  		multiline: true,
-@@ -13401,8 +13455,9 @@ const skills = {
+@@ -13401,8 +13439,9 @@ const skills = {
  			//ol结算先弃牌再交换
  			const { targets } = event;
  			const num = Math.abs(targets[0].countCards("e") - targets[1].countCards("e"));
@@ -606,6 +647,82 @@ index fcd3754..0f8754b 100644
  	},
  	re_caopi: {
  		sex: "male",
+diff --git a/apps/core/character/refresh/skill.js b/apps/core/character/refresh/skill.js
+index 1033f31..9f3e81e 100644
+--- a/apps/core/character/refresh/skill.js
++++ b/apps/core/character/refresh/skill.js
+@@ -12829,12 +12829,26 @@ const skills = {
+ 			if (!_status.characterlist) {
+ 				game.initCharacterList();
+ 			}
+-			_status.characterlist.randomSort();
+-			for (let i = 0; i < _status.characterlist.length; i++) {
+-				let name = _status.characterlist[i];
++			// 【私用补丁】化身牌堆按 OL:界限突破 + 界一将成名(名单由 sgs-friends 扩展给出,不随本局将池变);不含在场武将。
++			// 拿不到名单(扩展没加载等)时退回上游的「本局剩余武将」。
++			const olPool = lib.skill.rehuashen.getOLPool();
++			const pool = olPool ? olPool.slice(0) : _status.characterlist;
++			pool.randomSort();
++			const inPlay = olPool
++				? game.players
++						.concat(game.dead)
++						.flatMap(current => [current.name1, current.name2])
++						.filter(Boolean)
++						.map(current => get.rawName(current))
++				: [];
++			for (let i = 0; i < pool.length; i++) {
++				let name = pool[i];
+ 				if (name.indexOf("zuoci") != -1 || name.indexOf("key_") == 0 || name.indexOf("sp_key_") == 0 || get.is.double(name) || lib.skill.rehuashen.banned.includes(name) || player.storage.rehuashen.character.includes(name)) {
+ 					continue;
+ 				}
++				if (olPool && inPlay.includes(get.rawName(name))) {
++					continue;
++				}
+ 				let skills = lib.character[name][3].filter(skill => {
+ 					const categories = get.skillCategoriesOf(skill, player);
+ 					return !categories.some(type => lib.skill.rehuashen.bannedType.includes(type));
+@@ -12842,11 +12856,18 @@ const skills = {
+ 				if (skills.length) {
+ 					player.storage.rehuashen.character.push(name);
+ 					player.storage.rehuashen.map[name] = skills;
+-					_status.characterlist.remove(name);
++					if (!olPool) {
++						_status.characterlist.remove(name);
++					}
+ 					return name;
+ 				}
+ 			}
+ 		},
++		// 【私用补丁】OL 的化身牌堆(无名杀 id 列表);没有就返回 null
++		getOLPool() {
++			const ids = lib.sgsFriends && typeof lib.sgsFriends.huashenIds == "function" ? lib.sgsFriends.huashenIds() : null;
++			return Array.isArray(ids) && ids.length ? ids.filter(id => lib.character[id]) : null;
++		},
+ 		addHuashens(player, num) {
+ 			var list = [];
+ 			for (var i = 0; i < num; i++) {
+@@ -12864,7 +12885,9 @@ const skills = {
+ 		},
+ 		removeHuashen(player, links) {
+ 			player.storage.rehuashen.character.removeArray(links);
+-			_status.characterlist.addArray(links);
++			if (!lib.skill.rehuashen.getOLPool()) {
++				_status.characterlist.addArray(links);
++			}
+ 			game.log(player, "移去了", get.cnNumber(links.length) + "张", "#g化身");
+ 		},
+ 		drawCharacter(player, list) {
+@@ -12976,7 +12999,9 @@ const skills = {
+ 		mark: true,
+ 		intro: {
+ 			onunmark(storage, player) {
+-				_status.characterlist.addArray(storage.character);
++				if (!lib.skill.rehuashen.getOLPool()) {
++					_status.characterlist.addArray(storage.character);
++				}
+ 				storage.character = [];
+ 				const name = player.name ? player.name : player.name1;
+ 				if (name) {
 diff --git a/apps/core/character/sp/character.js b/apps/core/character/sp/character.js
 index d216fac..c9006e4 100644
 --- a/apps/core/character/sp/character.js
@@ -1439,7 +1556,7 @@ index c6516e6..f10deef 100644
  	dc_yangbiao: {
  		sex: "male",
 diff --git a/apps/core/character/xianding/skill.js b/apps/core/character/xianding/skill.js
-index b905cc5..b0b2bee 100644
+index b905cc5..f377e33 100644
 --- a/apps/core/character/xianding/skill.js
 +++ b/apps/core/character/xianding/skill.js
 @@ -7531,8 +7531,9 @@ const skills = {
@@ -1469,7 +1586,7 @@ index b905cc5..b0b2bee 100644
  			}
  		},
  		mod: {
-@@ -35678,6 +35675,182 @@ const skills = {
+@@ -35678,6 +35675,185 @@ const skills = {
  			},
  		},
  	},
@@ -1598,12 +1715,16 @@ index b905cc5..b0b2bee 100644
 +				if (!cards.length || cards.some(card => !names.includes(get.name(card, false)))) {
 +					break;
 +				}
-+				if (num >= 5 || !player.countCards("h", card => get.type(card) === "basic" && lib.filter.cardDiscardable(card, player, event.name))) {
++				if (num >= 5) {
 +					break;
 +				}
++				if (!player.countCards("h", card => get.type(card) === "basic" && lib.filter.cardDiscardable(card, player, event.name))) {
++					continue;
++				}
++				// 【私用补丁】用户 2026-11-23 口径:摸到已弃置过的基本牌牌名就继续摸;这一步的弃牌是「任意张」,可以不弃(不弃也照样继续摸)
 +				const result2 = await player
 +					.chooseToDiscard({
-+						prompt: "心幽：是否弃置任意张基本牌，然后摸一张牌？",
++						prompt: "心幽：可以再弃置任意张基本牌（不弃也会继续摸牌）",
 +						prompt2: `已弃置的牌名：${get.translation(names)}；已摸${get.cnNumber(num)}张牌（至多五张）`,
 +						position: "h",
 +						selectCard: [1, Infinity],
@@ -1618,10 +1739,9 @@ index b905cc5..b0b2bee 100644
 +						},
 +					})
 +					.forResult();
-+				if (!result2?.bool || !result2.cards?.length) {
-+					break;
++				if (result2?.bool && result2.cards?.length) {
++					names.addArray(result2.cards.map(card => get.name(card, false)));
 +				}
-+				names.addArray(result2.cards.map(card => get.name(card, false)));
 +			}
 +		},
 +		ai: {
@@ -1652,7 +1772,7 @@ index b905cc5..b0b2bee 100644
  	//笮融
  	dccansi: {
  		audio: 2,
-@@ -45136,9 +45309,7 @@ const skills = {
+@@ -45136,9 +45312,7 @@ const skills = {
  			if (!event.targets || event.targets.length !== 1 || event.player === event.target) {
  				return false;
  			}
@@ -1663,7 +1783,7 @@ index b905cc5..b0b2bee 100644
  			if (name === "useCardToPlayered") {
  				if (!event.cards.filterInD().length) {
  					return false;
-@@ -45162,7 +45333,8 @@ const skills = {
+@@ -45162,7 +45336,8 @@ const skills = {
  			} else {
  				target = trigger.targets[0];
  				prompt = `弃置一张牌，并获得${get.translation(trigger.cards.filterInD())}`;
@@ -1674,7 +1794,7 @@ index b905cc5..b0b2bee 100644
  			next.set("prompt", get.prompt(event.skill, target));
  			next.set("prompt2", prompt);
 diff --git a/apps/core/character/xianding/translate.js b/apps/core/character/xianding/translate.js
-index 2b68dbc..1fdc728 100644
+index 2b68dbc..e881551 100644
 --- a/apps/core/character/xianding/translate.js
 +++ b/apps/core/character/xianding/translate.js
 @@ -199,7 +199,7 @@ const translates = {
@@ -1702,7 +1822,7 @@ index 2b68dbc..1fdc728 100644
 +	olyuandi: "元嫡",
 +	olyuandi_info: "锁定技。每回合限一次，当你的牌名组（初始为【杀】【闪】【桃】）中的所有牌名于本回合均有牌进入过弃牌堆后，你摸一张牌。然后若这些牌中有不因使用而进入弃牌堆的牌，且牌名组中的牌名数大于1，你从牌名组中移除一个牌名。",
 +	olxinyou: "心幽",
-+	olxinyou_info: "出牌阶段限一次。你可以弃置任意张基本牌，然后摸一张牌。若你以此法摸到的牌与你本次发动已弃置的基本牌牌名相同，你可以重复此流程（至多以此法摸五张牌）。你以此法摸到的牌本回合不计入手牌上限。",
++	olxinyou_info: "出牌阶段限一次。你可以弃置任意张基本牌，然后摸一张牌。若你以此法摸到的牌与你本次发动已弃置的基本牌牌名相同，你重复此流程（可以再弃置任意张基本牌，然后摸一张牌），直到摸到其他牌名的牌（至多摸五张，以此法获得的牌本回合不计入手牌上限）。",
 +	olxinyou_effect: "心幽",
  	zerong: "笮融",
  	dccansi: "残肆",
@@ -1765,6 +1885,25 @@ index 214d953..9c4553d 100644
  	shibei: "矢北",
  	shibei_info: "锁定技，当你受到伤害后：若此伤害是你本回合第一次受到的伤害，则你回复1点体力；否则你失去1点体力。",
  	jianying: "渐营",
+diff --git a/apps/core/character/yingbian/skill.js b/apps/core/character/yingbian/skill.js
+index 75fa0b7..e4d55a5 100644
+--- a/apps/core/character/yingbian/skill.js
++++ b/apps/core/character/yingbian/skill.js
+@@ -1992,7 +1992,14 @@ const skills = {
+ 		audio: 2,
+ 		banned: ["kotomi_chuanxiang"],
+ 		global: "bolan_g",
++		// 【私用补丁】技能池按 OL 官方的固定 18 个:青囊 离间 驱虎 天义 离魂 枪舞 攻心 明策 奇策 密诏 国色 制衡 结姻 强袭 挑衅 三陈 除疠 盗书
++		// (与 sgs-wiki 房间钟琰工具 ZY_BUILTIN 同一份)。上游是扫描本局将池里所有描述带「出牌阶段限一次」的技能,池子随将池变、且远大于官方。
++		olPool: ["qingnang", "lijian", "quhu", "tianyi", "lihun", "qiangwu", "gongxin", "mingce", "qice", "mizhao", "reguose", "rezhiheng", "rejieyin", "qiangxi", "oltiaoxin", "sanchen", "chulao", "daoshu"],
+ 		initList(player) {
++			if (get.mode() !== "guozhan") {
++				player.storage.bolan = lib.skill.bolan.olPool.filter(skillName => lib.skill[skillName] && lib.translate[skillName]);
++				return;
++			}
+ 			let list;
+ 			const skills = [];
+ 			if (get.mode() === "guozhan") {
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
 index 99aaa79..4b68a1f 100644
 --- a/apps/core/game/config.json
@@ -3432,7 +3571,7 @@ index 34e2315..c661597 100644
  		ui.arena.classList.add("selecting");
  		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
 diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
-index 7335b5c..96eede7 100644
+index 7335b5c..bafba2f 100644
 --- a/apps/core/noname/game/index.js
 +++ b/apps/core/noname/game/index.js
 @@ -1869,7 +1869,21 @@ export class Game {
@@ -3458,7 +3597,29 @@ index 7335b5c..96eede7 100644
  	}
  	closeMenu() {
  		if (ui.menuContainer && !ui.menuContainer.classList.contains("hidden")) {
-@@ -7196,16 +7210,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
+@@ -2033,8 +2047,20 @@ export class Game {
+ 				num = get.config("choose_timeout");
+ 			}
+ 			game.countDown(parseInt(num), () => {
+-				ui.click.auto();
++				// 【私用补丁】(用户 2026-11-23:ban 掉自动托管)倒计时到点只让电脑代选这一次,随后自动退出托管;
++				// 原来会一直托管到玩家自己点「托管」取消。手动点「托管」按钮不受影响。
++				const wasAuto = !!_status.auto;
++				if (!wasAuto) {
++					ui.click.auto();
++				}
+ 				ui.timer.hide();
++				if (!wasAuto && _status.auto) {
++					setTimeout(() => {
++						if (_status.auto) {
++							ui.click.auto();
++						}
++					}, 1500);
++				}
+ 			});
+ 			if (!game.online && game.me) {
+ 				if (_status.event.getParent().skillHidden) {
+@@ -7196,16 +7222,59 @@ ${e instanceof Error ? e.stack : String(e)}`);
  		}
  		if (!ui.restart) {
  			if (game.onlineroom && typeof game.roomId == "string") {
@@ -3519,7 +3680,7 @@ index 7335b5c..96eede7 100644
  			} else {
  				ui.restart = ui.create.control("restart", game.reload);
  			}
-@@ -7376,6 +7433,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
+@@ -7376,6 +7445,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
  		});
  
  		game.Check.skill(event);
