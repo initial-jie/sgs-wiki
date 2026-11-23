@@ -168,16 +168,20 @@ export function handleSgs(request, env, url) {
     const cfg = await getConfig(env);
     const byId = new Map(GENERALS_DATA.map((h) => [h.id, h]));
     const nameOf = (id) => { const h = byId.get(id); return h ? h.name : null; };
+    const names = (ids) => (ids || []).map(nameOf).filter(Boolean);
+    // sets:该环境的将池套组(每套独立的黑白名单,/pool 页维护);无名杀建房时可选用哪一套(2026-11-23)
     const pools = Object.fromEntries(POOL_KEYS.map((k) => [k, { ...POOL_META[k],
-      white: ((cfg.pools[k] && cfg.pools[k].white) || []).map(nameOf).filter(Boolean),
-      ban: ((cfg.pools[k] && cfg.pools[k].ban) || []).map(nameOf).filter(Boolean) }]));
+      white: names(cfg.pools[k] && cfg.pools[k].white),
+      ban: names(cfg.pools[k] && cfg.pools[k].ban),
+      sets: ((cfg.pools[k] && cfg.pools[k].sets) || []).map((st) => ({ id: st.id, name: st.name, white: names(st.white), ban: names(st.ban) })) }]));
     // 名字 → 势力(魏/蜀/吴/群/晋/神):同名多版本(如 群贾充 / 晋贾充)靠它分辨
     const genre = Object.fromEntries(GENERALS_DATA.filter((h) => h.faction).map((h) => [h.name, h.faction]));
-    // OL 皮肤(只给各池白名单里的武将):名字 → [{id,name,url},…];大图直链 web.sanguosha.com(同座位立绘)
+    // OL 皮肤(只给各池白名单 + 各套组白名单里的武将):名字 → [{id,name,url},…];大图直链 web.sanguosha.com(同座位立绘)
     const SKIN_BIG = "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/big/static/";
     const skinOf = (id) => SKINS_DATA.skins[id] || SKINS_DATA.skins[SKINS_DATA.alias && SKINS_DATA.alias[id]] || [];
     const skins = {};
-    for (const k of POOL_KEYS) for (const id of ((cfg.pools[k] && cfg.pools[k].white) || [])) {
+    const skinIds = (k) => { const pk = cfg.pools[k] || {}; return [...(pk.white || []), ...(pk.sets || []).flatMap((st) => st.white || [])]; };
+    for (const k of POOL_KEYS) for (const id of skinIds(k)) {
       const h = byId.get(id); if (!h || skins[h.name]) continue;
       const list = skinOf(id); if (!list.length) continue;
       skins[h.name] = list.map(([sid, nm, q]) => ({ id: sid, name: String(nm).split("*")[0], q, url: `${SKIN_BIG}${sid}.png` }));

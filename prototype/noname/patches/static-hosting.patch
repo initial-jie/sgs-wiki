@@ -2275,7 +2275,7 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..c168732 100644
+index 67fb1b5..45c181b 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
 @@ -3,6 +3,542 @@ import html from "dedent";
@@ -2943,7 +2943,7 @@ index 67fb1b5..c168732 100644
  					skill;
  				if (enhance_zhu) {
  					if (_status.connectMode) {
-@@ -537,12 +1144,27 @@ export default {
+@@ -537,13 +1144,30 @@ export default {
  					//player.node.name.dataset.nature=get.groupnature(player.group);
  				}
  			}
@@ -2970,9 +2970,12 @@ index 67fb1b5..c168732 100644
 -			uiintro.add('<div class="text chat">游戏模式：' + (lib.configOL.identity_mode == "zhong" ? "明忠" : "标准"));
 +			uiintro.add('<div class="text chat">游戏模式：' + ({ zhong: "明忠", baonue: "暴虐无道", dazhong: "大忠似奸", shixin: "失心疯", wujian: "无间道", stratagem: "谋攻", purple: "3v3v2" }[lib.configOL.identity_mode] || "标准"));
  			uiintro.add('<div class="text chat">双将模式：' + (lib.configOL.double_character ? "开启" : "关闭"));
++			// 【私用补丁】房间信息里显示用的是哪套将池
++			uiintro.add('<div class="text chat">将池套组：' + (lib.sgsFriends && lib.sgsFriends.poolSetName ? lib.sgsFriends.poolSetName(lib.configOL.pool_set) : "默认名单"));
  			if (lib.configOL.identity_mode != "zhong") {
  				if (lib.configOL.identity_mode == "stratagem") {
-@@ -649,6 +1271,36 @@ export default {
+ 					uiintro.add('<div class="text chat">首轮强化：' + (lib.configOL.round_one_use_fury ? "开启" : "关闭"));
+@@ -649,6 +1273,36 @@ export default {
  						cai: "猜",
  					};
  				}
@@ -3009,7 +3012,7 @@ index 67fb1b5..c168732 100644
  			} else {
  				if (get.config("enable_commoner")) {
  					return {
-@@ -678,10 +1330,10 @@ export default {
+@@ -678,10 +1332,10 @@ export default {
  			for (var i in list) {
  				switch (i) {
  					case "fan":
@@ -3022,7 +3025,7 @@ index 67fb1b5..c168732 100644
  						break;
  					case "nei":
  						list[i] = "内奸";
-@@ -689,6 +1341,27 @@ export default {
+@@ -689,6 +1343,27 @@ export default {
  					case "commoner":
  						list[i] = "平民";
  						break;
@@ -3050,7 +3053,7 @@ index 67fb1b5..c168732 100644
  					case "zhu":
  						list[i] = "主公";
  						break;
-@@ -741,6 +1414,18 @@ export default {
+@@ -741,6 +1416,18 @@ export default {
  					case "stratagem":
  						str2 = get.cnNumber(get.playerNumber()) + "人谋攻" + "-" + lib.translate[game.me.identity + "2"];
  						break;
@@ -3069,7 +3072,7 @@ index 67fb1b5..c168732 100644
  					default:
  						str2 = get.cnNumber(get.playerNumber()) + "人" + get.translation(lib.config.mode) + " - " + lib.translate[game.me.identity + "2"];
  				}
-@@ -789,6 +1474,12 @@ export default {
+@@ -789,6 +1476,12 @@ export default {
  		 * @param {boolean} [me] - 兼容旧逻辑的保留参数，目前不会影响显示范围。
  		 */
  		showIdentity(me) {
@@ -3082,7 +3085,7 @@ index 67fb1b5..c168732 100644
  			for (const player of game.players) {
  				// if(me===false&&player==game.me) continue;
  				player.node.identity.classList.remove("guessing");
-@@ -911,6 +1602,104 @@ export default {
+@@ -911,6 +1604,104 @@ export default {
  				}
  				return;
  			}
@@ -3187,7 +3190,7 @@ index 67fb1b5..c168732 100644
  			if (!game.zhu) {
  				if (get.population("fan") == 0) {
  					switch (me.identity) {
-@@ -1853,8 +2642,8 @@ export default {
+@@ -1853,8 +2644,8 @@ export default {
  						if (event.zhongmode) {
  							identityChoices = ["random", "zhu", "mingzhong", "zhong", "fan", "nei"];
  						} else {
@@ -3198,7 +3201,7 @@ index 67fb1b5..c168732 100644
  								identityChoices.push("commoner");
  							}
  						}
-@@ -2109,7 +2898,13 @@ export default {
+@@ -2109,7 +2900,13 @@ export default {
  						currentPlayer.identityShown = false;
  					}
  
@@ -3213,7 +3216,7 @@ index 67fb1b5..c168732 100644
  						for (const currentPlayer of game.players) {
  							delete currentPlayer.special_identity;
  						}
-@@ -2552,7 +3347,13 @@ export default {
+@@ -2552,7 +3349,13 @@ export default {
  						}
  						currentPlayer.identityShown = false;
  					}
@@ -3228,7 +3231,7 @@ index 67fb1b5..c168732 100644
  						const map = {};
  						const zhongs = game.filterPlayer(current => current.identity === "zhong");
  						const fans = game.filterPlayer(current => current.identity === "fan");
-@@ -2605,6 +3406,7 @@ export default {
+@@ -2605,6 +3408,7 @@ export default {
  								}
  								zhu.setIdentity();
  								zhu.node.identity.classList.remove("guessing");
@@ -3236,7 +3239,7 @@ index 67fb1b5..c168732 100644
  								me.setIdentity(identity);
  								me.node.identity.classList.remove("guessing");
  								if (me.special_identity) {
-@@ -2618,6 +3420,13 @@ export default {
+@@ -2618,6 +3422,13 @@ export default {
  							currentPlayer.identity
  						);
  					}
@@ -3250,7 +3253,7 @@ index 67fb1b5..c168732 100644
  
  					let list;
  					const list2 = [];
-@@ -2659,6 +3468,11 @@ export default {
+@@ -2659,6 +3470,11 @@ export default {
  						}
  						(hasZhugong ? list2 : list3).push(name);
  					}
@@ -3262,7 +3265,7 @@ index 67fb1b5..c168732 100644
  					game.broadcast(availableCharacters => {
  						for (const name in lib.characterReplace) {
  							const replacements = lib.characterReplace[name];
-@@ -2719,7 +3533,22 @@ export default {
+@@ -2719,7 +3535,22 @@ export default {
  							zhuListUnique.sort(lib.sort.character);
  							return zhuListUnique;
  						};
@@ -3286,7 +3289,7 @@ index 67fb1b5..c168732 100644
  					}
  					const chooseButtonEvent = game.zhu.chooseButton(true);
  					chooseButtonEvent.set("selectButton", lib.configOL.double_character ? 2 : 1);
-@@ -2727,6 +3556,10 @@ export default {
+@@ -2727,6 +3558,10 @@ export default {
  					chooseButtonEvent.set("ai", () => Math.random());
  				},
  				async (event, trigger, player, result) => {
@@ -3297,7 +3300,7 @@ index 67fb1b5..c168732 100644
  					if (!game.zhu.name) {
  						game.zhu.init(result.links[0], result.links[1]);
  					}
-@@ -2774,6 +3607,9 @@ export default {
+@@ -2774,6 +3609,9 @@ export default {
  				},
  				// step 2
  				async (event, trigger, player) => {
@@ -3307,7 +3310,7 @@ index 67fb1b5..c168732 100644
  					const list = [];
  					const selectButton = lib.configOL.double_character ? 2 : 1;
  
-@@ -2799,6 +3635,11 @@ export default {
+@@ -2799,6 +3637,11 @@ export default {
  						}
  						list.push([currentPlayer, [str, [event.list.randomRemove(Math.min(num, num2)), "characterx"]], selectButton, true]);
  					}
@@ -3319,7 +3322,7 @@ index 67fb1b5..c168732 100644
  					game.me.chooseButtonOL(list, (player, result) => {
  						if (game.online || player === game.me) {
  							player.init(result.links[0], result.links[1]);
-@@ -2807,6 +3648,10 @@ export default {
+@@ -2807,6 +3650,10 @@ export default {
  				},
  				// step 3
  				async (event, trigger, player, result) => {
@@ -3330,7 +3333,7 @@ index 67fb1b5..c168732 100644
  					let shen = [];
  					for (const id in result) {
  						if (result[id] && result[id].links) {
-@@ -2831,6 +3676,11 @@ export default {
+@@ -2831,6 +3678,11 @@ export default {
  							shen.push(lib.playerOL[id]);
  						}
  					}
@@ -3342,7 +3345,7 @@ index 67fb1b5..c168732 100644
  					event.result2 = result;
  					if (shen.length) {
  						shen = shen.map(currentPlayer => {
-@@ -2957,6 +3807,22 @@ export default {
+@@ -2957,6 +3809,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -3365,7 +3368,7 @@ index 67fb1b5..c168732 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3846,20 @@ export default {
+@@ -2980,6 +3848,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -3386,7 +3389,7 @@ index 67fb1b5..c168732 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3878,16 @@ export default {
+@@ -2998,6 +3880,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -3403,7 +3406,7 @@ index 67fb1b5..c168732 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3992,40 @@ export default {
+@@ -3102,6 +3994,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -3444,7 +3447,7 @@ index 67fb1b5..c168732 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +4057,29 @@ export default {
+@@ -3133,6 +4059,29 @@ export default {
  						});
  					}
  				}
@@ -3474,7 +3477,7 @@ index 67fb1b5..c168732 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +4347,34 @@ export default {
+@@ -3400,6 +4349,34 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -3509,7 +3512,7 @@ index 67fb1b5..c168732 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4888,65 @@ export default {
+@@ -3913,6 +4890,65 @@ export default {
  				}
  				return -7;
  			}
@@ -3575,7 +3578,7 @@ index 67fb1b5..c168732 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5625,88 @@ export default {
+@@ -4591,6 +5627,88 @@ export default {
  		},
  	},
  	skill: {
@@ -4077,7 +4080,7 @@ index 72c08b2..819642f 100644
  			// setTimeout(function(){
  			// 	node.delete();
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..cca2bb3 100644
+index 08f9718..2a10279 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -4172,10 +4175,24 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -5866,6 +5870,22 @@ export class Library {
+@@ -5866,6 +5870,36 @@ export class Library {
  					frequent: true,
  					restart: true,
  				},
++				// 【私用补丁】将池套组:用 sgs-wiki 将池编辑页里的哪一套黑白名单(选项由 sgs-friends 扩展按接口返回的套组填;选了就整份换用)
++				connect_pool_set: {
++					name: "将池套组",
++					init: "default",
++					item: { default: "默认名单" },
++					frequent: true,
++					restart: true,
++					intro: "用哪一套武将名单开这一局。套组在 sgs-wiki 的将池编辑页维护,这里只是选用",
++					onsave(result) {
++						if (lib.sgsFriends && lib.sgsFriends.setPoolSet) {
++							lib.sgsFriends.setPoolSet(result);
++						}
++					},
++				},
 +				// 【私用补丁】联机同时选将(实现在 mode/identity.js 的 sgsChooseTogether)
 +				connect_choose_together: {
 +					name: "同时选将",
@@ -4195,7 +4212,7 @@ index 08f9718..cca2bb3 100644
  				connect_special_identity: {
  					name: "特殊身份",
  					init: false,
-@@ -6073,6 +6093,10 @@ export class Library {
+@@ -6073,6 +6107,10 @@ export class Library {
  						zhong: "明忠",
  						stratagem: "谋攻",
  						purple: "3v3v2",
@@ -4206,7 +4223,7 @@ index 08f9718..cca2bb3 100644
  					},
  					restart: true,
  					frequent: true,
-@@ -6379,7 +6403,7 @@ export class Library {
+@@ -6379,7 +6417,7 @@ export class Library {
  				},
  				choice_zhu: {
  					name: "主公候选武将数",
@@ -4215,7 +4232,7 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6427,7 +6451,7 @@ export class Library {
+@@ -6427,7 +6465,7 @@ export class Library {
  				},
  				choice_zhong: {
  					name: "忠臣候选武将数",
@@ -4224,7 +4241,7 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6444,7 +6468,7 @@ export class Library {
+@@ -6444,7 +6482,7 @@ export class Library {
  				},
  				choice_nei: {
  					name: "内奸候选武将数",
@@ -4233,7 +4250,7 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6461,7 +6485,7 @@ export class Library {
+@@ -6461,7 +6499,7 @@ export class Library {
  				},
  				choice_fan: {
  					name: "反贼候选武将数",
@@ -4242,7 +4259,7 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -6485,7 +6509,7 @@ export class Library {
+@@ -6485,7 +6523,7 @@ export class Library {
  				},
  				choice_commoner: {
  					name: "平民候选武将数",
@@ -4251,7 +4268,7 @@ index 08f9718..cca2bb3 100644
  					input: true,
  					restart: true,
  					onblur(e) {
-@@ -7491,7 +7515,7 @@ export class Library {
+@@ -7491,7 +7529,7 @@ export class Library {
  				},
  				read_clipboard: {
  					name: "读取邀请链接",
@@ -4287,10 +4304,21 @@ index 6af9480..cd63704 100644
  			},
  			{ once: true }
 diff --git a/apps/core/noname/ui/create/menu/pages/startMenu.js b/apps/core/noname/ui/create/menu/pages/startMenu.js
-index b533fc9..53ef420 100644
+index b533fc9..d2a20bc 100644
 --- a/apps/core/noname/ui/create/menu/pages/startMenu.js
 +++ b/apps/core/noname/ui/create/menu/pages/startMenu.js
-@@ -184,6 +184,22 @@ export const startMenu = function (connectMenu) {
+@@ -31,6 +31,10 @@ export const startMenu = function (connectMenu) {
+ 						config[i.slice(8)] = get.config(i, lib.configOL.mode);
+ 					}
+ 					config.zhinang_tricks = lib.config.connect_zhinang_tricks;
++					// 【私用补丁】房间建好后再改设置(比如换将池套组),禁将表也一起带上;上游只在建房那一刻取一次
++					if (Array.isArray(lib.config["connect_" + lib.configOL.mode + "_banned"])) {
++						config.banned = lib.config["connect_" + lib.configOL.mode + "_banned"];
++					}
+ 					if (game.online) {
+ 						if (game.onlinezhu) {
+ 							game.send("changeRoomConfig", config);
+@@ -184,6 +188,22 @@ export const startMenu = function (connectMenu) {
  						connect: true,
  						frequent: true,
  					};

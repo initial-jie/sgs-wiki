@@ -166,11 +166,16 @@ function applyPits(chosen) {
 
 // 无名杀模式 → 我们的将池环境:身份局=军争场(可在设置里换)、斗地主=斗地主池;2v2 / 1v1 池为空时回退身份局环境
 const MODE_ENV = { identity: "junzheng", doudizhu: "douzhu", versus: "2v2", single: "1v1" };
+// 将池套组(用户 2026-11-23:无名杀也做成选套组,套组只在 /pool 一处维护):存的是套组 id,"default" = 默认名单。
+// 单一来源 = 身份模式的联机配置 connect_pool_set(建房菜单里的「将池套组」;扩展菜单里那项写的也是它),单机身份局同样跟它走。
+const POOL_SET_KEY = "connect_pool_set";
+const currentSetId = () => { try { return get.config(POOL_SET_KEY, "identity") || "default"; } catch (e) { return "default"; } };
 function applyPool(data, mainEnv) {
 	const byOurs = buildIndex();
 	const total = Object.keys(lib.character).length;
 	const summary = {};
 	const allChosen = new Map();
+	const setId = currentSetId();
 	for (const [mode, env0] of Object.entries(MODE_ENV)) {
 		let env = mode === "identity" ? mainEnv : env0;
 		let pool = data.pools[env];
@@ -179,21 +184,52 @@ function applyPool(data, mainEnv) {
 			pool = data.pools[env];
 		}
 		if (!pool) continue;
-		const { allowed, unmatched, chosen } = computeAllowed({ ...pool, genre: data.genre || {} }, byOurs);
+		// 选了套组 → 白、黑名单整份换成它的(与房间发将同规则);这个环境没有这套(如斗地主池)就用它自己的默认名单
+		const set = (pool.sets || []).find(item => item.id === setId) || null;
+		const effective = set ? { ...pool, white: set.white, ban: set.ban } : pool;
+		const { allowed, unmatched, chosen } = computeAllowed({ ...effective, genre: data.genre || {} }, byOurs);
+		// 并坑 / 皮肤要认得所有名单里的武将(客人端的套组选择可能和房主不同),所以把默认名单和各套组的名字都对一遍
+		const everyName = [...new Set([...(pool.white || []), ...(pool.sets || []).flatMap(item => item.white || [])])];
+		for (const [name, ids] of computeAllowed({ white: everyName, ban: [], genre: data.genre || {} }, byOurs).chosen) allChosen.set(name, ids);
 		for (const [name, ids] of chosen) allChosen.set(name, ids);
 		const banned = Object.keys(lib.character).filter(id => !allowed.has(id));
 		// 本地 + 联机建房(startMenu 读 connect_<mode>_banned)两份都写进内存;不存盘,池子改了下次开局自动跟
 		lib.config[`${mode}_banned`] = banned.slice();
 		lib.config[`connect_${mode}_banned`] = banned.slice();
 		if (lib.config.mode === mode) lib.config.banned = banned.slice();
-		summary[mode] = { env, allowed: allowed.size, unmatched };
-		console.log(`[sgs-friends] ${mode} ← 将池「${pool.label || env}」:可用 ${allowed.size} / 无名杀共 ${total};白名单未对上 ${unmatched.length}:`, unmatched.join(" "));
+		summary[mode] = { env, set: set ? set.id : "default", setName: set ? set.name : "默认名单", allowed: allowed.size, unmatched };
+		console.log(`[sgs-friends] ${mode} ← 将池「${pool.label || env}」·${set ? set.name : "默认名单"}:可用 ${allowed.size} / 无名杀共 ${total};白名单未对上 ${unmatched.length}:`, unmatched.join(" "));
 	}
 	const main = summary.identity || Object.values(summary)[0] || { env: mainEnv, allowed: 0, unmatched: [] };
-	_status.sgsFriendsPool = { env: main.env, allowed: main.allowed, total, unmatched: main.unmatched, updatedAt: data.updatedAt, modes: summary };
+	_status.sgsFriendsPool = { env: main.env, set: main.set, setName: main.setName, allowed: main.allowed, total, unmatched: main.unmatched, updatedAt: data.updatedAt, modes: summary };
+	_status.sgsFriendsPoolData = { data, mainEnv };
+	syncSetMenu(data, mainEnv);
 	_status.sgsFriendsPool.pits = applyPits(allChosen);
 	applySkins(data.skins || {}, allChosen);
 }
+
+// 套组菜单:建房菜单「将池套组」(mode 补丁里定义,选项在这里按接口返回的套组填)和扩展菜单里的同名项共用一份选项
+const POOL_SET_ITEMS = { default: "默认名单" };
+function syncSetMenu(data, mainEnv) {
+	const sets = (data.pools[mainEnv] && data.pools[mainEnv].sets) || [];
+	for (const key of Object.keys(POOL_SET_ITEMS)) if (key !== "default") delete POOL_SET_ITEMS[key];
+	for (const item of sets) POOL_SET_ITEMS[item.id] = item.name;
+	const def = lib.mode && lib.mode.identity && lib.mode.identity.connect && lib.mode.identity.connect[POOL_SET_KEY];
+	if (def) def.item = POOL_SET_ITEMS;
+	// 存着的套组已经被删了 → 回到默认名单
+	if (!POOL_SET_ITEMS[currentSetId()]) game.saveConfig(POOL_SET_KEY, "default", "identity");
+}
+// 换套组:存下来并按缓存的接口数据重算禁将(建房菜单 / 扩展菜单改了都走这里)
+function setPoolSet(id) {
+	const next = POOL_SET_ITEMS[id] ? id : "default";
+	if (currentSetId() !== next) game.saveConfig(POOL_SET_KEY, next, "identity");
+	if (lib.config["sgs-friends_poolset_playpackconfig"] !== next) game.saveConfig("sgs-friends_poolset_playpackconfig", next); // 扩展菜单里那项的显示跟着走
+	const cache = _status.sgsFriendsPoolData;
+	if (cache) applyPool(cache.data, cache.mainEnv);
+	return _status.sgsFriendsPool;
+}
+const poolSetName = id => POOL_SET_ITEMS[id] || POOL_SET_ITEMS.default;
+lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { setPoolSet, poolSetName });
 
 // ---------------------------------------------------------------------------------------------
 // ③ OL 皮肤:worker 把各池武将的 OL 皮肤直链一并给过来;按设置给每个武将套一张(本局随机 / 固定第一张 / 关)。
@@ -757,6 +793,17 @@ game.import("play", function () {
 				onclick(item) {
 					game.saveConfig("sgs-friends_pool_playpackconfig", item);
 					loadPool();
+				},
+			},
+			poolset: {
+				name: "将池套组",
+				init: "default",
+				item: POOL_SET_ITEMS,
+				intro: "用哪一套黑白名单(套组在 sgs-wiki 的将池编辑页维护);联机建房菜单里的「将池套组」是同一个设置,以房主为准。改完要重开一局",
+				onclick(item) {
+					game.saveConfig("sgs-friends_poolset_playpackconfig", item);
+					const pool = setPoolSet(item);
+					if (pool) game.alert(`将池已切到「${pool.setName}」:可用 ${pool.allowed} 将`);
 				},
 			},
 			profile: {
