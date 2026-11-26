@@ -895,6 +895,19 @@ index 1033f3108..9f3e81e77 100644
  				storage.character = [];
  				const name = player.name ? player.name : player.name1;
  				if (name) {
+diff --git a/apps/core/character/refresh/translate.js b/apps/core/character/refresh/translate.js
+index db21eed79..bcdb706fe 100644
+--- a/apps/core/character/refresh/translate.js
++++ b/apps/core/character/refresh/translate.js
+@@ -228,7 +228,7 @@ const translates = {
+ 	reyingzi_info: "锁定技，摸牌阶段摸牌时，你额外摸一张牌；你的手牌上限为你的体力上限。",
+ 	refanjian_info: "出牌阶段限一次，你可以展示一张手牌并将此牌交给一名其他角色。然后该角色选择一项：展示其手牌并弃置所有与此牌花色相同的牌，或失去1点体力。",
+ 	qingjian_info: "每当你于摸牌阶段外得到牌时，你可以将其中任意牌以任意顺序交给其他角色，每回合最多发动四次。",
+-	qinxue_info: "觉醒技。准备阶段或结束阶段开始时，若你的手牌数减体力值大于1，则你减1点体力上限，回复1点体力或摸两张牌，获得技能〖攻心〗。",
++	qinxue_info: "觉醒技。准备阶段或结束阶段，若你的手牌数比体力值多2或更多，你减1点体力上限，回复1点体力或摸两张牌，然后获得〖攻心〗。",
+ 	retuxi_info: "摸牌阶段摸牌时，你可以少摸任意张牌，然后选择等量的手牌数大于或等于你的其他角色，获得这些角色的各一张手牌。",
+ 	reluoyi_info: "你可以跳过摸牌阶段，然后亮出牌堆顶的三张牌，获得其中的基本牌、武器牌和【决斗】，若如此做，直到你的下回合开始，你为伤害来源的【杀】或【决斗】造成的伤害+1。",
+ 	reganglie_info: "当你受到1点伤害后，你可进行判定，若结果为：红色，你对伤害来源造成1点伤害；黑色，你弃置伤害来源一张牌。",
 diff --git a/apps/core/character/sb/translate.js b/apps/core/character/sb/translate.js
 index f3e2d221d..c1234e835 100644
 --- a/apps/core/character/sb/translate.js
