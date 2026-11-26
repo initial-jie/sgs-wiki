@@ -1,5 +1,5 @@
 diff --git a/apps/core/card/yongjian.js b/apps/core/card/yongjian.js
-index bfc323c..9cf3145 100644
+index bfc323ccc..9cf31457e 100644
 --- a/apps/core/card/yongjian.js
 +++ b/apps/core/card/yongjian.js
 @@ -923,15 +923,15 @@ export default {
@@ -22,7 +22,7 @@ index bfc323c..9cf3145 100644
  		yonglv_append: '<span class="text" style="font-family: yuanli">它旁边的就是王仲宣。</span>',
  		zhanxiang: "战象",
 diff --git a/apps/core/character/clan/skill.js b/apps/core/character/clan/skill.js
-index 2dcb4ed..b0f3d83 100644
+index 2dcb4edf6..b0f3d83fe 100644
 --- a/apps/core/character/clan/skill.js
 +++ b/apps/core/character/clan/skill.js
 @@ -1121,30 +1121,46 @@ const skills = {
@@ -197,7 +197,7 @@ index 2dcb4ed..b0f3d83 100644
  	},
  	//族荀粲
 diff --git a/apps/core/character/clan/translate.js b/apps/core/character/clan/translate.js
-index c13f9b7..d46cd48 100644
+index c13f9b7f9..d46cd486d 100644
 --- a/apps/core/character/clan/translate.js
 +++ b/apps/core/character/clan/translate.js
 @@ -50,7 +50,7 @@ const translates = {
@@ -237,7 +237,7 @@ index c13f9b7..d46cd48 100644
  	clandongxu_info: "转换技，阳：你可以将一张装备牌置于其他角色装备区（替换原装备）；阴：你可以将手牌摸至X（X为你的攻击范围且至多为5）。然后视为使用一张【闪】或令你被抵消的【杀】依然造成伤害。",
  	clan_xunshi: "族荀莳",
 diff --git a/apps/core/character/diy/skill.js b/apps/core/character/diy/skill.js
-index 25c1c84..8c8bd79 100644
+index 25c1c842e..8c8bd794b 100644
 --- a/apps/core/character/diy/skill.js
 +++ b/apps/core/character/diy/skill.js
 @@ -4513,56 +4513,32 @@ const skills = {
@@ -328,7 +328,7 @@ index 25c1c84..8c8bd79 100644
  			remove: {
  				audio: "yuheng",
 diff --git a/apps/core/character/diy/translate.js b/apps/core/character/diy/translate.js
-index c7b3f60..a74c597 100644
+index c7b3f6067..a74c59776 100644
 --- a/apps/core/character/diy/translate.js
 +++ b/apps/core/character/diy/translate.js
 @@ -349,7 +349,7 @@ const translates = {
@@ -341,7 +341,7 @@ index c7b3f60..a74c597 100644
  	junk_guanyu_prefix: "旧谋",
  	junk_liuyan: "OL刘焉",
 diff --git a/apps/core/character/offline/character.js b/apps/core/character/offline/character.js
-index 5f209c6..e2c707a 100644
+index 5f209c6d8..e2c707ac0 100644
 --- a/apps/core/character/offline/character.js
 +++ b/apps/core/character/offline/character.js
 @@ -391,7 +391,8 @@ const characters = {
@@ -355,7 +355,7 @@ index 5f209c6..e2c707a 100644
  		skills: ["zc26_cangqiao", "zc26_shenxie", "zc26_huaxiu"],
  		groupInGuozhan: "shu",
 diff --git a/apps/core/character/offline/skill/extra_offline.js b/apps/core/character/offline/skill/extra_offline.js
-index 43f2c18..751e01c 100644
+index 43f2c180a..751e01c57 100644
 --- a/apps/core/character/offline/skill/extra_offline.js
 +++ b/apps/core/character/offline/skill/extra_offline.js
 @@ -2090,7 +2090,7 @@ const skills = {
@@ -376,8 +376,70 @@ index 43f2c18..751e01c 100644
  					.set("ai", ({ link: [_, __, name] }) => {
  						const { player, choice } = get.event();
  						if (choice) {
+diff --git a/apps/core/character/offline/skill/offline_jiudin.js b/apps/core/character/offline/skill/offline_jiudin.js
+index 78dde277d..1bdd38782 100644
+--- a/apps/core/character/offline/skill/offline_jiudin.js
++++ b/apps/core/character/offline/skill/offline_jiudin.js
+@@ -2494,22 +2494,43 @@ const skills = {
+ 				.slice()
+ 				.concat(game.dead)
+ 				.sort((a, b) => parseInt(a.dataset.position) - parseInt(b.dataset.position));
++			// 【私用补丁】从 source 往后数,中间隔着的都是阵亡座位也算(原来只认紧挨着的下家,连着死两个人时后一个座位的回合就没了)
+ 			const num = players.indexOf(source);
+-			const num2 = players.indexOf(player);
+-			return num2 - num === 1 || (num === players.length - 1 && num2 === 0);
++			if (num < 0 || !players.includes(player)) {
++				return false;
++			}
++			for (let i = 1; i < players.length; i++) {
++				const current = players[(num + i) % players.length];
++				if (current === player) {
++					return true;
++				}
++				if (game.players.includes(current)) {
++					return false;
++				}
++			}
++			return false;
+ 		},
+ 		subSkill: {
+ 			phase: {
+ 				charlotte: true,
+ 				trigger: { global: "phaseOver" },
+ 				filter(event, player) {
++					// 【私用补丁】只跟在额定回合后面:别人的额外回合(如博图)、封土自己插进来的回合结束时不再给
++					if (event.skill || event.sgsFengtu) {
++						return false;
++					}
+ 					return player.getStorage("jdfengtu_phase").some(target => !game.players.includes(target) && lib.skill.jdfengtu.check(event.player, target));
+ 				},
+ 				forced: true,
+ 				popup: false,
+ 				async content(event, trigger, player) {
+-					const next = player.insertPhase();
+-					delete next.skill;
++					// 同时接了多个阵亡座位就各执行一个回合
++					const num = player.getStorage("jdfengtu_phase").filter(target => !game.players.includes(target) && lib.skill.jdfengtu.check(trigger.player, target)).length;
++					for (let i = 0; i < num; i++) {
++						const next = player.insertPhase();
++						delete next.skill;
++						next.sgsFengtu = true;
++					}
+ 				},
+ 				intro: { content: "获得$的额定回合" },
+ 			},
+@@ -2519,7 +2540,8 @@ const skills = {
+ 		trigger: { global: "phaseZhunbeiBegin" },
+ 		filter(event, player) {
+ 			const storage = player.storage.jdjuqi;
+-			return event.player === player || event.player.countCards("h", card => _status.connectMode || (get.color(card, event.player) === storage ? "red" : "black"));
++			// 【私用补丁】原式少了括号(三目恒真):阳要黑色、阴要红色
++			return event.player === player || event.player.countCards("h", card => _status.connectMode || get.color(card, event.player) === (storage ? "red" : "black"));
+ 		},
+ 		async cost(event, trigger, player) {
+ 			const target = trigger.player;
 diff --git a/apps/core/character/offline/translate.js b/apps/core/character/offline/translate.js
-index b27e7ca..5b0626d 100644
+index b27e7cad9..5b0626d7e 100644
 --- a/apps/core/character/offline/translate.js
 +++ b/apps/core/character/offline/translate.js
 @@ -477,8 +477,8 @@ const translates = {
@@ -419,7 +481,7 @@ index b27e7ca..5b0626d 100644
  	zc26_huaxiu: "化朽",
  	zc26_huaxiu_info: `出牌阶段限一次，你可以将一种“藏巧”装备牌效果修改为下述对应顺序的牌直到下回合开始：${get.poptip("zc26_zhuge")}、${get.poptip("zc26_bagua")}、${get.poptip("zc26_lingling")}。`,
 diff --git a/apps/core/character/onlyOL/skill.js b/apps/core/character/onlyOL/skill.js
-index 661a36d..0603609 100644
+index 661a36df6..060360954 100644
 --- a/apps/core/character/onlyOL/skill.js
 +++ b/apps/core/character/onlyOL/skill.js
 @@ -18,25 +18,45 @@ const skills = {
@@ -672,7 +734,7 @@ index 661a36d..0603609 100644
  			await targets[0].swapEquip(targets[1]);
  			await game.delayx();
 diff --git a/apps/core/character/onlyOL/translate.js b/apps/core/character/onlyOL/translate.js
-index 23afeff..8705f35 100644
+index 23afeff92..8705f35d2 100644
 --- a/apps/core/character/onlyOL/translate.js
 +++ b/apps/core/character/onlyOL/translate.js
 @@ -4,9 +4,9 @@ const translates = {
@@ -724,7 +786,7 @@ index 23afeff..8705f35 100644
  	olzhouxi: "骤袭",
  	olzhouxi_info: "①准备阶段，你从三个可造成伤害的技能中选择一个获得直到你的下回合开始。②本轮受到你伤害的角色于本轮结束时视为对你使用一张【杀】。",
 diff --git a/apps/core/character/refresh/character.js b/apps/core/character/refresh/character.js
-index fcd3754..0f8754b 100644
+index fcd375496..0f8754b08 100644
 --- a/apps/core/character/refresh/character.js
 +++ b/apps/core/character/refresh/character.js
 @@ -203,7 +203,8 @@ const characters = {
@@ -749,7 +811,7 @@ index fcd3754..0f8754b 100644
  	re_caopi: {
  		sex: "male",
 diff --git a/apps/core/character/refresh/skill.js b/apps/core/character/refresh/skill.js
-index 1033f31..9f3e81e 100644
+index 1033f3108..9f3e81e77 100644
 --- a/apps/core/character/refresh/skill.js
 +++ b/apps/core/character/refresh/skill.js
 @@ -12829,12 +12829,26 @@ const skills = {
@@ -825,7 +887,7 @@ index 1033f31..9f3e81e 100644
  				const name = player.name ? player.name : player.name1;
  				if (name) {
 diff --git a/apps/core/character/sb/translate.js b/apps/core/character/sb/translate.js
-index f3e2d22..c1234e8 100644
+index f3e2d221d..c1234e835 100644
 --- a/apps/core/character/sb/translate.js
 +++ b/apps/core/character/sb/translate.js
 @@ -300,7 +300,7 @@ const translates = {
@@ -838,7 +900,7 @@ index f3e2d22..c1234e8 100644
  	sbjiefan_info: `出牌阶段限一次，你可以令一名角色选择一项：⒈令所有攻击范围内含有其的角色依次弃置一张牌；⒉其摸等同于攻击范围内含有其的角色数的牌；⒊${get.poptip("rule_beishui")}：此技能失效直到你杀死一名角色。`,
  	sb_gongsunzan: "谋公孙瓒",
 diff --git a/apps/core/character/sp/character.js b/apps/core/character/sp/character.js
-index d216fac..c9006e4 100644
+index d216fac8f..c9006e421 100644
 --- a/apps/core/character/sp/character.js
 +++ b/apps/core/character/sp/character.js
 @@ -971,14 +971,15 @@ const characters = {
@@ -861,7 +923,7 @@ index d216fac..c9006e4 100644
  	zhugejin: {
  		sex: "male",
 diff --git a/apps/core/character/sp/dynamicTranslate.js b/apps/core/character/sp/dynamicTranslate.js
-index 804290e..4bf3dd4 100644
+index 804290ed1..4bf3dd45d 100644
 --- a/apps/core/character/sp/dynamicTranslate.js
 +++ b/apps/core/character/sp/dynamicTranslate.js
 @@ -4,13 +4,13 @@ const dynamicTranslates = {
@@ -881,7 +943,7 @@ index 804290e..4bf3dd4 100644
  		return `${start}阳：${yang}；阴：${yin}${end}`;
  	},
 diff --git a/apps/core/character/sp/skill.js b/apps/core/character/sp/skill.js
-index f0599fa..efb2d73 100644
+index f0599fa45..2a41e5f64 100644
 --- a/apps/core/character/sp/skill.js
 +++ b/apps/core/character/sp/skill.js
 @@ -5138,13 +5138,15 @@ const skills = {
@@ -1295,7 +1357,48 @@ index f0599fa..efb2d73 100644
  								})
  							) {
  								for (const skill in target.disabledSkills) {
-@@ -28228,10 +28238,8 @@ const skills = {
+@@ -26867,6 +26877,12 @@ const skills = {
+ 				player.logSkill("tongxie", targets);
+ 				player.addTempSkill("tongxie_effect", { player: "phaseBegin" });
+ 				player.markAuto("tongxie_effect", targets);
++				// 【私用补丁】把同协角色标出来(原来场上完全看不出谁是同协角色):赵俨自己挂「协」标记(点开看名单),其余同协角色各挂一个「协」
++				for (const target of targets) {
++					if (target !== player) {
++						target.markSkill("tongxie_tag");
++					}
++				}
+ 				let min = player.countCards("h"),
+ 					min_player = player;
+ 				for (const i of targets) {
+@@ -26893,7 +26909,14 @@ const skills = {
+ 				audio: "tongxie",
+ 				charlotte: true,
+ 				trigger: { global: "useCardAfter" },
+-				onremove: true,
++				onremove(player, skill) {
++					for (const target of player.getStorage(skill)) {
++						target.unmarkSkill("tongxie_tag");
++					}
++					delete player.storage[skill];
++				},
++				marktext: "协",
++				intro: { name: "同协", content: "同协角色：$" },
+ 				forced: true,
+ 				popup: false,
+ 				filter(event, player) {
+@@ -27041,6 +27064,11 @@ const skills = {
+ 				},
+ 			},
+ 			count2: { charlotte: true },
++			tag: {
++				charlotte: true,
++				marktext: "协",
++				intro: { name: "同协", content: "同协角色（直到赵俨的下回合开始）" },
++			},
+ 		},
+ 	},
+ 	//群马超
+@@ -28228,10 +28256,8 @@ const skills = {
  			gain: {
  				charlotte: true,
  				audio: "qiaoli",
@@ -1308,7 +1411,7 @@ index f0599fa..efb2d73 100644
  				forced: true,
  				async content(event, trigger, player) {
  					player.removeSkill(event.name);
-@@ -28253,11 +28261,15 @@ const skills = {
+@@ -28253,11 +28279,15 @@ const skills = {
  		audio: 2,
  		trigger: { target: "useCardToTarget" },
  		filter(event, player) {
@@ -1325,7 +1428,7 @@ index f0599fa..efb2d73 100644
  			return player != event.player && player.countCards("h") > 0;
  		},
  		usable: 1,
-@@ -30195,7 +30207,8 @@ const skills = {
+@@ -30195,7 +30225,8 @@ const skills = {
  					if (!list.length) {
  						return 0;
  					}
@@ -1335,7 +1438,7 @@ index f0599fa..efb2d73 100644
  				})
  				.forResult();
  			if (result.bool) {
-@@ -30250,10 +30263,12 @@ const skills = {
+@@ -30250,10 +30281,12 @@ const skills = {
  					event.stopped = true;
  				}
  				if (event.target.isIn() && event.count > 0) {
@@ -1350,7 +1453,7 @@ index f0599fa..efb2d73 100644
  						if (!event.target.storage.oljuanxia_counter) {
  							event.target.storage.oljuanxia_counter = {};
  						}
-@@ -30268,7 +30283,8 @@ const skills = {
+@@ -30268,7 +30301,8 @@ const skills = {
  		},
  		subSkill: {
  			counter: {
@@ -1360,7 +1463,7 @@ index f0599fa..efb2d73 100644
  				forced: true,
  				charlotte: true,
  				onremove: true,
-@@ -39300,7 +39316,8 @@ const skills = {
+@@ -39300,7 +39334,8 @@ const skills = {
  			}
  		},
  		filter(event, player) {
@@ -1370,7 +1473,7 @@ index f0599fa..efb2d73 100644
  		},
  		onremove(player, skill) {
  			var cards = player.getExpansions(skill);
-@@ -39381,7 +39398,8 @@ const skills = {
+@@ -39381,7 +39416,8 @@ const skills = {
  			if (result.bool) {
  				event.cardname = result.links[0][2];
  				player.logSkill("shefu");
@@ -1380,7 +1483,7 @@ index f0599fa..efb2d73 100644
  				if (result2.bool) {
  					const card = result2.cards[0];
  					event.card = card;
-@@ -39480,11 +39498,9 @@ const skills = {
+@@ -39480,11 +39516,9 @@ const skills = {
  						}
  					}
  				}
@@ -1393,7 +1496,7 @@ index f0599fa..efb2d73 100644
  				if (loseNext) {
  					await loseNext;
  				}
-@@ -45569,6 +45585,10 @@ const skills = {
+@@ -45569,6 +45603,10 @@ const skills = {
  			return game.hasPlayer(current => get.info("songci").filterTarget(null, player, current));
  		},
  		filterTarget(card, player, target) {
@@ -1404,7 +1507,7 @@ index f0599fa..efb2d73 100644
  			return !player.getStorage("songci").includes(target);
  		},
  		logAudio(event, player) {
-@@ -45601,22 +45621,7 @@ const skills = {
+@@ -45601,22 +45639,7 @@ const skills = {
  				},
  			},
  		},
@@ -1428,7 +1531,7 @@ index f0599fa..efb2d73 100644
  	},
  	baobian: {
  		trigger: { player: ["phaseBefore", "changeHp"] },
-@@ -46458,17 +46463,10 @@ const skills = {
+@@ -46458,17 +46481,10 @@ const skills = {
  						}
  						case 2: {
  							player.line(trigger.player, "green");
@@ -1449,7 +1552,7 @@ index f0599fa..efb2d73 100644
  							}
  							break;
  						}
-@@ -47232,7 +47230,32 @@ const skills = {
+@@ -47232,7 +47248,32 @@ const skills = {
  		frequent: true,
  		async content(event, trigger, player) {
  			const num = lib.suit.filter(suit => player.hasMark(`xinfu_falu_${suit}`)).length;
@@ -1483,7 +1586,7 @@ index f0599fa..efb2d73 100644
  		},
  		ai: { combo: "xinfu_falu" },
  	},
-@@ -47357,16 +47380,17 @@ const skills = {
+@@ -47357,16 +47398,17 @@ const skills = {
  			club: {
  				audio: "xinfu_zhenyi",
  				enable: "chooseToUse",
@@ -1505,7 +1608,7 @@ index f0599fa..efb2d73 100644
  				check(card) {
  					return 15 - get.value(card);
  				},
-@@ -47392,12 +47416,21 @@ const skills = {
+@@ -47392,12 +47434,21 @@ const skills = {
  					});
  				},
  				prompt2(event) {
@@ -1530,7 +1633,7 @@ index f0599fa..efb2d73 100644
  			},
  		},
 diff --git a/apps/core/character/sp/translate.js b/apps/core/character/sp/translate.js
-index 5f65279..f538f5b 100644
+index 5f6527925..f538f5b71 100644
 --- a/apps/core/character/sp/translate.js
 +++ b/apps/core/character/sp/translate.js
 @@ -39,7 +39,7 @@ const translates = {
@@ -1656,7 +1759,7 @@ index 5f65279..f538f5b 100644
  };
  
 diff --git a/apps/core/character/sxrm/skill.js b/apps/core/character/sxrm/skill.js
-index 18a8593..c6db02b 100644
+index 18a8593dd..c6db02bb3 100644
 --- a/apps/core/character/sxrm/skill.js
 +++ b/apps/core/character/sxrm/skill.js
 @@ -4427,7 +4427,7 @@ const skills = {
@@ -1669,7 +1772,7 @@ index 18a8593..c6db02b 100644
  					})
  					.set("first", event.target)
 diff --git a/apps/core/character/sxrm/translate.js b/apps/core/character/sxrm/translate.js
-index 4e264ff..2d2bddc 100644
+index 4e264ff48..2d2bddc14 100644
 --- a/apps/core/character/sxrm/translate.js
 +++ b/apps/core/character/sxrm/translate.js
 @@ -37,7 +37,7 @@ const translates = {
@@ -1682,7 +1785,7 @@ index 4e264ff..2d2bddc 100644
  	sxrmyihe: "异合",
  	sxrmyihe_info: "锁定技，你的回合内各限一次，一名角色受到伤害时，若其与伤害来源的手牌数与体力值大小关系：相同，其与伤害来源各摸两张牌；不同，此伤害+1。",
 diff --git a/apps/core/character/xianding/character.js b/apps/core/character/xianding/character.js
-index c6516e6..f10deef 100644
+index c6516e68b..f10deef98 100644
 --- a/apps/core/character/xianding/character.js
 +++ b/apps/core/character/xianding/character.js
 @@ -1100,7 +1100,8 @@ const characters = {
@@ -1696,7 +1799,7 @@ index c6516e6..f10deef 100644
  	dc_yangbiao: {
  		sex: "male",
 diff --git a/apps/core/character/xianding/skill.js b/apps/core/character/xianding/skill.js
-index b905cc5..f377e33 100644
+index b905cc5ab..b1534bba9 100644
 --- a/apps/core/character/xianding/skill.js
 +++ b/apps/core/character/xianding/skill.js
 @@ -7531,8 +7531,9 @@ const skills = {
@@ -1726,7 +1829,7 @@ index b905cc5..f377e33 100644
  			}
  		},
  		mod: {
-@@ -35678,6 +35675,185 @@ const skills = {
+@@ -35678,6 +35675,186 @@ const skills = {
  			},
  		},
  	},
@@ -1818,7 +1921,7 @@ index b905cc5..f377e33 100644
 +			game.log(player, "从〖元嫡〗的牌名组中移除了", `#y【${get.translation(name)}】`);
 +		},
 +	},
-+	// 【私用补丁】按 OL 原文:新写 OL 版〖心幽〗——出牌阶段限一次,弃置任意张基本牌后摸一张牌,摸到本次已弃置过的基本牌牌名则可重复(再弃再摸),至多摸五张,所摸的牌本回合不计入手牌上限
++	// 【私用补丁】按 OL 原文:新写 OL 版〖心幽〗——出牌阶段限一次,弃置任意张基本牌后摸一张牌并重复(再弃再摸),直到摸到未弃置过牌名的基本牌,至多摸五张,所摸的牌本回合不计入手牌上限
 +	olxinyou: {
 +		audio: "dcxinyou",
 +		enable: "phaseUse",
@@ -1832,7 +1935,7 @@ index b905cc5..f377e33 100644
 +		},
 +		selectCard: [1, Infinity],
 +		allowChooseAll: true,
-+		prompt: "弃置任意张基本牌并摸一张牌，若摸到的牌与已弃置的基本牌牌名相同则可重复此流程（至多摸五张）",
++		prompt: "弃置任意张基本牌，然后摸一张牌并重复此流程，直到摸到未弃置过牌名的基本牌（至多摸五张）",
 +		check(card) {
 +			if (ui.selected.cards.length) {
 +				return 0;
@@ -1852,7 +1955,8 @@ index b905cc5..f377e33 100644
 +				const result = await next.forResult();
 +				num++;
 +				const cards = result?.cards ?? [];
-+				if (!cards.length || cards.some(card => !names.includes(get.name(card, false)))) {
++				// 【私用补丁】用户口径(2026-11-23 / 11-26):摸到「未弃置过的基本牌牌名」才停;摸到锦囊 / 装备、或已弃置过牌名的基本牌都继续
++				if (!cards.length || cards.some(card => get.type(card, null, false) === "basic" && !names.includes(get.name(card, false)))) {
 +					break;
 +				}
 +				if (num >= 5) {
@@ -1912,7 +2016,7 @@ index b905cc5..f377e33 100644
  	//笮融
  	dccansi: {
  		audio: 2,
-@@ -45136,9 +45312,7 @@ const skills = {
+@@ -45136,9 +45313,7 @@ const skills = {
  			if (!event.targets || event.targets.length !== 1 || event.player === event.target) {
  				return false;
  			}
@@ -1923,7 +2027,7 @@ index b905cc5..f377e33 100644
  			if (name === "useCardToPlayered") {
  				if (!event.cards.filterInD().length) {
  					return false;
-@@ -45162,7 +45336,8 @@ const skills = {
+@@ -45162,7 +45337,8 @@ const skills = {
  			} else {
  				target = trigger.targets[0];
  				prompt = `弃置一张牌，并获得${get.translation(trigger.cards.filterInD())}`;
@@ -1934,7 +2038,7 @@ index b905cc5..f377e33 100644
  			next.set("prompt", get.prompt(event.skill, target));
  			next.set("prompt2", prompt);
 diff --git a/apps/core/character/xianding/translate.js b/apps/core/character/xianding/translate.js
-index 2b68dbc..e881551 100644
+index 2b68dbcb8..167e86970 100644
 --- a/apps/core/character/xianding/translate.js
 +++ b/apps/core/character/xianding/translate.js
 @@ -199,7 +199,7 @@ const translates = {
@@ -1962,13 +2066,13 @@ index 2b68dbc..e881551 100644
 +	olyuandi: "元嫡",
 +	olyuandi_info: "锁定技。每回合限一次，当你的牌名组（初始为【杀】【闪】【桃】）中的所有牌名于本回合均有牌进入过弃牌堆后，你摸一张牌。然后若这些牌中有不因使用而进入弃牌堆的牌，且牌名组中的牌名数大于1，你从牌名组中移除一个牌名。",
 +	olxinyou: "心幽",
-+	olxinyou_info: "出牌阶段限一次。你可以弃置任意张基本牌，然后摸一张牌。若你以此法摸到的牌与你本次发动已弃置的基本牌牌名相同，你重复此流程（可以再弃置任意张基本牌，然后摸一张牌），直到摸到其他牌名的牌（至多摸五张，以此法获得的牌本回合不计入手牌上限）。",
++	olxinyou_info: "出牌阶段限一次。你可以弃置任意张基本牌，然后摸一张牌，并重复此流程（可以再弃置任意张基本牌，然后摸一张牌），直到你以此法摸到的牌是你本次发动未弃置过牌名的基本牌（至多摸五张，以此法获得的牌本回合不计入手牌上限）。",
 +	olxinyou_effect: "心幽",
  	zerong: "笮融",
  	dccansi: "残肆",
  	dccansi_info: "锁定技。准备阶段，你回复1点体力，然后选择一名其他角色，其回复1点体力，你视为对其依次使用以下能使用的牌：【杀】（无距离限制）、【决斗】、【火攻】。当其以此法受到1点伤害后，你摸两张牌。",
 diff --git a/apps/core/character/yijiang/skill.js b/apps/core/character/yijiang/skill.js
-index 7a035b5..e1291b1 100644
+index 7a035b521..e1291b192 100644
 --- a/apps/core/character/yijiang/skill.js
 +++ b/apps/core/character/yijiang/skill.js
 @@ -14771,6 +14771,40 @@ const skills = {
@@ -2013,7 +2117,7 @@ index 7a035b5..e1291b1 100644
  		trigger: { player: "damageEnd" },
  		forced: true,
 diff --git a/apps/core/character/yijiang/translate.js b/apps/core/character/yijiang/translate.js
-index 214d953..9c4553d 100644
+index 214d95371..9c4553df6 100644
 --- a/apps/core/character/yijiang/translate.js
 +++ b/apps/core/character/yijiang/translate.js
 @@ -345,6 +345,8 @@ const translates = {
@@ -2026,7 +2130,7 @@ index 214d953..9c4553d 100644
  	shibei_info: "锁定技，当你受到伤害后：若此伤害是你本回合第一次受到的伤害，则你回复1点体力；否则你失去1点体力。",
  	jianying: "渐营",
 diff --git a/apps/core/character/yingbian/skill.js b/apps/core/character/yingbian/skill.js
-index 75fa0b7..e4d55a5 100644
+index 75fa0b75a..e4d55a5be 100644
 --- a/apps/core/character/yingbian/skill.js
 +++ b/apps/core/character/yingbian/skill.js
 @@ -1992,7 +1992,14 @@ const skills = {
@@ -2045,7 +2149,7 @@ index 75fa0b7..e4d55a5 100644
  			const skills = [];
  			if (get.mode() === "guozhan") {
 diff --git a/apps/core/game/config.json b/apps/core/game/config.json
-index 99aaa79..4b68a1f 100644
+index 99aaa7989..4b68a1fe0 100644
 --- a/apps/core/game/config.json
 +++ b/apps/core/game/config.json
 @@ -62,7 +62,7 @@
@@ -2099,7 +2203,7 @@ index 99aaa79..4b68a1f 100644
  	"extensions": [],
  	"banned": [],
 diff --git a/apps/core/game/package.js b/apps/core/game/package.js
-index 753d0a0..4734abc 100644
+index 753d0a02d..4734abc66 100644
 --- a/apps/core/game/package.js
 +++ b/apps/core/game/package.js
 @@ -49,6 +49,7 @@ window.noname_package = {
@@ -2122,7 +2226,7 @@ index 753d0a0..4734abc 100644
  		guozhan: {
  			normal: "国战模式",
 diff --git a/apps/core/layout/default/layout.css b/apps/core/layout/default/layout.css
-index b7a3c12..b159157 100644
+index b7a3c124c..b159157a1 100644
 --- a/apps/core/layout/default/layout.css
 +++ b/apps/core/layout/default/layout.css
 @@ -4063,6 +4063,7 @@ div:hover > .intro {
@@ -2210,7 +2314,7 @@ index b7a3c12..b159157 100644
 +	height: calc(100% - 430px);
 +}
 diff --git a/apps/core/mode/connect.js b/apps/core/mode/connect.js
-index 943d3f9..80fd87b 100644
+index 943d3f929..80fd87bf6 100644
 --- a/apps/core/mode/connect.js
 +++ b/apps/core/mode/connect.js
 @@ -85,6 +85,7 @@ export default {
@@ -2275,7 +2379,7 @@ index 943d3f9..80fd87b 100644
  				const read = text => {
  					if (connectionStarted) {
 diff --git a/apps/core/mode/identity.js b/apps/core/mode/identity.js
-index 67fb1b5..45c181b 100644
+index 67fb1b58b..9d2093cf9 100644
 --- a/apps/core/mode/identity.js
 +++ b/apps/core/mode/identity.js
 @@ -3,6 +3,542 @@ import html from "dedent";
@@ -3239,7 +3343,7 @@ index 67fb1b5..45c181b 100644
  								me.setIdentity(identity);
  								me.node.identity.classList.remove("guessing");
  								if (me.special_identity) {
-@@ -2618,6 +3422,13 @@ export default {
+@@ -2618,6 +3422,17 @@ export default {
  							currentPlayer.identity
  						);
  					}
@@ -3250,10 +3354,14 @@ index 67fb1b5..45c181b 100644
 +					if (_status.mode === "wujian") {
 +						broadcastWujianDisplay();
 +					}
++					if (_status.mode === "dazhong") {
++						// 义军在选将阶段就认出队友(规则只写「义军彼此知晓身份」,没写时点;线下是身份一发就互认,这里同线下房间)。开局后还会再发一遍
++						revealDazhongYijun();
++					}
  
  					let list;
  					const list2 = [];
-@@ -2659,6 +3470,11 @@ export default {
+@@ -2659,6 +3474,11 @@ export default {
  						}
  						(hasZhugong ? list2 : list3).push(name);
  					}
@@ -3265,7 +3373,7 @@ index 67fb1b5..45c181b 100644
  					game.broadcast(availableCharacters => {
  						for (const name in lib.characterReplace) {
  							const replacements = lib.characterReplace[name];
-@@ -2719,7 +3535,22 @@ export default {
+@@ -2719,7 +3539,22 @@ export default {
  							zhuListUnique.sort(lib.sort.character);
  							return zhuListUnique;
  						};
@@ -3289,7 +3397,7 @@ index 67fb1b5..45c181b 100644
  					}
  					const chooseButtonEvent = game.zhu.chooseButton(true);
  					chooseButtonEvent.set("selectButton", lib.configOL.double_character ? 2 : 1);
-@@ -2727,6 +3558,10 @@ export default {
+@@ -2727,6 +3562,10 @@ export default {
  					chooseButtonEvent.set("ai", () => Math.random());
  				},
  				async (event, trigger, player, result) => {
@@ -3300,7 +3408,7 @@ index 67fb1b5..45c181b 100644
  					if (!game.zhu.name) {
  						game.zhu.init(result.links[0], result.links[1]);
  					}
-@@ -2774,6 +3609,9 @@ export default {
+@@ -2774,6 +3613,9 @@ export default {
  				},
  				// step 2
  				async (event, trigger, player) => {
@@ -3310,7 +3418,7 @@ index 67fb1b5..45c181b 100644
  					const list = [];
  					const selectButton = lib.configOL.double_character ? 2 : 1;
  
-@@ -2799,6 +3637,11 @@ export default {
+@@ -2799,6 +3641,11 @@ export default {
  						}
  						list.push([currentPlayer, [str, [event.list.randomRemove(Math.min(num, num2)), "characterx"]], selectButton, true]);
  					}
@@ -3322,7 +3430,7 @@ index 67fb1b5..45c181b 100644
  					game.me.chooseButtonOL(list, (player, result) => {
  						if (game.online || player === game.me) {
  							player.init(result.links[0], result.links[1]);
-@@ -2807,6 +3650,10 @@ export default {
+@@ -2807,6 +3654,10 @@ export default {
  				},
  				// step 3
  				async (event, trigger, player, result) => {
@@ -3333,7 +3441,7 @@ index 67fb1b5..45c181b 100644
  					let shen = [];
  					for (const id in result) {
  						if (result[id] && result[id].links) {
-@@ -2831,6 +3678,11 @@ export default {
+@@ -2831,6 +3682,11 @@ export default {
  							shen.push(lib.playerOL[id]);
  						}
  					}
@@ -3345,7 +3453,7 @@ index 67fb1b5..45c181b 100644
  					event.result2 = result;
  					if (shen.length) {
  						shen = shen.map(currentPlayer => {
-@@ -2957,6 +3809,22 @@ export default {
+@@ -2957,6 +3813,22 @@ export default {
  		fan: "反",
  		commoner: "民",
  		cai: "猜",
@@ -3368,7 +3476,7 @@ index 67fb1b5..45c181b 100644
  		cai2: "猜",
  		rZhu: "主",
  		rZhong: "忠",
-@@ -2980,6 +3848,20 @@ export default {
+@@ -2980,6 +3852,20 @@ export default {
  		nei2: "内奸",
  		fan2: "反贼",
  		commoner2: "平民",
@@ -3389,7 +3497,7 @@ index 67fb1b5..45c181b 100644
  		random2: "随机",
  		enemy: "敌",
  		friend: "友",
-@@ -2998,6 +3880,16 @@ export default {
+@@ -2998,6 +3884,16 @@ export default {
  		ai_strategy_5: "天使",
  		ai_strategy_6: "仇主",
  		yexinbilu: "野心毕露",
@@ -3406,7 +3514,7 @@ index 67fb1b5..45c181b 100644
  		stratagem_insight: "洞察",
  		sixiang_zhuque: "朱雀",
  		sixiang_xuanwu: "玄武",
-@@ -3102,6 +3994,40 @@ export default {
+@@ -3102,6 +3998,40 @@ export default {
  				if (_status.mode === "stratagem") {
  					return;
  				}
@@ -3447,7 +3555,7 @@ index 67fb1b5..45c181b 100644
  				if (_status.mode === "purple") {
  					if (source) {
  						if (this.identity === "rZhu" || this.identity === "bZhu") {
-@@ -3133,6 +4059,29 @@ export default {
+@@ -3133,6 +4063,29 @@ export default {
  						});
  					}
  				}
@@ -3477,7 +3585,7 @@ index 67fb1b5..45c181b 100644
  				if (this.identity === "fan" && source) {
  					source.draw(3);
  				} else if (this.identity === "commoner" && source) {
-@@ -3400,6 +4349,34 @@ export default {
+@@ -3400,6 +4353,34 @@ export default {
  			 * @this { Player }
  			 * @returns { void }
  			 */
@@ -3512,7 +3620,7 @@ index 67fb1b5..45c181b 100644
  			showIdentity() {
  				this.node.identity.classList.remove("guessing");
  				this.identityShown = true;
-@@ -3913,6 +4890,65 @@ export default {
+@@ -3913,6 +4894,65 @@ export default {
  				}
  				return -7;
  			}
@@ -3578,7 +3686,7 @@ index 67fb1b5..45c181b 100644
  			if (_status.mode === "stratagem") {
  				if (!game.zhu) {
  					if (from.identity === "nei" || to.identity === "nei") {
-@@ -4591,6 +5627,88 @@ export default {
+@@ -4591,6 +5631,88 @@ export default {
  		},
  	},
  	skill: {
@@ -3668,7 +3776,7 @@ index 67fb1b5..45c181b 100644
  		stratagem_gain: {
  			trigger: {
 diff --git a/apps/core/noname/game/check.js b/apps/core/noname/game/check.js
-index 34e2315..c661597 100644
+index 34e2315a3..c66159738 100644
 --- a/apps/core/noname/game/check.js
 +++ b/apps/core/noname/game/check.js
 @@ -181,6 +181,11 @@ export class Check {
@@ -3726,7 +3834,7 @@ index 34e2315..c661597 100644
  		ui.arena.classList.add("selecting");
  		if (event.filterTarget && (!event.filterCard || !event.position || (typeof event.position == "string" && !event.position.includes("e")))) {
 diff --git a/apps/core/noname/game/index.js b/apps/core/noname/game/index.js
-index 7335b5c..bafba2f 100644
+index 7335b5c7f..bafba2fa8 100644
 --- a/apps/core/noname/game/index.js
 +++ b/apps/core/noname/game/index.js
 @@ -1869,7 +1869,21 @@ export class Game {
@@ -3844,7 +3952,7 @@ index 7335b5c..bafba2f 100644
  		_status.multitarget = false;
  		const skillinfo = get.info(event.skill) || {};
 diff --git a/apps/core/noname/init/browser.js b/apps/core/noname/init/browser.js
-index 10da4f2..0864b56 100644
+index 10da4f224..0864b5678 100644
 --- a/apps/core/noname/init/browser.js
 +++ b/apps/core/noname/init/browser.js
 @@ -10,15 +10,17 @@ import { FileSystem, FileSystemError, FileSystemErrorCode, installLegacyFileSyst
@@ -3961,7 +4069,7 @@ index 10da4f2..0864b56 100644
   * @implements { FileSystemAdapter }
   */
 diff --git a/apps/core/noname/init/index.ts b/apps/core/noname/init/index.ts
-index 2aacae2..45f4c6a 100644
+index 2aacae291..45f4c6a9d 100644
 --- a/apps/core/noname/init/index.ts
 +++ b/apps/core/noname/init/index.ts
 @@ -84,6 +84,11 @@ export async function boot() {
@@ -3986,7 +4094,7 @@ index 2aacae2..45f4c6a 100644
  
  	if (autoImport) {
 diff --git a/apps/core/noname/init/polyfill.ts b/apps/core/noname/init/polyfill.ts
-index dc294b9..6e89446 100644
+index dc294b901..6e894463e 100644
 --- a/apps/core/noname/init/polyfill.ts
 +++ b/apps/core/noname/init/polyfill.ts
 @@ -249,9 +249,10 @@ HTMLDivElement.prototype.setBackgroundDB = async function (img) {
@@ -4002,7 +4110,7 @@ index dc294b9..6e89446 100644
  	} else if (URL.canParse(img)) {
  		this.style.backgroundImage = `url("${img}")`;
 diff --git a/apps/core/noname/library/element/content.ts b/apps/core/noname/library/element/content.ts
-index bbc3353..dc07928 100644
+index bbc335357..dc07928fa 100644
 --- a/apps/core/noname/library/element/content.ts
 +++ b/apps/core/noname/library/element/content.ts
 @@ -1669,7 +1669,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
@@ -4024,7 +4132,7 @@ index bbc3353..dc07928 100644
  			},
  			event.videoId,
 diff --git a/apps/core/noname/library/element/player.js b/apps/core/noname/library/element/player.js
-index 72c08b2..819642f 100644
+index 72c08b2d5..819642f29 100644
 --- a/apps/core/noname/library/element/player.js
 +++ b/apps/core/noname/library/element/player.js
 @@ -511,9 +511,9 @@ export class Player extends HTMLDivElement {
@@ -4080,7 +4188,7 @@ index 72c08b2..819642f 100644
  			// setTimeout(function(){
  			// 	node.delete();
 diff --git a/apps/core/noname/library/index.js b/apps/core/noname/library/index.js
-index 08f9718..2a10279 100644
+index 08f9718b5..2a10279e1 100644
 --- a/apps/core/noname/library/index.js
 +++ b/apps/core/noname/library/index.js
 @@ -34,7 +34,7 @@ export class Library {
@@ -4278,7 +4386,7 @@ index 08f9718..2a10279 100644
  					intro: "读取剪贴板以解析邀请链接自动加入联机房间",
  				},
 diff --git a/apps/core/noname/ui/click/index.js b/apps/core/noname/ui/click/index.js
-index add63cd..ac77751 100644
+index add63cd56..ac777511e 100644
 --- a/apps/core/noname/ui/click/index.js
 +++ b/apps/core/noname/ui/click/index.js
 @@ -413,6 +413,8 @@ export class Click {
@@ -4291,7 +4399,7 @@ index add63cd..ac77751 100644
  						ui.create.div(".name", button.info[i][0] || "无名玩家", node);
  					} else {
 diff --git a/apps/core/noname/ui/create/index.js b/apps/core/noname/ui/create/index.js
-index 6af9480..cd63704 100644
+index 6af9480e3..cd637040a 100644
 --- a/apps/core/noname/ui/create/index.js
 +++ b/apps/core/noname/ui/create/index.js
 @@ -2435,7 +2435,7 @@ export class Create {
@@ -4304,7 +4412,7 @@ index 6af9480..cd63704 100644
  			},
  			{ once: true }
 diff --git a/apps/core/noname/ui/create/menu/pages/startMenu.js b/apps/core/noname/ui/create/menu/pages/startMenu.js
-index b533fc9..d2a20bc 100644
+index b533fc968..d2a20bc39 100644
 --- a/apps/core/noname/ui/create/menu/pages/startMenu.js
 +++ b/apps/core/noname/ui/create/menu/pages/startMenu.js
 @@ -31,6 +31,10 @@ export const startMenu = function (connectMenu) {
@@ -4342,7 +4450,7 @@ index b533fc9..d2a20bc 100644
  						name: "允许旁观",
  						init: true,
 diff --git a/apps/core/noname/ui/create/menu/startMenu.js b/apps/core/noname/ui/create/menu/startMenu.js
-index 6288821..02a6e3e 100644
+index 6288821fc..02a6e3e8d 100644
 --- a/apps/core/noname/ui/create/menu/startMenu.js
 +++ b/apps/core/noname/ui/create/menu/startMenu.js
 @@ -91,6 +91,22 @@ export const startMenuData = {

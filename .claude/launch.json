@@ -81,7 +81,7 @@
       "name": "noname-static",
       "runtimeExecutable": "python3",
       "runtimeArgs": [
-        "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/4c648c35-95c0-4f63-9c27-b69809a8435f/scratchpad/static-nocache.py",
+        "prototype/noname/static-nocache.py",
         "8096",
         "/private/tmp/claude-501/-Users-bytedance-sgs-wiki/4c648c35-95c0-4f63-9c27-b69809a8435f/scratchpad/noname/dist"
       ],

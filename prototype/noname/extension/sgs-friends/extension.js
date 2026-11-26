@@ -170,7 +170,23 @@ const MODE_ENV = { identity: "junzheng", doudizhu: "douzhu", versus: "2v2", sing
 // 单一来源 = 身份模式的联机配置 connect_pool_set(建房菜单里的「将池套组」;扩展菜单里那项写的也是它),单机身份局同样跟它走。
 const POOL_SET_KEY = "connect_pool_set";
 const currentSetId = () => { try { return get.config(POOL_SET_KEY, "identity") || "default"; } catch (e) { return "default"; } };
+// 开局自选势力按 OL:无名杀给祝融 / 孟获 / 严颜 / 钟会等也标了双势力(国战用),身份局、斗地主里开局会多问一次「蜀还是群」,OL 没有这回事。
+// 只保留带「势力技」的武将(闪张辽这类,OL 开局可选);神 / 魔武将选势力走另一条规则,不受影响。
+const KEEP_DOUBLE = new Set(["ol_jsrg_zhangliao", "ol_jsrg_zhanghe", "jsrg_zhangliao", "jsrg_zhanghe", "jsrg_xuyou", "jsrg_lvbu"]);
+function trimDoubleGroup() {
+	if (get.mode() === "guozhan" || (lib.configOL && lib.configOL.mode === "guozhan")) {
+		return;
+	}
+	for (const id in lib.character) {
+		const info = lib.character[id];
+		if (info && Array.isArray(info.doubleGroup) && info.doubleGroup.length && !KEEP_DOUBLE.has(id)) {
+			info.doubleGroup = [];
+		}
+	}
+}
+
 function applyPool(data, mainEnv) {
+	try { trimDoubleGroup(); } catch (e) { console.warn("[sgs-friends] trimDoubleGroup", e); }
 	const byOurs = buildIndex();
 	const total = Object.keys(lib.character).length;
 	const summary = {};
@@ -736,12 +752,49 @@ function refreshPlayerScale() {
 	const style = document.createElement("style");
 	style.textContent = `
 #arena > .player:not(.minskin):not([data-position="0"]){scale:var(--sgs-pscale,1);translate:0 var(--sgs-pshift,0px)}
-#arena:not(.oldlayout) > #arenalog[data-position="center"]{top:calc(240px + var(--sgs-pshift,0px) * 2);height:calc(100% - 430px - var(--sgs-pshift,0px) * 2)}`;
+#arena:not(.oldlayout) > #arenalog[data-position="center"]{top:max(calc(240px + var(--sgs-pshift,0px) * 2), var(--sgs-log-top,0px));height:calc(100% - 190px - max(calc(240px + var(--sgs-pshift,0px) * 2), var(--sgs-log-top,0px)))}
+#arena:not(.oldlayout) > #arenalog:not([data-position="center"]){top:max(200px, var(--sgs-log-top,0px));height:calc(100% - 170px - max(200px, var(--sgs-log-top,0px)))}
+#arenalog{transition:opacity .2s}
+#arenalog.sgs-log-squeezed{opacity:0}`;
 	document.head.appendChild(style);
 	window.addEventListener("resize", () => setTimeout(refreshPlayerScale, 300));
 	setInterval(refreshPlayerScale, 1500); // 人数变化 / 布局切换没有统一的钩子,低频轮询即可
 })();
 lib.sgsFriends = Object.assign(lib.sgsFriends || {}, { refreshPlayerScale });
+
+// ⑨ 历史记录栏给提示框让位:记录栏默认在屏幕中部,和技能提示 / 选牌框是同一块地方,原来字叠在一起两边都看不清。
+//    有提示框时把记录栏的上沿推到提示框下面;剩下的地方不够三行就先隐藏,提示框关了再回来。
+function refreshLogDodge() {
+	try {
+		const arena = ui.arena;
+		const log = ui.arenalog;
+		if (!arena || !log || log.style.display === "none") {
+			return;
+		}
+		const arenaRect = arena.getBoundingClientRect();
+		if (!arenaRect.height) {
+			return;
+		}
+		const ratio = arena.offsetHeight / arenaRect.height; // 页面缩放
+		const logRect = log.getBoundingClientRect();
+		let bottom = 0;
+		for (const dialog of arena.querySelectorAll(":scope > .dialog:not(.hidden):not(.removing)")) {
+			const rect = dialog.getBoundingClientRect();
+			if (!rect.height || rect.right <= logRect.left || rect.left >= logRect.right) {
+				continue;
+			}
+			bottom = Math.max(bottom, (rect.bottom - arenaRect.top) * ratio);
+		}
+		const push = bottom ? Math.round(bottom + 4) : 0;
+		if (arena._sgsLogPush !== push) {
+			arena._sgsLogPush = push;
+			arena.style.setProperty("--sgs-log-top", push + "px");
+		}
+		// 190 = 记录栏下沿到牌桌底边的距离(底下是手牌和确定 / 取消按钮)
+		log.classList.toggle("sgs-log-squeezed", push > 0 && arena.offsetHeight - 190 - push < 56);
+	} catch (e) { /* 显示层,出错不影响对局 */ }
+}
+setInterval(refreshLogDodge, 200);
 
 // ---------------------------------------------------------------------------------------------
 // ⑧ OL 的固定牌堆:界左慈〖化身〗的武将牌堆 = 界限突破 + 界一将成名(89 将,不含左慈;名单 = 房间工具 room-logic.mjs HUASHEN_PACKS 的产出,
