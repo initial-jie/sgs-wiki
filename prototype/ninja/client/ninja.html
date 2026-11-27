@@ -60,6 +60,11 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 /* 忍者牌:阶段色块 + 图标 + 编号 */
 .cd{position:relative;width:64px;height:90px;border-radius:7px;border:2px solid rgba(0,0,0,.35);background:var(--paper);overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink);transition:transform .12s}
 .cd .top{position:absolute;inset:0 0 34% 0;background:var(--c,#555);display:flex;align-items:center;justify-content:center;font-size:26px}
+.cd img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 45%}
+.cd.hasimg .top{display:none}
+.cd.hasimg .cn{background:linear-gradient(transparent,rgba(10,12,24,.85) 35%);color:#f4ecd8;height:40%;align-items:flex-end;padding-bottom:9px}
+.cd.hasimg .ph{color:rgba(244,236,216,.6)}
+.cd .num{z-index:2}.cd .bd{z-index:2}.cd .cn{z-index:1}
 .cd .num{position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-weight:900;font-size:13px;border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center}
 .cd .cn{position:absolute;bottom:0;left:0;right:0;height:34%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;line-height:1.1;text-align:center;padding:0 2px}
 .cd .ph{position:absolute;bottom:1px;left:0;right:0;font-size:8px;color:#8a7a5a;text-align:center;letter-spacing:.05em}
@@ -77,6 +82,11 @@ body.disconnected #app{opacity:.5;pointer-events:none;filter:grayscale(.35)}
 .hs{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:4px 10px;font-weight:900;color:#fff;background:#555;font-size:14px;letter-spacing:.05em}
 .hs.crane{background:var(--red)}.hs.lotus{background:var(--blue)}.hs.ronin{background:var(--purple)}.hs.unknown{background:#3a3f55;color:var(--fg-soft)}
 .hs.big{font-size:22px;padding:12px 22px;border-radius:12px}
+.hcard{position:relative;width:120px;height:170px;border-radius:9px;overflow:hidden;border:2px solid rgba(0,0,0,.4);box-shadow:0 3px 10px rgba(0,0,0,.45);flex:none;background:#3a3f55}
+.hcard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+.hcard .nm{position:absolute;left:0;right:0;bottom:0;padding:18px 6px 6px;text-align:center;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(transparent,rgba(10,12,24,.9) 40%)}
+.hcard.crane .nm b{color:#ff8d94}.hcard.lotus .nm b{color:#8db6ef}.hcard.ronin .nm b{color:#c9a6e6}
+.hcard.unknown{display:flex;align-items:center;justify-content:center;color:var(--fg-soft);font-size:13px;text-align:center;padding:8px}
 .hs small{font-weight:400;font-size:11px;opacity:.85}
 
 /* 计分 / 阶段条 */
@@ -195,11 +205,19 @@ function cardHtml(c,opt){
   opt=opt||{}; const d=C[c.key]||{};
   const cls="cd"+(opt.big?" big":"")+(opt.mini?" mini":"")+(opt.sel?" sel":"")+(opt.dim?" dim":"")+(opt.click?" clickable":"");
   const da=opt.a?` data-a="${opt.a}" data-c="${esc(c.id)}"`:` data-a="codexOf" data-c="${esc(c.key)}"`;
-  return `<div class="${cls}"${da} style="--c:${d.color||'#555'}" title="${esc(cname(c))}"><div class="top">${d.icon||"?"}</div>${c.num!=null?`<div class="num">${c.num}</div>`:""}${opt.badge?`<div class="bd">${esc(opt.badge)}</div>`:""}<div class="cn">${esc(cbase(c.key))}</div><div class="ph">${esc(phaseName(d.phase))}</div></div>`;
+  const img=imgUrl(c.key)?`<img src="${esc(imgUrl(c.key))}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('hasimg');this.remove()"/>`:"";
+  return `<div class="${cls}${img?" hasimg":""}"${da} style="--c:${d.color||'#555'}" title="${esc(cname(c))}"><div class="top">${d.icon||"?"}</div>${img}${c.num!=null?`<div class="num">${c.num}</div>`:""}${opt.badge?`<div class="bd">${esc(opt.badge)}</div>`:""}<div class="cn">${esc(cbase(c.key))}</div><div class="ph">${esc(phaseName(d.phase))}</div></div>`;
 }
-const backHtml=(mini)=>`<div class="cd back${mini?" mini":""}">🥷</div>`;
+const backHtml=(mini)=>`<div class="cd back${mini?" mini":""}">${imgUrl("back-ninja")?`<img src="${esc(imgUrl("back-ninja"))}" alt="" loading="lazy" onerror="this.remove()"/>`:""}🥷</div>`;
 function houseHtml(h,big){ if(!h) return `<span class="hs unknown${big?" big":""}">?</span>`; const f=hfam(h); return `<span class="hs ${f}${big?" big":""}">${DATA.houses[f].icon} ${esc(hname(h))}${h==="ronin"?"<small>独行</small>":""}</span>`; }
 const mirrorN=()=>cbase("mirror"), martyrN=()=>cbase("martyr"), mmN=()=>cbase("mastermind");
+const imgUrl=k=>DATA.artBase?DATA.artBase+k+".webp":"";
+// 流派牌大卡(我的牌 / 图鉴):带图,缺图退回色块
+function houseCard(h,label){
+  if(!h) return `<div class="hcard unknown">${esc(label||"?")}</div>`;
+  const f=hfam(h);
+  return `<div class="hcard ${f}">${imgUrl(f)?`<img src="${esc(imgUrl(f))}" alt="" loading="lazy" onerror="this.remove()"/>`:""}<div class="nm">${DATA.houses[f].icon} <b>${esc(hname(h))}</b></div></div>`;
+}
 function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
 function afterState(prev){
   if(prev&&(prev.phase!==state.phase||prev.sub!==state.sub||prev.round!==state.round||prev.step!==state.step||prev.cur!==state.cur||JSON.stringify(prev.pending&&[prev.pending.seat,prev.pending.stage,prev.pending.card&&prev.pending.card.id])!==JSON.stringify(state.pending&&[state.pending.seat,state.pending.stage,state.pending.card&&state.pending.card.id]))) resetSel();
@@ -221,7 +239,9 @@ function openCodex(focus){
   let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 忍者牌图鉴 · 33 张<span class="x" data-a="close">×</span></h2>`;
   const cnt=k=>C[k].phase==="trickster"||C[k].phase==="react"||C[k].phase==="reveal"?1:6;
   for(const c of DATA.cards) h+=`<div class="ce" id="cx-${c.key}" ${focus===c.key?'style="background:rgba(217,164,65,.1);border-radius:6px"':""}>${cardHtml({id:c.key,key:c.key,num:c.num},{})}<div><div class="cn">${esc(cbase(c.key))} <span class="cm">${esc(c.en)}${cbase(c.key)!==c.name?" · 官方直译 "+esc(c.name):""} · ${esc(phaseName(c.phase))}${c.phase==="trickster"?" 第 "+c.num+" 个结算":""} · ${cnt(c.key)} 张</span></div><div class="cdsc">${esc(c.desc)}</div><div class="en">${esc(c.text)}</div></div></div>`;
-  h+=`<h3>📜 规则速记</h3>
+  h+=`<h3>🏯 流派牌</h3><div class="row" style="gap:10px;margin:6px 0">${houseCard("crane:1")}${houseCard("lotus:1")}${houseCard("ronin")}</div>
+    <div class="rule">${esc(famName("crane"))} 1~5 与 ${esc(famName("lotus"))} 1~5 各一张,1 最高;${esc(famName("ronin"))}只在奇数人数时加入,不属于任何派。</div>
+  <h3>📜 规则速记</h3>
     <div class="rule">· 两派 <b style="color:#ff8d94">${esc(famName("crane"))}</b> / <b style="color:#8db6ef">${esc(famName("lotus"))}</b> 各带等级 1~5(1 最高),奇数人数加中立 <b style="color:#c9a6e6">${esc(famName("ronin"))}</b>。<b>每轮重新暗发</b>流派牌。</div>
     <div class="rule">· 轮抽:每人 3 张忍者牌,留 1 张、其余 2 张传给左手(下一号),再留 1 张,最后 1 张弃到中央。手里 2 张。</div>
     <div class="rule">· 夜晚五阶段 ${DATA.phases.map(p=>esc(phaseName(p.key))).join(" → ")}。每阶段先各自声明出哪几张(或跳过),收齐后统一翻开,按编号 1→6 依次结算。<b>没打的同阶段牌作废</b>(可以用来诈唬)。</div>
@@ -435,7 +455,7 @@ function viewQueue(){
 function viewMine(){
   const me=curActSeat(), s=state.seats[me]; if(!s) return "";
   let h=`<div class="card secret"><h2>🪪 ${me}号 的牌 <span class="tag">只有你看得到</span></h2>${state.phase==="draft"||state.phase==="night"?"":seatTabs()}
-    <div class="row"><span>流派牌:</span>${s.house?houseHtml(s.house):s.cantLook?`<span class="hs unknown">? 被${esc(cbase("shapeshifter"))}对调过,不能再看</span>`:houseHtml(null)}${s.revealed?`<span class="chip gold">已公开</span>`:""}${s.dead?`<span class="chip red">💀 已死亡</span>`:""}</div>
+    <div class="row" style="align-items:flex-start">${s.house?houseCard(s.house):houseCard(null,s.cantLook?`被${cbase("shapeshifter")}对调过,不能再看`:"?")}<div class="grow"><div>流派牌${s.house?":"+esc(hname(s.house)):""}</div><div class="row" style="margin-top:4px">${s.revealed?`<span class="chip gold">已公开</span>`:`<span class="chip">只有你知道</span>`}${s.dead?`<span class="chip red">💀 已死亡</span>`:""}</div></div></div>
     <div class="row" style="margin-top:6px"><span>荣誉标记:</span>${(s.tokens||[]).length?(s.tokens||[]).map(k=>`<span class="tk">${k.v}分</span>`).join(""):'<span class="hint" style="margin:0">无</span>'}<span class="chip gold">合计 ${s.points||0} 分</span></div>`;
   if(state.phase==="night"){ const hand=s.hand||[]; h+=`<div class="hint" style="margin-top:8px">手里的忍者牌:</div><div class="hand" style="margin-top:4px">${hand.length?hand.map(c=>cardHtml(c,{dim:c.burnt,badge:c.burnt?"作废":c.faceUp?"公开":null})).join(""):'<span class="hint" style="margin:0">没有了</span>'}</div>`; }
   return h+`</div>`;

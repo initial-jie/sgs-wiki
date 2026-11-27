@@ -6,6 +6,9 @@
 //   规则书只说 33 张、同阶段按 1→6 结算;各类张数采用 PTT 玩家「每种忍者都有 1-6」+ 总数吻合(见 README §4)。
 // 荣誉标记 35 枚,面值 2/3/4:简中说明书(hsuBnOediH/NightOfNinjaOnline 按实卡核对)为 2×14 / 3×14 / 4×7,作默认;房间可配。
 
+// 卡图:assets/ninja/cards/<key>.webp(13 种牌 + crane/lotus/ronin + back-ninja/back-house;来源见 docs/ninja/art-sources.md),缺图前端退回色块 + 表情
+export const ART_BASE = "https://initial-jie.github.io/sgs-wiki/assets/ninja/cards/";
+
 export const HOUSES = {
   crane: { key: "crane", name: "仙鹤", en: "Crane House", icon: "🪶", color: "#c7343f" },
   lotus: { key: "lotus", name: "莲花", en: "Lotus House", icon: "🪷", color: "#3b74c4" },
@@ -99,9 +102,9 @@ export function buildTokenPool(dist = DEFAULT_TOKENS) {
 // manual:简中说明书版(hsuBnOediH/NightOfNinjaOnline 按实体说明书与 33 张实卡照片核对:灵魂商贩 / 窃贼 / 盲眼刺客 / 还施僧 / 首脑);
 // official:对照官方英文的直译(本仓库最初的拟名)。
 export const NAME_SETS = {
-  iga: { key: "iga", name: "伊贺 / 甲贺版(我们这套)", note: "流派按记忆 伊贺 / 甲贺;百变者 / 商人 / 刺客 / 大将军",
+  iga: { key: "iga", name: "伊贺 / 甲贺版(我们这套)", note: "流派按记忆 伊贺 / 甲贺;百变者 / 商人 / 判官 / 刺客 / 大将军",
     houses: { crane: "伊贺", lotus: "甲贺", ronin: "浪人" },
-    cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "商人", thief: "盗贼", judge: "裁判", blind: "刺客", shinobi: "上忍", mirror: "还施者", martyr: "殉道者", mastermind: "大将军" } },
+    cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "商人", thief: "盗贼", judge: "判官", blind: "刺客", shinobi: "上忍", mirror: "还施者", martyr: "殉道者", mastermind: "大将军" } },
   cn: { key: "cn", name: "简中版(仙鹤 / 莲花)", note: "与上一套同名,只是流派叫仙鹤 / 莲花",
     houses: { crane: "仙鹤", lotus: "莲花", ronin: "浪人" },
     cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "商人", thief: "盗贼", judge: "裁判", blind: "刺客", shinobi: "上忍", mirror: "还施者", martyr: "殉道者", mastermind: "大将军" } },
