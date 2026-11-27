@@ -3,7 +3,7 @@
 // node prototype/ninja/ninja-sim.mjs
 
 import { NinjaCore } from "./shared/ninja-logic.mjs";
-import { CARDS, PHASES, buildDeck, housesFor, buildTokenPool, houseName, cardName } from "./shared/ninja-data.mjs";
+import { CARDS, PHASES, buildDeck, housesFor, buildTokenPool, houseName, cardName, NAME_SETS, DEFAULT_NAMES, houseNameIn, cardNameIn, phaseNameIn } from "./shared/ninja-data.mjs";
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = "") {
@@ -16,6 +16,7 @@ const DECK = buildDeck(), card = (id) => { const c = DECK.find((x) => x.id === i
 function mk(n, seed = 1, config) {
   const room = new NinjaCore("1234", n, lcg(seed));
   const dev = {}; for (let i = 1; i <= n; i++) { dev[i] = `p${i}`; room.claimSeat(dev[i], i); }
+  room.action(dev[1], { op: "setConfig", config: { names: "official" } }); // 断言按官方直译名写;牌名版本单独测
   if (config) room.action(dev[1], { op: "setConfig", config });
   return { room, dev, V: (i) => room.viewFor(dev[i]), act: (i, o) => room.action(dev[i], o) };
 }
@@ -43,7 +44,7 @@ console.log("\n=== 数据 ===");
 check("13 种牌,键唯一;五阶段顺序 密探→隐士→骗徒→盲眼刺客→上忍", CARDS.length === 13 && new Set(CARDS.map((c) => c.key)).size === 13 && PHASES.map((p) => p.key).join() === "spy,mystic,trickster,blind,shinobi");
 check("牌组 33 张:密探/隐士/盲眼刺客/上忍 各 6(1~6)、骗徒 6 种编号 1~6、镜僧/殉道者/首脑各 1,id 唯一", DECK.length === 33 && new Set(DECK.map((c) => c.id)).size === 33 && ["spy", "mystic", "blind", "shinobi"].every((k) => DECK.filter((c) => c.key === k).map((c) => c.num).join() === "1,2,3,4,5,6") && DECK.filter((c) => CARDS.find((d) => d.key === c.key).phase === "trickster").map((c) => c.num).sort().join() === "1,2,3,4,5,6");
 check("人数表:4 人 1~2;7 人 1~3+浪人;11 人 1~5+浪人;3/12 人无", housesFor(4).join() === "crane:1,lotus:1,crane:2,lotus:2" && housesFor(7).length === 7 && housesFor(7).includes("ronin") && housesFor(11).filter((h) => h.startsWith("crane")).length === 5 && !housesFor(3) && !housesFor(12));
-check("荣誉标记默认 35 枚(2×15 3×12 4×8)", buildTokenPool().length === 35 && buildTokenPool().filter((t) => t.v === 4).length === 8);
+check("荣誉标记默认 35 枚(2×14 3×14 4×7,按简中说明书)", buildTokenPool().length === 35 && buildTokenPool().filter((t) => t.v === 4).length === 7 && buildTokenPool().filter((t) => t.v === 2).length === 14);
 check("名字:密探 3 / 判官 / 仙鹤 2 / 浪人", cardName(card("spy-3")) === "密探 3" && cardName(card("judge")) === "判官" && houseName("crane:2") === "仙鹤 2" && houseName("ronin") === "浪人");
 
 console.log("\n=== 准备 / 配置 ===");
@@ -52,9 +53,9 @@ console.log("\n=== 准备 / 配置 ===");
   check("4~11 座", NinjaCore.MIN_SEATS === 4 && NinjaCore.MAX_SEATS === 11);
   check("3 人不能开", act(1, { op: "startGame" }).error === "PLAYER_COUNT" && V(1).check.error === "PLAYER_COUNT");
   check("非法配置拒绝", act(1, { op: "setConfig", config: { points: 0 } }).error === "BAD_CONFIG" && act(1, { op: "setConfig", config: { tokens: { 2: 0, 3: 0, 4: 0 } } }).error === "BAD_CONFIG");
-  check("改分数与标记分布", act(1, { op: "setConfig", config: { points: 6, tokens: { 4: 1 } } }).ok && room.config.points === 6 && room.config.tokens[4] === 1 && room.config.tokens[2] === 15);
+  check("改分数与标记分布", act(1, { op: "setConfig", config: { points: 6, tokens: { 4: 1 } } }).ok && room.config.points === 6 && room.config.tokens[4] === 1 && room.config.tokens[2] === 14);
   room.addSeat("p1"); room.claimSeat("p4", 4);
-  check("4 人可开;标记堆 28 枚;每人 3 张,剩 21 张移出", act(1, { op: "startGame" }).ok && room.tokenPool.length === 28 && room.seatNos().every((n) => room.seats[n].hand.length === 3) && room.aside.length === 21 && room.phase === "draft" && room.sub === "pick1");
+  check("4 人可开;标记堆 29 枚;每人 3 张,剩 21 张移出", act(1, { op: "startGame" }).ok && room.tokenPool.length === 29 && room.seatNos().every((n) => room.seats[n].hand.length === 3) && room.aside.length === 21 && room.phase === "draft" && room.sub === "pick1");
   check("开局后不能改配置/座位", act(1, { op: "setConfig", config: { points: 5 } }).error === "NOT_SETUP" && room.addSeat("p1").error === "NOT_SETUP");
   check("4 人流派牌 = 仙鹤 1~2 + 莲花 1~2,每人一张", room.seatNos().map((n) => room.seats[n].house).sort().join() === "crane:1,crane:2,lotus:1,lotus:2");
 }
@@ -249,6 +250,22 @@ console.log("\n=== 揭示 / 计分 / 首脑 / 浪人 / 胜利 ===");
   room.seats[1].tokens = [{ id: "x", v: 2 }]; room.seats[3].tokens = [{ id: "y", v: 2 }];
   skipToReveal(t);
   check("同轮两人同时到 4 分 → 共享胜利", room.phase === "over" && room.result.winners.join() === "1,3");
+}
+
+console.log("\n=== 牌名版本(房规,只影响显示/日志)===");
+check("四套牌名,默认用户版 iga;每套 13 张牌 + 3 流派都有名", Object.keys(NAME_SETS).join() === "iga,cn,manual,official" && DEFAULT_NAMES === "iga" && Object.values(NAME_SETS).every((st) => CARDS.every((c) => st.cards[c.key]) && st.houses.crane && st.houses.lotus && st.houses.ronin));
+check("名字函数:iga 伊贺 2 / 百变者 / 刺客 3 / 大将军;cn 仙鹤 2 / 百变者;manual 灵魂商贩 / 首脑;official 变形者", houseNameIn("iga", "crane:2") === "伊贺 2" && cardNameIn("iga", { key: "shapeshifter", num: 1 }) === "百变者" && cardNameIn("manual", { key: "merchant" }) === "灵魂商贩" && cardNameIn("manual", { key: "mastermind" }) === "首脑" && cardNameIn("iga", { key: "blind", num: 3 }) === "刺客 3" && cardNameIn("iga", { key: "mastermind" }) === "大将军" && houseNameIn("cn", "crane:2") === "仙鹤 2" && cardNameIn("cn", { key: "shapeshifter", num: 1 }) === "百变者" && cardNameIn("official", { key: "shapeshifter", num: 1 }) === "变形者" && phaseNameIn("iga", "blind") === "刺客" && phaseNameIn("iga", "trickster") === "骗徒");
+{
+  const t = mk(4), { room, act, V } = t;
+  check("默认(未改)是 iga;非法版本拒绝", new NinjaCore("x", 4).config.names === "iga" && act(1, { op: "setConfig", config: { names: "nope" } }).error === "BAD_CONFIG" && act(1, { op: "setConfig", config: { names: "iga" } }).ok && V(1).config.names === "iga");
+  toNight(t);
+  layout(room, { 1: "crane:1", 2: "lotus:1", 3: "crane:2", 4: "lotus:2" }, { 1: ["spy-1"], 2: [], 3: [], 4: [] }, 0);
+  check("开局日志与阶段名用用户版名字", room.log.some((l) => l.includes("伊贺 1")) && room.log[0].includes("密探阶段"));
+  declareAll(t, { 1: ["spy-1"] });
+  check("笔记与日志按用户版:伊贺/刺客阶段", act(1, { op: "resolve", seatNo: 1, target: 3 }).ok && V(1).seats[1].notes[0].text.includes("伊贺 2") && (declareAll(t), declareAll(t), declareAll(t), room.log.some((l) => l.includes("刺客阶段"))));
+  room.seats[2].dead = true; room.seats[4].dead = true;
+  skipToReveal(t);
+  check("揭示日志用用户版派名:伊贺派获胜", room.log[0].includes("伊贺派获胜") && room.log[0].includes("甲贺派 ["));
 }
 
 console.log("\n=== 持久化 ===");

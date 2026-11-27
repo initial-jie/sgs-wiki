@@ -15,14 +15,14 @@
 // 阶段 phase:setup → draft(sub pick1 → pick2)→ night(sub declare → resolve,step 0..4 = 密探/隐士/骗徒/盲眼刺客/上忍)→ roundEnd → … → over
 
 import { RoomBase, clone } from "../../common/room-base.mjs";
-import { PHASES, CARD_BY_KEY, housesFor, houseFamily, houseRank, houseName, buildDeck, buildTokenPool, cardName, DEFAULT_TOKENS, DEFAULT_POINTS, TOKEN_VALUES, MIN_PLAYERS, MAX_PLAYERS } from "./ninja-data.mjs";
+import { PHASES, CARD_BY_KEY, housesFor, houseFamily, houseRank, buildDeck, buildTokenPool, DEFAULT_TOKENS, DEFAULT_POINTS, TOKEN_VALUES, MIN_PLAYERS, MAX_PLAYERS, NAME_SETS, DEFAULT_NAMES, namesOf, houseNameIn, cardNameIn, phaseNameIn } from "./ninja-data.mjs";
 
 function shuffle(arr, rng) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-export function defaultConfig() { return { points: DEFAULT_POINTS, tokens: { ...DEFAULT_TOKENS } }; }
+export function defaultConfig() { return { points: DEFAULT_POINTS, tokens: { ...DEFAULT_TOKENS }, names: DEFAULT_NAMES }; } // names:牌名版本(见 ninja-data NAME_SETS),只影响显示/日志
 const KILL_CARDS = ["blind", "shinobi"]; // 会触发镜僧/殉道者的击杀牌(判官不触发)
 
 export class NinjaCore extends RoomBase {
@@ -93,7 +93,12 @@ export class NinjaCore extends RoomBase {
     return true;
   }
   _note(n, text) { this.seats[n].notes.push({ round: this.round, text }); }
-  _hdesc(n) { return `${n}号 的流派牌是「${houseName(this.seats[n].house)}」`; }
+  // 牌名版本(房规):流派名 / 牌名 / 阶段名 / 派名
+  hn(h) { return houseNameIn(this.config.names, h); }
+  cn(card) { return cardNameIn(this.config.names, card); }
+  pn(i) { return phaseNameIn(this.config.names, PHASES[i].key); }
+  famCn(f) { return namesOf(this.config.names).houses[f] + "派"; }
+  _hdesc(n) { return `${n}号 的流派牌是「${this.hn(this.seats[n].house)}」`; }
 
   // ───────── 动作分派 ─────────
   action(id, msg) {
@@ -115,6 +120,7 @@ export class NinjaCore extends RoomBase {
     if (!c || typeof c !== "object") return { error: "BAD_CONFIG" };
     const cfg = clone(this.config);
     if (c.points !== undefined) { if (!(Number.isInteger(c.points) && c.points >= 1 && c.points <= 50)) return { error: "BAD_CONFIG" }; cfg.points = c.points; }
+    if (c.names !== undefined) { if (!NAME_SETS[c.names]) return { error: "BAD_CONFIG" }; cfg.names = c.names; }
     if (c.tokens !== undefined) {
       if (!c.tokens || typeof c.tokens !== "object") return { error: "BAD_CONFIG" };
       const t = {};
@@ -134,7 +140,7 @@ export class NinjaCore extends RoomBase {
     this.round = 0; this.history = []; this.result = null; this.roundResult = null;
     this.tokenPool = shuffle(buildTokenPool(this.config.tokens), this.rng);
     const N = this.seatNos().length;
-    this._log(`开局:${N} 人,流派牌 ${chk.houses.map(houseName).join(" / ")};荣誉标记 ${this.tokenPool.length} 枚,先到 ${this.config.points} 分者胜`);
+    this._log(`开局:${N} 人,流派牌 ${chk.houses.map((h) => this.hn(h)).join(" / ")};荣誉标记 ${this.tokenPool.length} 枚,先到 ${this.config.points} 分者胜`);
     this._startRound();
     return { ok: true };
   }
@@ -190,7 +196,7 @@ export class NinjaCore extends RoomBase {
   _beginStep(i) {
     this.step = i; this.sub = "declare"; this.queue = []; this.cur = 0; this.pending = null;
     for (const n of this.seatNos()) this.seats[n].declared = this.seats[n].dead ? [] : null; // 死人自动跳过
-    this._log(`夜晚 · ${PHASES[i].name}阶段:请每位存活者声明打出的牌(或跳过)`);
+    this._log(`夜晚 · ${this.pn(i)}阶段:请每位存活者声明打出的牌(或跳过)`);
     this._checkDeclared();
   }
   _declare(id, msg) {
@@ -219,8 +225,8 @@ export class NinjaCore extends RoomBase {
     }
     entries.sort((a, b) => (a.card.num ?? 99) - (b.card.num ?? 99) || a.owner - b.owner);
     this.queue = entries; this.cur = 0; this.sub = "resolve";
-    if (!entries.length) this._log(`${PHASES[this.step].name}阶段:无人出牌`);
-    else this._log(`${PHASES[this.step].name}阶段翻牌:${entries.map((e) => `${e.owner}号「${cardName(e.card)}」`).join("、")},按编号依次结算`);
+    if (!entries.length) this._log(`${this.pn(this.step)}阶段:无人出牌`);
+    else this._log(`${this.pn(this.step)}阶段翻牌:${entries.map((e) => `${e.owner}号「${this.cn(e.card)}」`).join("、")},按编号依次结算`);
     this._advance();
   }
   // 推进结算队列:给下一张未结算的牌开待决;队列空则进下一阶段 / 揭示
@@ -228,7 +234,7 @@ export class NinjaCore extends RoomBase {
     while (this.cur < this.queue.length) {
       const q = this.queue[this.cur];
       if (q.done) { this.cur++; continue; }
-      if (this.seats[q.owner].dead) { q.void = true; q.done = true; this._log(`${q.owner}号 已死亡,「${cardName(q.card)}」作废`); this.cur++; continue; }
+      if (this.seats[q.owner].dead) { q.void = true; q.done = true; this._log(`${q.owner}号 已死亡,「${this.cn(q.card)}」作废`); this.cur++; continue; }
       this.pending = { stage: "main", seat: q.owner, card: q.card };
       return;
     }
@@ -250,14 +256,14 @@ export class NinjaCore extends RoomBase {
     switch (card.key) {
       case "spy": {
         const t = Number(msg.target); if (!other(t)) return { error: "BAD_TARGET" };
-        this._note(n, `密探:${this._hdesc(t)}`); this._log(`${who} 的密探查看了 ${t}号 的流派牌`);
+        this._note(n, `密探:${this._hdesc(t)}`); this._log(`${who} 的${this.cn({key:"spy"})}查看了 ${t}号 的流派牌`);
         return this._finishCard(), { ok: true };
       }
       case "mystic": {
         const t = Number(msg.target); if (!other(t)) return { error: "BAD_TARGET" };
         const h = this.seats[t].hand, c = h.length ? h[Math.floor(this.rng() * h.length)] : null;
-        this._note(n, `隐士:${this._hdesc(t)}${c ? `;他手里有一张「${cardName(c)}」${this.seats[t].burnt.includes(c.id) ? "(已作废)" : ""}` : ";他手里没有忍者牌了"}`);
-        this._log(`${who} 的隐士查看了 ${t}号 的流派牌和一张手牌`);
+        this._note(n, `隐士:${this._hdesc(t)}${c ? `;他手里有一张「${this.cn(c)}」${this.seats[t].burnt.includes(c.id) ? "(已作废)" : ""}` : ";他手里没有忍者牌了"}`);
+        this._log(`${who} 的${this.cn({key:"mystic"})}查看了 ${t}号 的流派牌和一张手牌`);
         return this._finishCard(), { ok: true };
       }
       case "shapeshifter": {
@@ -266,7 +272,7 @@ export class NinjaCore extends RoomBase {
           if (ts.length !== 2 || ts[0] === ts[1] || !ts.every((t) => this._validSeat(t) && !this.seats[t].revealed)) return { error: "BAD_TARGET" };
           this._note(n, `变形者:${this._hdesc(ts[0])};${this._hdesc(ts[1])}`);
           p.stage = "decide"; p.targets = ts; p.info = { [ts[0]]: this.seats[ts[0]].house, [ts[1]]: this.seats[ts[1]].house };
-          this._log(`${who} 的变形者查看了 ${ts[0]}号 与 ${ts[1]}号 的流派牌,正在决定是否对调`);
+          this._log(`${who} 的${this.cn({key:"shapeshifter"})}查看了 ${ts[0]}号 与 ${ts[1]}号 的流派牌,正在决定是否对调`);
           return { ok: true };
         }
         const [a, b] = p.targets;
@@ -275,15 +281,15 @@ export class NinjaCore extends RoomBase {
           this.seats[a].cantLook = true; this.seats[b].cantLook = true;
           this._note(n, `变形者:你把 ${a}号 与 ${b}号 的流派牌对调了`);
         } else this._note(n, `变形者:你没有对调 ${a}号 与 ${b}号 的流派牌`);
-        this._log(`${who} 的变形者结算完毕(是否对调只有他知道)`);
+        this._log(`${who} 的${this.cn({key:"shapeshifter"})}结算完毕(是否对调只有他知道)`);
         return this._finishCard(), { ok: true };
       }
       case "gravedigger": {
         if (p.stage === "main") {
-          if (!this.discard.length) { this._log(`${who} 的掘墓人:弃牌堆是空的,无效果`); return this._finishCard(), { ok: true }; }
+          if (!this.discard.length) { this._log(`${who} 的${this.cn({key:"gravedigger"})}:弃牌堆是空的,无效果`); return this._finishCard(), { ok: true }; }
           const offer = this.discard.splice(0, Math.min(2, this.discard.length));
           p.stage = "decide"; p.offer = offer;
-          this._log(`${who} 的掘墓人翻看了弃牌堆的 ${offer.length} 张牌,正在挑选`);
+          this._log(`${who} 的${this.cn({key:"gravedigger"})}翻看了弃牌堆的 ${offer.length} 张牌,正在挑选`);
           return { ok: true };
         }
         const c = p.offer.find((x) => x.id === msg.pick); if (!c) return { error: "BAD_PICK" };
@@ -292,10 +298,10 @@ export class NinjaCore extends RoomBase {
         if (msg.play === "now" && canNow) {
           s.played.push(c);
           this.queue.splice(this.cur + 1, 0, { card: c, owner: n, done: false, void: false });
-          this._log(`${who} 的掘墓人挖出「${cardName(c)}」并立刻打出`);
+          this._log(`${who} 的${this.cn({key:"gravedigger"})}挖出「${this.cn(c)}」并立刻打出`);
         } else {
           s.hand.push(c); s.faceUp.push(c.id);
-          this._log(`${who} 的掘墓人挖出「${cardName(c)}」,面朝上留在面前`);
+          this._log(`${who} 的${this.cn({key:"gravedigger"})}挖出「${this.cn(c)}」,面朝上留在面前`);
         }
         return this._finishCard(), { ok: true };
       }
@@ -304,11 +310,11 @@ export class NinjaCore extends RoomBase {
           const t = Number(msg.target); if (!other(t)) return { error: "BAD_TARGET" };
           this._note(n, `捣乱者:${this._hdesc(t)}`);
           p.stage = "decide"; p.target = t;
-          this._log(`${who} 的捣乱者查看了 ${t}号 的流派牌,正在决定是否公开`);
+          this._log(`${who} 的${this.cn({key:"troublemaker"})}查看了 ${t}号 的流派牌,正在决定是否公开`);
           return { ok: true };
         }
-        if (msg.reveal) { this.seats[p.target].revealed = true; this._log(`${who} 的捣乱者公开:${this._hdesc(p.target)}`); }
-        else this._log(`${who} 的捣乱者没有公开 ${p.target}号 的流派牌`);
+        if (msg.reveal) { this.seats[p.target].revealed = true; this._log(`${who} 的${this.cn({key:"troublemaker"})}公开:${this._hdesc(p.target)}`); }
+        else this._log(`${who} 的${this.cn({key:"troublemaker"})}没有公开 ${p.target}号 的流派牌`);
         return this._finishCard(), { ok: true };
       }
       case "merchant": {
@@ -320,7 +326,7 @@ export class NinjaCore extends RoomBase {
           if (msg.look === "house") this._note(n, `通灵商人:${this._hdesc(t)}`);
           else if (ts.tokens.length) { const tk = ts.tokens[Math.floor(this.rng() * ts.tokens.length)]; p.seen = tk.id; this._note(n, `通灵商人:${t}号 的一枚荣誉标记(${tk.id})面值是 ${tk.v}`); }
           else this._note(n, `通灵商人:${t}号 没有荣誉标记`);
-          this._log(`${who} 的通灵商人查看了 ${t}号 的${msg.look === "house" ? "流派牌" : "一枚荣誉标记"},正在决定是否交换`);
+          this._log(`${who} 的${this.cn({key:"merchant"})}查看了 ${t}号 的${msg.look === "house" ? "流派牌" : "一枚荣誉标记"},正在决定是否交换`);
           return { ok: true };
         }
         const t = p.target, ts = this.seats[t];
@@ -331,13 +337,13 @@ export class NinjaCore extends RoomBase {
           s.tokens.push(k); ts.tokens.push(g);
           this._note(n, `通灵商人:你用面值 ${g.v} 的标记换来了 ${t}号 面值 ${k.v} 的标记`);
           this._note(t, `通灵商人:${n}号 用一枚标记换走了你的一枚(你拿到的面值是 ${g.v},被换走的是 ${k.v})`);
-          this._log(`${who} 的通灵商人与 ${t}号 交换了一枚荣誉标记`);
-        } else this._log(`${who} 的通灵商人没有与 ${t}号 交换标记`);
+          this._log(`${who} 的${this.cn({key:"merchant"})}与 ${t}号 交换了一枚荣誉标记`);
+        } else this._log(`${who} 的${this.cn({key:"merchant"})}没有与 ${t}号 交换标记`);
         return this._finishCard(), { ok: true };
       }
       case "thief": {
         s.revealed = true;
-        let txt = `${who} 的盗贼亮出流派牌「${houseName(s.house)}」`;
+        let txt = `${who} 的${this.cn({key:"thief"})}亮出流派牌「${this.hn(s.house)}」`;
         if (msg.target != null) {
           const t = Number(msg.target), ts = this.seats[t];
           if (!other(t) || ts.tokens.length <= s.tokens.length) return { error: "BAD_TARGET" };
@@ -353,13 +359,13 @@ export class NinjaCore extends RoomBase {
       case "judge": {
         const t = Number(msg.target); if (!otherAlive(t)) return { error: "BAD_TARGET" };
         s.revealed = true;
-        this._log(`${who} 的判官亮出流派牌「${houseName(s.house)}」,处决 ${t}号(镜僧/殉道者无效)`);
+        this._log(`${who} 的${this.cn({key:"judge"})}亮出流派牌「${this.hn(s.house)}」,处决 ${t}号(${this.cn({key:"mirror"})}/${this.cn({key:"martyr"})}无效)`);
         this._kill(t);
         return this._finishCard(), { ok: true };
       }
       case "blind": {
         const t = Number(msg.target); if (!otherAlive(t)) return { error: "BAD_TARGET" };
-        this._log(`${who} 的盲眼刺客选择杀死 ${t}号`);
+        this._log(`${who} 的${this.cn({key:"blind"})}选择杀死 ${t}号`);
         return this._attemptKill(n, t, card), { ok: true };
       }
       case "shinobi": {
@@ -367,12 +373,12 @@ export class NinjaCore extends RoomBase {
           const t = Number(msg.target); if (!otherAlive(t)) return { error: "BAD_TARGET" };
           this._note(n, `上忍:${this._hdesc(t)}`);
           p.stage = "decide"; p.target = t;
-          this._log(`${who} 的上忍查看了 ${t}号 的流派牌,正在决定是否出手`);
+          this._log(`${who} 的${this.cn({key:"shinobi"})}查看了 ${t}号 的流派牌,正在决定是否出手`);
           return { ok: true };
         }
         const t = p.target;
-        if (!msg.kill) { this._log(`${who} 的上忍放过了 ${t}号`); return this._finishCard(), { ok: true }; }
-        this._log(`${who} 的上忍选择杀死 ${t}号`);
+        if (!msg.kill) { this._log(`${who} 的${this.cn({key:"shinobi"})}放过了 ${t}号`); return this._finishCard(), { ok: true }; }
+        this._log(`${who} 的${this.cn({key:"shinobi"})}选择杀死 ${t}号`);
         return this._attemptKill(n, t, card), { ok: true };
       }
       default: return { error: "BAD_CARD" };
@@ -396,8 +402,8 @@ export class NinjaCore extends RoomBase {
       if (!p.options.includes(msg.cardId)) return { error: "BAD_CARDS" };
       const c = this._findCard(s, msg.cardId);
       s.hand = s.hand.filter((x) => x.id !== c.id); s.played.push(c);
-      if (c.key === "mirror") { this._log(`${n}号 翻开镜僧:反杀 ${p.killer}号!`); this._kill(p.killer); }
-      else { this._log(`${n}号 翻开殉道者:死去,但获得一枚荣誉标记`); this._kill(n); this._award(n, "殉道者"); }
+      if (c.key === "mirror") { this._log(`${n}号 翻开${this.cn({key:"mirror"})}:反杀 ${p.killer}号!`); this._kill(p.killer); }
+      else { this._log(`${n}号 翻开${this.cn({key:"martyr"})}:死去,但获得一枚荣誉标记`); this._kill(n); this._award(n, "殉道者"); }
     } else this._kill(n);
     this._finishCard();
     return { ok: true };
@@ -427,7 +433,7 @@ export class NinjaCore extends RoomBase {
       }
     }
     const awarded = [];
-    if (winner) for (const n of seats) if (fam(n) === winner && this._award(n, "本轮获胜")) awarded.push({ seat: n, why: `${this.seats[n].dead ? "已死亡的" : ""}${HOUSE_CN[winner]}成员` });
+    if (winner) for (const n of seats) if (fam(n) === winner && this._award(n, "本轮获胜")) awarded.push({ seat: n, why: `${this.seats[n].dead ? "已死亡的" : ""}${this.famCn(winner)}成员` });
     if (reason === "tie") for (const n of alive) if (this._award(n, "完全平手")) awarded.push({ seat: n, why: "完全平手的存活者" });
     for (const n of alive) if (fam(n) === "ronin" && reason !== "tie" && this._award(n, "浪人存活")) awarded.push({ seat: n, why: "浪人存活" });
     const survivors = Object.fromEntries(alive.map((n) => [n, this.seats[n].house]));
@@ -435,8 +441,8 @@ export class NinjaCore extends RoomBase {
     const dead = seats.filter((n) => this.seats[n].dead);
     this.roundResult = { round: this.round, winner, reason, mastermind: mm, crane: cr, lotus: lo, survivors, houses, dead, awarded, tokenCount: Object.fromEntries(seats.map((n) => [n, this.seats[n].tokens.length])) };
     this.history.push(clone(this.roundResult));
-    const why = reason === "mastermind" ? `${mm}号 亮出首脑` : reason === "rank" ? `存活者 仙鹤 [${cr.join(",")}] vs 莲花 [${lo.join(",")}]` : reason === "tie" ? "存活者等级完全相同,没有流派获胜" : "两派都没有存活者";
-    this._log(`揭示:${winner ? `${HOUSE_CN[winner]}获胜` : "没有流派获胜"}(${why});${awarded.length ? awarded.map((a) => `${a.seat}号`).join("/") + " 各摸 1 枚荣誉标记" : "无人得分"}`);
+    const why = reason === "mastermind" ? `${mm}号 亮出${this.cn({ key: "mastermind" })}` : reason === "rank" ? `存活者 ${this.famCn("crane")} [${cr.join(",")}] vs ${this.famCn("lotus")} [${lo.join(",")}]` : reason === "tie" ? "存活者等级完全相同,没有流派获胜" : "两派都没有存活者";
+    this._log(`揭示:${winner ? `${this.famCn(winner)}获胜` : "没有流派获胜"}(${why});${awarded.length ? awarded.map((a) => `${a.seat}号`).join("/") + " 各摸 1 枚荣誉标记" : "无人得分"}`);
     // 胜利检查(轮末)
     const need = this.config.points;
     const champs = seats.filter((n) => this.points(n) >= need);
@@ -492,4 +498,3 @@ export class NinjaCore extends RoomBase {
     for (const s of Object.values(this.seats)) for (const [k, v] of Object.entries(this._newSeat(s.seatNo))) if (s[k] === undefined) s[k] = v;
   }
 }
-const HOUSE_CN = { crane: "仙鹤派", lotus: "莲花派" };

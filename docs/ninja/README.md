@@ -12,6 +12,7 @@
 | 人数 / 时长 | **4~11 人**,15~30 分钟;另有官方 2 人变体(§7) |
 | 配件 | 33 张忍者牌 Ninja、11 张流派牌 House(仙鹤 1~5、莲花 1~5、浪人 ×1)、11 个立牌、35 枚手里剑形荣誉标记 Honor(+5 备用),面值 2/3/4 |
 | 繁中版 | 存在(台湾),译名:密探 / 隱士 / 騙徒 / 盲眼刺客 / 上忍 / 首腦;仙鶴派 / 蓮花派 / 浪人;榮譽標記。骗徒六张与两张反应牌的繁中名没搜到 |
+| 简中版译名 | **说明书版**(hsuBnOediH/NightOfNinjaOnline 按实体说明书 + 33 张实卡照片核对):仙鹤 / 莲花 / 浪人;密探、隐士、盲眼刺客、上忍;骗徒 1 百变者 / 2 掘墓人 / 3 捣蛋鬼 / 4 灵魂商贩 / 5 窃贼 / 6 裁判;首脑 / 还施僧 / 殉道者。**另一印次**(Byte-Git-hub/NinjaNight、LHY-1/ninja-night 两个网页版都用):百变者 / 商人 / 盗贼 / 裁判 / 刺客 / 还施者 / 大将军。用户手里那套(2026-11-27 口述)= 后者 + 流派叫「伊贺 / 甲贺」(流派名无任何来源,按记忆)。房间里做成「牌名版本」房规四选一(`NAME_SETS`:iga / cn / manual / official),只影响显示与日志 |
 | 类型 | 隐藏阵营(两派 + 中立浪人)、每轮重发身份、轮抽行动牌、夜晚按阶段结算、个人积分制 |
 
 ## 2. 准备(官方)
@@ -91,7 +92,7 @@
 
 | 项 | 状态 | 默认 |
 |---|---|---|
-| 荣誉标记 2/3/4 分各几枚 | **任何来源都没有**(BGG 被 403) | 做成配置;默认 **2 分 ×15、3 分 ×12、4 分 ×8**(=35,均值≈2.8,10 分≈4 枚) —— 用户有实卡请数一下 |
+| 荣誉标记 2/3/4 分各几枚 | 官方英文来源没有;**简中说明书版**(hsuBnOediH 按实卡核对)写 **2 分 ×14、3 分 ×14、4 分 ×7** = 35 | 采用 14/14/7 作默认;仍做成配置 |
 | 标记堆抽完 | 未说 | 本轮不再发 |
 | 密探/隐士/上忍能否选自己或死人 | 未说 | 不能选自己;**可以看死人**(死人不翻牌,情报仍有价值),盲眼刺客/上忍/判官不能杀死人 |
 | 变形者能否把自己算进「两人」 | 未说 | 允许(含自己) |
@@ -122,4 +123,6 @@
 - 官方产品页 / 2P 规则:https://www.brotherwisegames.com/night-of-the-ninja 、https://www.brotherwisegames.com/night-of-the-ninja-2p
 - 繁中开箱:https://punchboardgame.pixnet.net/blog/posts/9566351556 、https://gamesquare.pixnet.net/blog/posts/14222992236
 - PTT 心得(每種忍者都有 1-6):https://www.pttweb.cc/bbs/BoardGame/M.1672681963.A.5A9
-- 网页版实现(AGPL,规则账本 docs/01_GAME_RULES.md 可对照边界裁定):https://github.com/Byte-Git-hub/NinjaNight
+- 网页版实现(AGPL,规则账本 docs/01_GAME_RULES.md 可对照边界裁定;`src/ui/assets.ts` CARD_CN 是「商人 / 刺客 / 大将军」那套译名):https://github.com/Byte-Git-hub/NinjaNight
+- 网页版实现(按简中实体说明书与实卡照片核对的规则审计 `docs/RULES_AUDIT.zh-CN.md`:译名、张数、标记 14/14/7):https://github.com/hsuBnOediH/NightOfNinjaOnline
+- 网页版实现(engine.js 里也用 刺客 / 大将军):https://github.com/LHY-1/ninja-night

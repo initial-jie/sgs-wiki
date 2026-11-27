@@ -183,18 +183,23 @@ const mySeats=()=>state.youHold.slice().sort((a,b)=>a-b);
 const nameOf=s=>s.holderDevices[0]||"";
 const hfam=h=>h==="ronin"?"ronin":h.split(":")[0];
 const hrank=h=>h==="ronin"?null:+h.split(":")[1];
-const hname=h=>!h?"?":h==="ronin"?"浪人":(DATA.houses[hfam(h)].name+" "+hrank(h));
-const cname=c=>{ const d=C[c.key]; return d?(c.num!=null&&d.num==null?d.name+" "+c.num:d.name):c.key; };
+// 牌名版本(房规 config.names):流派名 / 牌名 / 阶段名都从这一套取
+const NS=()=>DATA.nameSets[(state&&state.config&&state.config.names)||DATA.defaultNames]||DATA.nameSets[DATA.defaultNames];
+const famName=f=>NS().houses[f]||f;
+const hname=h=>!h?"?":h==="ronin"?famName("ronin"):(famName(hfam(h))+" "+hrank(h));
+const cbase=k=>NS().cards[k]||(C[k]?C[k].name:k);
+const cname=c=>{ const d=C[c.key]; return d?(c.num!=null&&d.num==null?cbase(c.key)+" "+c.num:cbase(c.key)):c.key; };
 const stars=n=>n?"★".repeat(n):"☆";
-const phaseName=k=>PH[k]?PH[k].name:k==="react"?"反应":k==="reveal"?"揭示":k;
+const phaseName=k=>k==="trickster"?"骗徒":k==="react"?"反应":k==="reveal"?"揭示":PH[k]?cbase(k):k;
 function cardHtml(c,opt){
   opt=opt||{}; const d=C[c.key]||{};
   const cls="cd"+(opt.big?" big":"")+(opt.mini?" mini":"")+(opt.sel?" sel":"")+(opt.dim?" dim":"")+(opt.click?" clickable":"");
   const da=opt.a?` data-a="${opt.a}" data-c="${esc(c.id)}"`:` data-a="codexOf" data-c="${esc(c.key)}"`;
-  return `<div class="${cls}"${da} style="--c:${d.color||'#555'}" title="${esc(cname(c))}"><div class="top">${d.icon||"?"}</div>${c.num!=null?`<div class="num">${c.num}</div>`:""}${opt.badge?`<div class="bd">${esc(opt.badge)}</div>`:""}<div class="cn">${esc(d.name||c.key)}</div><div class="ph">${esc(phaseName(d.phase))}</div></div>`;
+  return `<div class="${cls}"${da} style="--c:${d.color||'#555'}" title="${esc(cname(c))}"><div class="top">${d.icon||"?"}</div>${c.num!=null?`<div class="num">${c.num}</div>`:""}${opt.badge?`<div class="bd">${esc(opt.badge)}</div>`:""}<div class="cn">${esc(cbase(c.key))}</div><div class="ph">${esc(phaseName(d.phase))}</div></div>`;
 }
 const backHtml=(mini)=>`<div class="cd back${mini?" mini":""}">🥷</div>`;
 function houseHtml(h,big){ if(!h) return `<span class="hs unknown${big?" big":""}">?</span>`; const f=hfam(h); return `<span class="hs ${f}${big?" big":""}">${DATA.houses[f].icon} ${esc(hname(h))}${h==="ronin"?"<small>独行</small>":""}</span>`; }
+const mirrorN=()=>cbase("mirror"), martyrN=()=>cbase("martyr"), mmN=()=>cbase("mastermind");
 function curActSeat(){ const ms=mySeats(); if(!ms.length) return null; if(actSeat==null||!ms.includes(actSeat)) actSeat=ms[0]; return actSeat; }
 function afterState(prev){
   if(prev&&(prev.phase!==state.phase||prev.sub!==state.sub||prev.round!==state.round||prev.step!==state.step||prev.cur!==state.cur||JSON.stringify(prev.pending&&[prev.pending.seat,prev.pending.stage,prev.pending.card&&prev.pending.card.id])!==JSON.stringify(state.pending&&[state.pending.seat,state.pending.stage,state.pending.card&&state.pending.card.id]))) resetSel();
@@ -215,15 +220,15 @@ function openCodex(focus){
   modal={t:"codex",focus};
   let h=`<div class="mask" data-a="closeMask"><div class="sheet codex"><h2>📖 忍者牌图鉴 · 33 张<span class="x" data-a="close">×</span></h2>`;
   const cnt=k=>C[k].phase==="trickster"||C[k].phase==="react"||C[k].phase==="reveal"?1:6;
-  for(const c of DATA.cards) h+=`<div class="ce" id="cx-${c.key}" ${focus===c.key?'style="background:rgba(217,164,65,.1);border-radius:6px"':""}>${cardHtml({id:c.key,key:c.key,num:c.num},{})}<div><div class="cn">${esc(c.name)} <span class="cm">${esc(c.en)} · ${esc(phaseName(c.phase))}${c.phase==="trickster"?" 第 "+c.num+" 个结算":""} · ${cnt(c.key)} 张</span></div><div class="cdsc">${esc(c.desc)}</div><div class="en">${esc(c.text)}</div></div></div>`;
+  for(const c of DATA.cards) h+=`<div class="ce" id="cx-${c.key}" ${focus===c.key?'style="background:rgba(217,164,65,.1);border-radius:6px"':""}>${cardHtml({id:c.key,key:c.key,num:c.num},{})}<div><div class="cn">${esc(cbase(c.key))} <span class="cm">${esc(c.en)}${cbase(c.key)!==c.name?" · 官方直译 "+esc(c.name):""} · ${esc(phaseName(c.phase))}${c.phase==="trickster"?" 第 "+c.num+" 个结算":""} · ${cnt(c.key)} 张</span></div><div class="cdsc">${esc(c.desc)}</div><div class="en">${esc(c.text)}</div></div></div>`;
   h+=`<h3>📜 规则速记</h3>
-    <div class="rule">· 两派 <b style="color:#ff8d94">仙鹤</b> / <b style="color:#8db6ef">莲花</b> 各带等级 1~5(1 最高),奇数人数加中立 <b style="color:#c9a6e6">浪人</b>。<b>每轮重新暗发</b>流派牌。</div>
+    <div class="rule">· 两派 <b style="color:#ff8d94">${esc(famName("crane"))}</b> / <b style="color:#8db6ef">${esc(famName("lotus"))}</b> 各带等级 1~5(1 最高),奇数人数加中立 <b style="color:#c9a6e6">${esc(famName("ronin"))}</b>。<b>每轮重新暗发</b>流派牌。</div>
     <div class="rule">· 轮抽:每人 3 张忍者牌,留 1 张、其余 2 张传给左手(下一号),再留 1 张,最后 1 张弃到中央。手里 2 张。</div>
-    <div class="rule">· 夜晚五阶段 密探 → 隐士 → 骗徒 → 盲眼刺客 → 上忍。每阶段先各自声明出哪几张(或跳过),收齐后统一翻开,按编号 1→6 依次结算。<b>没打的同阶段牌作废</b>(可以用来诈唬)。</div>
-    <div class="rule">· 被杀不翻流派牌,仍可说话。被上忍/盲眼刺客选中时,手里有镜僧(反杀)或殉道者(死但得 1 枚)可以翻开;判官的处决无法反应。</div>
-    <div class="rule">· 揭示:存活者翻流派牌,<b>存活者中等级最高(数字最小)的一派赢</b>,同级比次高者。赢的一派<b>全员(含已死)</b>各摸 1 枚荣誉标记(面值 2/3/4 暗放);浪人只要活着就摸 1 枚;完全平手则存活者各 1 枚。首脑存活则其流派直接赢(浪人首脑 = 没有派赢)。</div>
-    <div class="rule">· 轮末总分 ≥ ${state?state.config.points:10} 者胜,同轮多人达标分高者胜,同分共享。盗贼/通灵商人改分也等轮末才查。</div>
-    <div class="rule">· 房间口径:密探/隐士/上忍可以看死人(但只有活人能被杀);变形者可以把自己算进两人里、不能选已公开流派牌的人;挂了的人已翻开未结算的牌作废;轮末所有流派牌公开。</div>
+    <div class="rule">· 夜晚五阶段 ${DATA.phases.map(p=>esc(phaseName(p.key))).join(" → ")}。每阶段先各自声明出哪几张(或跳过),收齐后统一翻开,按编号 1→6 依次结算。<b>没打的同阶段牌作废</b>(可以用来诈唬)。</div>
+    <div class="rule">· 被杀不翻流派牌,仍可说话。被${esc(cbase("shinobi"))}/${esc(cbase("blind"))}选中时,手里有${esc(mirrorN())}(反杀)或${esc(martyrN())}(死但得 1 枚)可以翻开;${esc(cbase("judge"))}的处决无法反应。</div>
+    <div class="rule">· 揭示:存活者翻流派牌,<b>存活者中等级最高(数字最小)的一派赢</b>,同级比次高者。赢的一派<b>全员(含已死)</b>各摸 1 枚荣誉标记(面值 2/3/4 暗放);${esc(famName("ronin"))}只要活着就摸 1 枚;完全平手则存活者各 1 枚。${esc(mmN())}存活则其流派直接赢(${esc(famName("ronin"))}${esc(mmN())} = 没有派赢)。</div>
+    <div class="rule">· 轮末总分 ≥ ${state?state.config.points:10} 者胜,同轮多人达标分高者胜,同分共享。${esc(cbase("thief"))}/${esc(cbase("merchant"))}改分也等轮末才查。</div>
+    <div class="rule">· 房间口径:${esc(cbase("spy"))}/${esc(cbase("mystic"))}可以看死人(但只有活人能被杀);${esc(cbase("shapeshifter"))}可以把自己算进两人里、不能选已公开流派牌的人;挂了的人已翻开未结算的牌作废;轮末所有流派牌公开。</div>
   </div></div>`;
   $("#modal").innerHTML=h;
   if(focus){ const el=$("#cx-"+focus); el&&el.scrollIntoView({block:"center"}); }
@@ -237,8 +242,8 @@ function openHistory(){
   $("#modal").innerHTML=h;
 }
 function roundWhy(r){
-  const w=r.winner==="crane"?"仙鹤派获胜":r.winner==="lotus"?"莲花派获胜":"没有流派获胜";
-  const why=r.reason==="mastermind"?`${r.mastermind}号 亮出首脑`:r.reason==="rank"?`存活 仙鹤[${r.crane.join(",")}] vs 莲花[${r.lotus.join(",")}]`:r.reason==="tie"?"存活者等级完全相同":"两派都没有存活者";
+  const w=r.winner?`${famName(r.winner)}派获胜`:"没有流派获胜";
+  const why=r.reason==="mastermind"?`${r.mastermind}号 亮出${mmN()}`:r.reason==="rank"?`存活 ${famName("crane")}[${r.crane.join(",")}] vs ${famName("lotus")}[${r.lotus.join(",")}]`:r.reason==="tie"?"存活者等级完全相同":"两派都没有存活者";
   return `${w}(${why})`;
 }
 
@@ -280,13 +285,16 @@ function viewSetup(){
   h+=`</div><div class="row" style="margin-top:6px"><button class="sm ghost" data-a="addSeat">＋ 加座位</button><button class="sm ghost" data-a="removeSeat">－ 减座位</button><span class="hint">轮抽传牌方向:座位号 +1(末位传回 1 号)。一台手机可代持多个座位。</span></div></div>`;
   h+=`<div class="card"><h2>本局流派牌 <span class="tag">${N} 人</span></h2><div class="strip">${chk.ok?chk.houses.map(x=>houseHtml(x)).join(""):`<span class="hint" style="margin:0">人数要在 ${DATA.minPlayers}~${DATA.maxPlayers} 之间</span>`}</div>
     <div class="hint">每轮重新洗匀暗发。等级 1 最高;浪人不属于任何派,活到揭示就得 1 枚荣誉标记。</div></div>`;
-  h+=`<div class="card"><h2>房规</h2>
+  h+=`<div class="card"><h2>牌名版本 <span class="tag">只影响名字,规则一样</span></h2>`;
+  for(const st of Object.values(DATA.nameSets)){ const on=(cfg.names||DATA.defaultNames)===st.key;
+    h+=`<label style="display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;cursor:pointer${on?";border-color:var(--gold);background:rgba(217,164,65,.08)":""}"><input type="radio" name="names" data-a="names" data-k="${st.key}" ${on?"checked":""} style="width:auto;margin-top:4px"><span><b>${esc(st.name)}</b><small style="display:block;font-size:12px;color:var(--fg-soft)">${esc(st.note)} · ${esc(st.houses.crane)} / ${esc(st.houses.lotus)} / ${esc(st.houses.ronin)};${["spy","mystic","shapeshifter","gravedigger","troublemaker","merchant","thief","judge","blind","shinobi","mirror","martyr","mastermind"].map(k=>esc(st.cards[k])).join(" ")}</small></span></label>`; }
+  h+=`</div><div class="card"><h2>房规</h2>
     <div class="row"><label>获胜分数<select id="cf-points" style="width:auto;margin-top:4px">${[6,7,8,9,10,11,12,13,14,15].map(n=>`<option value="${n}" ${cfg.points===n?"selected":""}>${n} 分${n===10?"(官方)":""}</option>`).join("")}</select></label></div>
-    <div class="hint" style="margin-top:8px">荣誉标记各面值枚数(官方 35 枚,面值 2/3/4,具体分布未公布;有实卡请按实数改):</div>
+    <div class="hint" style="margin-top:8px">荣誉标记各面值枚数(35 枚;默认 2 分 ×14、3 分 ×14、4 分 ×7,按简中说明书;与实卡不符可改):</div>
     <div class="cfg">${[2,3,4].map(v=>`<label>${v} 分<input type="number" min="0" max="99" id="cf-t${v}" value="${cfg.tokens[v]}"></label>`).join("")}</div>
     <div class="hint">共 ${[2,3,4].reduce((a,v)=>a+(cfg.tokens[v]||0),0)} 枚。本机改动即时同步给全房。</div>
     <div class="cgrid">${DATA.cards.map(c=>cardHtml({id:c.key,key:c.key,num:c.num},{mini:true}))
-      .join("")}</div><div class="hint">33 张:密探 / 隐士 / 盲眼刺客 / 上忍 各 6 张(编号 1~6),骗徒 6 种各 1,镜僧 / 殉道者 / 首脑各 1。点 📖 看图鉴。</div></div>`;
+      .join("")}</div><div class="hint">33 张:${["spy","mystic","blind","shinobi"].map(k=>esc(cbase(k))).join(" / ")} 各 6 张(编号 1~6),骗徒 6 种各 1,${esc(mirrorN())} / ${esc(martyrN())} / ${esc(mmN())} 各 1。点 📖 看图鉴。</div></div>`;
   h+=`<div class="card"><button class="primary" style="width:100%;padding:12px;font-size:16px" data-a="start" ${chk.ok?"":"disabled"}>🥷 开始游戏(系统发牌)</button>
     <div class="hint">${chk.ok?"开局后流派牌只有自己看得到;每人发 3 张忍者牌进入轮抽。":`现在 ${N} 人,请增减座位到 ${DATA.minPlayers}~${DATA.maxPlayers} 人。`}</div></div>`;
   return h;
@@ -311,7 +319,7 @@ function viewScore(){
   return `<div class="score"><span class="sc"><b>第 ${state.round} 轮</b> · ${state.config.points} 分胜 · 标记堆 ${state.poolCount}</span>${seatsArr().map(s=>`<span class="sc${s.dead?" dead":""}"><b>${s.seatNo}</b>${esc(nameOf(s))||"空"}<span class="stars" title="${s.tokenCount} 枚">${stars(s.tokenCount)}</span>${s.points!=null?`<small>${s.points}分</small>`:""}</span>`).join("")}</div>`;
 }
 function viewPhases(){
-  const steps=[{k:"draft",n:"轮抽"}].concat(DATA.phases.map(p=>({k:p.key,n:p.name}))).concat([{k:"reveal",n:"揭示"}]);
+  const steps=[{k:"draft",n:"轮抽"}].concat(DATA.phases.map(p=>({k:p.key,n:phaseName(p.key)}))).concat([{k:"reveal",n:"揭示"}]);
   const curIdx=state.phase==="draft"?0:state.phase==="night"?state.step+1:steps.length-1;
   return `<div class="phases">${steps.map((p,i)=>`<span class="pp${i===curIdx?" on":i<curIdx?" done":""}">${esc(p.n)}</span>`).join('<span style="color:var(--fg-soft);font-size:10px;align-self:center">›</span>')}</div>`;
 }
@@ -380,7 +388,7 @@ function viewResolve(me){
         h+=`<div class="hint">翻到(只有你看得到),挑一张:</div><div class="hand" style="margin-top:6px">${offer.map(x=>cardHtml(x,{big:true,a:"offer",sel:offerSel===x.id,click:true})).join("")}</div>`;
         if(oc) h+=`<div class="hint">${esc(C[oc.key].desc)}</div>`;
         h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="resolveGo" data-x='${esc(JSON.stringify({pick:offerSel,play:"now"}))}' ${oc&&canNow?"":"disabled"} style="padding:12px">立刻打出</button><button class="grow" data-a="resolveGo" data-x='${esc(JSON.stringify({pick:offerSel,play:"keep"}))}' ${oc?"":"disabled"} style="padding:12px">面朝上留在面前</button></div>
-          <div class="hint">立刻打出 = 插进当前队列马上结算(不管阶段);反应牌/首脑只能留着。留在面前的牌是公开的。</div>`; }
+          <div class="hint">立刻打出 = 插进当前队列马上结算(不管阶段);反应牌/${esc(mmN())}只能留着。留在面前的牌是公开的。</div>`; }
       break;
     case "troublemaker":
       if(p.stage==="main") h+=`<div class="hint">选择要查看的玩家:</div>${tgtButtons(others,tgtSel)}${go("查看"+(tgtSel?" "+tgtSel+"号":""),{target:tgtSel},tgtSel!=null)}`;
@@ -389,7 +397,7 @@ function viewResolve(me){
     case "merchant":
       if(p.stage==="main") h+=`<div class="hint">选择玩家:</div>${tgtButtons(others,tgtSel)}<div class="hint">查看他的:</div><div class="tgt"><button class="${lookSel==="honor"?"on":""}" data-a="look" data-k="honor">一枚荣誉标记(随机)</button><button class="${lookSel==="house"?"on":""}" data-a="look" data-k="house">流派牌</button></div>${go("查看",{target:tgtSel,look:lookSel},tgtSel!=null&&lookSel)}`;
       else { const t=state.seats[p.target], myT=s.tokens||[], tt=pm.targetTokens||[];
-        h+=`<div class="note">${esc((s.notes||[]).filter(x=>x.round===state.round&&x.text.startsWith("通灵商人")).at(-1)?.text||"")}</div>`;
+        h+=`<div class="note">${esc((s.notes||[]).filter(x=>x.round===state.round&&x.text.startsWith(cbase("merchant"))).at(-1)?.text||"")}</div>`;
         if(!myT.length||!tt.length) h+=`<div class="hint">${!myT.length?"你没有荣誉标记":p.target+"号 没有荣誉标记"},不能交换。</div><div class="row" style="margin-top:10px"><button class="primary grow" data-a="resolveGo" data-x='{}' style="padding:12px">结束</button></div>`;
         else h+=`<div class="hint">给出你的一枚:</div><div class="strip">${myT.map(k=>`<span class="tk ${giveSel===k.id?"on":""}" data-a="give" data-k="${k.id}">${k.v}分</span>`).join("")}</div>
           <div class="hint">拿回 ${p.target}号 的一枚(面值暗放):</div><div class="strip">${tt.map(id=>`<span class="tk ${takeSel===id?"on":""}" data-a="take" data-k="${id}">${id===pm.seen?"👁 看过的":"?"}</span>`).join("")}</div>
@@ -399,7 +407,7 @@ function viewResolve(me){
       h+=`<div class="hint">会先亮出你的流派牌 ${houseHtml(s.house)}。${pool.length?"从荣誉标记比你多的人那里随机拿一枚:":"没有人标记比你多,只能亮牌。"}</div>${pool.length?tgtButtons(pool,tgtSel):""}
         <div class="row" style="margin-top:10px"><button class="primary grow" data-a="resolveGo" data-x='${esc(JSON.stringify({target:tgtSel}))}' ${tgtSel!=null?"":"disabled"} style="padding:12px">亮牌并拿走</button><button class="grow" data-a="resolveGo" data-x='{}' style="padding:12px">只亮牌</button></div>`; break; }
     case "judge":
-      h+=`<div class="hint">会先亮出你的流派牌 ${houseHtml(s.house)}。处决一名存活玩家(镜僧/殉道者无效):</div>${tgtButtons(othersAlive,tgtSel)}${go("⚖️ 处决"+(tgtSel?" "+tgtSel+"号":""),{target:tgtSel},tgtSel!=null)}`; break;
+      h+=`<div class="hint">会先亮出你的流派牌 ${houseHtml(s.house)}。处决一名存活玩家(${esc(mirrorN())}/${esc(martyrN())}无效):</div>${tgtButtons(othersAlive,tgtSel)}${go("⚖️ 处决"+(tgtSel?" "+tgtSel+"号":""),{target:tgtSel},tgtSel!=null)}`; break;
     case "blind":
       h+=`<div class="hint">选择要杀死的存活玩家(不看流派牌):</div>${tgtButtons(othersAlive,tgtSel)}${go("🗡️ 杀死"+(tgtSel?" "+tgtSel+"号":""),{target:tgtSel},tgtSel!=null)}`; break;
     case "shinobi":
@@ -411,12 +419,12 @@ function viewResolve(me){
   return h+`</div>`;
 }
 // 从最新一条笔记里抠出流派(上忍/捣乱者决定面板显示用)
-function lastNoteHouse(me){ const t=((state.seats[me].notes||[]).filter(x=>x.round===state.round).at(-1)||{}).text||""; const m=/「(仙鹤|莲花) (\d)」/.exec(t); if(m) return (m[1]==="仙鹤"?"crane":"lotus")+":"+m[2]; return /「浪人」/.test(t)?"ronin":null; }
+function lastNoteHouse(me){ const t=((state.seats[me].notes||[]).filter(x=>x.round===state.round).at(-1)||{}).text||""; const esc2=x=>x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); const m=new RegExp("「("+esc2(famName("crane"))+"|"+esc2(famName("lotus"))+") (\\d)」").exec(t); if(m) return (m[1]===famName("crane")?"crane":"lotus")+":"+m[2]; return new RegExp("「"+esc2(famName("ronin"))+"」").test(t)?"ronin":null; }
 function viewReact(me){
   const p=state.pending, opts=(state.pendingMine||{}).options||[], s=state.seats[me];
   let h=`<div class="card secret act"><h2>⚔️ 你被 ${p.killer}号 的「${esc(cname(p.card))}」盯上了 <span class="tag">${me}号</span></h2>${seatTabs()}<div class="hint">你手里有反应牌,可以翻开一张:</div><div class="hand" style="margin-top:6px">${opts.map(id=>{ const c=(s.hand||[]).find(x=>x.id===id)||{id,key:id,num:null}; return cardHtml(c,{big:true,a:"reactPick",sel:tgtSel===id,click:true}); }).join("")}</div>`;
   if(tgtSel) h+=`<div class="hint">${esc(C[tgtSel]?C[tgtSel].desc:"")}</div>`;
-  h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="reactGo" ${tgtSel?"":"disabled"} style="padding:12px">翻开 ${tgtSel?esc(C[tgtSel].name):""}</button><button class="grow" data-a="reactNone" style="padding:12px">不翻(接受死亡)</button></div></div>`;
+  h+=`<div class="row" style="margin-top:10px"><button class="primary grow" data-a="reactGo" ${tgtSel?"":"disabled"} style="padding:12px">翻开 ${tgtSel?esc(cbase(tgtSel)):""}</button><button class="grow" data-a="reactNone" style="padding:12px">不翻(接受死亡)</button></div></div>`;
   return h;
 }
 function viewQueue(){
@@ -427,7 +435,7 @@ function viewQueue(){
 function viewMine(){
   const me=curActSeat(), s=state.seats[me]; if(!s) return "";
   let h=`<div class="card secret"><h2>🪪 ${me}号 的牌 <span class="tag">只有你看得到</span></h2>${state.phase==="draft"||state.phase==="night"?"":seatTabs()}
-    <div class="row"><span>流派牌:</span>${s.house?houseHtml(s.house):s.cantLook?`<span class="hs unknown">? 被变形者对调过,不能再看</span>`:houseHtml(null)}${s.revealed?`<span class="chip gold">已公开</span>`:""}${s.dead?`<span class="chip red">💀 已死亡</span>`:""}</div>
+    <div class="row"><span>流派牌:</span>${s.house?houseHtml(s.house):s.cantLook?`<span class="hs unknown">? 被${esc(cbase("shapeshifter"))}对调过,不能再看</span>`:houseHtml(null)}${s.revealed?`<span class="chip gold">已公开</span>`:""}${s.dead?`<span class="chip red">💀 已死亡</span>`:""}</div>
     <div class="row" style="margin-top:6px"><span>荣誉标记:</span>${(s.tokens||[]).length?(s.tokens||[]).map(k=>`<span class="tk">${k.v}分</span>`).join(""):'<span class="hint" style="margin:0">无</span>'}<span class="chip gold">合计 ${s.points||0} 分</span></div>`;
   if(state.phase==="night"){ const hand=s.hand||[]; h+=`<div class="hint" style="margin-top:8px">手里的忍者牌:</div><div class="hand" style="margin-top:4px">${hand.length?hand.map(c=>cardHtml(c,{dim:c.burnt,badge:c.burnt?"作废":c.faceUp?"公开":null})).join(""):'<span class="hint" style="margin:0">没有了</span>'}</div>`; }
   return h+`</div>`;
@@ -457,7 +465,7 @@ function viewNotes(){
 function viewRoundEnd(){
   const r=state.roundResult; if(!r) return "";
   const over=state.phase==="over";
-  let h=`<div class="card result"><div class="big">${over?`🏆 ${state.result.winners.join("/")}号 获胜`:r.winner?`${r.winner==="crane"?"🪶 仙鹤派":"🪷 莲花派"}赢得第 ${r.round} 轮`:`第 ${r.round} 轮 · 没有流派获胜`}</div>
+  let h=`<div class="card result"><div class="big">${over?`🏆 ${state.result.winners.join("/")}号 获胜`:r.winner?`${DATA.houses[r.winner].icon} ${esc(famName(r.winner))}派赢得第 ${r.round} 轮`:`第 ${r.round} 轮 · 没有流派获胜`}</div>
     <div class="hint" style="text-align:center">${esc(roundWhy(r))}</div>
     <table class="vt"><tr><th>座位</th><th>流派牌</th><th>状态</th><th>本轮</th><th>标记</th>${over?"<th>总分</th>":""}</tr>`;
   for(const s of seatsArr()){ const a=r.awarded.find(x=>x.seat===s.seatNo);
@@ -485,6 +493,7 @@ document.addEventListener("click",e=>{
     case "addSeat": RC.send({type:"addSeat"}); break;
     case "removeSeat": { const last=seatsArr().at(-1); if(!last||!last.holderDevices.length||confirm(`${last.seatNo} 号座位有人,确定删除?`)) RC.send({type:"removeSeat"}); break; }
     case "start": act("startGame"); break;
+    case "names": act("setConfig",{config:{names:b.dataset.k}}); break;
     case "actSeat": actSeat=sn; resetSel(); render(); break;
     case "pick": pickSel=pickSel===b.dataset.c?null:b.dataset.c; render(); break;
     case "pickGo": if(pickSel) act("draftPick",{seatNo:curActSeat(),cardId:pickSel}); break;

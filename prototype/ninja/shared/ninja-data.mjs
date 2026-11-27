@@ -4,7 +4,7 @@
 //
 // 牌组 33 张:密探 / 隐士 / 盲眼刺客 / 上忍 各 6 张(编号 1~6)、骗徒 6 张(6 种各 1,编号 = 种类 1~6)、镜僧 / 殉道者 / 首脑 各 1。
 //   规则书只说 33 张、同阶段按 1→6 结算;各类张数采用 PTT 玩家「每种忍者都有 1-6」+ 总数吻合(见 README §4)。
-// 荣誉标记 35 枚,面值 2/3/4;各几枚官方没公布,默认 2×15 / 3×12 / 4×8,房间可配。
+// 荣誉标记 35 枚,面值 2/3/4:简中说明书(hsuBnOediH/NightOfNinjaOnline 按实卡核对)为 2×14 / 3×14 / 4×7,作默认;房间可配。
 
 export const HOUSES = {
   crane: { key: "crane", name: "仙鹤", en: "Crane House", icon: "🪶", color: "#c7343f" },
@@ -85,10 +85,48 @@ export function cardName(card) { const c = CARD_BY_KEY[card.key]; return c ? (ca
 
 // 荣誉标记
 export const TOKEN_VALUES = [2, 3, 4];
-export const DEFAULT_TOKENS = { 2: 15, 3: 12, 4: 8 }; // 共 35;官方分布待核
+export const DEFAULT_TOKENS = { 2: 14, 3: 14, 4: 7 }; // 共 35;按简中说明书
 export const DEFAULT_POINTS = 10;
 export function buildTokenPool(dist = DEFAULT_TOKENS) {
   const out = []; let k = 0;
   for (const v of TOKEN_VALUES) for (let i = 0; i < (dist[v] || 0); i++) out.push({ id: `t${++k}`, v });
   return out;
+}
+
+// ── 牌名版本(房规可切,只影响显示与日志,不影响规则)──
+// iga:用户手里那版(2026-11-27 口述:流派 伊贺 / 甲贺(无来源,按用户记忆)、商人、刺客、大将军;骗徒 1 三个来源都是「百变者」,其余按 cn 套补齐);
+// cn:国内另一印次的译名(网页版 Byte-Git-hub/NinjaNight 的 CARD_CN:百变者 / 商人 / 盗贼 / 裁判 / 刺客 / 还施者 / 大将军),与用户记忆吻合;
+// manual:简中说明书版(hsuBnOediH/NightOfNinjaOnline 按实体说明书与 33 张实卡照片核对:灵魂商贩 / 窃贼 / 盲眼刺客 / 还施僧 / 首脑);
+// official:对照官方英文的直译(本仓库最初的拟名)。
+export const NAME_SETS = {
+  iga: { key: "iga", name: "伊贺 / 甲贺版(我们这套)", note: "流派按记忆 伊贺 / 甲贺;百变者 / 商人 / 刺客 / 大将军",
+    houses: { crane: "伊贺", lotus: "甲贺", ronin: "浪人" },
+    cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "商人", thief: "盗贼", judge: "裁判", blind: "刺客", shinobi: "上忍", mirror: "还施者", martyr: "殉道者", mastermind: "大将军" } },
+  cn: { key: "cn", name: "简中版(仙鹤 / 莲花)", note: "与上一套同名,只是流派叫仙鹤 / 莲花",
+    houses: { crane: "仙鹤", lotus: "莲花", ronin: "浪人" },
+    cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "商人", thief: "盗贼", judge: "裁判", blind: "刺客", shinobi: "上忍", mirror: "还施者", martyr: "殉道者", mastermind: "大将军" } },
+  manual: { key: "manual", name: "简中说明书版", note: "按实体说明书核对:灵魂商贩 / 窃贼 / 盲眼刺客 / 还施僧 / 首脑",
+    houses: { crane: "仙鹤", lotus: "莲花", ronin: "浪人" },
+    cards: { spy: "密探", mystic: "隐士", shapeshifter: "百变者", gravedigger: "掘墓人", troublemaker: "捣蛋鬼", merchant: "灵魂商贩", thief: "窃贼", judge: "裁判", blind: "盲眼刺客", shinobi: "上忍", mirror: "还施僧", martyr: "殉道者", mastermind: "首脑" } },
+  official: { key: "official", name: "官方直译", note: "对照英文卡面",
+    houses: { crane: "仙鹤", lotus: "莲花", ronin: "浪人" },
+    cards: Object.fromEntries(CARDS.map((c) => [c.key, c.name])) },
+};
+export const DEFAULT_NAMES = "iga";
+export function namesOf(k) { return NAME_SETS[k] || NAME_SETS[DEFAULT_NAMES]; }
+export function houseNameIn(k, h) {
+  if (!h) return "?";
+  const set = namesOf(k), f = houseFamily(h);
+  return f === "ronin" ? set.houses.ronin : `${set.houses[f]} ${houseRank(h)}`;
+}
+export function cardNameIn(k, card) {
+  const set = namesOf(k), c = CARD_BY_KEY[card.key], nm = set.cards[card.key] || (c ? c.name : card.key);
+  return c && card.num != null && c.num == null ? `${nm} ${card.num}` : nm;
+}
+// 阶段名跟着牌名走(骗徒阶段固定叫骗徒)
+export function phaseNameIn(k, phaseKey) {
+  if (phaseKey === "trickster") return "骗徒";
+  if (phaseKey === "react") return "反应";
+  if (phaseKey === "reveal") return "揭示";
+  const set = namesOf(k); return set.cards[phaseKey] || (PHASE_BY_KEY[phaseKey] ? PHASE_BY_KEY[phaseKey].name : phaseKey);
 }
